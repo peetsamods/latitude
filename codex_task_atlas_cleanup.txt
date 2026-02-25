@@ -1,0 +1,140 @@
+• No index.html exists currently.
+  Current HTML in use is:                                                                                                                         
+                                                                                                                                                  
+  C:\Users\jscho\CascadeProjects\Latitude (Globe)\run\latdev\atlas\seed_4303535158216281382\R5000\viewer.html                                     
+                                                                                                                                                  
+  <!doctype html>                                                                                                                                 
+  <html>                                                                                                                                          
+  <head>                                                                                                                                          
+    <meta charset="utf-8" />                                                                                                                      
+    <meta name="viewport" content="width=device-width,initial-scale=1" />                                                                         
+    <title>Atlas Viewer</title>                                                                                                                   
+    <style>                                                                                                                                       
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 16px; }                                                 
+      .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }                                                    
+      select, input { padding:6px 8px; }                                                                                                          
+      .wrap { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }                                                                   
+      .pane { border:1px solid #ddd; padding:12px; border-radius:10px; }                                                                          
+      img { image-rendering: pixelated; max-width: min(85vw, 1100px); height:auto; border:1px solid #eee; }
+      pre { max-width: 520px; white-space: pre-wrap; word-break: break-word; margin:0; }                                                          
+      .muted { color:#666; font-size:12px; }                                                                                                      
+    </style>                                                                                                                                      
+  </head>                                                                                                                                         
+  <body>                                                                                                                                          
+    <div class="row">                                                                                                                             
+      <label>Step <select id="step"></select></label>                                                                                             
+      <label>Layer <select id="layer"></select></label>                                                                                           
+      <label>Zoom <input id="zoom" type="number" value="1" min="1" max="8" /></label>                                                             
+      <button id="reload" type="button">reload legend</button>                                                                                    
+      <span class="muted" id="status"></span>                                                                                                     
+    </div>                                                                                                                                        
+                                                                                                                                                  
+    <div class="wrap">                                                                                                                            
+      <div class="pane">                                                                                                                          
+        <img id="img" alt="atlas" />                                                                                                              
+      </div>                                                                                                                                      
+      <div class="pane" style="min-width:340px;">                                                                                                 
+        <strong id="legendTitle">legend.json</strong>                                                                                             
+        <pre id="legend">Loading...</pre>                                                                                                         
+      </div>                                                                                                                                      
+    </div>                                                                                                                                        
+                                                                                                                                                  
+  <script>                                                                                                                                        
+  const stepSel = document.getElementById('step');                                                                                                
+  const layerSel = document.getElementById('layer');                                                                                              
+  const img = document.getElementById('img');                                                                                                     
+  const zoom = document.getElementById('zoom');                                                                                                   
+  const legendEl = document.getElementById('legend');                                                                                             
+  const status = document.getElementById('status');                                                                                               
+                                                                                                                                                  
+  const preferredLayerOrder = [                                                                                                                   
+    "bands.png",                                                                                                                                  
+    "temperature.png",                                                                                                                            
+    "humidity.png",                                                                                                                               
+    "continentalness.png",                                                                                                                        
+    "erosion.png",                                                                                                                                
+    "weirdness.png",                                                                                                                              
+    "mask_swamp.png",                                                                                                                             
+    "mask_mangrove.png",                                                                                                                          
+    "biomes.png"                                                                                                                                  
+  ];                                                                                                                                              
+                                                                                                                                                  
+  let index = null;                                                                                                                               
+                                                                                                                                                  
+  function applyZoom() {                                                                                                                          
+    const z = Math.max(1, Math.min(8, parseInt(zoom.value || "1", 10)));                                                                          
+    img.style.maxWidth = `min(85vw, ${1100*z}px)`;                                                                                                
+  }                                                                                                                                               
+                                                                                                                                                  
+  function setImage(step, file) {                                                                                                                 
+    img.src = `${step}/${file}?t=${Date.now()}`;                                                                                                  
+    status.textContent = `Showing ${step}/${file}`;                                                                                               
+  }                                                                                                                                               
+                                                                                                                                                  
+  async function loadLegend(step) {                                                                                                               
+    // legend is per-step in your outputs                                                                                                         
+    try {                                                                                                                                         
+      const r = await fetch(`${step}/legend.json?t=${Date.now()}`);                                                                               
+      if (!r.ok) throw new Error("no legend.json");                                                                                               
+      const j = await r.json();
+      legendEl.textContent = JSON.stringify(j, null, 2);                                                                                          
+    } catch {                                                                                                                                     
+      legendEl.textContent = "No legend.json in this step folder.";                                                                               
+    }                                                                                                                                             
+  }                                                                                                                                               
+                                                                                                                                                  
+  function populateLayersForStep(stepName) {                                                                                                      
+    const step = index.find(x => x.step === stepName);                                                                                            
+    const files = new Set(step.files);                                                                                                            
+                                                                                                                                                  
+    const found = [];                                                                                                                             
+    for (const f of preferredLayerOrder) if (files.has(f)) found.push(f);
+    // fallback: include any other pngs                                                                                                           
+    for (const f of step.files) if (f.endsWith(".png") && !found.includes(f)) found.push(f);                                                      
+                                                                                                                                                  
+    layerSel.innerHTML = "";                                                                                                                      
+    for (const f of found) {                                                                                                                      
+      const opt = document.createElement("option");                                                                                               
+      opt.value = f;                                                                                                                              
+      opt.textContent = f.replace(".png","");                                                                                                     
+      layerSel.appendChild(opt);                                                                                                                  
+    }                                                                                                                                             
+                                                                                                                                                  
+    const first = found[0] || "biomes.png";                                                                                                       
+    setImage(stepName, first);                                                                                                                    
+    loadLegend(stepName);                                                                                                                         
+  }                                                                                                                                               
+                                                                                                                                                  
+  async function init() {                                                                                                                         
+    const r = await fetch(`atlas_index.json?t=${Date.now()}`);                                                                                    
+    index = await r.json();                                                                                                                       
+                                                                                                                                                  
+    // Prefer step16 if it exists; else step8; else first step                                                                                    
+    const steps = index.map(x => x.step);                                                                                                         
+    const preferredStep = steps.includes("step16") ? "step16" : (steps.includes("step8") ? "step8" : steps[0]);                                   
+                                                                                                                                                  
+    stepSel.innerHTML = "";                                                                                                                       
+    for (const s of steps) {                                                                                                                      
+      const opt = document.createElement("option");                                                                                               
+      opt.value = s;                                                                                                                              
+      opt.textContent = s;                                                                                                                        
+      stepSel.appendChild(opt);                                                                                                                   
+    }                                                                                                                                             
+    stepSel.value = preferredStep;                                                                                                                
+                                                                                                                                                  
+    populateLayersForStep(preferredStep);                                                                                                         
+                                                                                                                                                  
+    stepSel.addEventListener("change", () => populateLayersForStep(stepSel.value));
+    layerSel.addEventListener("change", () => setImage(stepSel.value, layerSel.value));                                                           
+    zoom.addEventListener("change", applyZoom);                                                                                                   
+    document.getElementById("reload").addEventListener("click", () => loadLegend(stepSel.value));                                                 
+                                                                                                                                                  
+    applyZoom();                                                                                                                                  
+  }                                                                                                                                               
+                                                                                                                                                  
+  init().catch(e => {                                                                                                                             
+    status.textContent = "Failed to load atlas_index.json (use the local server step).";                                                          
+  });                                                                                                                                             
+  </script>                                                                                                                                       
+  </body>                                                                                                                                         
+  </html>    
