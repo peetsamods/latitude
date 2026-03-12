@@ -1,0 +1,67 @@
+CHERRY_GROVE STATIC+LOCAL AUDIT
+
+Repo root:
+- C:/Users/jscho/CascadeProjects/Latitude (Globe)
+Branch:
+- fix/wsav-override-plus-final-clamp
+Commit:
+- 8257f30a
+Tree status:
+- tracked dirt only in run-headless runtime files; no tracked source edits
+
+Question 1  First admission point
+- function:
+  pick(...) main land selection flow, temperate mountain override branch
+- line range:
+  LatitudeBiomes.java:1024-1033 and 1273-1282
+- exact condition(s):
+  landBandIndex == BAND_TEMPERATE and mountainLike == true, then chosen = pickFromTagNoiseOrBase(..., LAT_TEMPERATE_MOUNTAIN, ...)
+- pool/tag/path:
+  globe:lat_temperate_mountain
+  values = meadow, cherry_grove, grove, windswept_hills, stony_peaks
+
+Question 2  Required survival gates
+- band gate:
+  must already be in BAND_TEMPERATE; cherry is not present in lat_temperate_primary/secondary/accent weighted pools
+- terrain / mountain gate:
+  mountainLike must be true or the temperate mountain branch never runs
+- humidity gate:
+  none specific to cherry after admission
+- rarity / weighted-roll gate:
+  after mountain tag pick, cherry must pass rollChance(blockX, blockZ, 0xC7E22E55, 6L); otherwise it is demoted immediately
+- special override dependency:
+  yes; cherry survives only through the explicit mountain override path, not the ordinary temperate weighted path
+- comparison competitors:
+  inside LAT_TEMPERATE_MOUNTAIN: meadow, grove, windswept_hills, stony_peaks
+  immediate demotion fallback list: grove, meadow, windswept_hills, stony_peaks
+
+Question 3  Late demotion or rewrite paths
+- function:
+  immediate post-mountain branch demotion in pick(...)
+- line range:
+  LatitudeBiomes.java:1025-1032 and 1274-1281
+- trigger:
+  chosen == cherry_grove and rollChance(..., 6L) fails
+- output biome(s):
+  one of grove / meadow / windswept_hills / stony_peaks
+
+Additional downstream checks:
+- sanitizeLandBiome(...) does not rewrite cherry in temperate; only polar bands rewrite cherry/grove/forest-family to ice_spikes
+- repickIfSurfaceCave(...) only affects SURFACE_CAVE_DENYLIST entries; cherry is not implicated here
+- applyLandOverrides(...) rewrites meadow or windswept_hills to stony_peaks on a rare roll, but has no direct cherry rewrite
+- applyFinalSavannaClimateClamp(...) is irrelevant to cherry
+
+Question 4  Primary choke classification
+- [ ] never admitted
+- [x] loses weighting
+- [ ] late rewrite
+- primary evidence:
+  cherry is admitted only through LAT_TEMPERATE_MOUNTAIN, then immediately subjected to a 1/6 keep roll; on failure it is replaced before sanitize/overrides/final clamp
+
+Question 5  Smallest future patch
+- one function only:
+  pick(...) mountainLike temperate branch
+- one behavior only:
+  relax or reorder the immediate cherry demotion gate after LAT_TEMPERATE_MOUNTAIN pick
+- expected movement:
+  more admitted cherry picks survive long enough to appear, without changing the broader temperate weighted pools

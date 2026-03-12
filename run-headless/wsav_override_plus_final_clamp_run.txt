@@ -1,0 +1,343 @@
+Picked up JAVA_TOOL_OPTIONS: -Dlatitude.audit.mangroveFinal=true -Dlatitude.mangrove.tidalMax=128 -Dlatitude.mangrove.maxYAboveSea=10
+Picked up JAVA_TOOL_OPTIONS: -Dlatitude.audit.mangroveFinal=true -Dlatitude.mangrove.tidalMax=128 -Dlatitude.mangrove.maxYAboveSea=10
+Starting a Gradle Daemon, 1 busy Daemon could not be reused, use --status for details
+
+> Configure project :
+Fabric Loom: 1.14.10
+
+> Task :clean
+> Task :compileJava
+> Task :processResources
+> Task :classes
+> Task :jar
+> Task :processIncludeJars
+> Task :sourcesJar
+> Task :validateAccessWidener NO-SOURCE
+> Task :check
+Cannot remap method_71110 because it does not exists in any of the targets [net/minecraft/client/render/fog/FogRenderer]
+> Task :remapJar
+> Task :remapSourcesJar
+> Task :assemble
+> Task :build
+
+[Incubating] Problems report is available at: file:///C:/Users/jscho/CascadeProjects/Latitude%20(Globe)/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.2.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 30s
+8 actionable tasks: 8 executed
+Picked up JAVA_TOOL_OPTIONS: -Dlatitude.audit.mangroveFinal=true -Dlatitude.mangrove.tidalMax=128 -Dlatitude.mangrove.maxYAboveSea=10
+Initialized native services in: C:\Users\jscho\.gradle\native
+Initialized jansi services in: C:\Users\jscho\.gradle\native
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.2.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Received JVM installation metadata from 'C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot': {JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot, JAVA_VERSION=21.0.10, JAVA_VENDOR=Eclipse Adoptium, RUNTIME_NAME=OpenJDK Runtime Environment, RUNTIME_VERSION=21.0.10+7-LTS, VM_NAME=OpenJDK 64-Bit Server VM, VM_VERSION=21.0.10+7-LTS, VM_VENDOR=Eclipse Adoptium, OS_ARCH=amd64}
+Starting process 'Gradle build daemon'. Working directory: C:\Users\jscho\.gradle\daemon\9.2.0 Command: C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot\bin\java.exe --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.xml/javax.xml.namespace=ALL-UNNAMED --add-opens=java.base/java.time=ALL-UNNAMED -Xmx1G -Dfile.encoding=UTF-8 -Duser.country=US -Duser.language=en -Duser.variant -cp C:\Users\jscho\.gradle\wrapper\dists\gradle-9.2.0-bin\11i5gvueggl8a5cioxuftxrik\gradle-9.2.0\lib\gradle-daemon-main-9.2.0.jar -javaagent:C:\Users\jscho\.gradle\wrapper\dists\gradle-9.2.0-bin\11i5gvueggl8a5cioxuftxrik\gradle-9.2.0\lib\agents\gradle-instrumentation-agent-9.2.0.jar org.gradle.launcher.daemon.bootstrap.GradleDaemon 9.2.0
+Successfully started process 'Gradle build daemon'
+An attempt to start the daemon took 1.54 secs.
+The client will now receive all logging from the daemon (pid: 13372). The daemon log file: C:\Users\jscho\.gradle\daemon\9.2.0\daemon-13372.out.log
+Daemon will be stopped at the end of the build 
+Using 12 worker leases.
+Operational build model parameters: {requiresToolingModels=false, parallelProjectExecution=true, configureOnDemand=false, configurationCache=false, configurationCacheParallelStore=false, configurationCacheParallelLoad=true, isolatedProjects=false, parallelProjectConfiguration=false, intermediateModelCache=false, parallelToolingApiActions=true, invalidateCoupledProjects=false, modelAsProjectDependency=false, resilientModelBuilding=false}
+Received JVM installation metadata from 'C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot': {JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot, JAVA_VERSION=21.0.10, JAVA_VENDOR=Eclipse Adoptium, RUNTIME_NAME=OpenJDK Runtime Environment, RUNTIME_VERSION=21.0.10+7-LTS, VM_NAME=OpenJDK 64-Bit Server VM, VM_VERSION=21.0.10+7-LTS, VM_VENDOR=Eclipse Adoptium, OS_ARCH=amd64}
+Watching the file system is configured to be enabled if available
+Now considering [C:\Users\jscho\CascadeProjects\Latitude (Globe)] as hierarchies to watch
+File system watching is active
+Starting Build
+Settings evaluated using settings file 'C:\Users\jscho\CascadeProjects\Latitude (Globe)\settings.gradle'.
+Projects loaded. Root project using build file 'C:\Users\jscho\CascadeProjects\Latitude (Globe)\build.gradle'.
+Included projects: [root project 'Latitude']
+
+> Configure project :
+Evaluating root project 'Latitude' using build file 'C:\Users\jscho\CascadeProjects\Latitude (Globe)\build.gradle'.
+Resolved plugin [id: 'fabric-loom', version: '1.14.10']
+Resolved plugin [id: 'maven-publish']
+Fabric Loom: 1.14.10
+(kotlin.metadata.jvm.KotlinClassMetadata) with version (2.2.20-release-333) was loaded from (/C:/Users/jscho/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-metadata-jvm/2.2.20/1f04dd6a9950a57b90ab8fa536337ba76dee4f59/kotlin-metadata-jvm-2.2.20.jar)
+(org.objectweb.asm.ClassVisitor) with version (9.9) was loaded from (/C:/Users/jscho/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm/9.9/c29635c8a7afa03d74b33c1884df8abb2b3f3dcc/asm-9.9.jar)
+(org.objectweb.asm.tree.analysis.Analyzer) with version (9.9) was loaded from (/C:/Users/jscho/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-analysis/9.9/bf4fa6e66638851c1cd22c2caea0c3ee5d5f437/asm-analysis-9.9.jar)
+(org.objectweb.asm.commons.ClassRemapper) with version (9.9) was loaded from (/C:/Users/jscho/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-commons/9.9/db9165a3bf908ded6b08612d583a15d1d0c7bda0/asm-commons-9.9.jar)
+(org.objectweb.asm.tree.ClassNode) with version (9.9) was loaded from (/C:/Users/jscho/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-tree/9.9/f8de6eead6d24dd0f45bd065bbe112b2cda6ea21/asm-tree-9.9.jar)
+(org.objectweb.asm.util.ASMifier) with version (9.9) was loaded from (/C:/Users/jscho/.gradle/caches/modules-2/files-2.1/org.ow2.asm/asm-util/9.9/42fdfc0508b43807c8078d6e82ecff2ce2112ae8/asm-util-9.9.jar)
+(com.google.gson.Gson) with version (null) was loaded from (/C:/Users/jscho/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.10.1/b3add478d4382b78ea20b1671390a858002feb6c/gson-2.10.1.jar)
+Using cached Minecraft jars
+:Extracting server jar from bootstrap
+Mod dependency options: {"__inlineRefmap__":false,"__mappings__":"net.fabricmc.yarn.1_21_11.1.21.11+build.1-v2"}
+Applying installer data from C:\Users\jscho\.gradle\caches\modules-2\files-2.1\net.fabricmc\fabric-loader\0.17.3\deafaba5de4d9bbd76105783ff4e21ce0773874f\fabric-loader-0.17.3.jar
+Found another installer JSON in (C:\Users\jscho\.gradle\caches\modules-2\files-2.1\net.fabricmc\fabric-loader\0.17.3\deafaba5de4d9bbd76105783ff4e21ce0773874f\fabric-loader-0.17.3.jar), ignoring
+All projects evaluated.
+Task name matched 'runBiomePreview'
+Selected primary task 'runBiomePreview' from project :
+Tasks to be executed: [task ':compileJava', task ':processResources', task ':classes', task ':generateLog4jConfig', task ':generateRemapClasspath', task ':generateDLIConfig', task ':configureLaunch', task ':prepareBiomePreviewRunDir', task ':runBiomePreview']
+Tasks that were excluded: []
+Resolve mutations for :compileJava (Thread[#233,Execution worker,5,main]) started.
+:compileJava (Thread[#233,Execution worker,5,main]) started.
+
+> Task :compileJava UP-TO-DATE
+Caching disabled for task ':compileJava' because:
+  Build cache is disabled
+Skipping task ':compileJava' as it is up-to-date.
+Resolve mutations for :processResources (Thread[#233,Execution worker,5,main]) started.
+:processResources (Thread[#233,Execution worker,5,main]) started.
+
+> Task :processResources UP-TO-DATE
+Caching disabled for task ':processResources' because:
+  Build cache is disabled
+  Not worth caching
+Skipping task ':processResources' as it is up-to-date.
+Resolve mutations for :classes (Thread[#233,Execution worker,5,main]) started.
+:classes (Thread[#233,Execution worker,5,main]) started.
+
+> Task :classes UP-TO-DATE
+Skipping task ':classes' as it has no actions.
+Resolve mutations for :generateLog4jConfig (Thread[#237,Execution worker Thread 5,5,main]) started.
+:generateLog4jConfig (Thread[#237,Execution worker Thread 5,5,main]) started.
+
+> Task :generateLog4jConfig UP-TO-DATE
+Caching disabled for task ':generateLog4jConfig' because:
+  Build cache is disabled
+  Caching has not been enabled for the task
+Skipping task ':generateLog4jConfig' as it is up-to-date.
+Resolve mutations for :generateRemapClasspath (Thread[#237,Execution worker Thread 5,5,main]) started.
+:generateRemapClasspath (Thread[#237,Execution worker Thread 5,5,main]) started.
+
+> Task :generateRemapClasspath UP-TO-DATE
+Caching disabled for task ':generateRemapClasspath' because:
+  Build cache is disabled
+  Caching has not been enabled for the task
+Skipping task ':generateRemapClasspath' as it is up-to-date.
+Resolve mutations for :generateDLIConfig (Thread[#237,Execution worker Thread 5,5,main]) started.
+:generateDLIConfig (Thread[#237,Execution worker Thread 5,5,main]) started.
+
+> Task :generateDLIConfig UP-TO-DATE
+Caching disabled for task ':generateDLIConfig' because:
+  Build cache is disabled
+  Caching has not been enabled for the task
+Skipping task ':generateDLIConfig' as it is up-to-date.
+Resolve mutations for :configureLaunch (Thread[#237,Execution worker Thread 5,5,main]) started.
+:configureLaunch (Thread[#237,Execution worker Thread 5,5,main]) started.
+
+> Task :configureLaunch UP-TO-DATE
+Skipping task ':configureLaunch' as it has no actions.
+Resolve mutations for :prepareBiomePreviewRunDir (Thread[#237,Execution worker Thread 5,5,main]) started.
+:prepareBiomePreviewRunDir (Thread[#237,Execution worker Thread 5,5,main]) started.
+
+> Task :prepareBiomePreviewRunDir
+Caching disabled for task ':prepareBiomePreviewRunDir' because:
+  Build cache is disabled
+Task ':prepareBiomePreviewRunDir' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :runBiomePreview (Thread[#237,Execution worker Thread 5,5,main]) started.
+:runBiomePreview (Thread[#237,Execution worker Thread 5,5,main]) started.
+
+> Task :runBiomePreview
+Caching disabled for task ':runBiomePreview' because:
+  Build cache is disabled
+Task ':runBiomePreview' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+[runBiomePreview] translated latdev --args to JVM property: enabled=true;seed=2591890304012655616;size=small;step=16;emitbiomeindex=true;out=C:/Users/jscho/CascadeProjects/Latitude (Globe)/run/latdev/atlas
+Starting process 'command 'C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot\bin\java.exe''. Working directory: C:\Users\jscho\CascadeProjects\Latitude (Globe)\run-headless Command: C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot\bin\java.exe -Dfabric.dli.config=C:\Users\jscho\CascadeProjects\Latitude@@0020(Globe)\.gradle\loom-cache\launch.cfg -Dfabric.dli.env=server -Dfabric.dli.main=net.fabricmc.loader.impl.launch.knot.KnotServer -Dlatdev.biomePng=enabled=true;seed=2591890304012655616;size=small;step=16;emitbiomeindex=true;out=C:/Users/jscho/CascadeProjects/Latitude (Globe)/run/latdev/atlas @C:\Users\jscho\CascadeProjects\Latitude (Globe)\build\loom-cache\argFiles\runBiomePreview -Dfile.encoding=UTF-8 -Duser.country=US -Duser.language=en -Duser.variant net.fabricmc.devlaunchinjector.Main nogui
+Successfully started process 'command 'C:\Program Files\Eclipse Adoptium\jdk-21.0.10.7-hotspot\bin\java.exe''
+Picked up JAVA_TOOL_OPTIONS: -Dlatitude.audit.mangroveFinal=true -Dlatitude.mangrove.tidalMax=128 -Dlatitude.mangrove.maxYAboveSea=10
+[34m[07:20:13][m [32m[main/INFO][m [36m(FabricLoader/GameProvider)[m [0mLoading Minecraft 1.21.11 with Fabric Loader 0.17.3
+[m[34m[07:20:13][m [32m[main/INFO][m [36m(FabricLoader)[m [0mLoading 44 mods:
+	- fabric-api 0.140.2+1.21.11
+	- fabric-api-base 1.0.5+4ebb5c083e
+	- fabric-api-lookup-api-v1 1.6.113+1fb1cde93e
+	- fabric-biome-api-v1 17.1.1+4fc5413f3e
+	- fabric-block-api-v1 1.1.10+4ebb5c083e
+	- fabric-block-view-api-v2 1.0.39+4ebb5c083e
+	- fabric-command-api-v2 2.4.7+6b42a6003e
+	- fabric-content-registries-v0 10.2.14+4fc5413f3e
+	- fabric-convention-tags-v1 2.1.55+7f945d5b3e
+	- fabric-convention-tags-v2 2.17.3+8ef948ba3e
+	- fabric-crash-report-info-v1 0.3.23+4ebb5c083e
+	- fabric-data-attachment-api-v1 1.8.44+1fb1cde93e
+	- fabric-data-generation-api-v1 23.4.0+69974c4e3e
+	- fabric-dimensions-v1 4.0.28+4fc5413f3e
+	- fabric-entity-events-v1 3.0.5+4ebb5c083e
+	- fabric-events-interaction-v0 4.0.44+1fb1cde93e
+	- fabric-game-rule-api-v1 2.0.3+4fc5413f3e
+	- fabric-gametest-api-v1 3.1.27+4fc5413f3e
+	- fabric-item-api-v1 11.5.20+d0c46b9e3e
+	- fabric-item-group-api-v1 4.2.36+4fc5413f3e
+	- fabric-lifecycle-events-v1 2.6.15+4ebb5c083e
+	- fabric-loot-api-v2 3.0.73+3f89f5a53e
+	- fabric-loot-api-v3 2.0.20+78c8b4663e
+	- fabric-message-api-v1 6.1.12+4ebb5c083e
+	- fabric-networking-api-v1 5.1.5+ae1e07683e
+	- fabric-object-builder-api-v1 21.1.39+4fc5413f3e
+	- fabric-particles-v1 4.2.11+4fc5413f3e
+	- fabric-recipe-api-v1 8.2.3+4ebb5c083e
+	- fabric-registry-sync-v0 6.2.5+1718722b3e
+	- fabric-rendering-fluids-v1 3.1.43+4ebb5c083e
+	- fabric-resource-conditions-api-v1 5.0.35+4fc5413f3e
+	- fabric-resource-loader-v0 3.3.4+4fc5413f3e
+	- fabric-resource-loader-v1 1.0.10+78c8b4663e
+	- fabric-screen-handler-api-v1 1.3.161+4fc5413f3e
+	- fabric-serialization-api-v1 1.0.5+4ebb5c083e
+	- fabric-tag-api-v1 1.2.20+4fc5413f3e
+	- fabric-transfer-api-v1 6.0.24+4fc5413f3e
+	- fabric-transitive-access-wideners-v1 7.1.0+014c8cec3e
+	- fabricloader 0.17.3
+	- globe 1.2.6-beta.2+1.21.11
+	- java 21
+	- minecraft 1.21.11
+	- mixinextras 0.5.0
+	- placeholder-api 2.8.1+1.21.10
+[m[34m[07:20:14][m [32m[main/INFO][m [36m(FabricLoader/Mixin)[m [0mSpongePowered MIXIN Subsystem Version=0.8.7 Source=file:/C:/Users/jscho/.gradle/caches/modules-2/files-2.1/net.fabricmc/sponge-mixin/0.16.5+mixin.0.8.7/80fc3a9f592673cea87f4cd702f87991c6c9fe4d/sponge-mixin-0.16.5+mixin.0.8.7.jar Service=Knot/Fabric Env=SERVER
+[m[34m[07:20:14][m [32m[main/INFO][m [36m(FabricLoader/Mixin)[m [0mLoaded Fabric development mappings for mixin remapper!
+[m[34m[07:20:14][m [32m[main/INFO][m [36m(FabricLoader/Mixin)[m [0mCompatibility level set to JAVA_21
+[m[34m[07:20:14][m [33m[main/WARN][m [36m(FabricLoader/Mixin)[m [0mReference map 'globe.refmap.json' for globe.mixins.json could not be read. If this is a development environment you can ignore this message
+[m[34m[07:20:15][m [32m[main/INFO][m [36m(FabricLoader/MixinExtras|Service)[m [0mInitializing MixinExtras via com.llamalad7.mixinextras.service.MixinExtrasServiceImpl(version=0.5.0).
+[m[34m[07:20:24][m [32m[main/INFO][m [36m(globe)[m [0mglobe initialized. Use the globe:globe world preset for deterministic terrain.
+[m[34m[07:20:24][m [32m[main/INFO][m [36m(globe)[m [0m[LAT][BUILD] side=server version=1.2.6-beta.2+1.21.11 commit=? branch=? dirty=? time=?
+[m[34m[07:20:25][m [32m[main/INFO][m [36m(Minecraft)[m [0mEnvironment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, profilesHost=https://api.mojang.com, name=PROD]
+[m[34m[07:20:27][m [32m[main/INFO][m [36m(Minecraft)[m [0mLoaded 1470 recipes
+[m[34m[07:20:27][m [32m[main/INFO][m [36m(Minecraft)[m [0mLoaded 1584 advancements
+[m[34m[07:20:27][m [33m[main/WARN][m [36m(globe)[m [0m[Latitude] Frozen river vegetal enumeration empty; no VEGETAL_DECORATION features removed.
+[m[34m[07:20:27][m [32m[main/INFO][m [36m(globe)[m [0m[Latitude] Frozen river vegetal removal attempted=0 removed=0 step=VEGETAL_DECORATION
+[m[34m[07:20:27][m [32m[main/INFO][m [36m(BiomeModificationImpl)[m [0mApplied 1 biome modifications to 1 of 65 new biomes in 7.188 ms
+[m[34m[07:20:27][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mStarting minecraft server version 1.21.11
+[m[34m[07:20:27][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mLoading properties
+[m[34m[07:20:27][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mDefault game type: SURVIVAL
+[m[34m[07:20:27][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mGenerating keypair
+[m[34m[07:20:28][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mStarting Minecraft server on *:25565
+[m[34m[07:20:28][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mPreparing level "world"
+[m[34m[07:20:28][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mLoading 0 persistent chunks...
+[m[34m[07:20:28][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mPreparing spawn area: 100%
+[m[34m[07:20:28][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mTime elapsed: 67 ms
+[m[34m[07:20:28][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mDone (0.539s)! For help, type "help"
+[m[34m[07:20:28][m [32m[Server thread/INFO][m [36m(globe)[m [0m[latdev][headless] starting export seed=2591890304012655616 worldSeed=5625139733791301233 radius=5000 steps=[16] y=64 layers=biomes overlays=none emitBiomeIndex=true emitHeight=false out=C:\Users\jscho\CascadeProjects\Latitude (Globe)\run\latdev\atlas
+[m[34m[07:20:28][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0m[STDOUT]: [latdev][headless] starting export seed=2591890304012655616 worldSeed=5625139733791301233 radius=5000 steps=[16] y=64 layers=biomes overlays=none emitBiomeIndex=true emitHeight=false out=C:\Users\jscho\CascadeProjects\Latitude (Globe)\run\latdev\atlas
+[m[34m[07:20:28][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[Latitude] skipping previewHeight() for callerContext=SOURCE (atlas fast-path enabled)
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=1 x=4024 z=-1864 sea=63 surfY=62 oceanDist=184 cont=-0.182 ero=0.268 weird=0.387 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=2 x=4040 z=-1864 sea=63 surfY=62 oceanDist=184 cont=-0.185 ero=0.278 weird=0.297 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=3 x=4008 z=-1848 sea=63 surfY=62 oceanDist=200 cont=-0.094 ero=0.279 weird=0.363 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=4 x=4024 z=-1848 sea=63 surfY=62 oceanDist=200 cont=-0.113 ero=0.282 weird=0.331 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=5 x=4008 z=-1832 sea=63 surfY=62 oceanDist=216 cont=-0.013 ero=0.284 weird=0.312 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=6 x=4024 z=-1832 sea=63 surfY=62 oceanDist=216 cont=-0.009 ero=0.287 weird=0.269 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=7 x=4040 z=-1832 sea=63 surfY=62 oceanDist=216 cont=-0.102 ero=0.292 weird=0.191 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=8 x=4040 z=-1816 sea=63 surfY=62 oceanDist=232 cont=-0.011 ero=0.298 weird=0.128 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=9 x=4056 z=-1800 sea=63 surfY=62 oceanDist=248 cont=-0.010 ero=0.322 weird=-0.057 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=10 x=4072 z=-1800 sea=63 surfY=62 oceanDist=248 cont=-0.073 ero=0.324 weird=-0.067 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=11 x=4088 z=-1800 sea=63 surfY=62 oceanDist=248 cont=-0.083 ero=0.327 weird=-0.083 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=12 x=4104 z=-1800 sea=63 surfY=62 oceanDist=240 cont=-0.084 ero=0.345 weird=-0.154 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=13 x=4072 z=-1784 sea=63 surfY=62 oceanDist=256 cont=0.012 ero=0.347 weird=-0.154 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=14 x=4088 z=-1784 sea=63 surfY=62 oceanDist=256 cont=-0.032 ero=0.351 weird=-0.167 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=15 x=4104 z=-1784 sea=63 surfY=62 oceanDist=248 cont=-0.051 ero=0.364 weird=-0.187 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=16 x=4120 z=-1784 sea=63 surfY=62 oceanDist=233 cont=-0.110 ero=0.344 weird=-0.145 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=17 x=4088 z=-1768 sea=63 surfY=62 oceanDist=256 cont=-0.015 ero=0.377 weird=-0.215 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=18 x=4104 z=-1768 sea=63 surfY=62 oceanDist=249 cont=-0.044 ero=0.374 weird=-0.193 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=19 x=4120 z=-1768 sea=63 surfY=62 oceanDist=234 cont=-0.089 ero=0.361 weird=-0.144 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=20 x=4088 z=-1752 sea=63 surfY=62 oceanDist=256 cont=0.013 ero=0.395 weird=-0.244 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=21 x=4104 z=-1752 sea=63 surfY=62 oceanDist=249 cont=-0.014 ero=0.393 weird=-0.219 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=22 x=4120 z=-1752 sea=63 surfY=62 oceanDist=236 cont=-0.053 ero=0.378 weird=-0.170 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=23 x=4136 z=-1752 sea=63 surfY=62 oceanDist=222 cont=-0.108 ero=0.360 weird=-0.108 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=24 x=4104 z=-1736 sea=63 surfY=62 oceanDist=250 cont=-0.011 ero=0.405 weird=-0.219 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=25 x=4120 z=-1736 sea=63 surfY=62 oceanDist=237 cont=-0.062 ero=0.391 weird=-0.136 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=26 x=4136 z=-1736 sea=63 surfY=62 oceanDist=225 cont=-0.104 ero=0.376 weird=-0.078 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=27 x=4120 z=-1720 sea=63 surfY=62 oceanDist=239 cont=-0.026 ero=0.421 weird=-0.169 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=28 x=4136 z=-1720 sea=63 surfY=62 oceanDist=227 cont=-0.058 ero=0.413 weird=-0.107 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=29 x=4120 z=-1704 sea=63 surfY=62 oceanDist=240 cont=0.004 ero=0.433 weird=-0.188 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=30 x=4136 z=-1704 sea=63 surfY=62 oceanDist=230 cont=-0.035 ero=0.423 weird=-0.123 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=31 x=4152 z=-1704 sea=63 surfY=62 oceanDist=219 cont=-0.089 ero=0.412 weird=-0.056 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=32 x=4136 z=-1688 sea=63 surfY=62 oceanDist=232 cont=-0.005 ero=0.447 weird=-0.183 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=33 x=4152 z=-1688 sea=63 surfY=62 oceanDist=223 cont=-0.078 ero=0.422 weird=-0.067 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=34 x=4152 z=-1672 sea=63 surfY=62 oceanDist=226 cont=-0.022 ero=0.451 weird=-0.160 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=35 x=4168 z=-1672 sea=63 surfY=62 oceanDist=218 cont=-0.066 ero=0.433 weird=-0.090 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=36 x=4184 z=-1672 sea=63 surfY=62 oceanDist=209 cont=-0.097 ero=0.424 weird=-0.092 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=37 x=1608 z=-1656 sea=63 surfY=62 oceanDist=86 cont=-0.024 ero=0.284 weird=0.348 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=38 x=1656 z=-1656 sea=63 surfY=62 oceanDist=64 cont=-0.148 ero=0.228 weird=0.633 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=39 x=1672 z=-1656 sea=63 surfY=62 oceanDist=56 cont=-0.158 ero=0.218 weird=0.667 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=40 x=4168 z=-1656 sea=63 surfY=62 oceanDist=222 cont=-0.024 ero=0.458 weird=-0.188 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=41 x=4184 z=-1656 sea=63 surfY=62 oceanDist=215 cont=-0.038 ero=0.455 weird=-0.206 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=42 x=4200 z=-1656 sea=63 surfY=62 oceanDist=207 cont=-0.108 ero=0.427 weird=-0.144 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=43 x=1592 z=-1640 sea=63 surfY=62 oceanDist=81 cont=-0.004 ero=0.310 weird=0.118 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=44 x=1608 z=-1640 sea=63 surfY=62 oceanDist=75 cont=-0.048 ero=0.307 weird=0.215 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=45 x=1640 z=-1640 sea=63 surfY=62 oceanDist=62 cont=-0.138 ero=0.271 weird=0.448 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=46 x=1656 z=-1640 sea=63 surfY=62 oceanDist=55 cont=-0.161 ero=0.266 weird=0.456 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=47 x=1672 z=-1640 sea=63 surfY=62 oceanDist=49 cont=-0.163 ero=0.254 weird=0.502 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=48 x=4168 z=-1640 sea=63 surfY=62 oceanDist=227 cont=0.010 ero=0.478 weird=-0.295 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=49 x=4184 z=-1640 sea=63 surfY=62 oceanDist=220 cont=-0.041 ero=0.457 weird=-0.230 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=50 x=4200 z=-1640 sea=63 surfY=62 oceanDist=214 cont=-0.055 ero=0.451 weird=-0.227 robust=7 decision=REJECT
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=2000 x=-2088 z=-1432 sea=63 surfY=62 oceanDist=704 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:32][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=4000 x=4360 z=-1336 sea=63 surfY=62 oceanDist=61 cont=-0.132 ero=0.525 weird=0.412 robust=7 decision=REJECT
+[m[34m[07:20:33][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=6000 x=1080 z=-1240 sea=63 surfY=62 oceanDist=216 cont=0.074 ero=0.394 weird=-0.178 robust=7 decision=REJECT
+[m[34m[07:20:33][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=8000 x=-3080 z=-1144 sea=63 surfY=62 oceanDist=1020 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:33][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=10000 x=-2312 z=-1048 sea=63 surfY=62 oceanDist=776 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:33][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=12000 x=4024 z=-936 sea=63 surfY=62 oceanDist=193 cont=-0.092 ero=0.447 weird=-0.442 robust=7 decision=REJECT
+[m[34m[07:20:33][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=14000 x=-4936 z=-792 sea=63 surfY=62 oceanDist=65 cont=-0.120 ero=-0.105 weird=0.357 robust=7 decision=REJECT
+[m[34m[07:20:33][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=16000 x=3192 z=-664 sea=63 surfY=62 oceanDist=496 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:33][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=18000 x=3368 z=-520 sea=63 surfY=62 oceanDist=505 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:34][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=20000 x=-168 z=-376 sea=63 surfY=62 oceanDist=79 cont=-0.111 ero=-0.170 weird=0.405 robust=7 decision=REJECT
+[m[34m[07:20:34][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=22000 x=2568 z=-232 sea=63 surfY=62 oceanDist=544 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:34][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=24000 x=3048 z=-104 sea=63 surfY=62 oceanDist=1152 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:34][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=26000 x=-2264 z=24 sea=63 surfY=62 oceanDist=728 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:34][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=28000 x=-1512 z=120 sea=63 surfY=62 oceanDist=109 cont=0.057 ero=-0.202 weird=-0.530 robust=7 decision=REJECT
+[m[34m[07:20:34][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=30000 x=-2600 z=216 sea=63 surfY=62 oceanDist=472 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:34][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=32000 x=4744 z=296 sea=63 surfY=62 oceanDist=120 cont=-0.107 ero=0.417 weird=0.183 robust=7 decision=REJECT
+[m[34m[07:20:34][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=34000 x=2504 z=392 sea=63 surfY=62 oceanDist=576 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:35][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=36000 x=2024 z=488 sea=63 surfY=62 oceanDist=46 cont=0.093 ero=-0.503 weird=-0.432 robust=7 decision=REJECT
+[m[34m[07:20:35][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=38000 x=2488 z=584 sea=63 surfY=62 oceanDist=512 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:35][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=40000 x=2392 z=680 sea=63 surfY=62 oceanDist=512 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:35][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=42000 x=1512 z=776 sea=63 surfY=62 oceanDist=8 cont=0.583 ero=-0.141 weird=0.854 robust=7 decision=REJECT
+[m[34m[07:20:35][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=44000 x=4200 z=872 sea=63 surfY=62 oceanDist=256 cont=0.169 ero=0.062 weird=-0.226 robust=7 decision=REJECT
+[m[34m[07:20:35][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=46000 x=-3816 z=1016 sea=63 surfY=62 oceanDist=240 cont=0.025 ero=0.209 weird=0.576 robust=7 decision=REJECT
+[m[34m[07:20:36][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=48000 x=872 z=1160 sea=63 surfY=62 oceanDist=207 cont=0.011 ero=-0.037 weird=-0.419 robust=7 decision=REJECT
+[m[34m[07:20:36][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=50000 x=4472 z=1368 sea=63 surfY=62 oceanDist=376 cont=-0.176 ero=0.414 weird=0.217 robust=7 decision=ACCEPT
+[m[34m[07:20:42][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=52000 x=-1256 z=-1528 sea=63 surfY=62 oceanDist=248 cont=0.507 ero=0.166 weird=-0.172 robust=7 decision=REJECT
+[m[34m[07:20:42][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=54000 x=2776 z=-1400 sea=63 surfY=62 oceanDist=533 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:42][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=56000 x=-3848 z=-1288 sea=63 surfY=62 oceanDist=1265 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:42][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=58000 x=-680 z=-1208 sea=63 surfY=62 oceanDist=146 cont=-0.073 ero=0.008 weird=-0.930 robust=7 decision=REJECT
+[m[34m[07:20:42][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=60000 x=-2824 z=-1112 sea=63 surfY=62 oceanDist=1272 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:42][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=62000 x=-4168 z=-1000 sea=63 surfY=62 oceanDist=696 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:42][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=64000 x=2536 z=-888 sea=63 surfY=62 oceanDist=488 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:43][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=66000 x=-3848 z=-744 sea=63 surfY=62 oceanDist=992 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:43][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=68000 x=2984 z=-616 sea=63 surfY=62 oceanDist=700 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:43][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=70000 x=-3688 z=-456 sea=63 surfY=62 oceanDist=864 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:43][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=72000 x=-4872 z=-312 sea=63 surfY=62 oceanDist=56 cont=-0.102 ero=0.010 weird=0.301 robust=7 decision=REJECT
+[m[34m[07:20:43][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=74000 x=2408 z=-184 sea=63 surfY=62 oceanDist=432 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:43][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=76000 x=2536 z=-56 sea=63 surfY=62 oceanDist=688 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:43][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=78000 x=1784 z=56 sea=63 surfY=62 oceanDist=61 cont=0.223 ero=-0.537 weird=0.499 robust=7 decision=REJECT
+[m[34m[07:20:43][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=80000 x=952 z=152 sea=63 surfY=62 oceanDist=227 cont=0.453 ero=-0.411 weird=0.625 robust=7 decision=REJECT
+[m[34m[07:20:43][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=82000 x=-1928 z=248 sea=63 surfY=62 oceanDist=392 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:44][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=84000 x=5000 z=328 sea=63 surfY=62 oceanDist=38 cont=0.190 ero=0.511 weird=-0.364 robust=7 decision=REJECT
+[m[34m[07:20:44][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=86000 x=2952 z=424 sea=63 surfY=62 oceanDist=992 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:44][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=88000 x=2648 z=520 sea=63 surfY=62 oceanDist=608 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:44][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=90000 x=-4328 z=632 sea=63 surfY=62 oceanDist=24 cont=-0.024 ero=0.425 weird=-0.202 robust=7 decision=ACCEPT
+[m[34m[07:20:44][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=92000 x=3064 z=712 sea=63 surfY=62 oceanDist=1022 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:44][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=94000 x=3048 z=808 sea=63 surfY=62 oceanDist=988 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[m[34m[07:20:45][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=96000 x=840 z=920 sea=63 surfY=62 oceanDist=109 cont=-0.068 ero=-0.169 weird=0.068 robust=7 decision=REJECT
+[m[34m[07:20:45][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=98000 x=824 z=1064 sea=63 surfY=62 oceanDist=209 cont=-0.023 ero=-0.097 weird=-0.308 robust=7 decision=REJECT
+[m[34m[07:20:45][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=100000 x=-56 z=1224 sea=63 surfY=62 oceanDist=312 cont=0.204 ero=-0.471 weird=0.395 robust=7 decision=REJECT
+[m[34m[07:20:45][m [32m[Server thread/INFO][m [36m(LatitudeBiomes)[m [0m[mangrove-eval] n=102000 x=-328 z=1480 sea=63 surfY=62 oceanDist=240 cont=-0.188 ero=-0.433 weird=-0.508 robust=7 decision=REJECT
+[m[34m[07:20:48][m [32m[Server thread/INFO][m [36m(globe)[m [0m[latdev][headless] finished export step=16 file=C:\Users\jscho\CascadeProjects\Latitude (Globe)\run\latdev\atlas\seed_2591890304012655616\R5000\step16\biomes.png sidecar=C:\Users\jscho\CascadeProjects\Latitude (Globe)\run\latdev\atlas\seed_2591890304012655616\R5000\step16\biomes.txt image=626x626 samples=391876 durationMs=19804
+[m[34m[07:20:48][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0m[STDOUT]: [latdev][headless] finished export step=16 file=C:\Users\jscho\CascadeProjects\Latitude (Globe)\run\latdev\atlas\seed_2591890304012655616\R5000\step16\biomes.png sidecar=C:\Users\jscho\CascadeProjects\Latitude (Globe)\run\latdev\atlas\seed_2591890304012655616\R5000\step16\biomes.txt image=626x626 samples=391876 durationMs=19804
+[m[34m[07:20:48][m [32m[Server thread/INFO][m [36m(globe)[m [0m[latdev][headless] stopping server
+[m[34m[07:20:48][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mStopping server
+[m[34m[07:20:48][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mSaving players
+[m[34m[07:20:48][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mSaving worlds
+[m[34m[07:20:48][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mSaving chunks for level 'ServerLevel[world]'/minecraft:overworld
+[m[34m[07:20:48][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mSaving chunks for level 'ServerLevel[world]'/minecraft:the_nether
+[m[34m[07:20:48][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mSaving chunks for level 'ServerLevel[world]'/minecraft:the_end
+[m[34m[07:20:48][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mThreadedAnvilChunkStorage (world): All chunks are saved
+[m[34m[07:20:48][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[m[34m[07:20:48][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[m[34m[07:20:48][m [32m[Server thread/INFO][m [36m(Minecraft)[m [0mThreadedAnvilChunkStorage: All dimensions are saved
+[m
+[Incubating] Problems report is available at: file:///C:/Users/jscho/CascadeProjects/Latitude%20(Globe)/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.2.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 47s
+7 actionable tasks: 2 executed, 5 up-to-date
+Watched directory hierarchies: [C:\Users\jscho\CascadeProjects\Latitude (Globe)]
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.2.0/userguide/configuration_cache_enabling.html

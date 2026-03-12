@@ -1,0 +1,43 @@
+WSAV post-override final-path audit
+
+Question:
+- If WSAV override logs fire on step16 lattice coordinates, why does the atlas inventory still record zero sampled windswept_savanna?
+
+What was traced:
+- Final atlas path in LatitudeBiomes.pick(...)
+- Exact lattice coordinates near the plateau corridor:
+  - 4120,-1560
+  - 4136,-1560
+  - 4152,-1560
+  - 4168,-1560
+  - 4184,-1560
+  - and the same x values at z=-1544
+
+Atlas path fact:
+- src/main/java/com/example/globe/dev/BiomeSamplerTools.java calls:
+  - LatitudeBiomes.pick(... callerContext="ATLAS_SAMPLER" ...)
+- inventory capture records the final biome returned from that call
+
+Final-path trace result:
+- The traced coordinates never became windswept_savanna in the final atlas path.
+- Representative lines from run-headless/logs/latest.log:
+  - x=4152 z=-1560 stage=post_pick biome=minecraft:savanna_plateau
+  - x=4152 z=-1560 stage=post_savanna_gate biome=minecraft:savanna_plateau
+  - x=4152 z=-1560 stage=post_land_band_pool biome=minecraft:savanna_plateau
+  - x=4152 z=-1560 stage=post_final_savanna_clamp biome=minecraft:savanna_plateau
+  - x=4152 z=-1560 stage=final_return biome=minecraft:savanna_plateau
+- Likewise:
+  - 4168,-1560 -> final_return = minecraft:savanna_plateau
+  - 4184,-1560 -> final_return = minecraft:savanna_plateau
+  - 4120,-1560 -> final_return = minecraft:savanna
+  - 4136,-1560 -> final_return = minecraft:savanna
+
+Conclusion:
+- The zero-WSAV sampled inventory is NOT a step16 lattice miss.
+- It is also NOT a later rewrite after a WSAV atlas final pick at these traced coordinates.
+- For these exact plateau-corridor lattice cells, the real atlas final path never returns windswept_savanna in the first place.
+
+Implication:
+- The earlier [LAT][WSAV_S2_OVERRIDE] logs came from an experiment-specific upstream decision point, not from the final biome value that inventory capture records in the reverted/current code path.
+- The unresolved mismatch is therefore not “inventory missed WSAV after final selection”.
+- The next valid slice is to compare the exact override log site against the final atlas path under the same patched experiment, or to re-run the override experiment with this final-path tracing left in place.

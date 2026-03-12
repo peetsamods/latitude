@@ -1,0 +1,44 @@
+MEADOW STATIC AUDIT
+
+Repo root:
+Branch:
+Commit:
+Tree status:
+Tag(s) at HEAD:
+
+Question 1  First admission point
+- function:
+- line range:
+- exact condition(s):
+- pool/tag/path:
+
+Question 2  Required survival gates
+- band gate:
+- terrain / mountain gate:
+- humidity gate:
+- rarity / weighted-roll gate:
+- special override dependency:
+- comparison competitors:
+
+Question 3  Late demotion or rewrite paths
+- function:
+- line range:
+- trigger:
+- output biome(s):
+
+Question 4  Policy/tag check
+- authoritative allowed bands:
+- live tag membership:
+- contradictory pool membership present?:
+
+Question 5  Primary choke classification
+- [ ] never admitted
+- [ ] loses weighting
+- [ ] late rewrite
+- [ ] clean / present
+- primary evidence:
+
+Question 6  Smallest future patch
+- one function only:
+- one behavior only:
+- expected movement:

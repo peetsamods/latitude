@@ -1,0 +1,55 @@
+WSAV override vs final path audit
+
+Question:
+- In the same patched run, do the exact WSAV override cells survive to the final atlas biome recorded by inventory capture?
+
+Patched run:
+- Atlas run: 20260309-212234
+- Log file: run-headless/wsav_override_plus_final_trace_run.txt
+- Debug flags:
+  - latitude.debug.wsavS2Override=true
+  - latitude.debug.wsavFinalPath=true
+
+Atlas path fact:
+- BiomeSamplerTools.scanGrid(...) records the final return value of LatitudeBiomes.pick(... callerContext="ATLAS_SAMPLER")
+
+Decisive result:
+- The override does fire on exact step16 lattice cells and produces windswept_savanna at post_pick.
+- Those same cells are later changed by the final savanna clamp before the sampler records them.
+
+Representative coordinates:
+- x=4152 z=-1560
+  - [LAT][WSAV_S2_OVERRIDE] ... chosen=minecraft:windswept_savanna
+  - [LAT][WSAV_FINAL_PATH] ... stage=post_pick biome=minecraft:windswept_savanna
+  - [LAT][WSAV_FINAL_PATH] ... stage=post_savanna_gate biome=minecraft:windswept_savanna
+  - [LAT][WSAV_FINAL_PATH] ... stage=post_land_band_pool biome=minecraft:windswept_savanna
+  - [LAT][WSAV_FINAL_PATH] ... stage=post_final_savanna_clamp biome=minecraft:savanna
+  - [LAT][WSAV_FINAL_PATH] ... stage=final_return biome=minecraft:savanna
+
+- x=4168 z=-1560
+  - same pattern:
+  - post_pick = minecraft:windswept_savanna
+  - post_final_savanna_clamp = minecraft:savanna
+  - final_return = minecraft:savanna
+
+- x=4184 z=-1560
+  - same pattern:
+  - post_pick = minecraft:windswept_savanna
+  - post_final_savanna_clamp = minecraft:savanna
+  - final_return = minecraft:savanna
+
+Equivalent pattern at z=-1544:
+- x=4168 z=-1544 -> windswept_savanna before final clamp, savanna after final clamp
+- x=4184 z=-1544 -> windswept_savanna before final clamp, savanna after final clamp
+
+Conclusion:
+- The zero-WSAV inventory result is not a sampling artifact.
+- It is not caused by missing the override site.
+- In the patched experiment, the remaining blocker is explicit:
+  - applyFinalSavannaClimateClamp(...)
+  - converts those exact overridden WSAV cells to minecraft:savanna before final return and inventory capture
+
+Implication:
+- The previously rejected "preserve rugged savanna through final clamp" idea needs to be reconsidered, but now with exact proof:
+  - the relevant bug is not speculative anymore
+  - the final savanna clamp is definitely flattening genuine WSAV picks on these lattice cells

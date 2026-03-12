@@ -1,0 +1,27 @@
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:896:RegistryEntry<Biome> oceanPick = oceanByLatitudeBandOrBase(biomeRegistry, base, blockX, blockZ, bandIndex);
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:897:RegistryEntry<Biome> out = mushroomIslandOverride(biomeRegistry, oceanPick, blockX, blockZ);
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:974:// Do not allow swamp/mangrove overrides on ocean picks.
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1125:RegistryEntry<Biome> oceanPick = oceanByLatitudeBandOrBase(biomePool, base, blockX, blockZ, bandIndex);
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1126:RegistryEntry<Biome> out = mushroomIslandOverride(biomePool, oceanPick, blockX, blockZ);
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1446:return pickFromTagNoiseOrFallback(biomes, LAT_OCEAN_TROPICAL, blockX, blockZ, 20,
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1448:"minecraft:lukewarm_ocean",
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1449:"minecraft:deep_lukewarm_ocean");
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1452:return pickFromTagNoiseOrFallback(biomes, LAT_OCEAN_TEMPERATE, blockX, blockZ, 21,
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1457:return pickFromTagNoiseOrFallback(biomes, LAT_OCEAN_SUBPOLAR, blockX, blockZ, 22,
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1461:return pickFromTagNoiseOrFallback(biomes, LAT_OCEAN_POLAR, blockX, blockZ, 23,
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1468:return pickFromTagNoiseOrFallback(biomes, base, LAT_OCEAN_TROPICAL, blockX, blockZ, 20,
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1470:"minecraft:lukewarm_ocean",
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1471:"minecraft:deep_lukewarm_ocean");
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1474:return pickFromTagNoiseOrFallback(biomes, base, LAT_OCEAN_TEMPERATE, blockX, blockZ, 21,
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1479:return pickFromTagNoiseOrFallback(biomes, base, LAT_OCEAN_SUBPOLAR, blockX, blockZ, 22,
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1483:return pickFromTagNoiseOrFallback(biomes, base, LAT_OCEAN_POLAR, blockX, blockZ, 23,
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1488:private static RegistryEntry<Biome> mushroomIslandOverride(Registry<Biome> biomes, RegistryEntry<Biome> oceanPick, int blockX, int blockZ) {
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1489:if (!isDeepOcean(oceanPick)) {
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1490:return oceanPick;
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1497:return oceanPick;
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1503:return oceanPick;
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1507:private static RegistryEntry<Biome> mushroomIslandOverride(Collection<RegistryEntry<Biome>> biomes, RegistryEntry<Biome> oceanPick, int blockX, int blockZ) {
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1508:if (!isDeepOcean(oceanPick)) {
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1509:return oceanPick;
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1516:return oceanPick;
+C:\Users\jscho\CascadeProjects\Latitude (Globe)\src\main\java\com\example\globe\world\LatitudeBiomes.java:1520:return entry != null ? entry : oceanPick;

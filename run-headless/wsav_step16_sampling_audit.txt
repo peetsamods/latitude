@@ -1,0 +1,53 @@
+WSAV step16 sampling audit
+Run examined: 20260309-204344
+
+Question:
+- Did the step16 atlas inventory miss logged WSAV override cells because they were off the sample lattice?
+
+Exporter/source of truth:
+- src/main/java/com/example/globe/dev/BiomeSamplerTools.java
+- scanGrid(...) iterates:
+  - for (blockZ = -radiusBlocks; blockZ <= radiusBlocks; blockZ += stepBlocks)
+  - for (blockX = -radiusBlocks; blockX <= radiusBlocks; blockX += stepBlocks)
+- For this run:
+  - radiusBlocks = 5000
+  - stepBlocks = 16
+  - discoveryStepUsed = 16
+
+Therefore the step16 lattice is:
+- x = -5000 + 16k
+- z = -5000 + 16m
+- equivalently, sampled coordinates satisfy x mod 16 = 8 and z mod 16 = 8
+
+Override evidence source:
+- run-headless/wsav_step2_secondary_pair_override_run.txt
+- pattern searched:
+  - [LAT][WSAV_S2_OVERRIDE] ... chosen=minecraft:windswept_savanna
+
+Key result:
+- Total logged WSAV override coordinates from that run: 252
+- Coordinates on the step16 lattice: 252
+- Coordinates off the step16 lattice: 0
+
+Representative override coordinates on the step16 lattice:
+- 4152,-1560
+- 4168,-1560
+- 4184,-1560
+- 2568,-1592
+- 3944,-1592
+
+Relevant inventory result from the same run:
+- run-headless/latdev/atlas-runs/20260309-204344/step16_world_biome_inventory.json
+- No sampled minecraft:windswept_savanna entry was recorded
+- Relevant sampled counts were:
+  - savanna = 28976
+  - savanna_plateau = 1703
+
+Conclusion:
+- The zero-WSAV step16 inventory result is NOT a sample-lattice coverage artifact.
+- The logged WSAV override cells were already aligned to the exact step16 lattice used by the exporter.
+- Because step16 should have sampled those coordinates, the remaining mismatch must be later than simple lattice coverage.
+
+Most likely next slice:
+- Inspect whether [LAT][WSAV_S2_OVERRIDE] is being logged upstream of the final atlas biome recorded by inventory capture.
+- In other words: compare the override log site against the exact final biome value written into the inventory path for the same coordinates.
