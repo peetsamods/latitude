@@ -1,0 +1,94 @@
+Ocean / frozen-river boundary audit
+=====================================
+- Repo root:  C:\Users\jscho\CascadeProjects\Latitude (Globe)
+- Branch:     fix/wsav-override-plus-final-clamp
+- HEAD:       86057297
+- Date:       2026-03-14
+
+OCEAN SELECTION ENTRYPOINT
+---------------------------
+  File:    src/main/java/com/example/globe/world/LatitudeBiomes.java
+  Path (Registry):   pick() line ~1151 → oceanByLatitudeBandOrBase(biomeRegistry, base, blockX, blockZ, bandIndex)
+  Path (Collection): pick() line ~1455 → oceanByLatitudeBandOrBase(biomePool, base, blockX, blockZ, bandIndex)
+  Function: oceanByLatitudeBandOrBase() line 1822/1849
+    bandIndex == 0 → warm/lukewarm ocean (tropical)
+    bandIndex == 1 || 2 → ocean/deep_ocean (subtropical/temperate)
+    bandIndex == 3 → cold/deep_cold_ocean (subpolar)
+    bandIndex >= 4 → frozen/deep_frozen_ocean (polar)
+
+FROZEN-RIVER ENTRYPOINT
+------------------------
+  File:    src/main/java/com/example/globe/world/LatitudeBiomes.java
+  Path (Registry):   pick() line ~1130 → if (bandIndex >= 3) frozen_river
+  Path (Collection): pick() line ~1443 → if (bandIndex >= 3) frozen_river
+
+OCEAN/RIVER CLIMATE AUTHORITY
+------------------------------
+  Both use:
+    tBase = abs(blockZ) / effectiveRadius
+    t     = applyBoundaryJitter(blockX, blockZ, effectiveRadius, tBase)
+    band  = bandForAbsLatFraction(t)                    ← from JITTERED t
+    bandIndex = bandIndexForBand(band)                  ← hard integer snap
+
+  applyBoundaryJitter:
+    amplitude:  clamp(radius * 0.03, 120, 700) blocks  → ~150 blocks at R=5000
+    wavelength: clamp(radius * 0.45, 2600, 12000) blocks → 2600 blocks at R=5000
+    Effect: long-wave (~2600 block) sinusoidal roughness on the boundary position.
+    Within each wave segment, the boundary is still a single-pixel-precision hard cutoff.
+
+LAND CLIMATE AUTHORITY (for comparison)
+-----------------------------------------
+  File:    src/main/java/com/example/globe/world/LatitudeBiomes.java
+  Path:    pick() line ~1158 → int landBandIndex = latitudeBandIndexWithBlend(...)
+  Function: latitudeBandIndexWithBlend() line 1970
+
+  latitudeBandIndexWithBlend uses BOTH:
+    1. The jittered t (same coarse noise as ocean/river)
+    2. ADDITIONAL: BLEND_TRANSITION_WIDTH_BLOCKS = 1408-block stochastic mixing zone
+       with warp noise (WARP_AMPLITUDE_BLOCKS = 420) and per-pixel blob noise.
+       Creates genuinely organic, pixel-level noisy boundaries.
+
+MISMATCH CONFIRMED — RULER-STRAIGHT EDGES
+------------------------------------------
+  Ocean and frozen_river use bandIndex (jitter only, hard integer snap).
+  Land uses latitudeBandIndexWithBlend (jitter + 1408-block stochastic blend).
+
+  The contrast causes:
+  - Ocean band edges: wavy at large scale (2600-block wavelength) but hard-cutoff
+    at fine scale (within each wave segment, ruler-straight at pixel level).
+  - Land band edges: pixel-level organic mixing in a 1408-block transition zone.
+  - Visible artifact: ruler-straight temperature transitions at ocean/river band
+    boundaries (tropical→subtropical ocean, subpolar→polar frozen_river) despite
+    land nearby having blended edges.
+
+PLANNED FIX
+-----------
+  Narrowest change: compute blendedBandIndex = latitudeBandIndexWithBlend(...)
+  ONCE, after the beach early-return and before the river/ocean checks.
+  Use it for river freeze threshold and ocean type selection.
+  Also reuse it as landBandIndex (eliminating the duplicate call).
+  Both pick() overloads (Registry and Collection) get the same fix.
+  Touch: LatitudeBiomes.java only. 6 lines changed across both overloads.
+
+  Files to change: src/main/java/com/example/globe/world/LatitudeBiomes.java
+
+POST-FIX OUTCOME
+-----------------
+  Files changed: src/main/java/com/example/globe/world/LatitudeBiomes.java
+    Registry pick() (~line 1126): +4 lines (blendedBandIndex hoist + comment), -2 lines (bandIndex refs)
+    Collection pick() (~line 1443): +4 lines (blendedBandIndex hoist + comment), -2 lines (bandIndex refs)
+    Net: +8 / -4 lines, 6 lines logically changed
+
+  Build proof:
+    compileJava: BUILD SUCCESSFUL (37s)
+    build:       BUILD SUCCESSFUL (34s)
+    atlas proof: 391,876 samples, 51 biomes, step=16 — PASSED
+
+  Atlas run: run-headless/latdev/atlas-runs/20260314-110757/
+  Commit: (see git log — tag save/ocean-frozen-river-boundaries-softened)
+
+  Water-side band authority is now ALIGNED with land:
+    Ocean band edges    → blendedBandIndex (jitter + 1408-block stochastic blend)
+    Frozen-river cutoff → blendedBandIndex (jitter + 1408-block stochastic blend)
+    Land band edges     → blendedBandIndex (same variable, no duplicate call)
+  Ruler-straight ocean/frozen-river band edges eliminated.
