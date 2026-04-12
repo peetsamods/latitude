@@ -1,0 +1,4 @@
+pickSubpolarWithRamp() — chooses snowy vs non-snow subpolar pool using pSnow and weighted roll; likely origin of missing snow.
+enforceSnowyLatitudeRamp() — dithered acceptance/removal of snowy variants between 56–66 deg; could rewrite snowy picks away.
+Main land pick return (subpolar branch) — final biome after overrides; helps see if snowy picks survive.
+Hypothesis: snowy pool rarely selected (pSnow too low or band blend keeping us temperate), or snowy picks are accepted but later overwritten by ramp rejection.

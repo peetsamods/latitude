@@ -1,0 +1,4 @@
+Seed 2591890304012655616, step16, radius 5000.
+Target band (58–62 deg ~= |z| 3220..3445): inventory shows non-snow biomes (plains/forest) first seen at ~58N; taiga at ~64N. Snowy biomes first appear much later: snowy_plains at ~73N (z -4072), snowy_taiga at ~77N (z -4296). No snowy hits in the 58–62 zone.
+Controlling logic: pickSubpolarWithRamp() selects snowy_pool via subpolarSnowProbability; enforceSnowyLatitudeRamp() allows snowy picks with alpha ramp 56–66 deg. Despite that, snowy variants do not occur until well past polar start (66.5), indicating shoulder too warm or band selection bias keeps temperate picks in subpolar latitudes.
+Classification today: too warm / snow arrives late.

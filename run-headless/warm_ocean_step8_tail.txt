@@ -1,0 +1,181 @@
+[07:27:43] [main/INFO] (FabricLoader/GameProvider) Loading Minecraft 1.21.11 with Fabric Loader 0.17.3
+[07:27:43] [main/INFO] (FabricLoader) Loading 44 mods:
+	- fabric-api 0.140.2+1.21.11
+	- fabric-api-base 1.0.5+4ebb5c083e
+	- fabric-api-lookup-api-v1 1.6.113+1fb1cde93e
+	- fabric-biome-api-v1 17.1.1+4fc5413f3e
+	- fabric-block-api-v1 1.1.10+4ebb5c083e
+	- fabric-block-view-api-v2 1.0.39+4ebb5c083e
+	- fabric-command-api-v2 2.4.7+6b42a6003e
+	- fabric-content-registries-v0 10.2.14+4fc5413f3e
+	- fabric-convention-tags-v1 2.1.55+7f945d5b3e
+	- fabric-convention-tags-v2 2.17.3+8ef948ba3e
+	- fabric-crash-report-info-v1 0.3.23+4ebb5c083e
+	- fabric-data-attachment-api-v1 1.8.44+1fb1cde93e
+	- fabric-data-generation-api-v1 23.4.0+69974c4e3e
+	- fabric-dimensions-v1 4.0.28+4fc5413f3e
+	- fabric-entity-events-v1 3.0.5+4ebb5c083e
+	- fabric-events-interaction-v0 4.0.44+1fb1cde93e
+	- fabric-game-rule-api-v1 2.0.3+4fc5413f3e
+	- fabric-gametest-api-v1 3.1.27+4fc5413f3e
+	- fabric-item-api-v1 11.5.20+d0c46b9e3e
+	- fabric-item-group-api-v1 4.2.36+4fc5413f3e
+	- fabric-lifecycle-events-v1 2.6.15+4ebb5c083e
+	- fabric-loot-api-v2 3.0.73+3f89f5a53e
+	- fabric-loot-api-v3 2.0.20+78c8b4663e
+	- fabric-message-api-v1 6.1.12+4ebb5c083e
+	- fabric-networking-api-v1 5.1.5+ae1e07683e
+	- fabric-object-builder-api-v1 21.1.39+4fc5413f3e
+	- fabric-particles-v1 4.2.11+4fc5413f3e
+	- fabric-recipe-api-v1 8.2.3+4ebb5c083e
+	- fabric-registry-sync-v0 6.2.5+1718722b3e
+	- fabric-rendering-fluids-v1 3.1.43+4ebb5c083e
+	- fabric-resource-conditions-api-v1 5.0.35+4fc5413f3e
+	- fabric-resource-loader-v0 3.3.4+4fc5413f3e
+	- fabric-resource-loader-v1 1.0.10+78c8b4663e
+	- fabric-screen-handler-api-v1 1.3.161+4fc5413f3e
+	- fabric-serialization-api-v1 1.0.5+4ebb5c083e
+	- fabric-tag-api-v1 1.2.20+4fc5413f3e
+	- fabric-transfer-api-v1 6.0.24+4fc5413f3e
+	- fabric-transitive-access-wideners-v1 7.1.0+014c8cec3e
+	- fabricloader 0.17.3
+	- globe 1.2.6-beta.2+1.21.11
+	- java 21
+	- minecraft 1.21.11
+	- mixinextras 0.5.0
+	- placeholder-api 2.8.1+1.21.10
+[07:27:43] [main/INFO] (FabricLoader/Mixin) SpongePowered MIXIN Subsystem Version=0.8.7 Source=file:/C:/Users/jscho/.gradle/caches/modules-2/files-2.1/net.fabricmc/sponge-mixin/0.16.5+mixin.0.8.7/80fc3a9f592673cea87f4cd702f87991c6c9fe4d/sponge-mixin-0.16.5+mixin.0.8.7.jar Service=Knot/Fabric Env=SERVER
+[07:27:44] [main/INFO] (FabricLoader/Mixin) Loaded Fabric development mappings for mixin remapper!
+[07:27:44] [main/INFO] (FabricLoader/Mixin) Compatibility level set to JAVA_21
+[07:27:44] [main/WARN] (FabricLoader/Mixin) Reference map 'globe.refmap.json' for globe.mixins.json could not be read. If this is a development environment you can ignore this message
+[07:27:45] [main/INFO] (FabricLoader/MixinExtras|Service) Initializing MixinExtras via com.llamalad7.mixinextras.service.MixinExtrasServiceImpl(version=0.5.0).
+[07:27:58] [main/INFO] (globe) globe initialized. Use the globe:globe world preset for deterministic terrain.
+[07:27:58] [main/INFO] (globe) [LAT][BUILD] side=server version=1.2.6-beta.2+1.21.11 commit=? branch=? dirty=? time=?
+[07:27:58] [main/INFO] (Minecraft) Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, profilesHost=https://api.mojang.com, name=PROD]
+[07:28:02] [main/INFO] (Minecraft) Loaded 1470 recipes
+[07:28:02] [main/INFO] (Minecraft) Loaded 1584 advancements
+[07:28:02] [main/WARN] (globe) [Latitude] Frozen river vegetal enumeration empty; no VEGETAL_DECORATION features removed.
+[07:28:02] [main/INFO] (globe) [Latitude] Frozen river vegetal removal attempted=0 removed=0 step=VEGETAL_DECORATION
+[07:28:02] [main/INFO] (BiomeModificationImpl) Applied 1 biome modifications to 1 of 65 new biomes in 26.58 ms
+[07:28:02] [Server thread/INFO] (Minecraft) Starting minecraft server version 1.21.11
+[07:28:02] [Server thread/INFO] (Minecraft) Loading properties
+[07:28:02] [Server thread/INFO] (Minecraft) Default game type: SURVIVAL
+[07:28:02] [Server thread/INFO] (Minecraft) Generating keypair
+[07:28:02] [Server thread/INFO] (Minecraft) Starting Minecraft server on *:25565
+[07:28:03] [Server thread/INFO] (Minecraft) Preparing level "world"
+[07:28:03] [Server thread/INFO] (Minecraft) Loading 0 persistent chunks...
+[07:28:03] [Server thread/INFO] (Minecraft) Preparing spawn area: 100%
+[07:28:03] [Server thread/INFO] (Minecraft) Time elapsed: 87 ms
+[07:28:03] [Server thread/INFO] (Minecraft) Done (0.674s)! For help, type "help"
+[07:28:03] [Server thread/INFO] (globe) [latdev][headless] starting export seed=-5103687410525530945 worldSeed=5625139733791301233 radius=5000 steps=[16] y=64 layers=biomes overlays=none emitBiomeIndex=true emitHeight=false out=C:\Users\jscho\CascadeProjects\Latitude (Globe)\run\latdev\atlas
+[07:28:03] [Server thread/INFO] (Minecraft) [STDOUT]: [latdev][headless] starting export seed=-5103687410525530945 worldSeed=5625139733791301233 radius=5000 steps=[16] y=64 layers=biomes overlays=none emitBiomeIndex=true emitHeight=false out=C:\Users\jscho\CascadeProjects\Latitude (Globe)\run\latdev\atlas
+[07:28:03] [Server thread/INFO] (LatitudeBiomes) [Latitude] skipping previewHeight() for callerContext=SOURCE (atlas fast-path enabled)
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=1 x=-2632 z=-1832 sea=63 surfY=62 oceanDist=328 cont=-0.103 ero=0.316 weird=0.144 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=2 x=-2616 z=-1832 sea=63 surfY=62 oceanDist=312 cont=-0.095 ero=0.308 weird=0.272 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=3 x=-2600 z=-1832 sea=63 surfY=62 oceanDist=296 cont=-0.106 ero=0.310 weird=0.268 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=4 x=-2584 z=-1832 sea=63 surfY=62 oceanDist=280 cont=-0.137 ero=0.302 weird=0.361 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=5 x=-2328 z=-1832 sea=63 surfY=62 oceanDist=60 cont=-0.155 ero=0.237 weird=0.316 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=6 x=-2312 z=-1832 sea=63 surfY=62 oceanDist=47 cont=-0.108 ero=0.239 weird=0.233 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=7 x=-2296 z=-1832 sea=63 surfY=62 oceanDist=48 cont=-0.051 ero=0.237 weird=0.176 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=8 x=-2280 z=-1832 sea=63 surfY=62 oceanDist=64 cont=-0.032 ero=0.232 weird=0.147 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=9 x=-2168 z=-1832 sea=63 surfY=62 oceanDist=176 cont=-0.020 ero=0.268 weird=-0.061 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=10 x=-2152 z=-1832 sea=63 surfY=62 oceanDist=192 cont=-0.005 ero=0.265 weird=-0.067 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=11 x=-2136 z=-1832 sea=63 surfY=62 oceanDist=208 cont=0.002 ero=0.262 weird=-0.069 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=12 x=-2680 z=-1816 sea=63 surfY=62 oceanDist=376 cont=-0.047 ero=0.326 weird=-0.109 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=13 x=-2584 z=-1816 sea=63 surfY=62 oceanDist=280 cont=-0.151 ero=0.314 weird=0.287 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=14 x=-2328 z=-1816 sea=63 surfY=62 oceanDist=46 cont=-0.179 ero=0.238 weird=0.356 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=15 x=-2312 z=-1816 sea=63 surfY=62 oceanDist=31 cont=-0.138 ero=0.241 weird=0.294 robust=7 decision=ACCEPT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=16 x=-2296 z=-1816 sea=63 surfY=62 oceanDist=32 cont=-0.090 ero=0.242 weird=0.255 robust=7 decision=ACCEPT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=17 x=-2280 z=-1816 sea=63 surfY=62 oceanDist=48 cont=-0.044 ero=0.240 weird=0.208 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=18 x=-2264 z=-1816 sea=63 surfY=62 oceanDist=64 cont=-0.017 ero=0.242 weird=0.228 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=19 x=-2184 z=-1816 sea=63 surfY=62 oceanDist=144 cont=-0.020 ero=0.273 weird=-0.054 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=20 x=-2168 z=-1816 sea=63 surfY=62 oceanDist=160 cont=-0.001 ero=0.282 weird=-0.081 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=21 x=-2152 z=-1816 sea=63 surfY=62 oceanDist=176 cont=0.014 ero=0.289 weird=-0.094 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=22 x=-2136 z=-1816 sea=63 surfY=62 oceanDist=192 cont=0.014 ero=0.288 weird=-0.085 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=23 x=-2120 z=-1816 sea=63 surfY=62 oceanDist=208 cont=0.015 ero=0.288 weird=-0.084 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=24 x=-2104 z=-1816 sea=63 surfY=62 oceanDist=224 cont=0.000 ero=0.282 weird=-0.057 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=25 x=-2680 z=-1800 sea=63 surfY=62 oceanDist=376 cont=-0.034 ero=0.333 weird=-0.155 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=26 x=-2664 z=-1800 sea=63 surfY=62 oceanDist=360 cont=-0.081 ero=0.330 weird=-0.093 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=27 x=-2648 z=-1800 sea=63 surfY=62 oceanDist=344 cont=-0.087 ero=0.338 weird=-0.061 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=28 x=-2568 z=-1800 sea=63 surfY=62 oceanDist=264 cont=-0.164 ero=0.311 weird=0.342 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=29 x=-2552 z=-1800 sea=63 surfY=62 oceanDist=248 cont=-0.184 ero=0.307 weird=0.379 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=30 x=-2312 z=-1800 sea=63 surfY=62 oceanDist=16 cont=-0.153 ero=0.241 weird=0.376 robust=7 decision=ACCEPT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=31 x=-2296 z=-1800 sea=63 surfY=62 oceanDist=16 cont=-0.081 ero=0.243 weird=0.325 robust=7 decision=ACCEPT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=32 x=-2280 z=-1800 sea=63 surfY=62 oceanDist=32 cont=-0.036 ero=0.243 weird=0.264 robust=7 decision=ACCEPT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=33 x=-2264 z=-1800 sea=63 surfY=62 oceanDist=48 cont=-0.027 ero=0.244 weird=0.276 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=34 x=-2248 z=-1800 sea=63 surfY=62 oceanDist=64 cont=-0.002 ero=0.246 weird=0.201 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=35 x=-2232 z=-1800 sea=63 surfY=62 oceanDist=80 cont=0.002 ero=0.251 weird=0.140 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=36 x=-2216 z=-1800 sea=63 surfY=62 oceanDist=96 cont=-0.000 ero=0.263 weird=0.061 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=37 x=-2104 z=-1800 sea=63 surfY=62 oceanDist=208 cont=-0.007 ero=0.306 weird=-0.062 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=38 x=-2680 z=-1784 sea=63 surfY=62 oceanDist=368 cont=0.009 ero=0.339 weird=-0.200 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=39 x=-2664 z=-1784 sea=63 surfY=62 oceanDist=352 cont=-0.051 ero=0.340 weird=-0.140 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=40 x=-2648 z=-1784 sea=63 surfY=62 oceanDist=336 cont=-0.067 ero=0.345 weird=-0.095 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=41 x=-2568 z=-1784 sea=63 surfY=62 oceanDist=256 cont=-0.173 ero=0.319 weird=0.285 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=42 x=-2552 z=-1784 sea=63 surfY=62 oceanDist=240 cont=-0.182 ero=0.316 weird=0.289 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=43 x=-2536 z=-1784 sea=63 surfY=62 oceanDist=225 cont=-0.183 ero=0.306 weird=0.377 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=44 x=-2312 z=-1784 sea=63 surfY=62 oceanDist=8 cont=-0.176 ero=0.243 weird=0.437 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=45 x=-2296 z=-1784 sea=63 surfY=62 oceanDist=8 cont=-0.093 ero=0.246 weird=0.385 robust=7 decision=ACCEPT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=46 x=-2280 z=-1784 sea=63 surfY=62 oceanDist=23 cont=-0.054 ero=0.248 weird=0.354 robust=7 decision=ACCEPT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=47 x=-2264 z=-1784 sea=63 surfY=62 oceanDist=39 cont=-0.033 ero=0.248 weird=0.326 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=48 x=-2248 z=-1784 sea=63 surfY=62 oceanDist=54 cont=-0.005 ero=0.249 weird=0.296 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=49 x=-2232 z=-1784 sea=63 surfY=62 oceanDist=70 cont=0.014 ero=0.253 weird=0.200 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=50 x=-2216 z=-1784 sea=63 surfY=62 oceanDist=85 cont=0.006 ero=0.268 weird=0.109 robust=7 decision=REJECT
+[07:28:08] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=2000 x=2744 z=-1480 sea=63 surfY=62 oceanDist=1336 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:09] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=4000 x=200 z=-1368 sea=63 surfY=62 oceanDist=88 cont=-0.038 ero=0.044 weird=0.096 robust=7 decision=REJECT
+[07:28:09] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=6000 x=1112 z=-1256 sea=63 surfY=62 oceanDist=320 cont=0.424 ero=-0.002 weird=0.466 robust=7 decision=REJECT
+[07:28:09] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=8000 x=3192 z=-1144 sea=63 surfY=62 oceanDist=1024 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:09] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=10000 x=-3192 z=-1000 sea=63 surfY=62 oceanDist=656 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:09] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=12000 x=2968 z=-888 sea=63 surfY=62 oceanDist=992 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:09] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=14000 x=-3096 z=-744 sea=63 surfY=62 oceanDist=768 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:10] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=16000 x=2376 z=-616 sea=63 surfY=62 oceanDist=688 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:10] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=18000 x=2808 z=-504 sea=63 surfY=62 oceanDist=760 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:10] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=20000 x=1752 z=-392 sea=63 surfY=62 oceanDist=608 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:10] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=22000 x=2440 z=-280 sea=63 surfY=62 oceanDist=416 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:10] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=24000 x=2280 z=-152 sea=63 surfY=62 oceanDist=152 cont=-0.001 ero=-0.496 weird=-0.192 robust=7 decision=REJECT
+[07:28:10] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=26000 x=1704 z=-24 sea=63 surfY=62 oceanDist=192 cont=0.805 ero=-0.752 weird=-0.156 robust=7 decision=REJECT
+[07:28:10] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=28000 x=-2952 z=136 sea=63 surfY=62 oceanDist=384 cont=0.186 ero=-0.460 weird=-0.287 robust=7 decision=REJECT
+[07:28:11] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=30000 x=1864 z=264 sea=63 surfY=62 oceanDist=250 cont=0.527 ero=-0.695 weird=-0.460 robust=7 decision=REJECT
+[07:28:11] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=32000 x=-3208 z=392 sea=63 surfY=62 oceanDist=256 cont=0.027 ero=-0.412 weird=0.210 robust=7 decision=REJECT
+[07:28:11] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=34000 x=-2216 z=504 sea=63 surfY=62 oceanDist=1104 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:11] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=36000 x=2104 z=616 sea=63 surfY=62 oceanDist=119 cont=0.216 ero=-0.492 weird=-0.150 robust=7 decision=REJECT
+[07:28:11] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=38000 x=-2456 z=760 sea=63 surfY=62 oceanDist=1125 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:11] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=40000 x=-4936 z=920 sea=63 surfY=62 oceanDist=184 cont=0.274 ero=-0.163 weird=-0.176 robust=7 decision=REJECT
+[07:28:12] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=42000 x=-2216 z=1080 sea=63 surfY=62 oceanDist=1211 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:12] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=44000 x=-2776 z=1288 sea=63 surfY=62 oceanDist=1232 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:12] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=46000 x=-3368 z=1480 sea=63 surfY=62 oceanDist=728 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:18] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=48000 x=2952 z=-1512 sea=63 surfY=62 oceanDist=1168 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:18] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=50000 x=3112 z=-1400 sea=63 surfY=62 oceanDist=1158 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:19] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=52000 x=2696 z=-1288 sea=63 surfY=62 oceanDist=1528 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:19] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=54000 x=-4120 z=-1160 sea=63 surfY=62 oceanDist=624 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:19] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=56000 x=-2952 z=-1032 sea=63 surfY=62 oceanDist=384 cont=0.054 ero=0.559 weird=0.320 robust=7 decision=REJECT
+[07:28:19] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=58000 x=-4136 z=-904 sea=63 surfY=62 oceanDist=592 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:19] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=60000 x=-3272 z=-776 sea=63 surfY=62 oceanDist=960 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:19] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=62000 x=2584 z=-648 sea=63 surfY=62 oceanDist=904 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:19] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=64000 x=-3336 z=-520 sea=63 surfY=62 oceanDist=768 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:20] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=66000 x=-4680 z=-408 sea=63 surfY=62 oceanDist=109 cont=-0.081 ero=-0.280 weird=0.632 robust=7 decision=REJECT
+[07:28:20] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=68000 x=-4104 z=-296 sea=63 surfY=62 oceanDist=288 cont=0.063 ero=-0.306 weird=-0.082 robust=7 decision=REJECT
+[07:28:20] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=70000 x=2136 z=-184 sea=63 surfY=62 oceanDist=184 cont=0.330 ero=-0.587 weird=-0.191 robust=7 decision=REJECT
+[07:28:20] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=72000 x=1912 z=-56 sea=63 surfY=62 oceanDist=192 cont=0.400 ero=-0.682 weird=0.105 robust=7 decision=REJECT
+[07:28:20] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=74000 x=1256 z=88 sea=63 surfY=62 oceanDist=104 cont=0.052 ero=-0.692 weird=-0.123 robust=7 decision=REJECT
+[07:28:20] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=76000 x=3256 z=232 sea=63 surfY=62 oceanDist=430 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:21] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=78000 x=-1992 z=360 sea=63 surfY=62 oceanDist=1072 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:21] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=80000 x=1480 z=472 sea=63 surfY=62 oceanDist=40 cont=0.067 ero=-0.608 weird=0.533 robust=7 decision=REJECT
+[07:28:21] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=82000 x=-4696 z=600 sea=63 surfY=62 oceanDist=88 cont=-0.067 ero=0.009 weird=-0.800 robust=7 decision=REJECT
+[07:28:21] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=84000 x=-3096 z=728 sea=63 surfY=62 oceanDist=488 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:21] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=86000 x=1192 z=872 sea=63 surfY=62 oceanDist=0 cont=0.160 ero=-0.466 weird=0.452 robust=7 decision=REJECT
+[07:28:21] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=88000 x=-1848 z=1032 sea=63 surfY=62 oceanDist=832 cont=0.000 ero=0.000 weird=0.000 robust=7 decision=REJECT(coastal)
+[07:28:22] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=90000 x=1896 z=1240 sea=63 surfY=62 oceanDist=88 cont=-0.074 ero=-0.418 weird=-0.251 robust=7 decision=REJECT
+[07:28:22] [Server thread/INFO] (LatitudeBiomes) [mangrove-eval] n=92000 x=4872 z=1400 sea=63 surfY=62 oceanDist=128 cont=0.322 ero=0.176 weird=-0.211 robust=7 decision=REJECT
+[07:28:25] [Server thread/INFO] (globe) [latdev][headless] finished export step=16 file=C:\Users\jscho\CascadeProjects\Latitude (Globe)\run\latdev\atlas\seed_-5103687410525530945\R5000\step16\biomes.png sidecar=C:\Users\jscho\CascadeProjects\Latitude (Globe)\run\latdev\atlas\seed_-5103687410525530945\R5000\step16\biomes.txt image=626x626 samples=391876 durationMs=21650
+[07:28:25] [Server thread/INFO] (Minecraft) [STDOUT]: [latdev][headless] finished export step=16 file=C:\Users\jscho\CascadeProjects\Latitude (Globe)\run\latdev\atlas\seed_-5103687410525530945\R5000\step16\biomes.png sidecar=C:\Users\jscho\CascadeProjects\Latitude (Globe)\run\latdev\atlas\seed_-5103687410525530945\R5000\step16\biomes.txt image=626x626 samples=391876 durationMs=21650
+[07:28:25] [Server thread/INFO] (globe) [latdev][headless] stopping server
+[07:28:25] [Server thread/INFO] (Minecraft) Stopping server
+[07:28:25] [Server thread/INFO] (Minecraft) Saving players
+[07:28:25] [Server thread/INFO] (Minecraft) Saving worlds
+[07:28:25] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[world]'/minecraft:overworld
+[07:28:25] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[world]'/minecraft:the_nether
+[07:28:25] [Server thread/INFO] (Minecraft) Saving chunks for level 'ServerLevel[world]'/minecraft:the_end
+[07:28:25] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (world): All chunks are saved
+[07:28:25] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[07:28:25] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[07:28:25] [Server thread/INFO] (Minecraft) ThreadedAnvilChunkStorage: All dimensions are saved

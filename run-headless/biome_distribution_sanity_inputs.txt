@@ -1,0 +1,5 @@
+Artifacts:
+- run/latdev/atlas/seed_2591890304012655616/R5000/step16/world_biome_inventory.json
+- run/latdev/atlas/seed_2591890304012655616/R5000/step16/biomes.txt
+- run/latdev/atlas/seed_2591890304012655616/R5000/step16/biomes.png
+Config: seed=2591890304012655616 size=small radius=5000 step=16 samples=391876 y=64

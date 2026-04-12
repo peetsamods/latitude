@@ -1,0 +1,4 @@
+Snowy shoulder trace shows snowy biomes being generated and surviving between 59–66 deg.
+Evidence: x=2392 z=-3400 deg=59.99 pSnow≈0.80 snowyPool=true pick=snowy_plains; final land at deg=59.76 outputs snowy_taiga. Ramp alpha ~0.98 accepts snowy picks; no demotion observed.
+Failure classification: none; shoulder active (not too warm). Earlier atlas first_seen ordering likely masked presence.
+Next target: none required; optional future tweak would be pSnow curve if finer density desired.

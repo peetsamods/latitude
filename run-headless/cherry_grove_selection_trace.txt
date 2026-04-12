@@ -1,0 +1,15 @@
+CHERRY GROVE SELECTION TRACE
+
+Repo root: C:/Users/jscho/CascadeProjects/Latitude (Globe)
+Branch: fix/wsav-override-plus-final-clamp
+Commit: 8257f30a (HEAD)
+
+Selected cherry_grove events: 14
+keep=true: 4
+keep=false: 10
+
+Replacements when keep=false:
+- mountain_fallback: 10
+
+Conclusion:
+- cherry_grove is selected in the LAT_TEMPERATE_MOUNTAIN path but is mostly demoted by the post-pick keep gate (rollChance 1-in-6 -> replacement=mountain_fallback). Upstream admission exists; choke is late demotion, not starvation.

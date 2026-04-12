@@ -1,0 +1,17 @@
+Counts (discovery_hits):
+- plains 15872, forest 3742, birch_forest 1993, taiga 14680
+- snowy_plains 15618, snowy_taiga 14713, grove 760, meadow 170
+- cherry_grove 23, flower_forest 682
+- savanna 28309, savanna_plateau 1703, windswept_savanna 667
+- jungle 22787, sparse_jungle 14272
+- swamp 2664, mangrove_swamp 322
+- desert 13461, badlands 3290
+- stony_peaks 447, jagged_peaks 11243, frozen_peaks 5455, snowy_slopes 30495
+Signals:
+- All key families present; no zero/near-zero absences. Rarest expected rares: cherry_grove 23, meadow 170, windswept_savanna 667, flower_forest 682 (rare but present as intended).
+- No single biome dominates implausibly; largest counts are in expected broad families (savanna 28k, snowy_slopes 30k, jungles/deserts/taiga/plains in normal ranges).
+- Mountains: snowy_slopes/jagged_peaks/frozen_peaks/stony_peaks all present with plausible proportions (snowy_slopes highest as expected for cold peaks).
+- Snowy family: snowy_plains and snowy_taiga both strong; grove present; ramp functioning.
+- Warm family: savanna variants, desert, badlands, jungle/sparse_jungle all healthy; mangrove_swamp present though naturally low (322).
+- No obvious band compression or monoculture noted from counts; atlas PNG available for quick visual.
+Classification: A) sane / pass. Recommend marking release-gate biome distribution sanity PASSES.
