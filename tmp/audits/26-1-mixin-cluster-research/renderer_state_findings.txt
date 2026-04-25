@@ -1,0 +1,60 @@
+RENDERER STATE API FINDINGS (26.1)
+==================================
+
+KEY DISCOVERY: PACKAGE STRUCTURE CHANGE
+======================================
+
+Old (1.20): net.minecraft.client.renderer.state.*
+New (26.1): net.minecraft.client.render.state.*
+
+Note: "renderer" → "render" (package name simplified)
+
+CONFIRMED EXISTING CLASSES (26.1)
+=================================
+
+✓ WorldBorderRenderState
+  - Package: net.minecraft.client.render.state (NOT renderer.state)
+  - Found in: _mcsrc_yarn/net/minecraft/client/render/state/WorldBorderRenderState.java
+  - Implements: FabricRenderState
+  - Used in: WorldBorderRendering class (method updateRenderState)
+  - Fix: Change import from renderer.state to render.state
+
+✓ WorldRenderState (NEW in 26.1)
+  - Package: net.minecraft.client.render.state
+  - Implements: FabricRenderState
+  - Contains: worldBorderRenderState field (line 22)
+  - Contains: cameraRenderState, entityRenderStates, blockEntityRenderStates, etc.
+  - Suggests: Consolidated rendering state pattern in 26.1
+
+NOT FOUND
+=========
+
+✗ LevelRenderState
+  - Does not appear in _mcsrc_yarn decompiled sources
+  - Not found in any render/state class files
+  - Possibly replaced by WorldRenderState
+  - Used in: EwStormWallRendererMixin.latitude$injectRenderWall (parameter)
+
+ARCHITECTURAL CHANGE INSIGHT
+============================
+
+26.1 appears to have refactored the rendering system to use:
+1. WorldRenderState as the central state object (contains all render states)
+2. Specific state objects (WorldBorderRenderState, SkyRenderState, etc.) as fields
+3. More unified render state architecture via FabricRenderState interface
+
+This explains why LevelRenderState may not exist as a separate parameter—
+the rendering pipeline has been restructured.
+
+FIXES NEEDED
+============
+
+Slice 2a: WorldBorderRenderState import fix (simple, 1 line)
+  - WorldRendererWorldBorderMixin.java line 5
+  - Change: net.minecraft.client.renderer.state → net.minecraft.client.render.state
+
+Slice 2b: LevelRenderState parameter investigation (requires method signature research)
+  - EwStormWallRendererMixin.java lines 11, 26
+  - Need to determine: What is the correct parameter type for pushEntityRenders in 26.1?
+  - Candidates: WorldRenderState, or parameter removed entirely
+  - Requires: Examining actual LevelRenderer.pushEntityRenders signature
