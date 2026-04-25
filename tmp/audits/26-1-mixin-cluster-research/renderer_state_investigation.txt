@@ -1,0 +1,71 @@
+RENDERER STATE API INVESTIGATION
+=================================
+
+ERRORS TO RESOLVE
+=================
+
+1. WorldBorderRenderState (WorldRendererWorldBorderMixin.java)
+   - Line 5: import net.minecraft.client.renderer.state.WorldBorderRenderState;
+   - Line 15: Parameter type in @Inject method: WorldBorderRenderState state
+
+   Current code:
+   @Inject(method = "render", at = @At("HEAD"), cancellable = true)
+   private void globe$cancelVanillaWorldBorder(WorldBorderRenderState state, Vec3 cameraPos, ...) {
+       if (!GlobeClientState.DEBUG_EW_SUPPRESS_VANILLA_BORDER) return;
+       ci.cancel();
+   }
+
+   Context: Mixin on WorldBorderRenderer.class, injecting into render method
+   Purpose: Conditionally suppress vanilla world border rendering
+
+2. LevelRenderState (EwStormWallRendererMixin.java)
+   - Line 11: import net.minecraft.client.renderer.state.LevelRenderState;
+   - Line 26: Parameter type in @Inject method: LevelRenderState renderStates
+
+   Current code:
+   @Inject(method = "pushEntityRenders", at = @At("HEAD"))
+   private void latitude$injectRenderWall(PoseStack matrices, LevelRenderState renderStates, SubmitNodeCollector queue, ...) {
+       ...
+       queue.submitCustomGeometry(matrices, RenderTypes.debugQuads(), (entry, vc) -> {
+           // Rendering logic
+       });
+   }
+
+   Context: Mixin on LevelRenderer.class, injecting into pushEntityRenders method
+   Purpose: Inject custom geometry rendering for EW storm wall
+
+INVESTIGATION APPROACH
+======================
+
+These are not removed APIs but potentially:
+1. Renamed classes (e.g., WorldBorderRenderState → SomethingElse)
+2. Moved to different packages (e.g., different renderer state package)
+3. Changed parameter pattern (e.g., states might be passed differently in 26.1)
+4. Replaced with a different rendering API pattern
+
+Key questions:
+- Do LevelRenderState and WorldBorderRenderState exist as classes in 26.1?
+- Are they in net.minecraft.client.renderer.state package?
+- Have they been renamed or refactored?
+- Has the @Inject method signature pattern changed for renderer injections?
+
+SEARCH STRATEGY
+===============
+
+Check Minecraft 26.1 decompiled code or docs for:
+1. Classes in net.minecraft.client.renderer.state (if package still exists)
+2. Alternative renderer state APIs or render target classes
+3. WorldBorderRenderer and LevelRenderer @Inject patterns in 26.1
+4. Changes to PoseStack and SubmitNodeCollector APIs
+
+BLOCKING NOTES
+==============
+
+This requires understanding the 26.1 rendering architecture, which is complex.
+May need to check:
+- Minecraft 26.1 game JAR (decompiled)
+- Related Fabric API changes
+- Forum/wiki documentation of renderer API changes
+
+Neither of these renderer state changes appear to be directly related to the
+GuiGraphics API migration, so they may be separate architectural changes in 26.1.

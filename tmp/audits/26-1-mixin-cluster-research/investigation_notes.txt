@@ -1,0 +1,98 @@
+MIXIN CLUSTER INVESTIGATION NOTES
+==================================
+
+PATTERNS IDENTIFIED FROM 3 MIXIN SAMPLES:
+==========================================
+
+1. GuiGraphics API Migration
+   - Pattern: import net.minecraft.client.gui.GuiGraphics → GuiGraphicsExtractor
+   - Pattern: Parameter type GuiGraphics → GuiGraphicsExtractor in @Inject methods
+   - Affected files: CreateWorldScreenLatitudeToggleMixin, InGameHudMixin, HandledScreenCompassToggleMixin
+   - Method calls on context (ctx.fill, ctx.text) stay the same
+
+2. Method Name Changes in @Inject Descriptors
+   - Key insight: @Inject method descriptors reference Minecraft internal method names
+   - Method descriptors appear to stay unchanged (e.g., render, renderMainHud, drawSlot)
+   - These match against the obfuscated/internal Minecraft code, not our parameter types
+   - Parameter type in descriptor uses internal class names (DrawContext, RenderTickCounter)
+   - Actual Java parameter types in our @Inject method use public API names
+
+3. Static Overlay Method Calls
+   - In InGameHudMixin, calling EwSandstormOverlayHud.render(context, tickCounter)
+   - These static methods accept GuiGraphicsExtractor (or will after migration)
+   - No changes needed to the call site; parameter type change handles it
+
+4. Handler vs. Error Type Analysis
+   CreateWorldScreenLatitudeToggleMixin (line 104):
+     @Inject(method = "render(Lnet/minecraft/client/gui/DrawContext;IIF)V", at = @At("TAIL"))
+     private void latitude$render(GuiGraphics context, ...)
+
+   Error pattern: GuiGraphics not found (import error propagates to parameter type)
+   Method descriptor references DrawContext (internal) - no error yet
+   Fix: Change parameter type to GuiGraphicsExtractor
+
+   InGameHudMixin (line 36):
+     @Inject(method = "render", at = @At("TAIL"))
+     private void globe$renderOverlay(GuiGraphics context, ...)
+
+   Simple method name + tail injection, no detailed descriptor
+   Same fix: GuiGraphics → GuiGraphicsExtractor
+
+   HandledScreenCompassToggleMixin (line 52):
+     @Inject(method = "drawSlot", at = @At("TAIL"))
+     private void globe$drawCompassDisabledX(GuiGraphics ctx, Slot slot, ...)
+
+   Different target method (drawSlot), same GuiGraphics parameter type
+   Fix: GuiGraphics → GuiGraphicsExtractor
+
+REMAINING ERRORS BY CATEGORY:
+=============================
+
+1. GuiGraphics → GuiGraphicsExtractor (5 mixins, ~8 errors):
+   - CreateWorldScreenLatitudeToggleMixin (2 errors: import + parameter)
+   - CreateWorldScreenSpawnZoneMixin (2 errors: import + parameter)
+   - InGameHudMixin (2 errors: import + parameters ×2)
+   - HandledScreenCompassToggleMixin (1 error: parameter in drawSlot)
+   - WorldRendererWorldBorderMixin (depends on analysis)
+
+2. Renderer State API Changes (2 mixins, 4 errors):
+   - WorldRendererWorldBorderMixin: WorldBorderRenderState
+   - EwStormWallRendererMixin: LevelRenderState
+
+   These are NOT direct GuiGraphics issues. They involve renderer state classes that may:
+   - Be renamed
+   - Be moved to different packages
+   - Have API changes requiring further investigation
+
+3. Other Errors:
+   - ExtremePolarVegetationGuardMixin: RandomPatchFeature class error (feature API change, separate from GUI)
+
+PROPOSED SLICE STRATEGY:
+========================
+
+Slice 1: GuiGraphics-only migration (5 mixins, ~8 errors)
+  Target files:
+  - CreateWorldScreenLatitudeToggleMixin (2 errors)
+  - CreateWorldScreenSpawnZoneMixin (2 errors)
+  - InGameHudMixin (3 errors)
+  - HandledScreenCompassToggleMixin (depends on final error count)
+
+  Expected reduction: 8-10 errors
+  Total after: 19 - 8 = 11 errors
+
+Slice 2: Renderer State APIs (2-3 mixins, 4-6 errors)
+  Target files:
+  - WorldRendererWorldBorderMixin (WorldBorderRenderState)
+  - EwStormWallRendererMixin (LevelRenderState)
+  - Possibly HandledScreenCompassToggleMixin if any remaining
+
+  Requires research: How renderer state classes are exposed in 26.1
+
+Slice 3: Feature/Non-GUI APIs (2 files, 4-5 errors)
+  - ExtremePolarVegetationGuardMixin (RandomPatchFeature)
+  - GlobeMod.java (ServerPlayer API: getCommandTags, giveItemStack, getTags)
+
+NEXT STEP:
+==========
+Create and execute Slice 1: Port 5 mixin files for GuiGraphics → GuiGraphicsExtractor migration.
+This is the smallest, most mechanical slice with highest confidence in correct mapping.
