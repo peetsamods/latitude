@@ -1,0 +1,39 @@
+# Latitude 1.21.1 Runtime Marker Capture - Corrected PASS
+
+Root: `/Users/joolmac/CascadeProjects/Latitude (Globe)`
+Branch: `port/1.3.0-1.21.1-bespoke-ui`
+HEAD: `f4b3ba9`
+
+## Verdict
+
+PASS for this runtime gate.
+
+This log proves fresh-world entry, live Latitude worldgen hook activity, bespoke overlay clear, and `/latdev` smoke proof. This does not make the whole port release-ready; it only closes the fresh-world runtime-entry proof gate for this session.
+
+## Required proof lines
+
+314:[20:51:24] [Server thread/INFO] (Minecraft) Player373[local:E:0f2ab3bd] logged in with entity id 5 at (8.5, 73.0, 10.5)
+317:[20:51:24] [Render thread/INFO] (LatitudeLoadingOverlay) [Latitude lifecycle] bespoke overlay cleared as level loading screen closed - 3872ms since beginExpedition
+369:[20:51:25] [Server thread/INFO] (Minecraft) Player373 joined the game
+815:[20:51:33] [Render thread/INFO] (Minecraft) [System] [CHAT] [latdev] commands: here | tpBand <tropical|subtropical|temperate|subpolar|polar> [center|low|high] | probe <radiusBlocks> <samples> | biomePng [stepBlocks] [y] | regen|regenChunk [radiusChunks] [biomes] [seed] | transect | transectDeg | slicePoleNS | pause | resume | stop | status | budgetMs | budgetAuto <on|off>
+1093:[20:51:38] [Render thread/INFO] (Minecraft) [System] [CHAT] [latdev] here x=473 y=114 z=-4742 deg=42.67 band=temperate(idx=2) cut=35.00..50.00 t=0.4749 mtnLike=false uplandT=0.000 savUpland=false chance=0.000 biome=minecraft:forest
+1486:[20:51:44] [Render thread/INFO] (Minecraft) [System] [CHAT] [latdev] probe r=512 n=300 loaded=125 unloaded=175 seed=996898367161317295
+1488:[20:51:44] [Render thread/INFO] (Minecraft) [System] [CHAT] [latdev] bands: temperate 100.0%(125)
+1734:[20:51:48] [Server thread/INFO] (Minecraft) Player373 lost connection: Disconnected
+1744:[20:51:48] [Server thread/INFO] (Minecraft) Stopping server
+
+## Interpretation
+
+- Player login and joined-game lines are present.
+- Bespoke overlay clear is present.
+- `/latdev help`, `here`, `probe`, and band histogram chat output are present.
+- No `Can't keep up` line appears in the proof grep slice.
+- Later `lost connection` / `Stopping server` lines occur after proof and are treated as normal session exit unless a separate crash proves otherwise.
+
+## Remaining release gates
+
+- broader visual/runtime check
+- artifact purity audit
+- release-readiness audit
+- non-Regular world-size proof if any size-sensitive code changes occur before release
+
