@@ -1,0 +1,93 @@
+# Latitude 1.20.1 PR #6 Post-Merge Release-Readiness Fixes
+
+Date: 2026-06-04
+Root: `/Users/joolmac/CascadeProjects/Latitude-issue5-1.20.1`
+Proof-time branch: `fix/1.20.1-refmap-name`
+Release branch target: `port/1.3.0-1.20.1`
+Baseline before this slice: `df8c4dc7`
+
+## Scope
+
+- Fix the Modrinth `Lat 1.20.1` launch blockers found after PR #6 merge.
+- Preserve existing `tmp/` evidence.
+- Rebuild and reinstall the local Modrinth profile jar for manual proof.
+- Stop before Modrinth/CurseForge publication and issue #5 closure.
+
+## Fixes
+
+- `src/main/resources/globe.mixins.json`
+  - Changed Mixin `compatibilityLevel` from `JAVA_21` to `JAVA_17`.
+  - Root cause: the Modrinth 1.20.1 profile launches Java 17, and Mixin rejected `JAVA_21` during bootstrap.
+- `src/main/java/com/example/globe/mixin/ChunkRegionWarmSnowTrapMixin.java`
+  - Removed production references to `com.example.globe.debug.WarmSnowTrapStats`.
+  - Root cause: the release jar excludes `com/example/globe/debug/**`, but the production warm-snow setBlockState mixin referenced that excluded debug class during worldgen.
+- `src/main/java/com/example/globe/dev/InvariantScan.java`
+  - Updated the scan from the old downloading-terrain text invariant to the current LevelLoadingScreen overlay and client tick handoff invariant.
+  - The dev package remains excluded from the runtime jar.
+
+## Proof Commands
+
+- `git diff --check`
+  - Result: PASS
+- `./gradlew --no-daemon --console plain -PenableInvariantScan latitudeInvariantScan`
+  - Result: BUILD SUCCESSFUL
+  - Marker: `[Latitude invariant scan] PASS`
+- `./gradlew --no-daemon --console plain clean build`
+  - Result: BUILD SUCCESSFUL
+  - Tasks executed from clean output through `remapJar`, `remapSourcesJar`, `assemble`, and `build`
+
+## Runtime Proof
+
+- Profile: `/Users/joolmac/Library/Application Support/ModrinthApp/profiles/Lat 1.20.1`
+- Installed jar: `mods/latitude-1.3.0+1.20.1-r1.jar`
+- Manual launch path: Modrinth App `Lat 1.20.1` profile, not the vanilla launcher.
+- Latest log reached new-world entry:
+  - `Preparing spawn area: 98%`
+  - `[Latitude] Radius Sync: WorldBorder/2 = 10000, ACTIVE_RADIUS_BLOCKS = 10000`
+  - `Peetsa[local:E:dc141224] logged in with entity id 188 at (2124.5, 106.0, -4673.5)`
+  - `JOIN: player=Peetsa, isGlobeOverworld=true`
+  - `[Latitude lifecycle] bespoke overlay cleared as level loading screen closed`
+  - `ThreadedAnvilChunkStorage: All dimensions are saved`
+- No new crash report was created after the successful run.
+
+## Artifact Findings
+
+- Runtime jar: `build/libs/latitude-1.3.0+1.20.1-r1.jar`
+  - SHA-256: `2e6cab07bc3c2820de1607de2b60c352c4a396176c123b97eb058ea48db5992b`
+- Sources jar: `build/libs/latitude-1.3.0+1.20.1-r1-sources.jar`
+  - SHA-256: `290f95fc07e6e904325d6b9442d45e4f3c3b3364c558df365b5dbc3f5b70bdf0`
+- Runtime metadata:
+  - `fabric.mod.json` version: `1.3.0+1.20.1-r1`
+  - Minecraft dependency: `~1.20.1`
+  - Java dependency: `>=17`
+  - Mixin config: `globe.mixins.json`
+- Mixin metadata:
+  - `globe.mixins.json` uses `compatibilityLevel: JAVA_17`
+  - `globe.mixins.json` points to `latitude-refmap.json`
+  - `latitude-refmap.json` contains mappings for `MinecraftServerInitialSpawnMixin.setupSpawn`
+  - `latitude-refmap.json` contains mappings for `ChunkRegionWarmSnowTrapMixin.setBlockState(...)`
+- Runtime jar contains:
+  - `globe.mixins.json`
+  - `latitude-refmap.json`
+  - `com/example/globe/mixin/MinecraftServerInitialSpawnMixin.class`
+  - `com/example/globe/mixin/ChunkRegionWarmSnowTrapMixin.class`
+  - `com/example/globe/mixin/client/LevelLoadingScreenLatitudeOverlayMixin.class`
+  - `com/example/globe/mixin/client/LatitudeLoadingClientTickMixin.class`
+- Runtime jar purity:
+  - No `com/example/globe/debug/**`
+  - No `com/example/globe/dev/**`
+  - No `WarmSnowTrapStats`
+  - No script/native payload hits from the release scan
+  - `javap` found no `WarmSnowTrapStats` or `com/example/globe/debug` reference in `ChunkRegionWarmSnowTrapMixin`
+
+## Binder Limitation
+
+- This hotfix worktree does not contain `docs/binder/index.md`, `docs/binder/update-contract.md`, `docs/binder/evidence-schema.json`, or `docs/binder/evidence-registry.md`.
+- Binder registry update was therefore not performed in this worktree.
+
+## Remaining Release Gate
+
+- Push the fix to the release branch that will be published.
+- Confirm the release tag points at the final release commit before public upload.
+- Publish `1.3.0+1.20.1-r1` to Modrinth/CurseForge only after Julia approves publication.
+- Close issue #5 only after public artifacts are available.
