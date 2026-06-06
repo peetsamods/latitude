@@ -303,3 +303,17 @@ it became blocking once the desktop app drove generation.)
 `R<radius>` dir (for the manifest + `validate_bundle`) instead of the guessed value. Robust to any current/future
 exporter mapping. Verified: `generate --step 32 --size small` now exits 0 and writes
 `run-headless/latdev/atlas-runs/<ts>/` with `radiusBlocks: 5000` (the real radius). Worldgen untouched.
+
+---
+
+## Post-savepoint fix — confetti overlay stale on run switch (2026-06-05)
+
+Reported by Julia: red confetti specks spilling outside the map. Root cause (pre-existing viewer behavior,
+unrelated to the 3 ported features): switching runs resized the `#map-canvas` to the new run's dimensions but
+left `#confetti-canvas` at the **previous** run's size while still `active`. Both share the same pan/zoom
+transform, so a larger prior run's confetti (e.g. `ns-test` regular/938) overhung a smaller new map
+(small/626) by 938/626 ≈ 1.5× → specks landed in empty space bottom-right. Reproduced + confirmed live
+(confetti canvas stuck at 938 over a 626 map). **Fix (`index.html`):** `selectLayer` now calls
+`renderConfettiOverlay()` after the new map loads (re-renders at the new dimensions if confetti is on, clears
+if off) and nulls `confettiScanCache`. Verified live: `ns-test`(938) → small(626) now keeps confetti canvas ==
+map (626), specks confined to the map. Commit `53532624`.
