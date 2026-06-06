@@ -281,3 +281,7 @@ run-headless artifact** (generated test worlds + `run/latdev` left uncommitted, 
 
 **GATE:** worldgen inventory diff EMPTY ✓ · binder logged ✓ · commit scoped to tooling only, no worldgen file in the
 diff ✓.
+
+**Pushed 2026-06-05:** commits `b014a9e8` + `dfbd6fcd` pushed to `origin` (github.com/joolbits/latitude); annotated
+tag `save/atlas-viewer-modernization` pushed. Branch `feat/atlas-viewer-modernization` tracks origin. PR **not opened**
+yet (awaiting Julia): https://github.com/joolbits/latitude/pull/new/feat/atlas-viewer-modernization
