@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "latitude-binder-evidence-row",
+  "title": "Latitude Binder Evidence Row",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "date",
+    "owner",
+    "trigger",
+    "scope",
+    "commands",
+    "result",
+    "tmp_path",
+    "canonical_docs_updated",
+    "next_action",
+    "status",
+    "supersedes"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}-[a-z0-9-]+$",
+      "description": "Evidence ID in YYYYMMDD-topic format."
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "trigger": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "worldgen",
+        "rendering",
+        "compatibility",
+        "release",
+        "migration"
+      ]
+    },
+    "commands": {
+      "type": "string",
+      "minLength": 1
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "partial",
+        "fail",
+        "blocked"
+      ]
+    },
+    "tmp_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "canonical_docs_updated": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "next_action": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "stale",
+        "superseded",
+        "retired"
+      ]
+    },
+    "supersedes": {
+      "type": "string"
+    }
+  }
+}
