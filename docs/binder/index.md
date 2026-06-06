@@ -22,6 +22,7 @@ Provide one canonical map for Latitude documentation, record-keeping, and proof 
 | live proof and runtime evidence | [/Users/joolmac/CascadeProjects/Latitude (Globe)/docs/binder/evidence-registry.md](/Users/joolmac/CascadeProjects/Latitude%20(Globe)/docs/binder/evidence-registry.md) | /tmp evidence payload folders listed in registry entries | release, worldgen, compatibility, rendering, migration | 2026-06-03 | active | 2026-06-17 |
 
 ## Binder sections
+- `atlas-viewer-modernization-worklog.md`: TOOLING bucket worklog (atlas viewer/world-map port + 3 viewer features), separate from worldgen; carries a worldgen-integrity proof per savepoint.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
 - `evidence-record-schema.md`: required evidence-row contract and enums.
 - `evidence-schema.json`: machine-readable schema for evidence rows.
