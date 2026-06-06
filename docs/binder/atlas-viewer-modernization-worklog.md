@@ -285,3 +285,21 @@ diff ✓.
 **Pushed 2026-06-05:** commits `b014a9e8` + `dfbd6fcd` pushed to `origin` (github.com/joolbits/latitude); annotated
 tag `save/atlas-viewer-modernization` pushed. Branch `feat/atlas-viewer-modernization` tracks origin. PR **not opened**
 yet (awaiting Julia): https://github.com/joolbits/latitude/pull/new/feat/atlas-viewer-modernization
+
+---
+
+## Post-savepoint fix — atlas_runner radius mismatch (2026-06-05)
+
+Surfaced when Julia pointed the desktop app's `repoRoot` at this worktree and tried to generate a run →
+"atlas generation failed." Root cause (PRE-EXISTING canonical bug, not introduced here): `atlas_runner.py`'s
+`SIZE_TO_RADIUS` is out of sync with the actual `BiomePreviewExporter` size→radius mapping (it expects
+small=7500/regular=10000, but the exporter at `8c73beab` writes 5000/7500). `find_fresh_step_dir` looked for the
+*guessed* `R<radius>/step<step>` dir, never found it, and errored after a successful generate — so generation was
+broken for **every** size. (This is exactly the inconsistency that made me leave `atlas_runner` unchanged in Phase 2;
+it became blocking once the desktop app drove generation.)
+
+**Fix (`atlas_runner.py`, tooling):** `find_fresh_step_dir` is now **radius-agnostic** — it matches any
+`Run_*/R*/step<step>` dir for the seed by recency, and `generate_run` reads the **actual** radius from the produced
+`R<radius>` dir (for the manifest + `validate_bundle`) instead of the guessed value. Robust to any current/future
+exporter mapping. Verified: `generate --step 32 --size small` now exits 0 and writes
+`run-headless/latdev/atlas-runs/<ts>/` with `radiusBlocks: 5000` (the real radius). Worldgen untouched.
