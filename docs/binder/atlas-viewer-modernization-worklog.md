@@ -317,3 +317,19 @@ transform, so a larger prior run's confetti (e.g. `ns-test` regular/938) overhun
 `renderConfettiOverlay()` after the new map loads (re-renders at the new dimensions if confetti is on, clears
 if off) and nulls `confettiScanCache`. Verified live: `ns-test`(938) → small(626) now keeps confetti canvas ==
 map (626), specks confined to the map. Commit `53532624`.
+
+---
+
+## Post-savepoint fix — namespace veil persistence + dim/hide strength (2026-06-05)
+
+Reported by Julia (3 defects in the Phase 4 namespace filter): (1) the isolate veil only flashed momentarily;
+(2) "Dim others" was too weak; (3) "Hide others" only dimmed. Root causes + fixes (`index.html`):
+1. **Persistence:** `selectBiomePersistent`, the mousemove (out-of-bounds) handler, `mouseleave`, and
+   `clearBiomeSelection` all called `clearHighlight()` whenever no *biome* was selected — wiping the veil on
+   every mouse event (the veil normally runs with no biome selected). Now they call `renderSelectedHighlights()`,
+   which redraws the veil if a namespace filter is active (and clears only when nothing is active). Verified live:
+   veil survives 6 mousemoves + a mouseleave.
+2. **Strength:** veil was gray `(128,128,128)` at α150 (dim)/α230 (hide). Now a dark veil `(13,17,25)` at
+   **α190 (dim — strong mute)** / **α255 (hide — fully opaque, others vanish)**. Verified live: Hide shows only the
+   selected namespace on a dark backdrop; Dim keeps the selected namespace at full colour while the rest is clearly
+   darkened. Commit `ea56cecd`.
