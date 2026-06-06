@@ -206,8 +206,12 @@ the largest threshold ≤12 that fits the biome count, so it **meets ΔE≥12 fo
 - `distinct_render.py` full render of a real run wrote `biome_ids_distinct.png` + component table.
 
 GATE: zero exact RGB collisions ✓ · stable same-id→same-color (id-rank keyed) ✓ · toggle pure repaint ✓ · legend
-matches map ✓ · JS/offline parity ✓ · **ΔE≥12 met where gamut-feasible (≤~43 biomes); maximally separated above
-that** (*deviation from the literal gate documented — it is a gamut limit, flagged for the user*).
+matches map ✓ · JS/offline parity ✓ · separation: **target ΔE 12, acceptance floor ΔE 8** (`DISTINCT_DELTA_E_MIN`/
+`DISTINCT_DELTA_E_FLOOR`) — sRGB holds only ~43 colours at ΔE 12, so the packer reaches 12 for realistic single-run
+stacks and relaxes toward the still-clearly-distinct 8 floor for larger ones (zero exact collisions always). Verified:
+48-biome real run **ΔE 12.01** (full target), 72-biome synthetic **ΔE 9.00** — **both PASS the ≥8 floor**, parity
+byte-identical. (Floor added 2026-06-05 per Julia: keeps real-map crispness at 12 while the literal ≥12 no longer
+trips for oversized stacks.)
 
 ---
 
