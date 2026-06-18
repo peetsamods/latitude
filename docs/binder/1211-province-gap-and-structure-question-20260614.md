@@ -2,6 +2,9 @@
 
 `scope: project structure + worldgen` · `status: PAUSED pending Julia's structural decision` · `severity: not-broken, but needs a deliberate call`
 
+## Resolution update (2026-06-18)
+Julia resolved the structural question: **26.1.2 is the current canonical line.** The 1.21.11 line should be treated as a future backport, not as the primary development target, and not resumed until the 26.1.2 source of truth is ready for that work. Julia noted that Minecraft 26.2 is now released; treat it as a future target to consider, not as a change to the immediate canonical decision. See `canonical-26-1-2-decision-20260618.md`.
+
 ## Why this entry exists
 Julia tested the 1.21.11 beta (beta.27, world TEST X) and saw confetti, deserts-in-temperate, and "cherries everywhere." Investigation traced these to the 1.21.11 line **lacking `ProvinceAuthority`** (the v1.4 Cohesive Horizons coherence+climate engine). That, in turn, surfaced a structural question Julia raised — *"I thought this was developed for 1.21.11 in the first place?"* — which must be settled before more worldgen work. **Nothing is corrupted; all work is committed or safely staged.** Full detail: `Latitude-port-1.4.0-1.21.11/docs/porting/HANDOFF-1.21.11-state-and-province-gap-20260614.md`.
 
