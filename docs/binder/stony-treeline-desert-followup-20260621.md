@@ -65,7 +65,7 @@ Results:
 - `git diff --check`: pass.
 - Atlas sanity on seed `214214684415956679`, SMALL, Y110: pass as a distribution guard. Inventory remained aligned with the earlier headless run: `minecraft:desert` ~4.288%, `minecraft:dark_forest` ~0.873%, `minecraft:stony_peaks` ~0.184%.
 - Current-source desert boundary proof at `[3773,136,3236]`: pass. `wrapped_source_biome=minecraft:dark_forest`, `source_equivalent_biome=minecraft:dark_forest`, and `populate_equivalent_biome=minecraft:dark_forest`, matching the saved profile biome from the earlier chunk probe.
-- Profile/build jar preflight: current staged jar SHA is still `e09ea00313307ae84f8e32a0470db523874fe11d8314d133ddadfe9d85bf2458` and its manifest commit is `e5d092ca7f09a397afc413137f62ea409566e1e7`, while the source checkout is HEAD `3d719aff`.
+- Profile/build jar preflight at that point: staged jar SHA was still `e09ea00313307ae84f8e32a0470db523874fe11d8314d133ddadfe9d85bf2458` and its manifest commit was `e5d092ca7f09a397afc413137f62ea409566e1e7`, while the source checkout was HEAD `3d719aff`.
 - Fresh local build jar proof: `build/libs/latitude-1.4.1-beta.2+26.1.2.jar` is SHA `76c5b020eb9570f6b7498f823cc054dd0058f0453f477226a5fa6316f4f4e933` with manifest commit `3d719aff4c1f33be64daa44bc9a0b803d719ad84` and `Build-Dirty: true`.
 - Profile staging proof: no matching Minecraft/Java process was running and `lsof` showed the profile jar was not open. The prior active profile jar was backed up to `/Users/joolmac/Library/Application Support/ModrinthApp/profiles/Lat 1.4+26.1.2/mods/latitude-1.4.1-beta.2+26.1.2.jar.pre-76c5b020-20260621-160420`, then the fresh source-HEAD jar was copied into the active profile. Post-stage active profile SHA is `76c5b020eb9570f6b7498f823cc054dd0058f0453f477226a5fa6316f4f4e933` with manifest commit `3d719aff4c1f33be64daa44bc9a0b803d719ad84`. Evidence: `tmp/biome-tuning-20260621/profile-stage-fresh-head-20260621-160420`.
 - Fresh staged live desert proof: exact Java-owned `Minecraft* 26.1.2 - Singleplayer` window loaded `Alternate` through Modrinth on staged SHA `76c5b020...`; the log confirms `[LAT][BUILD]` commit `3d719aff`, seed `214214684415956679`, `isGlobe=true`, and 15000-block border. `/worldborder get` returned 15000. `/locate biome minecraft:desert` returned `[4052, 86, 3156]`, but screenshots at `[4052.5,100,3156.5]` and exact locate Y `[4052.5,86,3156.5]` both show HUD `Biome: minecraft:dark_forest`. Saved chunk proof for `[4052,86,3156]` reports `saved_biome_at_y=minecraft:dark_forest` and `distinct_saved_biomes_in_column=[minecraft:dark_forest]`. Evidence: `tmp/biome-tuning-20260621/live-fresh-head-desert-20260621-160920`.
@@ -110,6 +110,79 @@ Treeline proof is green for staged-jar constants:
 
 Combined proof summary: `tmp/biome-tuning-20260621/live-registry-locate-after-stage-20260621-1703/stony-treeline-proof-summary.md`.
 
+## Savepoint Rebuild And Profile Stage
+
+After Julia accepted the biome-tuning savepoint, the local branch was committed and tagged:
+
+- Commit: `c9da0f93029f7f16c50a7bc89eb766c576a85b48` (`fix: close biome tuning follow-up`)
+- Tag: `save/biome-tuning-followup-26.1.2`
+
+The previously staged profile jar SHA `af1579b2...` carried pre-savepoint manifest commit `3d719aff...`. A fresh jar was rebuilt from `c9da0f93` and staged into `Lat 1.4+26.1.2`:
+
+- Fresh build/profile SHA: `1f50c5954cef3c91de1b071e78172ad6940a41abe5bace3e6febde5ac449a477`
+- Manifest: `Git-Commit=c9da0f93029f7f16c50a7bc89eb766c576a85b48`, `Build-Time=2026-06-21T21:53:47Z`, `Build-Dirty=true`
+- Rebuild evidence: `tmp/closeout-1.4-20260621/rebuild-c9da0f93-175345`
+- Profile stage evidence: `tmp/closeout-1.4-20260621/profile-stage-c9da0f93-175416/profile-stage.log`
+- Backup of the pre-savepoint profile jar: `/Users/joolmac/Library/Application Support/ModrinthApp/profiles/Lat 1.4+26.1.2/mods/latitude-1.4.1-beta.2+26.1.2.jar.pre-c9da0f93-20260621-175417`
+
+The next release gate is one bounded final live cruise on SHA `1f50c595...`; do not treat the older `af1579b2...` profile proof as final release-candidate cruise evidence.
+
+## Final Live Cruise Launch Blocker
+
+The 2026-06-21 final live cruise attempt on the c9 savepoint candidate did not reach Minecraft. This is a launcher/control blocker, not a new Latitude worldgen red:
+
+- The active profile jar still proves SHA `1f50c5954cef3c91de1b071e78172ad6940a41abe5bace3e6febde5ac449a477` and manifest commit `c9da0f93029f7f16c50a7bc89eb766c576a85b48`.
+- No `Minecraft*` Java client process or window was present.
+- Computer Use returned `cgWindowNotFound` for `Modrinth App`.
+- macOS reported the Modrinth App process with no windows.
+- Modrinth launcher log `session_20260621_181416.log` contains `theseus::state: Attempted to get state before it is initialized`.
+- A reversible removal of `app-window-state.json` did not make Modrinth recreate a visible window. The file was restored and reset to a visible 1400x900 rectangle.
+
+Evidence: `tmp/closeout-1.4-20260621/final-live-launch-blocker-181416`.
+
+The next live slice starts by restoring a usable Modrinth/profile launch path. Do not use a direct token-bearing launch helper unless Julia explicitly authorizes that last-resort route.
+
+## Final Live C9 Partial Cruise
+
+Julia reopened Modrinth, superseding the launcher blocker. A bounded c9 live cruise ran on staged profile SHA `1f50c5954cef3c91de1b071e78172ad6940a41abe5bace3e6febde5ac449a477`.
+
+Green:
+
+- Exact Java-owned `Minecraft* 26.1.2` window proof.
+- Live `[LAT][BUILD]` line for commit `c9da0f93029f7f16c50a7bc89eb766c576a85b48`.
+- Existing `New World` load reached `isGlobe=true`, radius `10000`, border diameter `20000`, first safe playable tick, and normal loading-screen closure.
+- `/worldborder get` reported `20000 block(s) wide`.
+- `/locate biome minecraft:desert` returned `[-896,220,-1312]`; settled HUD proof at `-895.5,100,-1311.5` shows `Biome: minecraft:desert`.
+- A 20-second non-teleport movement soak produced zero new warnings/errors/crashes.
+- Save/quit returned to title and logged all dimensions saved.
+
+Caveats:
+
+- `tools/lat-cruise-gate` stayed pending only on `Worldgen path active`; source shows that log line is gated behind `-Dlatitude.debugWorldgenPath=true`, which the release-profile JVM did not use.
+- Desert locate took `18128 ms` and logged a large `Can't keep up` warning; chunk-load teleports also logged short `Can't keep up` warnings. The later movement soak itself was clean.
+- Current-world `/locate biome minecraft:stony_peaks` returned `[1590,170,4112]`, but settled HUD at the coordinate read `promenade:cotton_sakura_grove`. The view contains a rugged high mountain nearby, and prior stony proof remains supportive, but this current live cruise is not a clean stony locate/HUD green.
+
+Evidence: `tmp/closeout-1.4-20260621/final-live-c9-192419`.
+
+Next gate: Julia decides whether the prior accepted stony visual proof plus current rugged-mountain view is enough, or opens one narrow stony locate/HUD follow-up before release push/publication.
+
+## C9 Stony Follow-up Green
+
+Julia chose the narrow follow-up. A fresh live pass on the staged c9 profile SHA `1f50c5954cef3c91de1b071e78172ad6940a41abe5bace3e6febde5ac449a477` launched through Modrinth and proved the exact Java-owned `Minecraft* 26.1.2` window.
+
+Green:
+
+- Existing `New World` loaded as Globe with `JOIN: player=Peetsa, isGlobeOverworld=true`, `S2C globe state: isGlobe=true`, 20,000-block border, first safe playable tick, and normal loading-screen close.
+- Fresh `/locate biome minecraft:stony_peaks` returned `[1452,170,4201]`.
+- `/tp @s 1452 170 4201 0 60` settled with HUD `Biome: minecraft:stony_peaks`.
+- The screenshot shows a rugged mostly-stone/calcite mountain scene.
+- `/execute if biome ~ ~ ~ minecraft:stony_peaks run say stony_peaks_here` emitted `[Peetsa] stony_peaks_here`, proving the player-position biome server-side.
+- Save and Quit to Title logged player/world/chunk saves and `ThreadedAnvilChunkStorage: All dimensions are saved`; final process check reported no `java` process.
+
+Evidence: `tmp/closeout-1.4-20260621/stony-followup-c9-195009`.
+
+Result: the c9 final live cruise no longer has an open stony locate/HUD blocker. Branch/tag push, upload, publication, cleanup, and porting remain separate Julia-owned release gates.
+
 ## Limits And Next Slice
 
 This slice closes the desert-locate mismatch for the current staged dirty-source candidate. It narrows the issue:
@@ -125,6 +198,6 @@ The next gate is not a desert-representation edit. The desert locate bug, stony-
 
 Atlas distribution currently shows vanilla desert around 4.3% and dark forest under 1%, so the video/live symptom is not evidence of global desert underrepresentation or global dark-forest overrepresentation.
 
-Remaining risk is ordinary release-readiness risk: this is not a savepoint, tag, push, upload, or full scenic/release cruise.
+Remaining risk is ordinary release-readiness/release-ops risk: public version identity, branch/tag push, upload, publication, cleanup, and porting are not authorized by this proof.
 
-This slice also does not delete/regenerate chunks, savepoint, tag, push, upload, or publish.
+This slice does not delete/regenerate chunks, push, upload, or publish.
