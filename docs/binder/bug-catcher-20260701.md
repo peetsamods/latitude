@@ -38,11 +38,14 @@ so `pickSeedIndex()` returns `33 + rand(19)` ∈ [33,51] — **never 0** with th
 check is safe today. (Latent fragility only if PHRASES ever shrinks below 19 or the featured block reaches index
 0; not a live bug.)
 
-### ⚠ Dimension errored: border-overlay (API connection drop mid-run)
-Re-running as a standalone review. Self-verified the primary risk meanwhile: all three EW `String.format`
-templates contain exactly two `%s`, and the polar path uses no format args — so no format-mismatch crash. The
-null-guards on the `ewIsColdBand`/`ewStormClientTick`/haze paths are present (render() checks player/level null
-before the STORM branch). Update this note if the re-run surfaces anything.
+### ✓ Re-ran border-overlay dimension (original crashed on an API drop): CLEAN — no runtime defects
+Standalone re-review confirmed: all three EW `String.format` templates have exactly two `%s` (no format-mismatch
+crash); every `degreesFromZ` path is null-safe because `LatitudeMath.halfSize(null|0)` returns 1.0 (no NPE / no
+divide-by-zero / no NaN, even on very early load before the Z-radius sync); the 66.5° band boundary classifies
+correctly (`>= 66.5` → POLAR); and the `cold` band computation is byte-identical across the warning TEXT
+(`ewIsColdBand`), the PARTICLES (`ewStormClientTick`), and the HAZE (`EwSandstormOverlayHud`) — so they can never
+disagree. Only smell: a provably-**unreachable** fallback `return` at `GlobeClientState.java:230` (dead code, no
+runtime risk) — left as-is (not worth a rebuild; clean up opportunistically on the next border touch).
 
 ## Not-a-bug notes worth keeping
 The **worldgen per-column cache** (the C3 lag fix) and the **C1/C2 village guards** drew adversarial scrutiny in
