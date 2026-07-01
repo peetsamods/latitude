@@ -33,6 +33,13 @@ surface for the 2.0 line. Recorded 2026-07-01 during the binder/handoff/lessons 
   11 findings from Peetsa's TEST 1 live test; the next work gate. Two items blocked on Notion re-auth.
 - `bug-catcher-20260701.md` — adversarial find→verify review (6 dimensions) run before Peetsa's TEST 6 retest;
   caught + fixed 2 confirmed bugs (existing-save Mercator-flip save-corruption; recreate drops world name).
+- `atlas-createscreen-iteration-20260701.md` — atlas + create-screen live-feedback loop (TEST 7→10): continents,
+  real vanilla map-texture frame + mapping notes, band contrast, centering, Vanilla-type grey-out. A4 layout
+  reorg still open.
+- `spark-profile-analysis-20260701.md` — decoded Peetsa's `.sparkprofile` (schema-less protobuf parse, no
+  browser/proto tooling needed). Confirms a real ~3-minute TPS collapse, but the capture only sampled "Server
+  thread" — the actual chunk-gen worker pool (where Latitude/Terralith run) is invisible in it. Needs a re-profile
+  with `--thread *`.
 
 ## Binder sections
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
