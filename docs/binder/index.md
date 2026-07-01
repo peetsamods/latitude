@@ -31,6 +31,8 @@ surface for the 2.0 line. Recorded 2026-07-01 during the binder/handoff/lessons 
   reading (commit `9a6e4e41`) + Atlas / World Shape Mercator-vs-Legacy toggle (commit `30db22fc`).
 - `test1-live-findings-20260701.md` — **open punch-list** (rendering + create-UI + worldgen + perf scope):
   11 findings from Peetsa's TEST 1 live test; the next work gate. Two items blocked on Notion re-auth.
+- `bug-catcher-20260701.md` — adversarial find→verify review (6 dimensions) run before Peetsa's TEST 6 retest;
+  caught + fixed 2 confirmed bugs (existing-save Mercator-flip save-corruption; recreate drops world name).
 
 ## Binder sections
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
