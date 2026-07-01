@@ -1,6 +1,7 @@
 # Adversarial bug-catcher pass — 2026-07-01 (post-TEST 5)
 
-`status: done (2 fixed in TEST 6, 1 dimension re-running)` · `scope: rendering, create-UI, worldgen` · `branch: feat/custom-biome-expansion-26.1.2`
+`status: done (2 fixed in TEST 6, 1 dimension re-running; 2nd independent pass added 4 more fixed in TEST 8)` ·
+`scope: rendering, create-UI, worldgen` · `branch: feat/custom-biome-expansion-26.1.2`
 
 Peetsa asked for an adversarial "bug-catcher" before another manual test pass. Ran a 6-dimension find→verify
 workflow (each finding independently re-checked by a skeptic reading the real code) over the code changed this
@@ -51,3 +52,43 @@ runtime risk) — left as-is (not worth a rebuild; clean up opportunistically on
 The **worldgen per-column cache** (the C3 lag fix) and the **C1/C2 village guards** drew adversarial scrutiny in
 their dimensions and produced no confirmed findings — the "does pick() depend on blockY only via biomeY" and
 "base-verify vs cave-deck override" concerns were checked and held. See `test1-live-findings-20260701.md`.
+
+## Second independent pass — same day, `code-review` skill at high effort, 8 finder angles + 1-vote verify
+
+A separate adversarial review (not the workflow above) ran `code-review` over the full UIX+worldgen diff
+(main...HEAD, 27 files). 9 candidates survived verification (5 CONFIRMED, 4 PLAUSIBLE); the 4 PLAUSIBLE ones were
+fixed here in TEST 8, with Peetsa's explicit go-ahead. The 5 CONFIRMED ones (a triplicated `-16` surface-band
+threshold with no shared constant, a magic-number Mercator-world gate, two small code-duplication cleanups, and
+a redundant micro-cache) are reported but **not yet applied** — still open, tracked in this conversation's
+ReportFindings output, not yet copied into a binder note.
+
+### ✅ Fixed (TEST 8): GlobePending race on overlapping world creation — `dd823a06`
+No world/session identity fenced `pendingGlobeShape`/`pendingGlobeRadius` against a second, overlapping world
+creation stealing/clearing them before the first world's own load consumed them. Added a time-bounded
+claim/release slot (`GlobePending.tryClaimWorldCreationInFlight`, 30s), claimed for every world type (not just
+Latitude) right before the "Preparing..." screen, released on both failure paths and unconditionally once any
+world's overworld actually loads.
+
+### ✅ Fixed (TEST 8): dead pre-bespoke-screen legacy mixins deleted — `25a8f9cf`
+`CreateWorldScreenLatitudeToggleMixin` + `CreateWorldScreenSpawnZoneMixin` — unregistered in `globe.mixins.json`,
+unreachable since `CreateWorldScreenInitRedirectMixin` cancels vanilla `init()` at HEAD before either mixin's
+TAIL injectors could fire. The toggle mixin also still targeted the stale pre-mojmap `DrawContext` descriptor —
+harmless while dead, but a hard `MixinApplyError` if ever re-registered. Deleted rather than patched (patching a
+descriptor on unreachable code just makes the landmine look current). **Still open, NOT decided here:** these
+were also the only home of a "RANDOM" spawn-zone option that never made it into `LatitudeBands.Band` — confirmed
+absent from the bespoke screen. Whether "Random spawn zone" should exist in the current UI is a product call,
+tracked separately, not resolved by this deletion.
+
+### ✅ Fixed (TEST 8): atlas rect-primitive bounds guard — `703ad458`
+`fillRect`/`fillBandStripRect`/`drawLatitudeLineRect` lacked the `halfW <= 0` no-op guard every circle primitive
+they sit next to has. Not reachable today (the sole caller always produces a positive width), but width is now
+an independently-supplied parameter rather than derived from one radius — a future caller or layout regression
+could hit it. Added the guard to match the existing pattern.
+
+### ✅ Fixed (TEST 8): falsy-zero loading-phrase sentinel — `ea243dd4`
+**Reconciling with the dismissal above:** the earlier workflow pass (this same doc, "Dismissed" section) checked
+this exact `phraseSeedIdx==0` concern and correctly found it unreachable with today's constants — that fact
+still holds, this isn't a factual disagreement. The second pass made the same factual finding but reached a
+different call on whether to harden it anyway; Peetsa asked for it, and the fix is a genuinely zero-behavior-
+change hardening today (`-1`/`>=0` sentinel instead of `0`/`>0`), so there's no real tension — it was safe to do
+either way and is just no longer a *latent* trap if `FEATURED_PHRASE_COUNT`/`PHRASES` ever change.
