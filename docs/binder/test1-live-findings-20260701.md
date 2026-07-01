@@ -12,7 +12,7 @@ Peetsa to confirm**, not decided. Line numbers are as of `30db22fc` and will dri
 
 Legend — Pri: **H** high / **M** medium / **L** low. ⛔ = blocked on an external dependency.
 
-## Status (updated 2026-07-01, TEST 6) — source-green, live-eyeball pending
+## Status (updated 2026-07-01, TEST 7) — source-green, live-eyeball pending
 - ✅ **A2** Legacy atlas square — `13f60b27` (TEST 2)
 - ✅ **B1** loading-message randomize + 70% newer-bias + anti-clustering — `b5fd8e1b` (TEST 3)
 - ✅ **C2 (forbid half)** villages banned from bog/swamp — `5dc6377e` (TEST 3). Full village-biome **audit** still open (⛔ Notion).
@@ -20,9 +20,10 @@ Legend — Pri: **H** high / **M** medium / **L** low. ⛔ = blocked on an exter
 - ✅ **A5** Re-create copies source seed — `12f53f0a` (TEST 3) + **changing World Size no longer erases the seed** (seedInput backing field) — `65439d26` (TEST 5).
 - ✅ **C1** mismatched (savanna) village cancelled by **latitude band** — `cadd7230` (TEST 4)
 - ✅ **C3** chunk-gen lag — **REAL FIX**: `pick()` memoized **per column** (was recomputed ~96×/column; only deep cells fall through) — `7d5918ef` (TEST 5). (Earlier `isBiomeId` memoize `1bc2f8a4` kept.) *Needs live confirmation the lag is gone.* If still laggy, next lever = `entriesForTag()` alloc/sort.
-- 🔨 **A1** atlas redesign (translucent latitude stripes over a continent outline, framed with the vanilla MC map graphic) — direction given by Peetsa in TEST 4 feedback; **in progress**, not yet built.
+- ✅ **A1** atlas redesign — ocean → continent outline → **translucent** latitude climate wash → faint graticule → gold selected edges, with a parchment **frame** (`880683d0`, TEST 7). Caveat: the frame is a *drawn* parchment border; the literal vanilla `map_background.png` texture is a 1-line swap pending the `RenderPipelines.GUI_TEXTURED` package in this mapping (yarn's `net.minecraft.client.gl` doesn't exist here; `drawTexture` itself resolves).
+- ✅ **A3** latitude labels de-crammed — the column now slides up by any overflow so labels stay within the atlas height instead of spilling past the bottom (`880683d0`, TEST 7).
 - 🐛 **Bug-catcher pass** (adversarial find→verify, 6 dimensions — see `bug-catcher-20260701.md`): 2 confirmed bugs fixed in TEST 6 — existing Classic/legacy saves flipping to Mercator on load (`4a73791a`, save-corruption) and Re-create dropping the source world name (`018e4d0e`). Border-overlay dimension crashed mid-run; re-running + templates self-verified.
-- ⏳ **Still open:** A3 (cramped labels), A4 (layout side — needs decision), C2-audit + D1 /latdev list (⛔ Notion).
+- ⏳ **Still open:** **A4** (group World Type/Shape/Size) — assessed in depth: a 6-method blind layout reorg (init / updateLeftLayout / updateSettingsLayout / render / applyTabbedVisibility / left-widget visibility) PLUS new left-pane rendering (drawSettingsStepperValue is rail-geometry-specific), and it competes with the atlas space A1/A3 just gained. Recommendation: move World Type+Shape onto the left "World" pane with Size; deferred pending an eyeball of the redesigned atlas since it changes the space tradeoff. The vanilla map-texture frame (A1 caveat) and C2-audit + D1 /latdev list (⛔ Notion) also remain.
 
 ---
 
