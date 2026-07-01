@@ -12,6 +12,14 @@ Peetsa to confirm**, not decided. Line numbers are as of `30db22fc` and will dri
 
 Legend — Pri: **H** high / **M** medium / **L** low. ⛔ = blocked on an external dependency.
 
+## Status (updated 2026-07-01) — 5 fixed, source-green, live-eyeball pending
+- ✅ **A2** Legacy atlas square — `13f60b27` (TEST 2)
+- ✅ **B1** loading-message randomize + 70% newer-bias + anti-clustering — `b5fd8e1b` (TEST 3)
+- ✅ **C2 (forbid half)** villages banned from bog/swamp — `5dc6377e` (TEST 3). The full village-biome **audit** is still open (⛔ Notion).
+- ✅ **E1** climate-aware E/W storm (snow + grey→whiteout in cold bands), "sandstorm"→"storm", "extreme danger"→"low visibility" — `b24553d7` (TEST 3). Fog-*color* tinting left as a follow-up.
+- ✅ **A5** Re-create world copies the source seed — `12f53f0a` (TEST 3)
+- ⏳ **Still open:** A1 (atlas aesthetics — needs design direction), A3 (cramped labels), A4 (layout side — needs decision), C1 (savanna village in temperate zone), C3 (generation lag), C2-audit + D1 /latdev list (⛔ Notion).
+
 ---
 
 ## A. Atlas / create-world screen (the feature we just shipped)
