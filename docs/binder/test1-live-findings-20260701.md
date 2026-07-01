@@ -12,15 +12,16 @@ Peetsa to confirm**, not decided. Line numbers are as of `30db22fc` and will dri
 
 Legend — Pri: **H** high / **M** medium / **L** low. ⛔ = blocked on an external dependency.
 
-## Status (updated 2026-07-01) — 7 fixed + C3 partial, source-green, live-eyeball pending
+## Status (updated 2026-07-01, TEST 5) — source-green, live-eyeball pending
 - ✅ **A2** Legacy atlas square — `13f60b27` (TEST 2)
 - ✅ **B1** loading-message randomize + 70% newer-bias + anti-clustering — `b5fd8e1b` (TEST 3)
-- ✅ **C2 (forbid half)** villages banned from bog/swamp — `5dc6377e` (TEST 3). The full village-biome **audit** is still open (⛔ Notion).
-- ✅ **E1** climate-aware E/W storm (snow + grey→whiteout in cold bands), "sandstorm"→"storm", "extreme danger"→"low visibility" — `b24553d7` (TEST 3). Fog-*color* tinting left as a follow-up.
-- ✅ **A5** Re-create world copies the source seed — `12f53f0a` (TEST 3)
-- ✅ **C1** mismatched (savanna) village cancelled by **latitude band** — biome-sample-independent, gated to globe worlds — `cadd7230` (TEST 4)
-- 🟡 **C3** generation lag — *diagnosed*; applied one safe win (`isBiomeId` parse-memoize, `1bc2f8a4`, TEST 4). **NOT confirmed-fixed** — gen lag is measurement-dependent and needs a live profile (spark/JFR). Top follow-up: `entriesForTag()` per-call ArrayList + tag-scan + toString-sort (highest surveyed cost, but risky to cache without a live run — could be a biome-placement regression).
-- ⏳ **Still open:** A1 (atlas aesthetics — needs design direction), A3 (cramped labels), A4 (layout side — needs decision), C2-audit + D1 /latdev list (⛔ Notion).
+- ✅ **C2 (forbid half)** villages banned from bog/swamp — `5dc6377e` (TEST 3). Full village-biome **audit** still open (⛔ Notion).
+- ✅ **E1** climate-aware E/W storm (snow + grey→whiteout in cold bands), "sandstorm"→"storm" — `b24553d7` (TEST 3) + **escalating, climate-specific warning text** ("Storms and low visibility" → "Whiteout"/"Blinding sandstorm") — `ac3ff0bf` (TEST 5). Ocean edge confirmed good by Peetsa. Fog-*color* tinting still a follow-up.
+- ✅ **A5** Re-create copies source seed — `12f53f0a` (TEST 3) + **changing World Size no longer erases the seed** (seedInput backing field) — `65439d26` (TEST 5).
+- ✅ **C1** mismatched (savanna) village cancelled by **latitude band** — `cadd7230` (TEST 4)
+- ✅ **C3** chunk-gen lag — **REAL FIX**: `pick()` memoized **per column** (was recomputed ~96×/column; only deep cells fall through) — `7d5918ef` (TEST 5). (Earlier `isBiomeId` memoize `1bc2f8a4` kept.) *Needs live confirmation the lag is gone.* If still laggy, next lever = `entriesForTag()` alloc/sort.
+- 🔨 **A1** atlas redesign (translucent latitude stripes over a continent outline, framed with the vanilla MC map graphic) — direction given by Peetsa in TEST 4 feedback; **in progress**, not yet built.
+- ⏳ **Still open:** A3 (cramped labels), A4 (layout side — needs decision), C2-audit + D1 /latdev list (⛔ Notion).
 
 ---
 
