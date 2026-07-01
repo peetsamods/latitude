@@ -24,8 +24,13 @@ Needs an atlas/map treatment (framing, graticule, land/water feel, labels — de
 - `client/create/LatitudePlanisphereRenderer.java` — `renderCompact()` L289–351 (ocean base fill L300–304,
   band strip fills L327–333). This is the aesthetic surface to redesign.
 
-### A2 — Legacy 1:1 atlas should be a SQUARE, currently renders a CIRCLE · Pri H  (bug in the just-shipped feature)
+### A2 — Legacy 1:1 atlas should be a SQUARE, currently renders a CIRCLE · Pri H  (bug in the just-shipped feature) · ✅ FIXED `13f60b27` (TEST 2), live eyeball pending
 > "Legacy atlas should be a square"
+
+**Fix (2026-07-01, `13f60b27`):** `renderCompact` now uses the rectangular primitives for both shapes — a
+square for Legacy 1:1 (halfW == halfH), a 2:1 rectangle for Mercator. The bounding box was already
+shape-correct (`computePreviewLayout`); the old code just drew a circle inside the Legacy square box. Removed
+the mercator-vs-classic branch. Staged as `TEST 2.jar`. Remaining: Peetsa live-eyeball the square.
 
 The Legacy 1:1 world border is a square (X radius == Z radius), but the preview draws a circle for CLASSIC.
 Mercator correctly draws a rectangle.
