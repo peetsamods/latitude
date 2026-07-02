@@ -313,3 +313,86 @@ Launch `LATITUDE 26.2` via the Modrinth App (never the Mojang launcher). Confirm
 3. Menus/screens open and close (settings, HUD studio) — the screen-management repairs.
 4. `/locate biome minecraft:sulfur_caves` returns a hit (new-biome generation), and digging there shows it.
 5. General biome feel across bands looks right; no crashes on load/soak/save-quit.
+
+---
+
+## Live client crash #1: fixed, plus a full client-mixin audit (2026-07-02, same day)
+
+`trigger: Peetsa's first live launch of TEST 1.jar crashed at startup.`
+
+### The crash
+
+```
+java.lang.RuntimeException: Mixin transformation of net.minecraft.client.gui.Gui failed
+Caused by: MixinApplyError: Mixin [...InGameHudMixin...] FAILED during APPLY
+Caused by: InvalidInjectionException: Critical injection failure: @Inject annotation on
+globe$renderEwHazeBeforeHotbar could not find any targets matching
+'extractHotbarAndDecorations' in net/minecraft/client/gui/Gui. No refMap loaded.
+```
+
+Full report: `crash-2026-07-02_16.59.16-client.txt` (Modrinth profile `LATITUDE 26.2`).
+
+### Root cause
+
+26.2 moved the entire HUD-element extraction method family off `Gui` and onto a **new class**,
+`net.minecraft.client.gui.Hud` (`Gui` now just holds a `hud` field and delegates:
+`Gui.extractRenderState(DeltaTracker, boolean, boolean)` internally calls
+`hud.extractRenderState(GuiGraphicsExtractor, DeltaTracker)`). Verified by `javap` diff: every method name and
+signature in the family — `extractHotbarAndDecorations`, `extractRenderState(GuiGraphicsExtractor, DeltaTracker)`,
+`extractCrosshair`, `extractEffects`, `extractItemHotbar`, etc. — is **identical**, just moved wholesale to `Hud`.
+This is exactly the class of bug the plan warned about: mixin injection targets are strings resolved at
+class-load time, not checked by `compileJava`, and `Gui`/`Hud` are client-only classes a headless server run
+never loads — so nothing in the entire prior proof suite could have caught this.
+
+**Fix:** retarget `@Mixin(Gui.class)` → `@Mixin(Hud.class)` in `InGameHudMixin`. No other change (commit
+`2133372e`).
+
+### Full client-mixin audit (to avoid a second crash cycle)
+
+Per Peetsa's standing instruction to finish the whole phase before another live test, every **registered**
+client mixin (per `globe.mixins.json`'s `client` list — 11 total) was manually checked against the real 26.2
+jar via `javap`, not just the one that crashed:
+
+| Mixin | Target | 26.2 verdict |
+|---|---|---|
+| `CreateWorldScreenMixin` | `CreateWorldScreen.init()` | exists, matches |
+| `CreateWorldScreenInitRedirectMixin` | `CreateWorldScreen.init()` | exists, matches |
+| `WorldCreatorMixin` | `WorldCreationUiState.updatePresetLists()` + shadowed fields | exists, matches |
+| `WorldRendererWorldBorderMixin` | `WorldBorderRenderer.render(WorldBorderRenderState, Vec3, double, double)` | exists, matches |
+| `SystemDetailsHardwareProbeMixin` | `SystemReport` (class only, no injectors) | exists |
+| `MinecraftClientStartIntegratedMixin` | `Minecraft.doWorldLoad(LevelStorageAccess, PackRepository, WorldStem, Optional<GameRules>, boolean)` | exists, matches |
+| `InGameHudMixin` | `Hud.extractHotbarAndDecorations`, `Hud.extractRenderState` | **fixed this pass** (was `Gui`) |
+| `LatitudeLoadingClientTickMixin` (2nd class in `LevelLoadingScreenLatitudeOverlayMixin.java`) | `Minecraft.tick()` | exists, matches |
+| `LevelLoadingScreenLatitudeOverlayMixin` | `LevelLoadingScreen.extractRenderState(GuiGraphicsExtractor,int,int,float)`, `.onClose()`, `.tick()` | exists, matches |
+| `FogRendererEwMixin` | `FogRenderer.applyFog` (`@ModifyVariable`, `require=0` both) | **target method GONE** — fails safe (no crash), feature inert (see below) |
+| `compat.sodium.RenderSectionManagerVisibilityMixin` | `@Pseudo` target on a Sodium class string | Sodium not installed in this profile — mixin is a designed no-op, N/A |
+
+Four **unregistered** (dead) client mixins were also found and correctly ignored, since they're not in
+`globe.mixins.json`'s `client` list and therefore never load: `CreateWorldScreenShowMixin` (also has an
+unrelated pre-existing bug — a Yarn-style `MinecraftClient` descriptor string that could never have resolved on
+any Mojang-mapped version; harmless only because it's dead), `EwStormWallRendererMixin`, `FogUniformPackerClampMixin`,
+`FogRendererMixin`.
+
+### New follow-up flagged: east-west fog tightening is silently inert on 26.2
+
+26.2 restructured fog rendering: the old `FogRenderer.applyFog(...)` local-variable-based method is gone,
+replaced by `setupFog(Camera, int, DeltaTracker, float, ClientLevel) -> FogData` plus a new
+`FogEnvironment`/`FogMode` abstraction. `FogRendererEwMixin`'s two `@ModifyVariable` injectors target the
+removed method with `require = 0` (explicitly permissive), so this **fails safe — no crash** — but the
+east-west fog-tightening visual feature does nothing on 26.2 right now. This is a real design task (understand
+the new `FogData`/`FogEnvironment` shape and find the right hook), not a rename, so it was **not** attempted in
+this crash-fix pass. Flagged for its own card.
+
+### What this does NOT change
+
+The sulfur_caves fix, the worldgen mixin repairs, compileJava, full build, and headless Atlas all re-verified
+green and **byte-identical** to the pre-crash-fix baseline after this change (this crash and its fix are 100%
+client-side; no worldgen path was touched).
+
+### Re-staged for live retest
+
+Rebuilt jar (sha256 `982dd4238014161e7946812eb3087a6d0827320b1fd9b01213211a7ad405851b`), staged as **`TEST 2.jar`**
+in the `LATITUDE 26.2` Modrinth profile, stale `TEST 1.jar` removed, staged sha256 verified identical to the
+build. Did **not** attempt to launch the client myself (`runClient` would open a real graphical window on
+Peetsa's screen from a background process — inappropriate to trigger unprompted, and is exactly the live-test
+step reserved for him).
