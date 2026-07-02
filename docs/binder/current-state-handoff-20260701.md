@@ -1,4 +1,4 @@
-# Current-state handoff — 2.0 "Longitude", TEST 1 punch-list is the next gate (2026-07-01)
+# Current-state handoff — 2.0 "Longitude" plus overhaul plan (updated 2026-07-02)
 
 `status: active resume pointer` · `scope: release, rendering, worldgen` · `branch: feat/custom-biome-expansion-26.1.2`
 
@@ -7,6 +7,15 @@
 > and `docs/LESSONS.md` live on the `main` worktree (`/Users/joolmac/CascadeProjects/Latitude (Globe)`, a
 > pre-2.0 lineage); this feature branch has the active binder but no top-level handoff, so this dated note
 > serves that role until the branches reconcile.
+
+## 2026-07-02 planning update
+
+The comprehensive Latitude 2.0 overhaul plan is now the first planning document to read:
+
+- `docs/LATITUDE_2_0_OVERHAUL.md` — canonical front door for the earthlike-world overhaul, Minecraft `26.2` canonical-pivot plan, portability spine, phased roadmap, stop rules, and Fable 5 handoff.
+- `docs/binder/longitude-earthlike-world-overhaul-20260702.md` — dated binder research and hardening log behind that plan.
+
+This is a docs/planning update only. It does not move release authorization, staged jar truth, profile truth, or source behavior.
 
 ## Truth table
 - **Version:** `2.0-beta.1+26.1.2` — public title **"Longitude"** (renamed from `1.4.1-beta.2`; see
@@ -34,6 +43,10 @@ create-screen polish (Legacy atlas should be a **square**, atlas "looks like a f
 left/right layout question, recreate-world blank seed), a loading-message randomization/70%-bias request, and
 worldgen/structure/perf items (savanna village in a temperate zone, **bog village → forbid**, generation lag,
 E/W border storm should be climate-aware, incomplete `/latdev` tester command set).
+
+For the larger Latitude 2.0 overhaul, the first implementation gate is **not** visible continent generation.
+Start with the `26.2` pivot and the Atlas geography analyzer/fixture work described in
+`docs/LATITUDE_2_0_OVERHAUL.md`.
 
 ## Notion dependency (blocked this session)
 Two punch-list items reference **@Notion** for authoritative prior state — the full historical `/latdev`
