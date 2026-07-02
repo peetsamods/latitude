@@ -41,7 +41,13 @@ surface for the 2.0 line. Recorded 2026-07-01 during the binder/handoff/lessons 
   thread" — the actual chunk-gen worker pool (where Latitude/Terralith run) is invisible in it. Needs a re-profile
   with `--thread *`.
 
+## 2026-07-02 additions (future pass parking lot)
+- `future-pass-ideas.md` — parked ideas Julia wants future agents to notice without making them active scope.
+- `arid-belt-dry-mosaic-assessment-20260702.md` — complete read-only assessment and future implementation
+  direction for reintroducing custom-biome variety into the subtropical arid belt while preserving band law.
+
 ## Binder sections
+- `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
 - `evidence-record-schema.md`: required evidence-row contract and enums.
 - `evidence-schema.json`: machine-readable schema for evidence rows.

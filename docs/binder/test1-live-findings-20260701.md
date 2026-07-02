@@ -24,6 +24,9 @@ Legend — Pri: **H** high / **M** medium / **L** low. ⛔ = blocked on an exter
 - ✅ **A3** latitude labels de-crammed — the column now slides up by any overflow so labels stay within the atlas height instead of spilling past the bottom (`880683d0`, TEST 7).
 - 🐛 **Bug-catcher pass** (adversarial find→verify, 6 dimensions — see `bug-catcher-20260701.md`): 2 confirmed bugs fixed in TEST 6 — existing Classic/legacy saves flipping to Mercator on load (`4a73791a`, save-corruption) and Re-create dropping the source world name (`018e4d0e`). Border-overlay dimension crashed mid-run; re-running + templates self-verified.
 - ⏳ **Still open:** **A4** (group World Type/Shape/Size) — assessed in depth: a 6-method blind layout reorg (init / updateLeftLayout / updateSettingsLayout / render / applyTabbedVisibility / left-widget visibility) PLUS new left-pane rendering (drawSettingsStepperValue is rail-geometry-specific), and it competes with the atlas space A1/A3 just gained. Recommendation: move World Type+Shape onto the left "World" pane with Size; deferred pending an eyeball of the redesigned atlas since it changes the space tradeoff. The vanilla map-texture frame (A1 caveat) and C2-audit + D1 /latdev list (⛔ Notion) also remain.
+- 🐛 **C3 re-opened (2026-07-01 polar session):** live-tested chunk-gen lag "prohibitive" at ~78°S; not yet isolated from missing perf mods (no Sodium/C2ME on the test rig). See C3 addendum.
+- 🔧 **C4 (new, 2026-07-01):** `polarProbeDelta` found hardcoded to `0` on the live polar mountain-authority path (unintentional side effect of the C3 stall fix `4ae1bec5`) — fix applied via a non-reentrant `Climate.Sampler` ruggedness proxy, staged and confirmed by SHA match as **`TEST 8.jar`** (the exact build Peetsa live-tested in the polar session above), but **still uncommitted to git and behaviorally unverified** — the C3 lag made it too hard to survey enough polar terrain to see the fix's effect. See C4.
+- 📝 **F1 (new, 2026-07-01):** feature idea, not started — heavier/deeper snow accumulation approaching the subpolar/polar edges. See section F.
 
 ---
 
@@ -141,6 +144,39 @@ Worldgen performance. Prime suspects: the per-chunk biome-remap wrap and terrain
 `code-red-itty-palm-performance-20260620.md` and `worldgen-jank-earmark-20260622.md`. Needs a profiling pass on
 `TEST 1` (which world size/shape, seed, and location should be captured when reproducing).
 
+**2026-07-01 addendum (post-TEST 7 polar session):** Peetsa reports chunk loading "extremely slow — prohibitive"
+while testing polar terrain (~78°S), to the point `/locate minecraft:jagged_peaks` never returned. Important
+caveat Peetsa flagged themself: this test rig has **no Sodium and no concurrent-chunk-loading mod** (e.g.
+C2ME), both of which most players run — so this may be closer to a worst-case vanilla-performance floor than a
+new regression. Not yet isolated whether this is (a) the pre-existing C3 lag `7d5918ef` only partially fixed,
+(b) something specific to polar-band terrain, or (c) environment-only (missing perf mods) — all still open.
+`/locate` is also a poor verification tool here: it scans outward chunk-by-chunk and can appear to hang or
+silently give up under slow chunk-gen even if the target biome exists; prefer flying to visually rugged terrain
+and reading the biome off F3/`/latdev` directly (see C4 below) over `/locate`.
+
+### C4 — Polar mountain ruggedness (`polarProbeDelta`) hardcoded to 0 on the live path · Pri M · fix applied 2026-07-01, uncommitted, unverified live
+
+Found while auditing `feat/custom-biome-expansion-26.1.2` vs `main`: commit `4ae1bec5` (the C3 stall fix) replaced
+a real `previewTerrain()` ruggedness probe with a hardcoded `polarProbeDelta = 0` in the live polar
+mountain-authority bridge (`LatitudeBiomes.pick()`, two call sites), as a side effect of removing the
+generator-re-entry call that caused the stall. This silently disabled the `polarProbeDelta >= 12` OR-branch that
+`dbf6ac86` had deliberately added so rugged-but-not-tall polar terrain could earn `jagged_peaks`/`frozen_peaks`/
+`snowy_slopes` authority (height-only survived; ruggedness-only did not).
+
+- Fix (uncommitted): added `polarClimateRuggednessProxy()` — samples `Climate.Sampler` weirdness at 4 ring
+  offsets around the column (same non-reentrant query `isMountainLike()` already does; never touches the chunk
+  generator, so it shouldn't reintroduce the C3 stall) — and wired it into both `polarProbeDelta` sites in place
+  of the `= 0`. New tunable `-Dlatitude.polarClimateRuggedScale` (default `20.0`, **not yet atlas/live-calibrated**).
+- **Unverified**: today's polar test (screenshot at 78°S, 175°E, F3 biome = `terralith:siberian_grove` on
+  visibly craggy/rugged-but-modest-height terrain) did not confirm the fix — the chunk-gen lag made it too hard
+  to survey enough polar terrain, and `/locate minecraft:jagged_peaks` is unreliable under slow chunk-gen (see
+  C3 addendum). Also open: whether a custom/modded polar biome like `siberian_grove` is even eligible to receive
+  "polar mountain authority" the same way vanilla alpine biomes are, or whether it's selected through a separate
+  pool untouched by this bridge — not yet traced.
+- Next steps once C3 lag is ruled out/mitigated: re-test with `/latdev tpband polar` + `/latdev probe` (reads
+  biome without needing `/locate`) across several rugged polar sites; if alpine biomes still don't appear,
+  trace whether `siberian_grove`-class custom biomes bypass `polarMountainLikeFinal` entirely.
+
 ---
 
 ## D. Dev tooling
@@ -179,6 +215,27 @@ climate (poles already have a separate `SNOWFLAKE` path for the N/S cap, which c
   band — subpolar/polar → snow particles + cool grey fog escalating to whiteout, temperate/tropical → keep a
   (renamed) dust/haze storm; (3) reword the tier-2 line to "low visibility ahead" (region-appropriate) rather
   than "extreme danger."
+
+---
+
+## F. Climate polish (future action item, not started)
+
+### F1 — Heavier snow the closer you get to the subpolar/polar world edges · Pri L · idea only, no fix started
+> Peetsa, 2026-07-01 (same polar test session as C3/C4): "Can we make it heavier snow the closer you get to the
+> subpolar/polar world edges?"
+
+Currently there's no Latitude mechanic that grades snow *accumulation/coverage* by latitude within a band —
+what exists is a latitude-graded **snow *line altitude*** (`alpineSnowMinY()`, `world/LatitudeBiomes.java`
+~L711, feeding `alpineSurfaceKind()` ~L705, `ALPINE_ROCK_Y=168`), which decides at what height snow caps start
+on alpine terrain, not how deep/heavy ground-level snow looks as you travel poleward. Grepped for
+`SnowLayer`/`snow_layer`/`snowDepth`/`snowAccum` in `src/main/java` — the only hit is
+`ProtoChunkSnowBlockGuardMixin`, which is a grass↔gravel ocean-authority surface swap, unrelated to snow depth.
+- Not started. Would need new logic — likely a latitude-graded snow-layer height/probability (vanilla
+  `snow_layer` supports 1-8 layers) or a surface-rule addition, keyed on absolute latitude degree within
+  `BAND_SUBPOLAR`/`BAND_POLAR`, following the existing latitude-graded pattern in `alpineSnowMinY()`.
+- Open design questions for whoever picks this up: linear ramp vs. banded steps toward the pole; whether it
+  should interact with the E/W storm's existing snow-particle escalation (E1) or stay a separate ground-cover
+  effect; whether it applies inside `BAND_SUBPOLAR` too or only deep `BAND_POLAR`.
 
 ---
 
