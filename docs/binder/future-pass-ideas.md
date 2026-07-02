@@ -44,3 +44,11 @@ Parking lot for ideas Julia wants future agents to notice without making them ac
 - Source: Julia chat
 - Repo state when captured: feat/custom-biome-expansion-26.1.2 / e2c8ee69, with pre-existing unrelated dirty files in `run-headless/server.properties` and `src/main/java/com/example/globe/world/LatitudeBiomes.java`
 - Status: untriaged; saved for a future pass
+
+### 2026-07-02 - No rivers in deserts
+- Idea: Desert biomes should not have ordinary wet rivers running through them. If a future hydrology pass needs drainage across desert terrain, prefer dry washes, wadis, canyons, intermittent beds, or rare oasis/coast transitions rather than full river biome corridors.
+- Context: Parked Latitude 2.0 worldgen/hydrology rule for future GeoAuthority, ClimateAuthority, river, and biome-family work.
+- Tags: worldgen, hydrology, deserts, rivers, climate
+- Source: Julia chat
+- Repo state when captured: feat/custom-biome-expansion-26.1.2 / d7771838, with pre-existing unrelated dirty files in `run-headless/server.properties` and `src/main/java/com/example/globe/world/LatitudeBiomes.java`
+- Status: untriaged; saved for a future pass
