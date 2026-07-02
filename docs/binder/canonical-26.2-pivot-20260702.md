@@ -179,7 +179,7 @@ checkpoint — not a jump to Phase 0/1.
 
 ## Opus repair pass (2026-07-02, later same day)
 
-`model: Opus 4.8, high effort` · `outcome: Phase -1 GREEN`
+`model: Opus 4.8, high effort` · `outcome: Phase -1 code-complete; all headless gates GREEN; only live client pass remains`
 
 Peetsa switched the ambient model to Opus and said "continue." Rather than brute-force the 22-file drift, the
 Opus pass first did a full evidence-based diagnosis against the actual 26.2 deobf jars (`javap -p`, jar-content
@@ -221,23 +221,51 @@ mixin retarget and the sapling TagKey reconstruction, both proven behavior-prese
 - **Determinism: GREEN.** Two consecutive `runBiomePreview` runs produced byte-identical `biomes.txt`
   (same seed, band counts, and top-biome histogram). This directly clears the Hard Stop *"New authority code
   leaks seed/radius/shape across consecutive world loads."*
+- **Full production `build`: GREEN.** `./gradlew build` produces `build/libs/latitude-2.0-beta.1+26.2.jar`
+  (1.49 MB) plus the sources jar. This is more than `compileJava` — it runs the Loom remap step that produces
+  the shippable (intermediary-mapped) jar.
+- **Production mixin-apply structure verified against the known-good jar.** The 26.2 jar declares
+  `"refmap": "globe.refmap.json"` in `globe.mixins.json` but contains **no** standalone `globe.refmap.json` —
+  and this is **identical** to the live-proven `latitude-1.4.1-beta.2+26.1.2.jar` (the jar that passed the full
+  live closeout in `docs/release/current-gates.json`). The project uses modern Loom's remap-at-build-time
+  (tiny-remapper mixin extension rewrites mixin bytecode references straight to intermediary in the output jar),
+  so the standalone refmap file is unnecessary and its absence is expected, not a defect. The dev-run warning
+  *"Reference map globe.refmap.json could not be read… ignore in a development environment"* is the normal dev
+  message. Conclusion: mixins will apply in the Modrinth (production) runtime the same way they do in the
+  shipped 26.1.2 jar.
 
-### Flagged follow-ups (NOT fixed in this slice — each needs its own card)
+### Frozen-river vegetal stripping: investigated, NOT a regression, deliberately untouched
 
-1. **Frozen-river vegetal stripping silently no-ops on 26.2.** `BiomeFeatureStripping.java:71` reflects
-   `getMethod("getFeatures")`, which 26.2 renamed to `BiomeGenerationSettings.features()`. The call is caught
-   gracefully (WARN, no crash) so the frozen-river VEGETAL_DECORATION scrub currently does nothing. It's a
-   one-word reflection change (`getFeatures` → `features`) but it touches **worldgen behavior**, so it needs its
-   own before/after atlas check rather than being smuggled into this compile/drift slice.
-2. **Client-side repairs are compile-proven only.** The screen/camera/render-target/HUD changes and all
-   client mixins (`InGameHudMixin`, `LatitudeCreateWorldScreen`, etc.) are not exercised by a headless server
-   run. They need a live 26.2 client pass (separate proof type, LESSONS L4) before any release claim.
-3. **No cross-version byte-identical flag-off diff was produced.** Vanilla worldgen itself changed 26.1.2→26.2
-   (speleothem system, etc.), so a byte-identical cross-version diff is not meaningful; the determinism + banded-
-   distribution sanity above stand in as the worldgen-unchanged evidence for this slice.
+`BiomeFeatureStripping.java:71` reflects `getMethod("getFeatures")`. The headless log warns
+`NoSuchMethodException: BiomeGenerationSettings.getFeatures()`. First read (Sonnet pass) called this a 26.2
+regression. **It is not.** Verified against the 26.1.2 merged deobf jar: 26.1.2's `BiomeGenerationSettings`
+already exposed **`features()`**, not `getFeatures()` — the `getFeatures` name has not existed in these mappings
+since before 26.1.2. So this reflection threw `NoSuchMethodException` on 26.1.2 **too**, and the frozen-river
+VEGETAL_DECORATION scrub has **removed nothing on any version** (also confirmed by the inner
+`instanceof List<?>` check, which can never match a `HolderSet` — `HolderSet extends Iterable`, not `List`). No
+evidence of `removed>0` exists anywhere in the repo.
+
+Because the feature has always been inert, the behavior-preserving action for the pivot is to **leave it
+exactly as-is** (no-op → no-op; the log warning is identical to 26.1.2's). *Fixing* it to actually strip
+vegetation would be a NEW, never-shipped worldgen change (frozen rivers losing plants for the first time),
+which would violate the pivot's "no worldgen behavior changes" mandate. If working frozen-river vegetal
+stripping is actually desired, that is a **new feature request for Peetsa**, not a pivot repair — file it
+separately.
+
+### Remaining before release-ready (separate lanes, NOT this slice)
+
+1. **Live 26.2 client pass.** The screen/camera/render-target/HUD changes and all client mixins
+   (`InGameHudMixin`, `LatitudeCreateWorldScreen`, etc.) are compile-proven only — a headless server run does
+   not load client mixins. Needs a live 26.2 client pass (separate proof type, LESSONS L4). This is the single
+   item that genuinely requires Peetsa at the keyboard.
+2. **No cross-version byte-identical flag-off diff.** Vanilla worldgen itself changed 26.1.2→26.2 (speleothem
+   system, etc.), so a byte-identical cross-version diff is not meaningful; the determinism + banded-distribution
+   sanity above stand in as the worldgen-unchanged evidence.
 
 ### Verdict
 
-Phase -1 is **GREEN** for the deterministic-headless proof gate. Remaining before this can be called
-release-ready (separate lanes, not this slice): the frozen-river reflection fix and a live 26.2 client pass.
-Local commits only; no tag, no push, no Modrinth profile staging (none authorized).
+Phase -1 is **code-complete and GREEN for every headlessly-verifiable gate**: compile, full production build,
+production mixin-apply structure (matches the shipped 26.1.2 jar), headless Atlas, determinism. The one flagged
+"worldgen regression" turned out to be a pre-existing inert feature, correctly left untouched. The only thing
+left is the live in-game client pass, which only Peetsa can drive. Local commits only; no tag, no push, no
+Modrinth profile staging performed (staging offered pending Peetsa's go-ahead).
