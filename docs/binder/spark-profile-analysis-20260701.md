@@ -1,6 +1,6 @@
 # Spark profile analysis — TEST 9/10 lag capture (2026-07-01)
 
-`status: analyzed — real freeze confirmed, root cause NOT captured, re-profile needed` · `scope: worldgen, perf`
+`status: analyzed — real freeze confirmed; likely cause = system memory/swap pressure, not (only) code; re-profile needed` · `scope: worldgen, perf`
 
 Peetsa shared `cXV9L86RDv.sparkprofile` (a spark profiler capture, 300s, taken while testing chunk-gen lag /
 `tpedge` to the east border). No browser was available this session and the spark viewer is JS/protobuf-backed
@@ -60,6 +60,30 @@ Re-run spark capturing **all threads**, specifically around a `tpedge`:
 `--thread *` is the key flag — without it spark defaults to the main thread only, which is what happened here.
 That capture will show the actual worker-thread hot path and let us target the real bottleneck instead of
 guessing.
+
+## Finding 3 (2026-07-01, from spark's own web viewer) — the machine is nearly out of physical RAM
+Peetsa pulled up the actual spark web viewer (not decodable via WebFetch/no-browser earlier, but readable once
+they screenshotted it) for both this profile and a second capture ("Profile @ 09:54"). System-level stats:
+
+- **Physical memory: 23.9 GB / 24 GB — 99.71% used.**
+- **Swap: 4.2 GB / 5 GB — 83.9% used.**
+- Heap (the JVM's own pool, separate from the above): 5.3 GB used / 11 GB committed / **16 GB max** —
+  `-Xmx16384M` confirmed correctly applied in the JVM Flags tab. (Peetsa's question — "only 4.4GB committed,
+  not the full 16" — was reading the G1 **Old Gen** sub-pool specifically, not total heap; G1GC commits regions
+  lazily on demand, this is normal, not a misconfiguration.)
+
+**This is a stronger lead than anything in Finding 1/2.** A near-full physical memory + heavy swap use means any
+GC pause that touches a swapped-out page can balloon from milliseconds to seconds/minutes — this plausibly
+explains part or all of the ~3-minute freeze in Finding 1 far better than a Latitude/Terralith code hotspot
+would. With `Xmx16384M` on a 24 GB machine, only ~8 GB is left for the OS + JVM off-heap (Metaspace, native
+render buffers, thread stacks) + everything else running. Recommended before the next capture: close other
+memory-heavy apps, and/or try LOWERING Xmx (e.g. 10-12 GB) — a smaller heap that stays fully resident with quick
+GCs can beat a large one that swap-thrashes during a pause.
+
+**Also:** the second capture ("Profile @ 09:54") shows "No Data — this profile doesn't contain any data!" in
+its All View — it captured summary stats (TPS/memory/GC) but no actual call-tree samples, likely the
+async-profiler engine failing to attach (not uncommon on Apple Silicon). Still waiting on a real `--thread *`
+capture with tree data to see the worker-pool hot path.
 
 ## Aside — client performance mods (Sodium / FerriteCore / ImmediatelyFast)
 Peetsa noted the game "runs better" with these. Worth being precise about why: they're all **client-side**
