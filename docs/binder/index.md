@@ -51,7 +51,11 @@ surface for the 2.0 line. Recorded 2026-07-01 during the binder/handoff/lessons 
 ## 2026-07-02 additions (future pass parking lot)
 - `../LATITUDE_2_0_OVERHAUL.md` — **canonical Latitude 2.0 overhaul front door**: 26.2 pivot, portability,
   projected-planet world-shape direction, measurement-first GeoAuthority/ClimateAuthority roadmap, stop rules,
-  and Fable 5 execution handoff.
+  and generalized execution handoff.
+- `model-effort-strategy-20260702.md` — which model/reasoning-effort tier per overhaul phase, and a precise
+  answer to "can a future thread self-adjust model as it goes" (partially: can delegate bounded sub-tasks via
+  Agent/Workflow's `model` param, cannot change its own ambient model without `/model`). Fable explicitly
+  excluded from the default rotation on cost/cadence grounds.
 - `future-pass-ideas.md` — parked ideas Julia wants future agents to notice without making them active scope.
 - `arid-belt-dry-mosaic-assessment-20260702.md` — complete read-only assessment and future implementation
   direction for reintroducing custom-biome variety into the subtropical arid belt while preserving band law.
