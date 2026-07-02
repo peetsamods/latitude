@@ -269,3 +269,47 @@ production mixin-apply structure (matches the shipped 26.1.2 jar), headless Atla
 "worldgen regression" turned out to be a pre-existing inert feature, correctly left untouched. The only thing
 left is the live in-game client pass, which only Peetsa can drive. Local commits only; no tag, no push, no
 Modrinth profile staging performed (staging offered pending Peetsa's go-ahead).
+
+---
+
+## New-biome handling + profile staging (2026-07-02, same day)
+
+`trigger: Peetsa flagged that 26.2 introduces new biomes — "make sure those are able to load in."`
+
+**26.2 added exactly one biome: `minecraft:sulfur_caves`** (a cave biome from the "Chaos Cubed" update; none
+removed). Diffed the 26.1.2 vs 26.2 merged deobf biome registries to confirm.
+
+**Bug found and fixed (commit `292c7ed3`).** Latitude classifies each biome as cave-vs-surface via a **hardcoded
+list** of `{lush_caves, dripstone_caves, deep_dark}` in three places. `sulfur_caves` was not in it, so Latitude
+misclassified it as a *surface* biome and overwrote it with a latitude-band pick — meaning **sulfur_caves would
+never have generated underground**. Added it to all three cave lists so it is preserved exactly like the other
+cave biomes:
+- `ChunkGeneratorPopulateBiomesMixin.isCaveBiome`
+- `LatitudeBiomeSource.isCaveBiome`
+- `LatitudeBiomes.SURFACE_CAVE_DENYLIST`
+
+Proof: compileJava green; headless Atlas green; the **surface** atlas is byte-identical before/after (the fix is
+surgical — only underground caves); vanilla `OverworldBiomeBuilder` confirms `sulfur_caves` is placed in the
+overworld; it is now handled identically to `dripstone_caves`, which the atlas biome inventory confirms is
+preserved and reachable. The atlas inventory doesn't positively list `sulfur_caves` — but it also doesn't list
+`lush_caves` or `deep_dark` (both known-working cave biomes), because that sampling only catches common caves at
+its Y, so its absence is not evidence of failure. **Final visible confirmation is a live
+`/locate biome minecraft:sulfur_caves`** in the client test.
+
+Note: this cave-list fragility is worth a future refactor (there is no vanilla `#is_cave` biome tag — `is_overworld`
+lumps surface and cave biomes together — so a hardcoded list is currently the only clean option; revisit if
+Mojang adds a cave tag or a new cave biome lands again).
+
+**Profile staged (Peetsa authorized).** Built jar `latitude-2.0-beta.1+26.2.jar`
+(sha256 `a9f0ce4e455ffc95f577f6b72ae73da23ff34876af21dd734bafd7145cb2ce55`) staged into the Modrinth profile
+**`LATITUDE 26.2`** as **`TEST 1.jar`** (profile already had the matching `fabric-api-0.154.0+26.2.jar`). Staged
+sha256 verified identical to the build output. Ready for the live client pass.
+
+### Live test checklist (the one remaining gate — Peetsa at the keyboard)
+
+Launch `LATITUDE 26.2` via the Modrinth App (never the Mojang launcher). Confirm:
+1. Title screen loads; create a new Latitude world (world-creation screen renders + works — client mixins).
+2. World enters; HUD/compass renders; latitude warnings/overlays behave.
+3. Menus/screens open and close (settings, HUD studio) — the screen-management repairs.
+4. `/locate biome minecraft:sulfur_caves` returns a hit (new-biome generation), and digging there shows it.
+5. General biome feel across bands looks right; no crashes on load/soak/save-quit.
