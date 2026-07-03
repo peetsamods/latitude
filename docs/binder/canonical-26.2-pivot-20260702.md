@@ -456,3 +456,30 @@ Note: this couldn't be verified headlessly — the `runBiomePreview` server IS a
 full-command path, not the subset. Confidence rests on the compile + the version-string check (`2.0-beta.1`
 contains "beta") + the standard Fabric `getModContainer("globe")` metadata lookup. Peetsa's live `/latdev help`
 is the confirmation.
+
+---
+
+## Live test #3 feedback: atlas border, scroll clipping, tabbed heading (2026-07-02)
+
+`trigger: Peetsa screen recording (couldn't open it — macOS Desktop TCC blocks the sandboxed shell — worked from his written description + the actual texture).`
+
+1. **Atlas frame border wrong on right/bottom (top/left fine, changes per size).** Root cause found by
+   extracting the texture: `map_background.png` is **64×64**, but `drawAtlasFrame` passed `128, 128` as the
+   texture size to the 1:1-mapping `blit` overload — so the frame mapped texels 1:1 into a claimed-128 space
+   that was really 64px, and the right/bottom of the frame sampled *past* the real texture (garbage that shifted
+   with each atlas dimension). Fixed with the region-blit overload (dest size separate from source region) to
+   stretch the full 64×64 texture cleanly over the frame box. Commit `18a82995`.
+2. **Scroll "snap" persisted** despite the smooth-glide, because (as Peetsa nailed it) panels 2/3 show "no half
+   sentence" — the glide moved the offset but the widgets still popped whole. Fixed for panel 2: `ZoneRowWidget`
+   visibility gate is now INTERSECT and `extractWidgetRenderState` scissors each row to the panel viewport, so
+   rows slide and clip into "half rows" at the edge like panel 1's text. Rows are click-active only while fully
+   visible.
+3. **Redundant "Spawn Zone" title in tabbed mode** removed (the tab strip labels the pane) and its reserved
+   height zeroed so content moves up; three-column mode unchanged.
+
+**Deferred: panel 3 (Rules) still pops** — its 14 stepper/toggle widgets are vanilla `Button`s that can't
+self-clip like the inner-class `ZoneRowWidget`; clipping them needs a `Button` subclass across all 14, so it was
+held until the panel-2 clip technique is confirmed good live (validate the low-risk case before replicating a
+riskier change blind). Staged **`TEST 5.jar`** (sha `d8c01ed0…`). All three changes are client-only and
+visual — need Peetsa's live eyes; the atlas-border fix is high-confidence (clear texture-size bug), the
+row-clipping and heading are best-reasoned-but-unverified.
