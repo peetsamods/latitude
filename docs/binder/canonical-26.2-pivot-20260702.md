@@ -483,3 +483,164 @@ held until the panel-2 clip technique is confirmed good live (validate the low-r
 riskier change blind). Staged **`TEST 5.jar`** (sha `d8c01ed0…`). All three changes are client-only and
 visual — need Peetsa's live eyes; the atlas-border fix is high-confidence (clear texture-size bug), the
 row-clipping and heading are best-reasoned-but-unverified.
+
+---
+
+## Live test #4 feedback: Rules panel clipped scrolling confirmed good, extend it (2026-07-03)
+
+`trigger: Peetsa confirmed the panel-2 clip technique looks right live — go ahead and give panel 3 the same treatment.`
+
+Panel 2's technique validated the deferred item above, so it was replicated for the Rules panel's 14 vanilla
+`Button`s. 26.2 sealed `Button`'s own rendering (`extractWidgetRenderState` is final, `extractContents`
+package-private), so a self-clipping `Button` subclass — the approach that worked for `ZoneRowWidget` — isn't
+possible here. Instead, the fix follows vanilla's own `AbstractSelectionList` pattern: the 14 buttons are added
+via `addWidget` (get input/focus/narration, but are NOT auto-rendered by `super`) and drawn manually by
+`renderSettingsScrollWidgets` *inside* the Rules panel's scissor, so they clip at the viewport edges exactly
+like the panel's labels already did. Visibility gate switched from fully-contained to INTERSECT so partial
+buttons render (and take clicks) while fully-off-viewport ones don't; buttons still receive input through the
+screen's existing `super.mouseClicked/Dragged/Released` children dispatch, and render pixel-identical to vanilla
+(same `extractRenderState` call, just invoked manually at the right time). Commit `b1e9a68b`, staged
+**`TEST 12.jar`**. Client-only, needed Peetsa's live eyes to confirm every Rules button (steppers, toggles, Game
+Rules, HUD Studio) still scrolls, clips, and responds correctly — the Settings screen and HUD Studio's own lists
+still popped at this point and would get the same treatment once this was confirmed good.
+
+## Live test #5 feedback: World Shape relocation, compass N scaling (2026-07-03)
+
+`trigger: Peetsa: "I'd like the world shape (1:1 vs 2:1) to be on this panel/tab, above world size... Do you see how the 'N' overtakes the whole compass when it is scaled down?"`
+
+1. **World Shape (Mercator 2:1 / Legacy 1:1) moved from the Rules panel to the World panel**, positioned above
+   World Size — reads more naturally there as a "what kind of world is this" property than buried in Rules.
+   Moved wholesale, not duplicated: stepper creation, layout math (new `worldShapeFieldY` row between Seed and
+   World Size, pushing everything below down one row), visibility/active gating (still greyed out for
+   non-Latitude world types), tabbed-mode visibility (toggles with the World tab now, not Rules), and rendering
+   all moved together. Rules panel's row count dropped from 9 to 8 accordingly.
+2. **Analog compass "N" glyph now scales with the compass radius** instead of a fixed vanilla-font size. At
+   small analog sizes (the slider goes down to radius 8) the unscaled letter was as tall as the whole disc.
+   Uses the same `pose().pushMatrix()/translate()/scale()/popMatrix()` pattern already established in
+   `LatitudeSettingsScreen.drawScaledCenteredText`: `scale = clamp(radius / 24.0, 0.4, 1.0)` — 24 was the
+   pre-2.0 default radius where the unscaled letter looked proportionate, with a 0.4x floor so it stays visible
+   at the smallest compass. Still anchored just under the north tick (which already scales with radius).
+
+Commit `a9bd94ee`, staged **`TEST 13.jar`**. Verified: `compileJava` + `build` green; headless Atlas
+byte-identical (both changes are client-only, no worldgen impact).
+
+## HUD Studio prominence + rainbow lettering (2026-07-03)
+
+`trigger: Peetsa: "I want HUD Studio to be more prominent... perhaps it should be the first button... change the letter colors to rainbow."`
+
+New shared `RainbowText` utility (`com.example.globe.client`): draws text with each non-space character cycling
+through a 7-color ROYGBIV-ish palette tuned to stay legible on the mod's dark panels. Used by both the Latitude
+Settings screen and the create-screen Rules panel so the palette/logic lives in exactly one place — deliberately
+avoiding the "three independent copies of the compass defaults" drift bug fixed earlier this session. Mechanism:
+vanilla `Button` forces its own label white and 26.2 sealed its render pipeline, so a button's text can't be
+recolored directly — both HUD Studio buttons get a blank `Component` message, and `RainbowText.drawCentered`
+paints the real "HUD Studio" lettering on top right after the button renders (still inside the Rules panel's
+scissor on the create screen, so it clips consistently with everything else there). Reordering: Settings screen
+moves HUD Studio's entry to the very top of its list (was last); create-screen Rules panel moves its row to be
+first, shifting World Type and everything below down by one row. Removes the earlier gold-frame decoration on
+the Settings screen (superseded by the rainbow text). Commit `b3f06bfa`, staged **`TEST 14.jar`**. Verified:
+`compileJava` + `build` green; headless Atlas byte-identical.
+
+## Rules panel double-layout fix + HUD Studio reposition (2026-07-03)
+
+`trigger: Peetsa: "On world creation menu third panel, we have like two layers that are scrolling. Also, the HUD studio should be under 'Starting Compass'."`
+
+**"Two layers scrolling" root cause**, found by comparing all three panels' layout-call structure: World and
+Spawn Zone each call their own layout function exactly once per frame (top of `extractRenderState`,
+unconditionally). Rules was the *only* panel that called its layout function a **second time**, redundantly,
+inside its own tab-conditional render block — `updateSettingsLayout()` at the top of `extractRenderState`
+already computes and applies every widget's position/visibility for the current frame regardless of active tab,
+so the second call was recomputing and re-applying (via `.setRectangle` on every button) the exact same thing a
+second time per frame. Fixed by removing the redundant call, matching how World/Spawn Zone already worked. Also
+repositioned HUD Studio's row to sit right after "Starting Compass" instead of first, on this screen only (the
+pause-menu Settings screen keeps HUD Studio first, unchanged). Commit `53ccd98a`, staged **`TEST 15.jar`**.
+Verified: `compileJava` + `build` green; headless Atlas byte-identical.
+
+## Biome display + full HUD detachability (2026-07-03)
+
+`trigger: Peetsa: "put an option to put the biome in the compass HUD... they should be detachable and moved around at will. All the HUD elements should be allowed to snap-to grid or free move."`
+
+New `CompassHudConfig` fields: `displayBiomeInHud`, `biomeFollowsCompass`, `biomeHAnchor`/`VAnchor`,
+`biomeOffsetX`/`Y` (mirrors the existing zone/band fields exactly), `biomeBeforeZone` (order toggle for when
+both zone and biome are attached to the compass line), and `coordsFollowsCompass`/`coordsHAnchor`/`VAnchor`/
+`coordsOffsetX`/`Y` — coords (lat/lon) were previously always fused to the compass with no detach concept at
+all; now they get the same follow/detach/anchor/offset shape. `CompassHud.java`: made
+`BiomeSamplerTools.biomeDisplayName` public and reused it (no duplicate name-formatting logic); added
+`biomeLabel`/`sampleBiome` mirroring `zoneLabel`/`sampleZone`; added `attachedZoneBiomeLive`/`Sample` +
+`joinOrdered` to combine zone+biome into one order-respecting "attached text" segment, replacing ~9 duplicate
+`zoneFollowsCompass ? sampleZone(cfg) : null` call sites with one source of truth; added `coordsText`/
+`coordsSample` canonical formatters; added `computeBiomeBounds`/`renderDetachedBiome` and
+`computeCoordsBounds`/`renderDetachedCoords` mirroring the proven zone pattern; fixed two now-stale
+`cfg.displayZoneInHud && cfg.zoneFollowsCompass` guards that would have wrongly hidden biome-only text.
+`LatitudeHudStudioScreen.java`: new `DragElement.BIOME`/`COORDS` with matching hit-test/drag/release handling;
+new sidebar controls (Display Biome in HUD, Biome Placement, Zone/Biome Order, Coords Placement) plus a
+**Dragging control exposing the previously-unexposed `LatitudeConfig.hudSnapEnabled`/`hudSnapPixels`** — this
+config already existed and was already wired into every drag handler, but had zero UI, so players could never
+turn "snap only" off. `applyDefaults(CompassHudConfig)`/`resetHudDefaults()` updated with the new fields
+(avoiding the "independent copies of defaults drift apart" bug fixed earlier). Full review pass confirmed
+`LatitudeHudAdjustScreen.java` was dead code (never instantiated) — intentionally left untouched at this point
+(deleted in the next round below). Commit `0d65a0a7`, staged **`TEST 16.jar`**. Verified: `compileJava` + full
+`build` green; headless Atlas byte-identical.
+
+---
+
+## RGB color pickers + tabbed HUD Studio redesign, then a full title-styling + polish arc (2026-07-03)
+
+`trigger: Peetsa: "It looks absolutely beautiful!! Please apply the RGB sliders to the titles also..." (after "I need the RGB picker now for text colors/compass custom color scheme").`
+
+This was a 4-commit arc, each fully verified (`compileJava` + `build` + headless `runBiomePreview`
+byte-identical) and staged as its own test jar. Full technical detail for each lives in its own dated doc; this
+entry is the continuity summary tying them into the pivot's running log.
+
+1. **`90a5fbbe` — RGB color pickers + tabbed HUD Studio redesign** (staged `TEST 17.jar`). New 12th `CUSTOM`
+   analog compass theme with independent RGB pickers (3 sliders + live swatch) for face/ring/muted/needle;
+   an RGB picker for HUD text color; a previously-unexposed text-opacity slider. HUD Studio restructured from
+   a flat scrolling list gated by a "Target: Compass/Title/Both" button into **4 tabs** (Compass/Placement/
+   Title/General) with the same themed-card look (bordered panel, gold accents, heading) as the Settings and
+   World Creation screens — widgets are now constructed per-tab (mirroring the pre-existing analog/digital
+   branching) rather than always-constructed-with-visibility-toggle. Also rolls in the removal of
+   `LatitudeHudAdjustScreen.java` (confirmed dead, zero call sites, flagged in the prior round). Full detail:
+   `docs/binder/hud-studio-custom-theme-20260703.md`.
+2. **`9000dd49` — Title RGB/preset/rainbow colors + text case + General tab additions** (staged `TEST 18.jar`).
+   Zone-enter title text gets the same styling depth as the compass: 6 color presets (White/Gold/Red/Cyan/
+   Green) plus Custom (RGB sliders + swatch) plus **Rainbow** (per-letter cycling, reusing `RainbowText` via a
+   new alpha-aware overload so the title's fade-in/out still works), plus a letter-case selector (Normal/
+   UPPERCASE/lowercase/**Mocking** — alternates capitalization per letter, skipping spaces/punctuation without
+   breaking the alternation). Tracing the two live render paths (`ZoneEnterTitleOverlay.render()` for real
+   gameplay vs. `renderStaticAt()` for the HUD Studio preview) to apply this consistently found they were
+   independently duplicated with zero shared code — refactored both onto one shared `drawStyledTitle`/
+   `applyCase` helper pair, and deleted two confirmed-zero-caller dead overloads (`renderStatic`, the 4-arg
+   `renderStaticAt`). Title tab also gained direct access to settings previously reachable only from the
+   separate pause-menu Settings screen (Zone Title on/off, duration, whether the title shows the degree
+   readout); General tab gained a Title Draggable toggle (the config field existed and was already read by the
+   drag handler, but had zero UI anywhere until now). `LatitudeConfig`'s dual-representation GSON pattern
+   (public static + private "Value" fields, no `fresh()`-style factory unlike `CompassHudConfig`) required the
+   new fields threaded through both of `load()`'s branches, `save()`, and `sanitize()`; both hardcoded-defaults
+   copies (`LatitudeSettingsScreen.applyDefaults(LatitudeConfig)`, HUD Studio's `resetHudDefaults()`) updated in
+   lockstep. **Spun off a background investigation** (`task_7003cfac`, not yet resolved): `ZoneEntryNotifier`/
+   `ui.ZoneTitleOverlay` turned out to be a completely unreachable parallel title-notification system — zero
+   callers on both the trigger and render sides — likely a pre-`GlobeWarningOverlay` implementation that was
+   superseded but never deleted.
+3. **`0600661e` — Title Normal case, letter spacing, tab strip overflow fixes** (staged `TEST 19.jar`). Live
+   feedback caught that "Normal" title case was silently identical to UPPERCASE: the source text was forced
+   `.toUpperCase()` before `applyCase()` ever ran, in 3 places — `LatitudeHudStudioScreen.zoneTitleWord()` (HUD
+   Studio preview), `GlobeWarningOverlay.buildZoneEnterTitle()` (real zone-enter title), and the hardcoded
+   `"NORTHERN/SOUTHERN HEMISPHERE"` literals (real hemisphere-crossing title) — all three now use natural case
+   ("Tropics", "Northern Hemisphere"), leaving `applyCase()` as the only place casing is decided. Added a Letter
+   Spacing slider (-4 to +16px) to the Title tab, which required switching `ZoneEnterTitleOverlay`'s single-call
+   `ctx.centeredText` draw to a per-character `drawSpacedText` loop for both the solid-color and Rainbow paths
+   (one styling code path instead of a branch that could drift); `RainbowText` gained a `paletteColor(int)`
+   accessor for reuse. Also fixed the "Placement" tab label overflowing its button's borders: widened the HUD
+   Studio sidebar 180→208px and scaled tab labels to 0.85x.
+4. **`61d51782` — Rainbow Text for compass/zone/biome/coords** (staged `TEST 20.jar`, current HEAD). New
+   `CompassHudConfig.textRainbow` toggle overrides the Text Color preset/RGB sliders with a per-letter rainbow
+   cycle, wired through `CompassHud`'s existing shared `drawText()` helper (already used by the analog-attached
+   line and all 3 detached zone/biome/coords labels) plus `renderDigitalAt()`'s per-line loop for digital mode,
+   via a new `drawRainbowLeftAligned()` reusing `RainbowText.paletteColor()` — one addition covers every place
+   this text renders. Preserves the existing Text Opacity fade by carrying the alpha byte through from
+   `textArgb()`. Both `applyDefaults(CompassHudConfig)` copies synced with the new field.
+
+**Current state at the end of this arc:** HEAD `61d51782`, staged jar `TEST 20.jar` in the Modrinth profile
+`LATITUDE 26.2`, all local commits (not pushed). Every round in this arc is a pure client-UI/HUD change with
+zero worldgen impact, each individually confirmed via a byte-identical headless `runBiomePreview` diff against
+the prior commit.
