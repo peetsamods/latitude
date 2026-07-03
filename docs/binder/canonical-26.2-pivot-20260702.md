@@ -432,3 +432,27 @@ Re-staged: rebuilt jar sha256 `7c51fc01c1515fbfa6124097ff958ce405d204d2a03b91c51
 **`TEST 3.jar`** (stale `TEST 2.jar` removed, staged sha verified). These are visual changes — smoothness and
 atlas size need Peetsa's live eyes to confirm; the scroll pop-vs-glide and atlas centering may take a round or
 two since they can't be verified headlessly.
+
+---
+
+## /latdev commands restored for testers (2026-07-02, same day)
+
+`trigger: Peetsa: "all of the /latdev commands are absent in this version."`
+
+**Not a 26.2 regression.** By design the full `/latdev` (`dev.LatitudeDevCommand`, with the seam auditor + PNG
+exporter) only registers in a dev environment, and the shippable subset (`LatitudeDevCommands` — `here`,
+`probe`, `tpband <band> [center|low|high]`, `tpedge <west|east> [frac]`) was gated behind an opt-in
+`-Dlatitude.devCommands=true` JVM flag that the Modrinth profile didn't carry. So the staged jar simply never
+registered them.
+
+**Peetsa chose (AskUserQuestion): bake into beta builds.** `LatitudeDevCommands.registerIfEnabled` now
+auto-registers the subset when the mod version is a pre-release (contains beta/alpha/rc/pre/snapshot), stays off
+in a dev env (full command owns `/latdev` there) and off for stable releases, with `-Dlatitude.devCommands=true/
+false` as an explicit override either way (commit `47c6c5ad`). Commands still require cheats/op. Built jar
+version is `2.0-beta.1+26.2` → auto-enabled. Staged as **`TEST 4.jar`**. The subset covers the live-testing set;
+the heavy tools (seam audit, PNG export) stay dev/headless-only intentionally.
+
+Note: this couldn't be verified headlessly — the `runBiomePreview` server IS a dev environment, so it takes the
+full-command path, not the subset. Confidence rests on the compile + the version-string check (`2.0-beta.1`
+contains "beta") + the standard Fabric `getModContainer("globe")` metadata lookup. Peetsa's live `/latdev help`
+is the confirmation.
