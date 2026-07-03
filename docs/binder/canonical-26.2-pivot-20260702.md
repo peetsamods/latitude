@@ -396,3 +396,39 @@ in the `LATITUDE 26.2` Modrinth profile, stale `TEST 1.jar` removed, staged sha2
 build. Did **not** attempt to launch the client myself (`runClient` would open a real graphical window on
 Peetsa's screen from a background process — inappropriate to trigger unprompted, and is exactly the live-test
 step reserved for him).
+
+---
+
+## Live test #2: create-screen works, plus scroll/atlas polish (2026-07-02, same day)
+
+`trigger: TEST 2.jar launched clean — custom LATITUDE New World screen renders and creates worlds. Polish feedback followed.`
+
+**The crash fix held.** TEST 2 launched to the title screen, the custom `LatitudeCreateWorldScreen` renders, and
+world creation works — confirming the `InGameHudMixin`→`Hud` retarget and all the other client-mixin repairs
+apply correctly live. That closes the "client-side repairs are compile-proven only" gap for everything except
+the two still-flagged items (fog-tightening inert; a full scenic soak).
+
+Peetsa's polish feedback on the New World screen, and what was done:
+
+1. **Panels 2 & 3 scrolled "jerkily/snappy" at larger GUI scale; panel 1 was buttery smooth.** Root cause
+   found: the interactive widgets in panels 2/3 (`ZoneRowWidget` rows, stepper `Button`s) are
+   `addRenderableWidget`'d and extracted by `super.extractRenderState()` *outside* the panels' scissor blocks, so
+   `updateRightLayout`/`positionSettingsStepper` hard-hide each one the instant it isn't 100% inside the viewport
+   → they pop in/out. Panel 1 barely scrolls, so it never triggers. **Fix (Peetsa chose the low-risk option via
+   AskUserQuestion): smooth-scroll glide.** Added float `*ScrollDisplay` that eases toward the integer `*Scroll`
+   target each frame (`advanceScrollAnimation`, framerate-independent ease-out); all panel content + widgets +
+   scrollbar thumbs now position from the eased display. The visibility toggle still exists but the offset moves
+   continuously, so it's one smooth transition instead of a jarring jump. Commit `91eb6764`. Client-only, zero
+   worldgen impact.
+2. **Atlas "too small."** Raised `previewDiscFill` for every world size (e.g. TINY 0.52→0.68). Still graded by
+   world size (conveys relative scale). Safe because `renderPlanispherePreview`'s `while (radius >= 18)` fit loop
+   shrinks the radius until the composition fits — an over-large request can't overflow.
+3. **Deferred (subjective, need live iteration):** atlas horizontal **centering** (the globe+labels composition
+   is centered, which necessarily offsets the globe left by half the label column; centering the globe alone
+   risks the latitude labels overflowing into the scrollbar gutter — needs Peetsa to judge direction) and the
+   **right/lower frame-border angularity** (in `LatitudePlanisphereRenderer.drawAtlasFrame`).
+
+Re-staged: rebuilt jar sha256 `7c51fc01c1515fbfa6124097ff958ce405d204d2a03b91c5156dc643fd70a9e2` as
+**`TEST 3.jar`** (stale `TEST 2.jar` removed, staged sha verified). These are visual changes — smoothness and
+atlas size need Peetsa's live eyes to confirm; the scroll pop-vs-glide and atlas centering may take a round or
+two since they can't be verified headlessly.
