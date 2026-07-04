@@ -108,9 +108,21 @@ flag-off byte-identical proof against `save/canonical-26.2-baseline`. See `evide
 - `../design/atlas-geography-overlay-plan-20260703.md` — Atlas overlay plan (design only, deferred to
   Phase 2/3 consumer work).
 - Both authorities are pure Core Logic (zero Minecraft imports) and pack-independent by construction —
-  see memory `vanilla-first-overhaul-constraint`. Neither drives biome selection yet (summaries are
-  computed and discarded) — that is the next slice ("Biome Consumer"), kickoff prompt already written
-  in `../LATITUDE_2_0_OVERHAUL.md`.
+  see memory `vanilla-first-overhaul-constraint`.
+
+## 2026-07-04 addition (Biome Consumer slice -- implemented, NOT ready for a live pass)
+- `biome-consumer-slice-20260704.md` — GeoAuthority now replaces `OceanDistanceField` as the land/ocean
+  authority and ClimateAuthority now rerolls clear climate/biome-family mismatches, both behind a new
+  `latitude.biomeConsumerV2.enabled` flag (default false, kept separate from `geoV2`/`climateV2` on
+  purpose). Flag-off byte-identical (16/16); vanilla-only run resolves 44/44 real vanilla biomes, zero
+  fallback. **Real finding, not yet resolved:** live land fraction collapses to ~13% (GeoAuthority alone
+  calibrated ~39%) because `pick()`'s existing `base.is(IS_OCEAN) || oceanAuthority` union now compounds
+  two largely-independent noise fields instead of the old, highly-overlapping ODF-vs-terrain pair;
+  confirmed via a `-Dlatitude.geoV2.seaLevel=0.0` diagnostic (barely moved the number) that this is a
+  terrain-integration gap (Phase 4), not a GeoAuthority miscalibration. Geography still reads as coherent
+  continents in the preview image, just too little land. Three options laid out for Peetsa; the slice is
+  implemented and proven safe with the flag off, but explicitly NOT declared ready for a live session.
+  See `evidence-registry.md` row `20260704-biome-consumer-slice`.
 
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
