@@ -89,6 +89,29 @@ surface for the 2.0 line. Recorded 2026-07-01 during the binder/handoff/lessons 
 - `docs/porting/VERSION_MATRIX.md` — the "live 26.2 client pass" item was still listed as the one open blocker;
   updated to reflect it as done (proven across ~20 staged test jars) and pointed at the two docs above for detail.
 
+## 2026-07-03 additions (GeoAuthority/ClimateAuthority phases 0-3)
+Overhaul-plan phases, all landed on `port/canonical-26.2-pivot`, all behind disabled flags, all with a
+flag-off byte-identical proof against `save/canonical-26.2-baseline`. See `evidence-registry.md` rows
+`20260703-phase0-portability-foundation` through `20260703-phase3-climateauthority`.
+- `phase0-portability-foundation-20260703.md` — no-op `GeoSummary`/`ClimateSummary` core-layer scaffolding
+  + adapter shells behind `latitude.geoV2.enabled`/`latitude.climateV2.enabled` (both default false).
+- `phase1-measurement-harness-20260703.md` — `tools/atlas/geography_analyzer.py`; independently
+  reproduced the "current red" (~63-64% land, ~95%-share landmass, no dominant ocean basin).
+- `phase2-geoauthority-20260703.md` (design: `../design/geoauthority-design-20260703.md`) —
+  "Inverted-Plate Continentality" macro-geography, locked via a 4-design adversarial judge panel.
+  Measured vs the red on the same seed: land 63%→39%, largest continent-of-world ~60%→~30%, dominant
+  ocean basin <10%→99.6%.
+- `phase3-climateauthority-20260703.md` (design: `../design/climateauthority-design-20260703.md`) —
+  "Fetch & Lift" moisture-transport climate model, same judge-panel discipline; 14/14 acceptance rows
+  executed as JVM tests; Earth-like distribution on real geography (subtropical arid belt ~60% desert,
+  ice caps 82% at the poles).
+- `../design/atlas-geography-overlay-plan-20260703.md` — Atlas overlay plan (design only, deferred to
+  Phase 2/3 consumer work).
+- Both authorities are pure Core Logic (zero Minecraft imports) and pack-independent by construction —
+  see memory `vanilla-first-overhaul-constraint`. Neither drives biome selection yet (summaries are
+  computed and discarded) — that is the next slice ("Biome Consumer"), kickoff prompt already written
+  in `../LATITUDE_2_0_OVERHAUL.md`.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
