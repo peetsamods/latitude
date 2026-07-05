@@ -159,6 +159,13 @@ flag-off byte-identical proof against `save/canonical-26.2-baseline`. See `evide
   bookkeeping only). Every finding individually dispositioned — fixed, test-pinned as intentional
   behavior, or documented-and-deferred to Phase 4 / a dedicated future slice with a stated reason. See
   `evidence-registry.md` row `20260705-biome-consumer-sweeper-fixes`.
+- `sweeper-audit-standing-practice-20260705.md` — the sweeper find→verify→synthesize pattern is now a
+  documented standing practice (`.claude/workflows/latitude-sweeper-audit.js`, the canonical
+  lens/schema template — confirmed NOT resolvable by `Workflow({name, args})` in this environment, so
+  always copy-and-hardcode into `script`/`scriptPath` instead). Sweeper audit #2 (Phases 0-3
+  comprehensive sweep, excluding the already-fixed classifyBase/climateFamilyMismatch/
+  applyClimateCompatReroll scope) launched as background workflow `wf_9c9dbfa8-fec`. See
+  `evidence-registry.md` row `20260705-sweeper-standing-practice`.
 
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
