@@ -110,18 +110,21 @@ flag-off byte-identical proof against `save/canonical-26.2-baseline`. See `evide
 - Both authorities are pure Core Logic (zero Minecraft imports) and pack-independent by construction —
   see memory `vanilla-first-overhaul-constraint`.
 
-## 2026-07-04 addition (Biome Consumer slice -- implemented, NOT ready for a live pass)
-- `biome-consumer-slice-20260704.md` — GeoAuthority now replaces `OceanDistanceField` as the land/ocean
-  authority and ClimateAuthority now rerolls clear climate/biome-family mismatches, both behind a new
-  `latitude.biomeConsumerV2.enabled` flag (default false, kept separate from `geoV2`/`climateV2` on
-  purpose). Flag-off byte-identical (16/16); vanilla-only run resolves 44/44 real vanilla biomes, zero
-  fallback. **Real finding, not yet resolved:** live land fraction collapses to ~13% (GeoAuthority alone
-  calibrated ~39%) because `pick()`'s existing `base.is(IS_OCEAN) || oceanAuthority` union now compounds
-  two largely-independent noise fields instead of the old, highly-overlapping ODF-vs-terrain pair;
-  confirmed via a `-Dlatitude.geoV2.seaLevel=0.0` diagnostic (barely moved the number) that this is a
-  terrain-integration gap (Phase 4), not a GeoAuthority miscalibration. Geography still reads as coherent
-  continents in the preview image, just too little land. Three options laid out for Peetsa; the slice is
-  implemented and proven safe with the flag off, but explicitly NOT declared ready for a live session.
+## 2026-07-04 addition (Biome Consumer slice -- land reroll shippable, ocean swap walled off)
+- `biome-consumer-slice-20260704.md` — GeoAuthority can replace `OceanDistanceField` as the land/ocean
+  authority and ClimateAuthority rerolls clear climate/biome-family mismatches, behind
+  `latitude.biomeConsumerV2.enabled` (default false, kept separate from `geoV2`/`climateV2` on purpose).
+  Flag-off byte-identical (16/16); vanilla-only run resolves real vanilla biomes with zero fallback.
+  **Real finding, RESOLVED via a flag split:** with the ocean-authority swap active, live land fraction
+  collapsed to ~13% (GeoAuthority alone calibrated ~39%) because `pick()`'s existing
+  `base.is(IS_OCEAN) || oceanAuthority` union now compounds two largely-independent noise fields instead
+  of the old, highly-overlapping ODF-vs-terrain pair; confirmed via a `-Dlatitude.geoV2.seaLevel=0.0`
+  diagnostic (barely moved the number) that this is a terrain-integration gap (Phase 4), not a
+  GeoAuthority miscalibration. **Peetsa's decision: wait for Phase 4.** The ocean-authority swap now
+  requires its own additional `latitude.biomeConsumerV2.oceanAuthority.enabled` flag (still default
+  false) so it can't be enabled by accident; with only the original consumer flag on, land fraction is
+  confirmed back at the pre-existing 63.14% baseline (ocean swap fully inert) while the safe climate
+  reroll is active. The land-reroll half is ready to enable; the ocean half stays parked.
   See `evidence-registry.md` row `20260704-biome-consumer-slice`.
 
 ## Binder sections
