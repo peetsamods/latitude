@@ -207,6 +207,28 @@ flag-off byte-identical proof against `save/canonical-26.2-baseline`. See `evide
   workflow fan-out that a later step "recovers" from solo needs a genuine separate adversarial pass, not
   just acceptance of a plausible-looking final result.
 
+## 2026-07-05 addition (Phase 4 execution -- implementation, mechanical proof, sweeper audit, fixes)
+- **Phase 4 (Terrain Integration Spike) is mechanically proof-complete; the live pass is still pending.**
+  Full execution log: `phase4-terrain-wrapper-20260705.md`. Implementation (`GeoTerrainBiasFunction`,
+  `TerrainRouterWrapping`, the `ChunkMap`-relocated mixin, 3 new flags) landed on the locked r2 design.
+  The mechanical proof harness's own structural check caught and fixed a real defect (a default
+  `mapChildren` broke installed-but-strength=0 byte-identity in pipeline structure, closing design residual
+  R5) and surfaced a K-scaling calibration finding for the live pass (R4: strength=1.0 at the starting K
+  produced a floating landmass on vanilla density). A subsequent 6-lens sweeper audit (23/26 findings
+  confirmed -- an unusually high rate) found the harness's initial "34/34 PASS" claim was **not
+  trustworthy** (its own non-globe isolation leg never validly ran) and one **critical** defect: the
+  install gate checked only a boolean flag as proof `GeoAuthority`'s field was live, missing that a seed-0
+  world leaves the field a NEUTRAL no-op regardless of the flag -- which would have silently biased the
+  **entire world** toward ocean. Both are fixed and the full mechanical proof gate was genuinely re-run
+  (not trusted from a summary) with raw evidence spot-checked directly. See `LESSONS.md` L16 (the design-
+  review lesson: verifying facts a design cites is not verifying its reasoning) and L17 (the fix-round
+  lesson: a flag being "on" doesn't mean the state it represents is actually live) in the main worktree,
+  and `evidence-registry.md` rows `20260705-phase4-terrain-wrapper-design` and
+  `20260705-phase4-terrain-wrapper-execution`.
+- **Next step:** Peetsa's live pass (terrain amplitude is live-only verifiable -- the atlas cannot see
+  height at all). Checklist in `phase4-terrain-wrapper-20260705.md`, notably a LOW starting strength (not
+  1.0) and a specific check for anachronistic snow on a lifted subtropical peak (design residual R7).
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
