@@ -177,6 +177,13 @@ flag-off byte-identical proof against `save/canonical-26.2-baseline`. See `evide
   deferred (Phase-4-scoped, pre-existing mod-wide convention, or a currently-unconsumed field) rather
   than fixed. Both sweeper audits are now fully triaged/resolved. See `evidence-registry.md` row
   `20260705-sweeper-audit-2-phases-0-3`.
+- **Phase 4 (Terrain Integration Spike) kickoff prompt drafted** in `docs/LATITUDE_2_0_OVERHAUL.md`
+  ("Kickoff Slice Prompt (Phase 4 only)"), built on `phase4-prep-research-20260705.md`. Closes off the
+  scrapped ocean-seam teleport-loop approach explicitly; distinguishes this phase's position-dependent
+  terrain wrapper from the separate, still-open Y-only amplitude wrapper; requires height-export
+  validation + an all-thread Spark before/after capture (not repeating the 2026-07-01 ambiguous
+  capture) as prerequisites; proposes flag `latitude.terrainV2.enabled`; states plainly this phase is
+  live-verification-only. See `evidence-registry.md` row `20260705-phase4-kickoff-prompt`.
 
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
