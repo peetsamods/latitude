@@ -73,6 +73,21 @@ opt-in mode. The roadmap's own Hard Stop list already names this: "Analyzer cann
 water, terrain water, and intended ocean basin" and "Terrain-water proof blocked by missing height
 export." Enabling and validating this is Phase 4's own first action-plan item, not yet done.
 
+**Addendum (2026-07-05, after the locked Phase 4 design):** the locked design
+(`docs/design/terrain-wrapper-design-20260705.md` §6.2) settled on its own dedicated headless
+density/height probe harness for Phase 4's proof needs instead of this atlas flag, so this gap does
+NOT block Phase 4. Separately, empirical testing the same day confirmed `-Dlatitude.emitHeight=true`
+was **fully non-functional**, not just slow/opt-in: it only routed the atlas export through the
+tick-budgeted `HeightStepProcessor` (to avoid long single ticks) without that processor ever sampling
+or writing any height data — same output file set as a normal run. Fixed in `BiomePreviewExporter.java`
+(`HeightStepProcessor`): it now samples real per-column terrain height via `ChunkGenerator.getBaseHeight`
+and writes it as `height.png` (16-bit grayscale raster, one pixel per sampled column) + `height_meta.json`
+(decode offset/min/max Y) alongside the existing bundle, so the still-open terrain-water-vs-biome-water
+distinction work referenced by `tools/atlas/geography_analyzer.py` and
+`docs/design/atlas-geography-overlay-plan-20260703.md` now has a real artifact to build on. Compiles
+clean; a live headless smoke run to confirm `height.png` contents is still pending (a separate,
+already-running headless process held the shared `run-headless/world` lock at implementation time).
+
 ## 5. Performance — a real, unresolved freeze in the historical record
 
 `docs/binder/spark-profile-analysis-20260701.md` documents a genuine ~3-minute near-total TPS freeze
