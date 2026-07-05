@@ -185,6 +185,28 @@ flag-off byte-identical proof against `save/canonical-26.2-baseline`. See `evide
   capture) as prerequisites; proposes flag `latitude.terrainV2.enabled`; states plainly this phase is
   live-verification-only. See `evidence-registry.md` row `20260705-phase4-kickoff-prompt`.
 
+## 2026-07-05 addition (Phase 4 kickoff -- terrain wrapper design locked + adversarially reviewed)
+- **Phase 4 (Terrain Integration Spike) execution started.** A judge-panel design workflow's 3-candidate
+  fan-out failed outright (all 3 hit a structured-output retry-cap); the synthesis step recovered solo by
+  decompiling the real `minecraft-merged-deobf-26.2.jar` and producing a fact-grounded r1 design. Because
+  the fan-out failure meant no genuine adversarial diversity had occurred, a SEPARATE 4-lens adversarial
+  review + independent-verify pass was run against the locked r1 design and found 2 high/critical CONFIRMED
+  defects a plausible, well-cited single-author design still missed: a unit-mismatch bug (wrapping both
+  `finalDensity` and `preliminarySurfaceLevel` with one additive term when they are in incommensurable
+  units) built on a false premise (spawn/heightmap does not actually read `preliminarySurfaceLevel`), and a
+  gating method (`GlobeMod.isGlobeWorld(RandomState)`) that does not exist and cannot be implemented as
+  described. See `docs/design/terrain-wrapper-design-20260705.md` (revision r2, locked) for the corrected
+  design, its `preliminarySurfaceLevel`→`finalDensity`-only fix, the replaced globe gate, a corrected
+  smoothness claim (Lipschitz-on-the-block-lattice, not "C-infinity" -- `land01` is `Math.round`-snapped),
+  a new vanilla-only proof leg, and a 6-item residual-risk register (R1-R6) disclosing what is accepted
+  rather than fixed (notably: `land01` is itself edge/pole-coupled, so the bias legitimately sinks a
+  terrain ring near world edges/poles -- intended-direction, not a hard cliff, but honestly disclosed
+  rather than assumed away). See `evidence-registry.md` row `20260705-phase4-terrain-wrapper-design` and
+  `docs/LESSONS.md` L16 (main worktree) for the generalized lesson: verifying that individual facts a
+  design cites are true is not the same as verifying the reasoning that combines them, and a failed
+  workflow fan-out that a later step "recovers" from solo needs a genuine separate adversarial pass, not
+  just acceptance of a plausible-looking final result.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
