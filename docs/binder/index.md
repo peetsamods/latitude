@@ -150,6 +150,15 @@ flag-off byte-identical proof against `save/canonical-26.2-baseline`. See `evide
 - A sweeper-audit workflow (adversarial find + independently-verify + synthesize, Opus) was run against
   the Biome Consumer bug scope to find any OTHER instances of the same failure classes before trusting
   the slice again; see the binder note this produces once triaged, and `evidence-registry.md`.
+- `biome-consumer-sweeper-fixes-20260705.md` — triage + fix of all 30 sweeper findings above.
+  `ClimateAuthority.classifyBase` rewritten as a compile-time-exhaustive `switch` over `LatitudeBand`
+  (root cause of the live bug); ocean altitude-cooling zeroed; `climateFamilyMismatch` made symmetric;
+  the climate-compat reroll relocated to run after all downstream land-law gates; a dead constant
+  removed; a live current-gate/design-doc mismatch fixed; design doc corrected on 3 points. 5 new tests
+  (44 total), flag-off byte-identical re-confirmed (20/22 artifacts exact, 2 diffs are timestamp/duration
+  bookkeeping only). Every finding individually dispositioned — fixed, test-pinned as intentional
+  behavior, or documented-and-deferred to Phase 4 / a dedicated future slice with a stated reason. See
+  `evidence-registry.md` row `20260705-biome-consumer-sweeper-fixes`.
 
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
