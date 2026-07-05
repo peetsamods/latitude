@@ -721,7 +721,8 @@ Minimum summary fields:
 - `prevailingWindX`, `prevailingWindZ`.
 - `upwindOceanFetchBlocks`.
 - `precipitation01`, `windwardLift01`, `rainShadow01`.
-- `currentModifier01` for schematic warm/cold ocean currents.
+- `currentModifierSigned` for schematic warm/cold ocean currents (SIGNED [-1,+1]; renamed 2026-07-05
+  from `currentModifier01`, sweeper audit #2 finding #8).
 - `seasonalityClass`: static biome-selection class, not dynamic seasons.
 - `climateClass`: compact temperature/precipitation/elevation class for biome-family selection.
 - `diagnosticFlags`: fallback, missing terrain proxy, missing ocean basin, low confidence.

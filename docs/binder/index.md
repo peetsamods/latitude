@@ -166,6 +166,17 @@ flag-off byte-identical proof against `save/canonical-26.2-baseline`. See `evide
   comprehensive sweep, excluding the already-fixed classifyBase/climateFamilyMismatch/
   applyClimateCompatReroll scope) launched as background workflow `wf_9c9dbfa8-fec`. See
   `evidence-registry.md` row `20260705-sweeper-standing-practice`.
+- `sweeper-audit-2-phases-0-3-20260705.md` — sweep #2 results + triage: 30 raw findings, 27 survived
+  verification. Headline: `geography_analyzer.py`'s `largest_share()` reused the raw-largest
+  component's weight for its "largest area-weighted share" metric instead of ranking weighted-share
+  independently (found by 7/27 survivors across nearly every lens; understated dominance 4-5x) — fixed.
+  Also fixed: silently-land-classified unknown/out-of-palette biome indices; an unreachable-class test;
+  a misleadingly-named signed field (renamed before any consumer existed); a dead tautological
+  seasonality clause; a missing radius-scale floor; a tautological test's misleading docstring; 2
+  design-doc inaccuracies. 6 lower-severity findings documented as residual risks and deliberately
+  deferred (Phase-4-scoped, pre-existing mod-wide convention, or a currently-unconsumed field) rather
+  than fixed. Both sweeper audits are now fully triaged/resolved. See `evidence-registry.md` row
+  `20260705-sweeper-audit-2-phases-0-3`.
 
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
