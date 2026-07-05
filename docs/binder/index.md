@@ -127,6 +127,30 @@ flag-off byte-identical proof against `save/canonical-26.2-baseline`. See `evide
   reroll is active. The land-reroll half is ready to enable; the ocean half stays parked.
   See `evidence-registry.md` row `20260704-biome-consumer-slice`.
 
+## 2026-07-05 addition (live-session finding + sweeper audit + Phase 4 prep research)
+- **LIVE FINDING (2026-07-05): the "safe" land climate-reroll was NOT actually safe.** First live
+  in-game session with `latitude.biomeConsumerV2.enabled=true` showed "Snowy Taiga" next to jungle at
+  18°N. Root-caused: `ClimateAuthority.classifyBase`'s TROPICAL-band case requires `temperature01>=
+  T_WARM`; a tropical column cooled below that by GeoAuthority's terrain-decoupled altitude proxy falls
+  through every case to the generic `HUMID_CONTINENTAL` default, alpine-stepped to `BOREAL`. The unit
+  test for this exact scenario passed anyway (the fallthrough default coincidentally produces the same
+  label the intended path would have) — recorded as `docs/LESSONS.md` L14 in the main worktree, alongside
+  L13 (same root pattern: a new independent signal breaking something that assumed correlation, this
+  time GeoAuthority's altitude intent vs. real terrain, showing up a second time in a different
+  subsystem).
+- `phase4-prep-research-20260705.md` — Phase 4's own document-review step, done ahead of any kickoff
+  prompt: the prior E-W ocean-seam wrapping attempt was fully built, live-tested, and explicitly scrapped
+  by Peetsa (closed, do not revive); Latitude's own terrain density functions are orphaned dead code
+  (live terrain is 100% vanilla/Terralith); the existing amplitude-wrapper design
+  (`amplitude-df-wrapper-design-20260622.md`) is a related-but-different, still-unimplemented piece of
+  work (Y-only dampening, not position-dependent geography integration); height export exists but is
+  disabled by default and unvalidated; and a ~3-minute generation freeze from 2026-07-01 was never
+  conclusively root-caused (main-thread-only Spark capture, confounded by 99.71% system memory use at
+  the time) — any Phase 4 proof needs an all-thread Spark capture on an unloaded machine.
+- A sweeper-audit workflow (adversarial find + independently-verify + synthesize, Opus) was run against
+  the Biome Consumer bug scope to find any OTHER instances of the same failure classes before trusting
+  the slice again; see the binder note this produces once triaged, and `evidence-registry.md`.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
