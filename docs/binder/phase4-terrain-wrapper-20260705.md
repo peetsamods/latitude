@@ -1,7 +1,17 @@
 # Phase 4 (Terrain Integration Spike) — terrain wrapper execution log
 
-`status: mechanically proof-complete, LIVE PASS PENDING` · `scope: worldgen` · `date: 2026-07-05`
+`status: LIVE PASS IN PROGRESS — install-timing bug found + fixed, mechanism confirmed working live,
+strength calibration ongoing` · `scope: worldgen` · `date: 2026-07-05, updated 2026-07-06`
 `branch: port/canonical-26.2-pivot`
+
+> **2026-07-06 update (read this first):** the mechanically-proof-complete state below (as of 2026-07-05)
+> turned out to hide a critical bug that made the wrapper **never install on any freshly created world,
+> regardless of seed or strength** — found on Peetsa's very first live create-world test, the exact gate
+> this whole phase existed to require. See "Live pass findings (2026-07-06)" below for the full story: a
+> second critical bug (install-timing), a real performance regression, and the actual first confirmation
+> that the mechanism works. Also two unrelated fixes landed the same day (a Sodium client-crash fix and an
+> arid/savanna biome-boundary fray fix) — noted here for the same-day record but tracked as their own,
+> separate concerns; see their own commits/tags, not this phase's design doc.
 
 ## What this covers
 
@@ -121,10 +131,79 @@ much lower than the starting 0.25, confirmed real on vanilla), R5 (closed — th
 (vanilla `depth` climate parameter unwrapped, shore-band caveat), R7 (subtropical alpine snow-line, new
 this pass).
 
+## Live pass findings (2026-07-06)
+
+Peetsa's first live create-world test with `latitude.geoV2.enabled=true`/`latitude.terrainV2.enabled=true`
+found the wrapper doing **nothing at all** — no visible effect at any strength, including 1000. This was
+NOT a strength-calibration problem; it was a second critical, previously-undetected defect.
+
+### Bug: the wrapper never installed on any live-created world (any seed, any strength)
+
+Confirmed directly from the client log: `"[Latitude] Phase 4 terrain bias NOT installed: geo provider is
+still the NoOp..."` appeared, followed one line later by the real province-authority seed/radius log that
+would have made the check pass. Root cause: the `ChunkMap`-constructor install site (real gameplay) runs
+**before** `GlobeMod`'s create-world flow finishes rebuilding `GEO_V2_PROVIDER` for the new world. The
+L17/sweeper-finding-#7 safety check (an `instanceof GeoAuthorityProvider` gate, added to stop a seed-0 world
+from silently sinking the whole world toward ocean) was checked ONCE at install time — and always saw the
+still-uninitialized placeholder, so it permanently refused to install, on **every** freshly created world,
+not just seed-0 ones. Neither the mechanical proof gate nor the 6-lens sweeper audit could have caught this:
+both exercise `TerrainRouterWrapping.installIfArmed` only via `BiomePreviewExporter`'s dev/atlas path, which
+builds its `RandomState` on an already-fully-loaded `ServerLevel` — `GEO_V2_PROVIDER` is already real by
+the time that path calls `installIfArmed`, so the exact ordering hazard that broke real gameplay cannot
+occur on the harness's own call path at all. Recorded as `LESSONS.md` L18 (main worktree): a proof harness
+sharing production code is not enough if it can't reproduce the real call's timing.
+
+**Fix** (`95bca16c`): moved the `instanceof GeoAuthorityProvider` check out of the one-time install gate and
+into `GeoTerrainBiasFunction.compute()` itself, re-evaluated on every call rather than snapshotted once.
+The wrapper now always installs structurally once the flag/globe gates pass, and simply no-ops per-column
+until the real provider is ready — which resolves itself moments after world load, long before any chunk is
+generated for a player, and stays a no-op forever on a genuine seed-0 world (preserving the original L17
+guarantee via a correctly-timed mechanism). `TerrainRouterWrapping.InstallResult.SKIPPED_NOOP_PROVIDER` was
+removed (no longer produced); `INSTALLED` now means "structurally wrapped," not "actively biasing this
+call" — see both classes' updated javadoc. This fix **cannot be verified by atlas regression** for the same
+structural reason it evaded the original proof gate; `TerrainProofHarness`'s own doc comments were updated
+to state this plainly.
+
+### Bug: a real chunk-generation performance regression at any nonzero strength
+
+Once the wrapper actually started installing, Peetsa reported chunk loading behaving noticeably slowly.
+Root cause: `GeoAuthority.sample(x,z)` (domain warp, plate-cell lookup, several noise evaluations — real
+work) doesn't depend on Y, but `GeoTerrainBiasFunction.compute()` is invoked once per vertical
+noise-lattice cell (roughly every 8 blocks of world height, tens of times per column) — every one of those
+calls was redundantly re-running the full `GeoAuthority` cost for the identical `(x,z)`. Invisible to the
+Phase 4 Spark baseline, which was captured at `strength=0` (a fast path that never reaches this code at
+all). **Fix** (`0be832f2`): a per-thread, single-entry last-column memo (`ThreadLocal`, since chunk
+generation is multi-threaded) — chunk generation visits a column's Y-levels back-to-back before moving on,
+so a single last-value cache catches essentially all the redundancy. Value-only optimization; does not
+change any prior byte-identity proof result. Recorded as part of `LESSONS.md` L18's evidence.
+
+### First live confirmation the mechanism actually works
+
+After both fixes, Peetsa confirmed at `strength=10.0` (deliberately extreme, for a stress-test-strength
+confirmation, not a usable value) a dramatic land/ocean boundary — a sheer rift canyon with lava exposed at
+the bottom where land was pushed sharply up next to ocean pushed sharply down. This is the first real,
+positive confirmation that the wrapper reads live geography and reacts to it correctly. `strength=1.0` alone
+was already known (from the original mechanical-proof-era finding, R4) to produce a floating landmass on
+vanilla density, so the actual usable range is expected well under 1.0 — calibration is ongoing.
+
+### Live-tuning method: use `GeoAuthority` directly, not the displayed biome map
+
+Free-flying at different strength values without a fixed comparison point was reported as hard to judge,
+compounded by the slow chunk generation above. Also: since `latitude.biomeConsumerV2.enabled` is off
+(default), the *displayed* biome/ocean placement is driven by an entirely separate legacy system,
+independent of `GeoAuthority`'s own land/ocean field — picking a "coastline" off the visible map does not
+guarantee the terrain wrapper has any reason to do anything there. Recorded as `LESSONS.md` L19. A small
+standalone Java scan against the compiled `core.geo.GeoAuthority` class directly (no Minecraft bootstrap
+needed — Core Logic is plain Java by construction) located a genuine, gradually-softened coastline at
+seed 0, Mercator, regular size, around `x=9600, z=3372` (~30°N): solid land (`land01=1.0`) west of ~x=9256,
+a smooth ~500-block transition, solid ocean (`land01=0.0`) east of ~x=9856. Handed to Peetsa as a fixed,
+reproducible before/after test point.
+
 ## Next step
 
-Peetsa's live pass, generating and walking a real small world with `latitude.terrainV2.enabled=true` and a
-LOW starting `latitude.terrainV2.strength` (given the vanilla floating-landmass finding at 1.0 — start
-well below that and dial up), per the checklist above. End with a plain go/no-go: does terrain now respect
-the land/ocean map without looking broken, and is Phase 5 (Boundary Experience) next, or does Phase 4 need
-another live-tuning round first.
+Strength calibration is now the open item — the mechanism is confirmed working; find the value that reads
+as "terrain believably follows the map" rather than "canyons and rifts" (>1.0 is confirmed too strong on
+vanilla density) or "no visible difference" (too weak). Once a working strength is found, complete the
+live-pass checklist above (mountain range, polar cap, subtropical-peak snow-cap check per R7, badlands/
+coastal band check per R3, Classic vs Mercator parity) and end with a plain go/no-go on whether Phase 5
+(Boundary Experience) is next, or whether Phase 4 needs another round.

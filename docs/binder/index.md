@@ -229,6 +229,41 @@ flag-off byte-identical proof against `save/canonical-26.2-baseline`. See `evide
   height at all). Checklist in `phase4-terrain-wrapper-20260705.md`, notably a LOW starting strength (not
   1.0) and a specific check for anachronistic snow on a lifted subtropical peak (design residual R7).
 
+## 2026-07-06 addition (Phase 4 live pass: install-timing bug + perf fix + first live confirmation; two
+unrelated same-day fixes)
+- **Phase 4's mechanically-proof-complete state hid a critical bug, found on Peetsa's very first live
+  create-world test:** the terrain wrapper never installed on ANY freshly created world, any seed, any
+  strength -- both the full mechanical proof gate and the 6-lens sweeper audit passed clean because neither
+  could structurally reach the exact world-load ordering window where the bug lived (the dev/atlas proof
+  path always builds its `RandomState` on an already-fully-loaded world, so `GEO_V2_PROVIDER` is already
+  real by the time it's checked there; real gameplay's `ChunkMap`-constructor path is not). Fixed by moving
+  the NoOp-provider safety check from a one-time install-time snapshot into a per-call check in
+  `GeoTerrainBiasFunction.compute()`. A second real defect (chunk-generation performance regression from
+  redundantly re-sampling `GeoAuthority` once per vertical noise cell instead of once per column) was found
+  and fixed once the wrapper started actually installing. After both fixes, Peetsa confirmed the mechanism
+  genuinely works live (a dramatic land/ocean rift at a deliberate stress-test strength of 10.0). See
+  `phase4-terrain-wrapper-20260705.md`'s "Live pass findings (2026-07-06)" section, design doc residuals
+  R8/R9 (both closed) and R4's update, `LESSONS.md` L18 and L19 (main worktree), and `evidence-registry.md`
+  row `20260706-phase4-terrain-live-pass-findings`. Strength calibration is the open item; a fixed,
+  reproducible test coordinate (computed directly from `GeoAuthority`, independent of the currently-
+  unrelated displayed biome map) was handed to Peetsa for that.
+- **Unrelated same-day fix:** a client crash on every singleplayer world load with Sodium 0.9.0+mc26.2
+  installed, caused by an E-W section-culling compat mixin targeting a Sodium internal method that version
+  no longer has. Fixed by making that one injection tolerant of a missing target (`require = 0`) instead of
+  crashing the whole client. See `evidence-registry.md` row `20260706-sodium-client-crash-fix`.
+- **Unrelated same-day fix:** a visually-wrong, dead-straight arid/savanna boundary cutting across
+  mountains, initially suspected as a seed-0 noise degeneracy (hypothesis tested and refuted via a same-
+  config atlas run at a different seed). Real cause: `pickTropicalGradient`'s subtropical composition
+  ladder picks a discrete step via `floor(tJitter*4)` with zero blending between the arid and savanna
+  steps. Fixed by widening the existing step-dither band specifically at that boundary; verified
+  composition-neutral (arid/savanna aggregate shares essentially unchanged) with a real, measured increase
+  in boundary fraying (8.6%->12.7% of edges). See `evidence-registry.md` row
+  `20260706-arid-savanna-boundary-fray`.
+- Also: `CLAUDE.md` gained guidance on multi-step sequential background pipelines (never delegate to a
+  subagent; the orchestrator sequences each state-changing step itself) and on shared, lockable headless
+  world-gen resources, after a subagent's before/after regression-proof attempt piled up concurrent
+  processes against the same `run-headless/world` directory.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
