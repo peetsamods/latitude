@@ -344,6 +344,25 @@ Executes the audit report's Slice B. See `evidence-registry.md` row `20260706-fa
   silently skipped because build.gradle's forward list lacked the new property (the L17 forwarding class,
   caught by the gate itself) — forwarding added.
 
+## 2026-07-07 addition (Slice C — Y-aware taper: THE USABLE STRENGTH WINDOW NOW EXISTS, all gates green)
+Executes the audit report's core slice. See `evidence-registry.md` row `20260707-fable5-slice-c-y-taper`.
+- **The taper** (smoothstep envelope: zero ≤Y=-32, full across [0,96], zero ≥Y=160) killed both measured
+  artifact classes: NO detached ceiling slab at any strength up to 1.0 on 3/3 seeds (pre-taper: slab at
+  S=0.10), NO lava voids under oceans at ratio up to 30 (pre-taper: voids from ~0.075 ocean push).
+- **A real window exists:** land ground +3/+5/+6 blocks at S=0.3/0.4/0.5 (+13 at 1.0), coasts grade
+  (land-side +4, mid-ramp 0, ocean-side −1 at S=0.4 on the calibration coastline), formula exact at all
+  16 sampled Y. **Named live-gate candidate: S=0.4.**
+- **Drowned-land fixed, not asserted:** the coherence tripwire caught 1/81 columns (jungle sunk below sea,
+  still land-biome) — the audit-predicted one-directional-veto gap; a mirror veto now flips sunk
+  geography-ocean land columns to ocean, gated so flag-off and armed-S=0 are PROVEN byte-identical
+  (zero biome/height diffs on the grid). S=0.4 composition shift: 6/81 columns, all sensible.
+- **Preset naming trap caught by the gate:** `globe:globe_regular` = UI-size SMALL (7500);
+  UI-size REGULAR = `globe:globe_large` (10000). The Slice-A calibration coordinate is valid for the
+  UI-Regular worlds Peetsa actually creates; headless verification of live-Regular claims must boot
+  `globe_large`. (First probe run read land01=0 everywhere — the absoluteness gate caught it.)
+- Harness gained caller X/Z probes, a Y ladder to 319, and the 81-column coherence grid — the
+  live-diagnostics design's §4 instrument gaps are now closed for the headless side.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
