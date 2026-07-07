@@ -427,6 +427,16 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   (disc/ring/rose/tape/minimal, texture-atlas rendered → resource-pack reskinnable + kills the per-pixel
   fills), element-centric STUDIO IA v2 (F9→Studio, one page per element, one save model), and a deeper
   create/loading refinement list. Slices U-A..U-E. Row `20260707-ui-overhaul-design-r2`.
+- `ui-overhaul-implementation-20260707.md` — **IMPLEMENTED same day (approval: "I absolutely love all
+  of these ideas and approve their implementations")**: U-A `e904d731` pin+grow core + hotbar dock +
+  migration, U-B `b34b30a6` truthful Studio + element tabs + F9→Studio (LatitudeSettingsScreen deleted),
+  U-C `764e188e` versioned single-source config (10 dead fields pruned, directionMode surfaced),
+  U-D `6b11c849` five compass looks + span-batched dial + change-driven HUD strings + world-switch
+  resets, U-E `db93644e` seed guard/affordances + truthful loading stages + Chartroom pass + dead-code
+  deletion. Gates: 54/54 pure-JVM; worldgen identity by diff-scope construction. Jar
+  `latitude-2.0-beta.1+26.2.jar` SHA `5651ac0a...c56f2` **built + HELD** (TEST 27 session in flight);
+  stages as TEST 28. Remaining gate: Peetsa's ONE live UI pass (checklist in the doc). Row
+  `20260707-ui-overhaul-implementation`.
 
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
