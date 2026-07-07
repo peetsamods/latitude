@@ -328,6 +328,22 @@ no code touched. See `evidence-registry.md` row `20260706-fable5-slice-a-truth-r
 - **Topic-map freshness enforced:** the 4 overdue rows above flipped `active`→`stale` per
   `update-contract.md`'s own rule (they block savepoint/release-class progression until re-reviewed).
 
+## 2026-07-06 addition (Slice B — state + observability hardening, ALL GATES GREEN)
+Executes the audit report's Slice B. See `evidence-registry.md` row `20260706-fable5-slice-b-state-observability`.
+- **Stale-provider leak (audit P1-1) killed two ways:** the rebuild decline paths now explicitly reset the
+  V2 providers to NoOp (an inert world reads NEUTRAL, never a prior world's geography), and a new
+  SERVER_STOPPED teardown clears providers + seed + radius. Proven by a new harness replay-probe leg that
+  replays the exact seed-0 world-B load order and asserts the provider ends NoOp (pass=true).
+- **Every silent mode now speaks once** (audit P1-2): seed-0/zero-radius INERT warn (fires from
+  `setWorldSeed`, the load sequence's final setter); terrainV2-on+geoV2-off never-installs warn;
+  INSTALLED-but-not-ready info; first-bias ENGAGED info; compute() bias-failure warn (catch restructured so
+  the delegate's own failures propagate unwrapped — no more double-invoke); Sodium-degrade warn via a
+  client-init reflection check. All observed in real headless logs.
+- **Proof gates:** compile+test green; armed-S=0 vs flag-off terrainProof reports byte-identical (all data
+  fields); S=0.05 values pre-vs-post change byte-identical; replay probe green. NB: the probe's first run
+  silently skipped because build.gradle's forward list lacked the new property (the L17 forwarding class,
+  caught by the gate itself) — forwarding added.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
