@@ -397,6 +397,15 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   runBiomePreview process or a genuinely HELD session.lock. Smoke `20260707-094823` green. See
   `evidence-registry.md` row `20260707-fable5-slice-d-tooling-truthfulness`.
 
+## 2026-07-07 addition (Slice E READY — TEST 27 staged, scripted live session waiting on Peetsa)
+- `fable5-slice-e-live-script-20260707.md` — **Peetsa's run sheet for the one session that closes
+  Phase 4.** TEST 27.jar staged in `LATITUDE 26.2` (SHA `fbfb7a2b…`, Sodium 0.9.0 present); JVM args
+  `-Dlatitude.geoV2.enabled=true -Dlatitude.terrainV2.enabled=true -Dlatitude.terrainV2.strength=0.4`;
+  TYPE seed `2591890304012655616`; 9 steps (~45-60 min): Sodium boot, Mercator-Regular world, the
+  calibration-coastline flight, R7 glance at pre-located warm-band columns, Spark all-thread capture at
+  S=0.4, Classic same-seed second world (teardown/re-arm log check), fresh-world S=0 control capture.
+  See `evidence-registry.md` row `20260707-fable5-slice-e-prep`.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
