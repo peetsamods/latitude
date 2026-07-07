@@ -481,6 +481,21 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   S=0 control capture; JVM args unchanged from the live-green retry. r=1 bathymetry = args-only on this
   jar afterwards.
 
+## 2026-07-07 addition (TEST 28 UI pass round 1 — 5 bugs fixed, 2 create-screen requests landed)
+- `ui-pass-round1-fixes-20260707.md` — Peetsa's mid-pass findings, all root-caused in code and fixed:
+  tape-docked-too-high/too-large (dock ladder docked TAPE's phantom diameter box; now docks the look's
+  TRUE content height — the strip sits ON the hotbar row), L-toggle leaving Direction Format + Compass
+  Look visible (hand-list vs tracker split; blanket pass now; Reset Compass was tracked by NEITHER and
+  also didn't scroll — fixed), Direction Format inert on analog (only the digital line ever rendered it;
+  TAPE labels now honor it incl. degrees, and the row only exists where it has an effect), analog-size ×
+  dock strangeness (same content-true fix + content-true Studio border/hitbox/drag + ghost hotbar for
+  docked analog previews), Reset-lands-mid-screen (U-D's 15% boss-bar nudge in `fresh()` reverted to the
+  classic top-center default). Create screen: atlas now centers the MAP not the map+labels composition;
+  new sixth spawn-zone row **Random** (rolled to a concrete band at create time, logged; planisphere
+  renders highlight-free via null-tolerant `renderCompact`). Compile + pure-JVM suite green; zero
+  worldgen files touched. Live re-test = TEST 29 candidate (specific matrix in the doc). Row
+  `20260707-ui-pass-round1-fixes`.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
