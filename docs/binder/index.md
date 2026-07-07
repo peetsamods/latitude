@@ -277,6 +277,32 @@ unrelated same-day fixes)
   `../design/live-terrain-diagnostics-design-20260706.md`. See `evidence-registry.md` row
   `20260706-fable5-audit-kickoff`.
 
+## 2026-07-06 addition (Fable 5 overhaul audit — REPORT: Phase 4 NO-GO, Y-taper prerequisite)
+- `fable5-overhaul-audit-report-20260706.md` — **the audit's final 10-section report; START HERE for
+  anything Phase-4/Phase-5.** Executive verdict: Phase 4 is mechanically closed but CANNOT live-close and
+  Phase 5 must not start — the Y-uniform bias formula has a refutation-hardened EMPTY usable strength
+  window (ground ≤±1 block below S≈0.10; a detached stone slab at Y256-319 appears at S=0.10 on 3/3 seeds
+  — the live "enormous block"; the asymmetric ocean-ratio escape closes with lava-floored voids under the
+  seabed), so strength calibration as scoped is unsatisfiable and a Y-aware taper is a PREREQUISITE (P0-1).
+  Also P0: the binder's own calibration handoff is a trap (coordinate derived at seed 0, which no live
+  world can arm; live registry rows pair "seed 0" with armed terrainV2 — impossible as written) and the
+  two front-door docs are misleading-current-truth. P1s: refutation-CONFIRMED stale-REAL provider
+  cross-world leak (world B re-seeds with world A's seed before setWorldSeed(0) declines); a
+  zero-observability compound (silent seed-0 decline / silent nonsense flag combos / silent compute()
+  catch / silent Sodium degrade); perf fix never profiled; Sodium fix not live-confirmed; proof bundles
+  don't record their own config. Path forward: 5 bounded slices (A docs-truth, B state+observability, C
+  Y-taper w/ headless proof gate, D tooling truthfulness, E ONE scripted ~45-min live session → written
+  go/no-go). Blocking gates G1/G2/G3. 12 subagents + 19 director-run headless measurements; every P0/P1
+  spot-checked at raw code by the director + two adversarial refuters + an independent synthesis critic.
+- `../design/live-terrain-diagnostics-design-20260706.md` — DESIGN-ONLY (per Peetsa) implementation-ready
+  spec for `/latdev terrainHere`: land01/bias/install-gate/provider-seed-match at the player's column, a
+  wrapped-vs-strength-0-baseline density ladder (baseline arithmetically recovered from one live sample —
+  no second launch), a ceiling scan with a slab-flip proximity warning derived from the measured
+  0.0225-0.025 flip bracket, and a loud STALE? marker that would have made both the install-timing bug and
+  the stale-provider hazard visible at a glance. Plus harness extensions (caller X/Z probes, Y-to-320
+  sampling) and the 3 adjacent one-line observability fixes to bundle. See `evidence-registry.md` row
+  `20260706-fable5-audit-report`.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
