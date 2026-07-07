@@ -389,6 +389,14 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recorded (2× flag-forwarding, the globe_regular≠UI-Regular preset trap, a silent malformed-flag zero).
   See `evidence-registry.md` row `20260707-fable5-recovery-checkpoint`.
 
+## 2026-07-07 addition (Slice D — tooling truthfulness, gates green)
+- Proof bundles now self-describe and contention is un-stumble-into-able: `run_manifest.json` records the
+  actual `--sysprop` config + honest emitHeight (was hardcoded False); `run_flags.json` sidecar (next to
+  biomes.txt, both exporter call sites) echoes every LatitudeV2Flags value — sidecar not in-file, so
+  flag-off byte-identity diffs of biomes.txt keep working; `atlas_runner` preflight aborts on a live
+  runBiomePreview process or a genuinely HELD session.lock. Smoke `20260707-094823` green. See
+  `evidence-registry.md` row `20260707-fable5-slice-d-tooling-truthfulness`.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
