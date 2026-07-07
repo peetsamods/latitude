@@ -1,6 +1,17 @@
 # Slice E — the ONE scripted live session (Phase 4's closing gate) — 2026-07-07
 
-`status: READY — waiting on Peetsa's session` · est. 45–60 min · this is the audit report's G3 gate: the
+> **CORRECTION (2026-07-07, after attempt #1 — READ FIRST):** Peetsa's first run correctly aborted on
+> tripwires (hollowed/shattered ocean-side terrain incl. the spawn column; see
+> `test27-live-findings-20260707.md` for the full diagnosis). **The retry uses the SAME TEST 27 jar with
+> ONE added JVM arg:** `-Dlatitude.terrainV2.oceanStrengthRatio=0.0` — verified headlessly to make every
+> ocean-intent/edge-band column byte-identical to unbiased terrain (no hollowing possible) while land
+> still lifts. Full args for the retry:
+> `-Dlatitude.geoV2.enabled=true -Dlatitude.terrainV2.enabled=true -Dlatitude.terrainV2.strength=0.4
+> -Dlatitude.terrainV2.oceanStrengthRatio=0.0`. Also: start Spark with `--thread *` (attempt #1's capture
+> was server-thread-only) and check RAM headroom before playing (attempt #1 ran at 99.6% physical + 83%
+> swap, which invalidates any perf feel). Steps below are otherwise unchanged.
+
+`status: RETRY READY (attempt #1 aborted on tripwires — see correction above)` · est. 45–60 min · this is the audit report's G3 gate: the
 only manual session in the recovery plan. Everything below is pre-verified headlessly; the session
 confirms it live and produces the two Spark captures. **STOP on any tripwire; no fixes mid-session; no
 strength dialing on a reused world.**

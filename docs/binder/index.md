@@ -438,6 +438,19 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   stages as TEST 28. Remaining gate: Peetsa's ONE live UI pass (checklist in the doc). Row
   `20260707-ui-overhaul-implementation`.
 
+## 2026-07-07 addition (TEST 27 live findings — Slice E attempt #1 aborted, diagnosed, one-arg retry ready)
+- `test27-live-findings-20260707.md` — Peetsa's aborted first Slice-E run, fully diagnosed with headless
+  reproduction at his exact F3 coordinates. Headline: **negative bias HOLLOWS terrain** (uniform −0.1
+  density shatters marginal underground: spawn column [-64..98] solid → 4 fragments + 63 void blocks —
+  the "massive broken cavern"; the spawn even sits in the projection edge band at land01=0.000 via the
+  biome-driven spawn decoupling Lane 1 predicted). Rain-shadow question answered: NOT WIRED in this
+  config (the model believes what Peetsa expects; the map can't hear it until the consumer law-compliance
+  slice). Shelf absence = smoothstep dead-zone + unconsumed shelf01 (design item). Chunk lag
+  environment-confounded (99.6% RAM / 83% swap / server-thread-only capture). **Retry recipe (verified
+  headlessly): same TEST 27 jar + `-Dlatitude.terrainV2.oceanStrengthRatio=0.0`** — ocean/edge columns
+  byte-identical to unbiased, land still lifts. Slice C-2 (bathymetry regime) + spawn fix pending
+  authorization. See `evidence-registry.md` row `20260707-test27-live-findings`.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
