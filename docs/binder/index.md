@@ -481,6 +481,20 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   S=0 control capture; JVM args unchanged from the live-green retry. r=1 bathymetry = args-only on this
   jar afterwards.
 
+## 2026-07-07 addition (TEST 28 "geography looks off" — three-map ocean decoupling, measured)
+- `test28-deep-ocean-decoupling-20260707.md` — Peetsa's "Deep Ocean over knee-deep water / tree in
+  water / unsunken wreck / water level off?" report, diagnosed with log ground truth + headless probes
+  at his exact columns. NOT a water-level bug and NOT C-2: the world runs r=0 (log-verified) and the
+  area is the pre-existing THREE-MAP decoupling — vanilla terrain (seabed) vs legacy ODF labels
+  ("Deep Ocean", gravel dressing, seam features/structures) vs GeoAuthority (says land01=1.0 = solid
+  CONTINENT at all four probed columns). Grid quantification: 40/81 aligned; 24/81 double-land over
+  geo-ocean (r=1 carves these — verified 33 carve + 21 labels realign); **8/81 = his phantom-ocean
+  class, bit-identical at r=1** (both C-2 vetoes require isOceanIntent) + 3/81 phantom-ocean-on-dry
+  → post-r=1 THE dominant remaining artifact class (~14%). Fix candidates enumerated for
+  authorization (narrow land01 label veto; depth-honest deep-vs-regular family); full fix = consumer
+  flip behind law-compliance. Preset-radius map extended: globe=15000/UI-Large. Row
+  `20260707-test28-geo-decoupling`.
+
 ## 2026-07-07 addition (TEST 28 UI pass round 1 — 5 bugs fixed, 2 create-screen requests landed)
 - `ui-pass-round1-fixes-20260707.md` — Peetsa's mid-pass findings, all root-caused in code and fixed:
   tape-docked-too-high/too-large (dock ladder docked TAPE's phantom diameter box; now docks the look's
