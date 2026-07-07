@@ -27,14 +27,34 @@ headless cross-sections at the reported F3 coordinates (scratchpad `test27-5/`).
    flips, and desert→plains is the highest-contrast pair possible. Would look identical flag-off.
    Backlog candidate (biome-side, pre-existing class): an ecotone strip / boundary fray at band edges,
    cousin of the arid-ladder fray (`ff713f57`).
-2. **"Wall" (-2771/-3810, 34.3°):** MOSTLY pre-existing — Terralith steps 94→81→73 naturally across that
-   line; the bias adds +5 only on the west shoulder, exactly where `land01` flips 1.0→0.0 in <50 blocks
-   (the known sharp island edge east of the calibration ramp). Verdict: minor sharpening at r=0. Backlog
-   note (geography-side): sharp land01 edges translate to terrain shoulders under bias; consider edge
-   softening or a slope limiter before high-strength configs.
+2. **"Wall" (-2771/-3810, 34.3°):** MOSTLY pre-existing — VANILLA terrain steps 94→81→73 naturally across
+   that line; the bias adds +5 only on the west shoulder, exactly where `land01` flips 1.0→0.0 in <50
+   blocks (the known sharp island edge east of the calibration ramp). Verdict: minor sharpening at r=0.
+   Backlog note (geography-side): sharp land01 edges translate to terrain shoulders under bias; consider
+   edge softening or a slope limiter before high-strength configs.
 3. **Note for the bathymetry era:** the "believable?" desert massif sits on land01=0.000 — geography
    wants it UNDERWATER. Under C-2 r=1 it carves to sea. The r=0 recipe deliberately leaves old-map land
    standing; the alignment arrives with the next jar.
+
+## Terrain-config clarification (added same day, after Peetsa asked "Terralith is not installed — does
+## that change anything?")
+
+**No Terralith anywhere in this test chain — and that makes the record BETTER, not worse.** Verified
+directly: the live `LATITUDE 26.2` profile's mods contain no terrain mod, AND the headless dev server
+loads only fabric-api modules + Latitude (44 mods, datapacks `vanilla,…,globe`) — so every headless
+measurement and every live observation in Phase 4 ran on IDENTICAL, PURE-VANILLA `minecraft:overworld`
+noise (which is exactly why headless numbers matched live blocks throughout). Corrections and rules:
+- Earlier "Terralith"/"vanilla-Terralith" attributions in this doc and adjacent records (the wall's
+  stepping, the coast terracing, the slab-bracket "noise config" hedge) describe VANILLA behavior — the
+  Terralith phrasing was inherited from the 26.1.2-era profile, which did carry Terralith.
+- **Calibration scope rule: every Phase-4 number (S=0.4, the 0.09→0.10 slab bracket, the taper window,
+  C-2's K_DEPTH/shelf constants) is calibrated for PURE-VANILLA density.** If Terralith or any
+  noise-settings datapack is ever added to the 26.2 profile, re-run the Slice C/C-2 sweep matrix
+  (~5 min headless) BEFORE trusting any of these values — design residual R4's anticipated
+  recalibration, now with its concrete trigger.
+- Alignment note: the vanilla-first hard rule (2.0 must work vanilla-only; packs are enrichment) is
+  satisfied by construction for Phase 4's entire proof chain — the pack-present configuration is
+  untested-but-additive, the intended shape.
 
 ## Decision
 
