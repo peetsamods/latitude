@@ -465,6 +465,15 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   bathymetry (28/81 interior columns converting to proper oceans) is the NEXT live candidate, after the
   current retry reports.
 
+## 2026-07-07 addition (TEST 27 retry: LIVE GREEN — the Phase-4 terrain go/no-go note exists)
+- `test27-retry-go-no-go-20260707.md` — the r=0 recipe live pass: Sodium boot (P1-4 closed), green
+  spawn, believable graded coasts, no wrapper snow, healthy ALL-THREAD Spark at S=0.4 (P1-3 armed leg
+  closed: TPS 20, med 7.97 ms). **GO with two ~10-minute residuals** (Classic world-B parity + S=0
+  control capture), folded into the next session. The "harsh seam" (35.2°) is pure pre-existing
+  band-edge contrast (zero bias involvement, verified); the "wall" (34.3°) is Terralith stepping +5
+  bias at the sharp land01 island edge. Sequencing recommendation: TEST 28 = held UI jar, TEST 29 =
+  fresh build with C-2 for the r=1 bathymetry look. See row `20260707-test27-retry-go`.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
