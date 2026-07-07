@@ -406,6 +406,22 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   S=0.4, Classic same-seed second world (teardown/re-arm log check), fresh-world S=0 control capture.
   See `evidence-registry.md` row `20260707-fable5-slice-e-prep`.
 
+## 2026-07-07 addition (bespoke-UI audit + HUD overhaul design — PROPOSED, awaiting Peetsa)
+- `ui-audit-20260707.md` — evaluation of every Latitude-owned UI surface. Both live complaints
+  root-caused to ONE layout primitive (content-width-coupled anchoring: `anchoredX` consumes a box width
+  that includes the biome text — the dial moves because the box re-centers; the Studio lies because its
+  previews/offsets are computed against fixed SAMPLE text widths). Plus hidden problems (GUI-scale-baked
+  placements, per-pixel disc fill, stale cross-dimension statics, boss-bar collision, F9→legacy-Settings
+  split with dup fields, unversioned configs, 8 dead config fields, no seed-0 guard on the create screen,
+  dead classes) and an explicit what-works list (create screen + loading overlay healthy; Studio preview
+  already renders the real draw path).
+- `../design/hud-layout-overhaul-design-20260707.md` — the proposed fix: **pin + grow** layout model
+  (anchor is a point; alignment decides growth; satellites pin to compass edges; scale-independent
+  storage + versioned migration), truthful Studio (Longest-text preview default, pin crosshairs, one drag
+  model, show-mode honesty), F9→Studio consolidation + config hygiene, render hygiene, and create-screen
+  refinements (seed-0 guard first among them). Slices U-A..U-D, mechanical gates, one live UI pass at the
+  end. See `evidence-registry.md` row `20260707-ui-audit-and-overhaul-design`.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
