@@ -419,8 +419,14 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   (anchor is a point; alignment decides growth; satellites pin to compass edges; scale-independent
   storage + versioned migration), truthful Studio (Longest-text preview default, pin crosshairs, one drag
   model, show-mode honesty), F9→Studio consolidation + config hygiene, render hygiene, and create-screen
-  refinements (seed-0 guard first among them). Slices U-A..U-D, mechanical gates, one live UI pass at the
-  end. See `evidence-registry.md` row `20260707-ui-audit-and-overhaul-design`.
+  refinements (seed-0 guard first among them). See `evidence-registry.md` row
+  `20260707-ui-audit-and-overhaul-design`. **r2 (same day, direction APPROVED):** adds the non-clipping
+  HOTBAR DOCK (the historical clipping bug found precisely: analog attach centered the dial ON the hotbar,
+  `CompassHud.java:589-592`, disabled in `4778a5ed`; the dock pin computes past offhand/attack-indicator
+  and grows only away from the hotbar, with a deterministic fit ladder), five COMPASS LOOKS
+  (disc/ring/rose/tape/minimal, texture-atlas rendered → resource-pack reskinnable + kills the per-pixel
+  fills), element-centric STUDIO IA v2 (F9→Studio, one page per element, one save model), and a deeper
+  create/loading refinement list. Slices U-A..U-E. Row `20260707-ui-overhaul-design-r2`.
 
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
