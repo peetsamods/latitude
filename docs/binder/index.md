@@ -474,6 +474,13 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   bias at the sharp land01 island edge. Sequencing recommendation: TEST 28 = held UI jar, TEST 29 =
   fresh build with C-2 for the r=1 bathymetry look. See row `20260707-test27-retry-go`.
 
+## 2026-07-07 addition (TEST 28 staged — UI pass + worldgen residuals; bathymetry is args-only next)
+- Registry row `20260707-test28-staging`: TEST 28 = fresh HEAD build (`e453665d…`), superseding the held
+  `5651ac0a…` (identical UI code + C-2 inert-at-r=0 by gate proof). Session = the UI 9-point checklist
+  (`ui-overhaul-implementation-20260707.md`) + Classic world-B parity/teardown-log residual + optional
+  S=0 control capture; JVM args unchanged from the live-green retry. r=1 bathymetry = args-only on this
+  jar afterwards.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
