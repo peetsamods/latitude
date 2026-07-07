@@ -451,6 +451,20 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   byte-identical to unbiased, land still lifts. Slice C-2 (bathymetry regime) + spawn fix pending
   authorization. See `evidence-registry.md` row `20260707-test27-live-findings`.
 
+## 2026-07-07 addition (Slice C-2 — bathymetry: oceans carve instead of shatter, and they FLOOD)
+- Registry row `20260707-fable5-slice-c2-bathymetry`. The additive negative bias is gone: ocean-intent
+  columns now carve to a geography-prescribed floor (shelf01 apron = real continental shelves; min()
+  semantics = hollowing and slabs structurally impossible), and the new `preliminarySurfaceLevel`
+  companion wrapper (unit-correct block-Y clamp — not L16's rejected additive term) makes carved seas
+  flood properly instead of forming air pockets + perched aquifers. The mirror veto gained solid-floor
+  sight (its own new tripwire caught 26/81 land biomes floating over carved water — the fluid-inclusive
+  heightmap blinded it once flooding worked) and an r≠0 gate (protects the r=0 recipe); 24/26 convert to
+  latitude-appropriate oceans, 2 beach-rule residuals ACCEPTED-RISK P2. Spawn search now excludes the
+  projection edge band when biasing. Harness tripwires upgraded (gapBlocks/solidRanges + floorHeight).
+  All gates green incl. r=0-recipe exactness — Peetsa's in-flight TEST 27 retry is untouched. r=1
+  bathymetry (28/81 interior columns converting to proper oceans) is the NEXT live candidate, after the
+  current retry reports.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
