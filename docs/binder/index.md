@@ -379,6 +379,16 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   forwarding class, second catch today — the first "consumer-on" atlas silently ran consumer-off and
   diffed 0.00%). See `evidence-registry.md` row `20260707-fable5-biome-geography-audit`.
 
+## 2026-07-07 addition (RECOVERY CHECKPOINT — A/B/C green, stopped before D/E; START HERE to resume)
+- `fable5-recovery-checkpoint-20260707.md` — the stop-gate record for this recovery pass: Slice A (docs
+  truth), Slice B (stale-provider kill + observability), Slice C (Y-taper — no slab, no lava voids, real
+  ground response, S=0.4 named candidate) all GREEN with their proof gates; biome geography audit
+  delivered (2 CONFIRMED consumer bugs queued as a pre-Phase-5-flip slice; live config unaffected). Audit
+  gates G1+G2 satisfied, G3 (the ONE live session) not run. Phase 4 NOT claimed closed; Phase 5 NOT
+  recommended. Awaiting Peetsa: Slice E, Slice D, consumer law-compliance. Four in-pass gate catches
+  recorded (2× flag-forwarding, the globe_regular≠UI-Regular preset trap, a silent malformed-flag zero).
+  See `evidence-registry.md` row `20260707-fable5-recovery-checkpoint`.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
