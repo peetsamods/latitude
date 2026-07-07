@@ -264,6 +264,19 @@ unrelated same-day fixes)
   world-gen resources, after a subagent's before/after regression-proof attempt piled up concurrent
   processes against the same `run-headless/world` directory.
 
+## 2026-07-06 addition (Fable 5 overhaul audit — kickoff charter)
+- `fable5-overhaul-audit-kickoff-20260706.md` — standing charter for a deep, adversarial, read-first audit
+  of the whole 2.0 overhaul (and adjacent code/docs) before any Phase 5 go decision, prompted by Phase 4
+  shipping two live-only bugs through a full mechanical proof gate + sweeper audit, plus the brand-new
+  headless-measured cliff-edge strength threshold (`baseHeight` 92→320 world-ceiling flip between
+  strength 0.05 and 0.1 at one mountain-peak column while flat/coastal columns don't move). Base draft by
+  GPT-5.5 (supplied by Peetsa), corrected + expanded by Fable 5 against fresh-verified repo state; per
+  Peetsa's decision the audit executes in the authoring session with Fable 5 as director over read-only
+  subagent lanes (10 lanes; the new Lane 10 owns cliff-edge characterization and a DESIGN-ONLY live
+  `/latdev terrainHere` diagnostic spec). Deliverables: `fable5-overhaul-audit-report-20260706.md` +
+  `../design/live-terrain-diagnostics-design-20260706.md`. See `evidence-registry.md` row
+  `20260706-fable5-audit-kickoff`.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
