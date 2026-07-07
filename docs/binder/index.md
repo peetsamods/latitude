@@ -363,6 +363,22 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
 - Harness gained caller X/Z probes, a Y ladder to 319, and the 81-column coherence grid — the
   live-diagnostics design's §4 instrument gaps are now closed for the headless side.
 
+## 2026-07-07 addition (biome geography audit — "is it broken?" answered with exact-ID evidence)
+- `fable5-biome-geography-audit-20260707.md` — Peetsa's question ("do rain shadows, windward/leeward,
+  subtropical transitions, desert/plains boundaries, coast/interior logic make sense, or is Latitude
+  broken/not wired?") answered per config. **Verdict: not broken.** The authorities' fields are genuinely
+  earthlike (textbook belts, real Sahara-belt minimum, coast→interior drying, working rain-shadow
+  transect, strong tropical-highland cooling) — but in the LIVE config none of the moisture logic reaches
+  the visible map (NOT WIRED; the map is the lawful pre-2.0 band/province machinery, tropical dry share
+  0.02%). With the consumer ON (measured for the first time with the flags actually forwarded): 1.76% of
+  cells change — roughly half are climate-correct corrections the stripe logic can't make, and half are
+  two CONFIRMED consumer bugs: P1-A (reroll undoes the tropical dry law at 10-20°, 0.02%→2.01%) and P1-B
+  (kAlt over-cool + flat-polar repaint = snowy_plains on warm-band mountains, the L14 class). A/B/C
+  sequencing unaffected; a new "consumer law-compliance" slice is prerequisite to any Phase-5 consumer
+  flip. Also fixed in-pass: climateV2/biomeConsumerV2 were never forwarded to the headless JVM (the L17
+  forwarding class, second catch today — the first "consumer-on" atlas silently ran consumer-off and
+  diffed 0.00%). See `evidence-registry.md` row `20260707-fable5-biome-geography-audit`.
+
 ## Binder sections
 - `future-pass-ideas.md`: parked Julia ideas that are not active implementation scope yet.
 - `evidence-registry.md`: append-only list of proof and savepoint evidence.
