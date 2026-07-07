@@ -199,6 +199,23 @@ seed 0, Mercator, regular size, around `x=9600, z=3372` (~30°N): solid land (`l
 a smooth ~500-block transition, solid ocean (`land01=0.0`) east of ~x=9856. Handed to Peetsa as a fixed,
 reproducible before/after test point.
 
+> **CORRECTION (2026-07-06, Fable 5 audit P0-2 — supersedes the coordinate above AND the "Next step"
+> below).** The coordinate above was derived from a standalone `GeoAuthority(seed=0)` scan, but a live
+> world whose typed seed is literally `0` NEVER arms GeoAuthority (`rebuildGeoAuthority()` declines at
+> `seed == 0`, permanently, by design) — that coastline exists in no live world, and following the recipe
+> as written reproduces the exact "no visible difference at any strength" symptom of the install-timing
+> bug this same doc records. Worse: creating a seed-0 world AFTER a real-seed world in the same game
+> session silently reuses the earlier world's geography (stale-provider finding, same audit).
+> **Corrected recipe: create the world by TYPING seed `2591890304012655616` (Mercator, regular size) and
+> fly to `x=-3300, z=-3636` (~32.7°S). `land01` ramps smoothly 0.10→0.99 from ocean (west, x≈-3400) to
+> land (east, x≈-2840) over ~560 blocks — stay west of x≈-2840; beyond it is an abrupt island edge, not
+> the graduated ramp.** (Re-derived 2026-07-06 with the same standalone scanner at the pinned seed.)
+> The "find the value" calibration framing below is RETIRED: the audit measured an empty usable strength
+> window on the current Y-uniform formula (ground ≤±1 block below S≈0.10; a detached ceiling slab at
+> Y256–319 from S=0.10 on 3/3 seeds; the ocean-ratio escape closes with lava-floored voids) — a Y-aware
+> taper is a prerequisite before ANY strength tuning. See `fable5-overhaul-audit-report-20260706.md`
+> (P0-1/P0-2) and registry row `20260706-fable5-slice-a-truth-restore`.
+
 ## Next step
 
 Strength calibration is now the open item — the mechanism is confirmed working; find the value that reads

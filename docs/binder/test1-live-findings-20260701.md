@@ -1,6 +1,11 @@
 # TEST 1 live-test findings — Peetsa, 2026-07-01 (Atlas/World Shape toggle build)
 
-`status: open punch-list` · `scope: rendering, create-world UI, worldgen, structures, perf` · `build: TEST 1.jar (feat/custom-biome-expansion-26.1.2 @ 30db22fc)`
+`status: HISTORICAL punch-list (2026-07-06) — no longer the work gate` · `scope: rendering, create-world UI, worldgen, structures, perf` · `build: TEST 1.jar (feat/custom-biome-expansion-26.1.2 @ 30db22fc)`
+
+> **HISTORICAL (2026-07-06, Fable 5 audit Slice A):** this list froze at TEST 1 / `30db22fc`; substantial
+> later work (TEST 2–26 client arcs, overhaul Phases 0-4) closed or superseded many items without
+> annotating them here. Do not triage from this list. The current work gate is
+> `docs/binder/fable5-overhaul-audit-report-20260706.md` (slices A–E). Kept as the TEST 1 record.
 
 Peetsa live-tested `TEST 1.jar` (the Atlas / World Shape toggle build) in the Modrinth profile `Lat 1.4+26.1.2`
 and reported the batch below via annotated screenshots. **The toggle itself works** — both Mercator 2:1 and

@@ -1,6 +1,12 @@
 # Current-state handoff — 2.0 "Longitude" plus overhaul plan (updated 2026-07-02)
 
-`status: active resume pointer` · `scope: release, rendering, worldgen` · `branch: feat/custom-biome-expansion-26.1.2`
+`status: SUPERSEDED 2026-07-06 — historical` · `scope: release, rendering, worldgen` · `branch: feat/custom-biome-expansion-26.1.2`
+
+> **SUPERSEDED (2026-07-06, Fable 5 audit Slice A):** this note froze at the 26.1.2 feature branch's HEAD
+> `30db22fc` and predates the 26.2 pivot entirely. The active line is
+> `/Users/joolmac/CascadeProjects/Latitude-2.0-26.2-pivot` (branch `port/canonical-26.2-pivot`). Start at
+> that root's `docs/binder/index.md` (dated sections) and
+> `docs/binder/fable5-overhaul-audit-report-20260706.md`. Kept for history; do not resume work from here.
 
 > This is the "start here / resume here" pointer for the **2.0 line on the canonical 26.1.2 root**
 > (`/Users/joolmac/CascadeProjects/Latitude-custom-biome-expansion-26.1.2`). The general-repo `docs/HANDOFF.md`

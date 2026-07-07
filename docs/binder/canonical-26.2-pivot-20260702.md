@@ -2,6 +2,11 @@
 
 `status: GREEN — compileJava + deterministic headless Atlas proven on 26.2` · `scope: Phase -2 (Version Truth) + Phase -1 (Canonical 26.2 Pivot) only`
 
+> **Point-in-time note (added 2026-07-06, Fable 5 audit Slice A):** this running log ends at TEST 20 /
+> HEAD `61d51782` (2026-07-03). Everything after — GeoAuthority/ClimateAuthority Phases 0-3, the Biome
+> Consumer slice, Phase 4 (terrain wrapper), TEST 21-26, and the Fable 5 audit — is recorded in
+> `index.md`'s dated sections and `fable5-overhaul-audit-report-20260706.md`, not here.
+
 > **UPDATE (same day, later pass — model escalated to Opus 4.8).** The initial Sonnet pass below hit a Hard Stop
 > and stopped at compile-RED (correctly, on first read). Peetsa then switched the ambient model to Opus 4.8 and
 > said "continue." Per `docs/binder/model-effort-strategy-20260702.md` ("Any Hard Stop trigger is itself a signal
