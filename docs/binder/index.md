@@ -487,6 +487,17 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-07 addition (Slice C-3 grade-the-grip GREEN + TEST 30 staged — the wall fix)
+- `fable5-slice-c3-grip-20260707.md` — Peetsa authorized the wall fix same night. SHIPPED DESIGN: the
+  carve CEILING descends from Y160 (taper top) to the C-2 depth target across `smoothstep(|d|/gripWidth)`
+  — pure min() semantics preserved. DEAD END recorded: the first attempt blended DENSITIES and the
+  gap-delta tripwire caught it re-creating the TEST 27 hollowing class at partial grip (14950: gaps 0→8)
+  — density blending in the carve regime is rejected, don't retry. Knob `-Dlatitude.terrainV2.gripWidth`
+  (default 0.8 measured on the wall transect; 0.4 too tight on steep gradients; 0 = legacy). Gates 5/5:
+  r=0 byte-identity, wall-transect grading (80 stands where C-2 planed to 60), open-ocean bit-identity,
+  0 lowered floors / 0 flips on the 81-grid, no gap/fragment regressions. `TEST 30.jar` STAGED (SHA
+  `13a5cd19…`, = UI round 2 + C-3); fresh world required. Row `20260707-fable5-slice-c3-grip`.
+
 ## 2026-07-07 addition (TEST 29 — first r=1 live look: the wall = carve-onset cliff; UI round 2 landed)
 - `test29-r1-look-and-ui-round2-20260707.md` — TEST 29 ran **r=1 live** (log-verified). The "cursed
   giant wall" at 40°S 135°E is DIAGNOSED via headless transect: a real geography coastline (land01
