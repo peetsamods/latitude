@@ -481,6 +481,12 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   S=0 control capture; JVM args unchanged from the live-green retry. r=1 bathymetry = args-only on this
   jar afterwards.
 
+## 2026-07-07 addition (TEST 29 staged — UI round-1 fixes jar; session = the r=1 bathymetry look)
+- Registry row `20260707-test29-staging`: `TEST 29.jar` = the `af752929` build (SHA `2f7360c1…`),
+  TEST 28 removed. Args change is ONE knob: `oceanStrengthRatio=1.0`; fresh world, same pinned seed
+  recommended. Expectations + the not-fixed phantom-ocean caveat in
+  `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
+
 ## 2026-07-07 addition (TEST 28 "geography looks off" — three-map ocean decoupling, measured)
 - `test28-deep-ocean-decoupling-20260707.md` — Peetsa's "Deep Ocean over knee-deep water / tree in
   water / unsunken wreck / water level off?" report, diagnosed with log ground truth + headless probes
