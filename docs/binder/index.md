@@ -487,6 +487,20 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-07 addition (TEST 29 — first r=1 live look: the wall = carve-onset cliff; UI round 2 landed)
+- `test29-r1-look-and-ui-round2-20260707.md` — TEST 29 ran **r=1 live** (log-verified). The "cursed
+  giant wall" at 40°S 135°E is DIAGNOSED via headless transect: a real geography coastline (land01
+  1→0 over ~300 blocks; NOT the edge band) where the carve ceiling's INSTANT grip planes tall old-map
+  hills to sea level — the go/no-go's "sharp-edge shoulder" residual promoted to a 20-40-block cliff
+  at r=1. Fix candidate "grade the grip" (lerp the ceiling in over a coastal ramp; monotone-safe)
+  awaits authorization. Img-2 shelf terraces = system working as designed. UI round 2 ALL LANDED:
+  atlas top-aligned, Random rainbow-italic when selected, LATITUDE letterpress wordmark, checkerboard
+  only-while-adjusting + content-sized (also fixes tape grab confusion + docked preview overhang),
+  snap→Labels, preview text defaults LIVE, drag-undocks-the-dock, Reset Labels/Title tracked, and an
+  always-on create-click zone-selection log line (the Random-created-Temperate mystery is evidence-
+  bounded: selection was false at click; wiring verified correct). Jar `a97ea5c8…` HELD → TEST 30 on
+  Peetsa's word. Row `20260707-test29-r1-ui-round2`.
+
 ## 2026-07-07 addition (TEST 28 "geography looks off" — three-map ocean decoupling, measured)
 - `test28-deep-ocean-decoupling-20260707.md` — Peetsa's "Deep Ocean over knee-deep water / tree in
   water / unsunken wreck / water level off?" report, diagnosed with log ground truth + headless probes
