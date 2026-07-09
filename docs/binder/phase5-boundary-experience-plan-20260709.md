@@ -64,3 +64,69 @@ Push cadence: commit per green pass; push after B-2's atlas gate (geography) and
 - **B-0 opened (2026-07-09)**: recon complete (edge suppression terms, unused projectionEdgeSuitability01
   hook, dead storm wall, live haze/warnings, physical-edge split X-border/Z-hazard, wrap post-mortem
   reusables=none). Edge composition measured from A′ (numbers above).
+- **B-0 DIAGNOSIS COMPLETE (2026-07-09, code-trace with file:line evidence)**: the edge-ocean intent IS
+  expressed in 3D but not in biome labels, via a two-mechanism stack:
+  1. **Atlas overstates the problem**: biomes.png runs terrain-BLIND by default (`ATLAS_SAMPLER` context,
+     null noiseConfig/heightView → the C-2 sunk-land mirror veto's guard never passes). The carve itself
+     (`carveCeilYOrInfinity`, gated only on land01/shelf01) DOES fire at the edge — land01≈0 → carve
+     target ~Y39 → flooded. **Live, the outer band is already water over a ~Y39 seabed**, not dry savanna.
+  2. **Live biome labels are still wrong**: the mirror veto's cheap (`skipPreview`, MIXIN/live) branch
+     reads the FLUID-INCLUSIVE `WORLD_SURFACE_WG` (flooded columns read 63 → veto never fires); C-2's own
+     floor-sighted fix (`previewFloorHeight`/OCEAN_FLOOR_WG) was wired only into the `!skipPreview`
+     harness branch. So live shows ocean water tagged savanna/jungle (wrong identity), and C-2's veto was
+     never live-verified (Phase 4 stopped pre-Slice-E).
+  Candidates evaluated: (1) consume `projectionEdgeSuitability01` as a flag-gated latitude-aware edge
+  ocean authority in pick() — RECOMMENDED (terrain-blind → identical on atlas + live); (2) floor-sight the
+  live veto branch — correct C-2 completion, helps everywhere, invisible to the default atlas; (3) global
+  BIOME_CONSUMER_V2_OCEAN_AUTHORITY — mis-scoped (known land-collapse to ~13%), rejected.
+
+## B-1 design (architect, 2026-07-09 — under adversarial review)
+
+Two bounded fixes, one flag:
+
+**Fix 1 — edge intent (the Phase-5 core).** New flag `latitude.boundaryV2.enabled` (house LatitudeV2Flags
+pattern, default false). In `pick()`, when the flag is on AND geoV2 is live: consume
+`GeoSummary.projectionEdgeSuitability01` — when it crosses a threshold, set `oceanAuthority = true` for
+the column. The EXISTING latitude-correct ocean-family logic then does the rest (C-2 already proved ocean
+family follows latitude: frozen oceans at the poles — the "ice" edge comes free). The boundary must be
+FRAYED, not a ring: gate through the same coherent keep-noise pattern the demote gates use (Art VI — no
+straight lines), ramping with edgeSuit so ocean share rises smoothly toward the border. Threshold/ramp
+chosen so the outer ~0.90·xRadius+ is ocean-dominated while everything with edgeSuit≈0 is untouched.
+Shared authority end to end: GeoAuthority signal → pick()'s existing oceanAuthority seam; no biome clamps.
+
+**Fix 2 — floor-sight the live mirror veto (C-2 completion).** In the veto's `skipPreview` branch, replace
+the fluid-inclusive `columnDecisionY` height source with an `OCEAN_FLOOR_WG`-based floor estimate (the same
+source C-2's `previewFloorHeight` already trusts). No new flag: it completes C-2's documented intent under
+C-2's existing gates (`terrainBiasActivelyBiasing`); flag-off (all-V2-off) remains byte-identical because
+the veto only runs while biasing. Fixes wrong-identity water everywhere (interior floating-land + edge).
+
+**B-2 acceptance (targets from B-0 numbers, measured on atlas runs with `-Dlatitude.atlasTerrainAware=true`
+where fix-2 visibility is needed, plain atlas for fix-1):**
+- Flag-off (boundaryV2 off, live-config flags): atlas byte-identical to A′ `20260709-113845`.
+- Flag-on: X-edge outer 3 cells land-biome share ≤10% (from 46-48%), ocean+ice ≥85%, frozen-family
+  dominating at polar rows; cells with edgeSuit≈0 byte-identical to flag-off (change confined to the band).
+- Pure-JVM: new tests for the edge-intent threshold/ramp helper (pure core) + existing suite green.
+- Hard stops honored: no clamps, no wrap claims, flag discipline.
+
+### B-1 amendments (sweeper APPROVE-WITH-CHANGES, 2026-07-09 — binding on B-2)
+
+1. **Fix-1 consumes the X-only `edgeB` term, NOT `projectionEdgeSuitability01`** (= max(edgeB, poleB) —
+   the poleB component would convert the already-good icy pole LAND shelf into frozen ocean, a regression;
+   D1). Expose edgeB as its own GeoSummary field (additive).
+2. **Fix-1 gates on `terrainBiasActivelyBiasing()` (same predicate + oceanStrengthRatio check the C-2
+   mirror uses) and inserts AFTER the raised-land veto** — otherwise the fluid-inclusive raised-land veto
+   clobbers it live (WORLD_SURFACE_WG reads 63 ≥ seaLevel on flooded columns) while the terrain-blind
+   atlas shows it working: atlas≠live, the exact failure class this phase exists to kill (D2). With the
+   gate, boundaryV2-on + terrainV2-off can never paint ocean labels on dry land. The "plain atlas proves
+   fix-1" framing is DROPPED — both fixes are proven with `-Dlatitude.atlasTerrainAware=true` runs (and
+   targets re-derived at whatever radius that mode can afford) + the B-4 live look.
+3. **Fix-2 gets its own sub-flag** (`latitude.terrainV2.floorSightedVeto`, default false — the
+   oceanAuthority sub-flag precedent): it is honestly a MAP-WIDE change to the current live config
+   (~30% of sampled columns flip to their C-2-intended ocean identity, with chunk-boundary discontinuities
+   in existing worlds), so it must be independently switchable at B-4 (R1). Applied to BOTH pick-path
+   mirror copies. AND its premise — that `OCEAN_FLOOR_WG` sees the terrainV2 carve in the live MIXIN
+   context — must be empirically confirmed (harness/live), not assumed (R2, L24 class).
+4. Noted, accepted, stated: the outer band becoming ocean-dominated IS a (frayed-approach) ocean moat —
+   that is the intentional Phase-5 outcome, not an accident (Art X reviewed); edge rivers stay rivers
+   (cosmetic, revisit at B-4); edge villages vanish with the land (structures follow biome); spawn is
+   already excluded from the band by the C-2 clamp — add no third net.
