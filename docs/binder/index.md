@@ -487,6 +487,17 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-09 addition (Consumer law-compliance slice — plan + working record)
+- `consumer-law-compliance-plan-20260709.md` — the Phase-5-gating slice, authorized by Peetsa: fix P1-A
+  (reroll undoes the tropical dry law — make `applyClimateCompatReroll` law-aware IN PLACE via the same
+  demote predicates, reroll stays LAST) and P1-B (kAlt over-cool + snowy_plains-on-warm-mountains — fixed
+  at the CONSUMER using the already-exposed `altitudeCooling01` + real `preview.centerHeight`; altitude
+  families grove/snowy_slopes, never snowy_plains; ClimateAuthority untouched). Tiered workflow
+  (AGENTS.md): Architect/Developer(Opus)/Test-writer(Sonnet)/Sweeper(Opus)/Reviewer. Proof: pre-fix
+  baselines pinned from a pristine worktree; post-fix config-1 byte-identity + config-2 acceptance diff
+  (dry 0-20° ≤0.1% w/ 25.5° corrections retained; zero snowy_plains <45°; T1-T3 green). Push only after
+  map proof. Row `20260709-consumer-law-compliance`.
+
 ## 2026-07-09 addition (Round 12 — undo/redo icons + selected-band left→right glow)
 - `ui-pass-round12-undo-redo-selband-sweep-20260709.md` — two requests off the TEST 43 screenshot. (1)
   Replaced round 11's verbose "Undo Last Load" text button with a compact `↶`/`↷` icon PAIR, extending the
