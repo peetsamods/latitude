@@ -1,6 +1,6 @@
 # Consumer law-compliance slice — plan & working record (2026-07-09)
 
-`status: IN PROGRESS — pass 0 (scoping) complete; updates appended per pass`
+`status: IN PROGRESS — passes 0 (scoping+baselines) and 1 (P1-A) complete; pass 2 (P1-B) in flight; pass 3 (map proof) pending`
 Authorized by Peetsa 2026-07-09 ("pull up the P1-A/P1-B bug diagnosis and scope the slice"). This is the
 prerequisite slice gating any Phase-5 `biomeConsumerV2` flip, per
 `fable5-biome-geography-audit-20260707.md` §6. Run under the tiered multi-agent workflow (AGENTS.md):
@@ -62,3 +62,25 @@ Push to origin only after Pass 3 is green (map-based proof is law).
 - **Pass 0 (2026-07-09)**: recon complete (code map with file:line for both bugs, law gates, flag plumbing,
   test idioms, atlas tooling — sole code briefing for the developer). Plan committed. Baselines: see
   registry row `20260709-consumer-law-compliance` as runs land.
+- **Pass 0 baselines (2026-07-09)**: A (consumer OFF) run `20260709-110329`, B (consumer ON, pre-fix) run
+  `20260709-110752`, both from the pristine worktree pinned at `01ba2de5` (~3 min each, R7500 step64,
+  seed 2591890304012655616, flags verified in run manifests). `band_correctness_check`: A **PASS**,
+  B **FAIL** (tropical arid 2.17% vs 0.50% max) — the P1-A signature reproduced on demand. Exact-ID diff
+  (`atlas_diff.py`, session scratchpad; measures the same three acceptance metrics Pass 3 will use):
+  980/110,215 cells change (0.889%); **dry share 0-20° 0.027% → 1.681%** (P1-A, ~350 jungle→arid cells);
+  **snowy_plains <45° 0 → 174** (P1-B, plus savanna→windswept_gravelly_hills COLD_STEPPE siblings);
+  keep-these corrections present (~88 desert→forest/flower_forest cells at 24-35°).
+- **Pass 1 — P1-A (2026-07-09)**: Developer (Opus) made the reroll law-aware in place: new private helper
+  `rerollCandidateViolatesEquatorialAridLaw(candidate, blockX, blockZ)` — candidate is desert/badlands
+  family AND either `shouldDemoteEquatorialBadlands` OR `shouldDemoteEquatorialDesert` fires → both
+  `applyClimateCompatReroll` overloads skip the repaint and keep the already-lawful pick. Direct predicate
+  reuse (their signatures already fit); no constant duplication — veto and law share the identical
+  ramp+keep-noise and cannot drift. Reroll stays LAST. compile + pure-JVM suite green. Test-writer ruling:
+  engages in Pass 2 (Pass 1's change is entirely in MC-heavy LatitudeBiomes, atlas-proven by convention;
+  no registry-bootstrap test infra invented mid-slice). Sweeper (Opus, adversarial, 9 probes):
+  **ACCEPT-WITH-NOTES** — all probes clean (predicate purity, full family coverage incl. eroded_badlands,
+  only HOT/COOL_DESERT classes affected, twins symmetric, flag-gating structural, exception paths correct);
+  2 non-blocking notes recorded: (i) first-vetoed-member early-return can conservatively under-correct in
+  the 23.5-27° salt-divergence belt (safe direction; future refinement could continue the loop),
+  (ii) a pathological cold-pick-in-tropical-HOT_DESERT case keeps the cold pick — a PRE-EXISTING frozen-law
+  gap, not this pass's regression.
