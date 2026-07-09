@@ -71,6 +71,37 @@ drawTitleLineAt extraction byte-equivalent; antimeridian teleport-back can NEVER
 crossing (never crosses centerX + 256 guard). B-4 eyeball notes: late-joining second line skips its
 fade-in (cosmetic); a zone title dragged to ~center-40 could visually neighbor the hemisphere block.
 
+## B-3-P3 pass log (2026-07-09) — polar warning ladder re-anchor (dev+7-tests+sweeper green, reviewer pending)
+
+Developer (Opus): re-anchored the 4 `LatitudeMath.POLAR_STAGE_{1,2,3,LETHAL}_PROGRESS` constants
+0.940/0.970/0.990/0.995 → **0.9444/0.9667/0.9889/0.9967** (= 85/87/89/89.7°) to align the warning ladder
+with P1's window, and rewrote the 4 polar warning strings: WARN_1 "Snow begins to fall. The cold is
+setting in — consider turning back." (the snow-onset line, 85°), WARN_2 "The cold seeps in. Your movements
+are slowing." (87°, as slowness starts), DANGER "DANGER! Lethal cold ahead. Turn back now." (89°, RED+BOLD),
+LETHAL "The cold is freezing you." (89.7°, RED+BOLD — replaces the dishonest "The cold overwhelms you." that
+fired before death at 90°). New `LatitudeMathHazardStageTest` (7 tests, boundary + monotonic-no-skip);
+suite 118/118. Hazard MECHANICS (PolarHazardWindow, degree-keyed) untouched.
+
+**Sweeper (Opus): ACCEPT-WITH-NOTES, zero defects.** Architect-priority findings:
+- **SHARED-CONSTANT coupling (HONEST DISCLOSURE — corrects the earlier "EW out of scope / unchanged"
+  framing):** these 4 constants are ALSO read by the E/W storm axis (`hazardStageIndexEW` = EW storm text +
+  `stormIntensityForStage` particles) and the EW spawn safe-margin (`GlobeMod.java:693` uses STAGE_1). So
+  re-anchoring N/S DID nudge EW: LEVEL_1 storm onset +66 blocks outward, LEVEL_2 whiteout onset ~50 blocks
+  INWARD (safer), stormCritical +25 blocks, spawn cap +66 blocks outward (still min()-capped, spawn↔hazard
+  gap stays exactly 0.08·xRadius=1200 blocks so spawn is NEVER inside a hazard band). Every shift ≤0.44% of (largest = STAGE_1, +66 blocks;
+  X-radius, no EW warning inverts, no particle tier vanishes, terrain/biome byte-identical. **Architect
+  decision: KEEP-SHARED** — correctness does not require splitting; the EW values were themselves arbitrary
+  fractions, this is a sub-1% re-tune of a tuning choice, the one meaningful shift is in the safer
+  direction. RECORDED-NOT-FIXED: the constants couple N/S-latitude warnings to EW-border-fraction storm
+  tuning; the day either axis needs INDEPENDENT tuning, split them into separate sets (cheap then, and the
+  shared coupling is the only blocker).
+- **Rounding (NOTE, harmless):** the 4-dp literals aren't bit-exact vs deg/90 — WARN_2/DANGER/LETHAL lag
+  their mechanic by fractions of a single block (~0.003°), WARN_1 leads by ~0.004°. Sub-block, imperceptible,
+  no stage skipped. Optional future polish: express as exact `85.0/90.0`-style fractions (self-documenting,
+  flips the sub-block lags to leads). Not fixed — genuinely cosmetic.
+Ordering CLEAN (strict monotonic; each warning fires at/just-before its mechanic). Strings CLEAN (honest,
+short, RED+BOLD retained). Mechanics independence CLEAN. New test correctly pins the new boundaries.
+
 ## B-2 runtime gates (2026-07-09 — RESOLVED, push authorized ba9b1099)
 
 - **Gate 1 GREEN**: flag-off plain atlas @ `94bed4ac` (run `20260709-123627`) = byte-identical to A′
@@ -182,6 +213,25 @@ FIXED per-tick budget).
   the spawn tick** to kill (b), and keep the fixed-budget-per-tick / no-accumulator rule. Paused → spawns
   nothing → resumes clean; the few flakes already airborne just freeze/resume (not a dump). Never
   reintroduce a wall-clock or "how many do I owe since last spawn" accumulator for particle cadence.
+
+**Polar warning ladder re-anchor (B-3-P3, 2026-07-09).** The four polar warning MESSAGES + their trigger
+thresholds still sit on the PRE-B-3 stage ladder (`LatitudeMath.POLAR_STAGE_{1,2,3,LETHAL}_PROGRESS =
+0.940/0.970/0.990/0.995` → 84.6°/87.3°/89.1°/89.55°), which no longer aligns with P1's new window
+(snow 85° / hazard 87° / blindness ~89° / lethal 90°). Peetsa: refine the messages. Re-anchor the 4 stage
+constants to the new milestones (progress = deg/90) and refresh the wording, esp. the dishonest LETHAL line
+("The cold overwhelms you." fires at 89.55° while death is at 90°):
+- WARN_1 → **85°** (0.9444), coincides with snow onset → an atmospheric "the snow begins / cold sets in"
+  line (this IS the snow-onset message Peetsa asked for; no 5th tier needed).
+- WARN_2 → **87°** (0.9667), coincides with the hazard onset (slowness begins) → "the cold seeps in,
+  movement slowing".
+- DANGER → **89°** (0.9889), ~blindness onset → the actionable red "lethal cold ahead, turn back NOW"
+  (keeps ~1° lead before real freeze damage at 90°).
+- LETHAL → **~89.7°** (0.9967) → present-continuous, honest "the cold is freezing you" (fires only when
+  freeze ticks are genuinely near-max, not prematurely final).
+These constants also drive warning-PARTICLE intensity (`polarIntensityForStage`) — re-anchoring aligns the
+whole warning system (text + particles) to the new window, desirable. Hazard EFFECTS are P1's
+`PolarHazardWindow` (independent, untouched). EW warnings out of scope (already refined) — DESIGN-TIME ASSUMPTION, CORRECTED by the B-3-P3 pass log above: the shared stage constants DID nudge EW ≤0.44% of X-radius (accepted, KEEP-SHARED). Client-only, no
+worldgen, no thresholds on the hazard mechanics themselves — only the WARNING display ladder.
 
 **Hemisphere titles (B-3c).** Geography: longitude runs -180..+180; **two** meridians flip the E/W
 hemisphere — the **prime meridian (0°, interior)** and the **antimeridian (±180°, the world edge)**.
