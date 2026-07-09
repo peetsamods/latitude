@@ -1,6 +1,6 @@
 # Consumer law-compliance slice — plan & working record (2026-07-09)
 
-`status: IN PROGRESS — passes 0 (scoping+baselines) and 1 (P1-A) complete; pass 2 (P1-B) in flight; pass 3 (map proof) pending`
+`status: IN PROGRESS — passes 0 (scoping+baselines), 1 (P1-A), 2 (P1-B) complete; pass 3 (map proof) pending`
 Authorized by Peetsa 2026-07-09 ("pull up the P1-A/P1-B bug diagnosis and scope the slice"). This is the
 prerequisite slice gating any Phase-5 `biomeConsumerV2` flip, per
 `fable5-biome-geography-audit-20260707.md` §6. Run under the tiered multi-agent workflow (AGENTS.md):
@@ -84,3 +84,29 @@ Push to origin only after Pass 3 is green (map-based proof is law).
   the 23.5-27° salt-divergence belt (safe direction; future refinement could continue the loop),
   (ii) a pathological cold-pick-in-tropical-HOT_DESERT case keeps the cold pick — a PRE-EXISTING frozen-law
   gap, not this pass's regression.
+- **Pass 2 — P1-B (2026-07-09)**: Developer (Opus), two layers. (B, the hard guarantee) new pure-core
+  `ClimateClass.alpineFamily()` — COLD_STEPPE/TUNDRA→(grove, snowy_slopes), ICE_CAP→(frozen_peaks,
+  snowy_slopes), all others fall through to vanillaFamily; `rerollFamilyFor` routes every cold-class
+  repaint below `SNOWY_PLAINS_MIN_LAT_DEG = 45.0` (cites the audit acceptance) through alpineFamily —
+  snowy_plains structurally unreachable from the reroll below 45° regardless of why the column classified
+  cold. (A, the realism layer) `rerollColdAltitudeVetoed`: cold class below 45° + `altitudeCooling01 ≥
+  ClimateAuthorityParams.ALPINE_ALT` (the exact 0.45 anchor alpineStep itself fires on) + real terrain NOT
+  genuinely elevated (reuses temperateMountainTerrainAuthority's own test: centerHeight ≥ seaLevel+25 or
+  robustDelta ≥ 8 — no new magic numbers) → skip the repaint, keep the lawful pick. Conservative fallback:
+  when preview terrain is synthetic (`realTerrainKnown=false`, which includes LIVE worldgen contexts under
+  the default skip-preview sysprops), the veto dominates — live consumer-on play keeps base picks on
+  warm-band mountains (alpine SNOW still applies via the elevation-driven surface mixin); only
+  terrain-probed contexts exercise the grove/snowy_slopes branch. ClimateAuthority/kAlt/alpineStep
+  UNTOUCHED (locked); both overloads exact twins; both call sites still flag-gated. compile + full suite
+  green. Test-writer (Sonnet): new pure-JVM `ClimateClassAlpineFamilyTest` (5/5 green) — key invariant
+  asserted over ALL enum values (no class's alpineFamily may contain snowy_plains) + a pin on the original
+  vanillaFamily data so accidental edits fail loudly. Sweeper (Opus, 9 probes): **ACCEPT-WITH-NOTES** —
+  all probes clean (additivity, no import/class-load hazard since ALPINE_ALT is compile-time-inlined,
+  sparse-registry fallback returns the pick not vanillaFamily so nothing leaks, P1-A untouched, twins,
+  gating, latitude helper character-faithful to the law idiom, hot path arithmetic-only). RISK-1 (moderate,
+  by design): the code guarantee is REPAINT-scoped; the map-scoped acceptance ("zero snowy_plains <45° in
+  the final consumer-ON map") additionally requires the BASE path to contribute none — baseline A already
+  measured base-path snowy_plains <45° = 0 on this seed (all 174 pre-fix cells were reroll-injected), so
+  Pass 3's atlas closes RISK-1; do not declare acceptance from code inspection alone. Sweeper note 2:
+  registry-level absence is delivered by the Pass-3 atlas metric (LatitudeBiomes is atlas-proven by repo
+  convention), not JUnit.
