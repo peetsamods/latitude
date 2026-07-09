@@ -1,8 +1,8 @@
 # Phase 5 — Boundary Experience: plan & run log (2026-07-09)
 
 `status: IN PROGRESS — B-0/B-1 (23908d7a) + B-2 incl. runtime gates complete (pushed ba9b1099);
-B-3-P1 polar approach done (dev+tests+sweeper+re-sweep green, reviewer PASSED); NEXT B-3-P2 hemisphere
-titles/warning language → B-4 live look`
+B-3-P1 polar approach done (4daf45d5); B-3-P2 hemisphere titles + warning language done (dev+18-tests+
+sweeper green, reviewer PASSED); NEXT: stage TEST jar → B-4 live look`
 
 ## B-2 pass log (2026-07-09)
 
@@ -48,6 +48,28 @@ surfaceOk so no cave whiteout) + one call in InGameHudMixin after the EW haze + 
 legible); both hemispheres via |lat|; comments accurate. Notes for B-4 eyeball: cold-corner EW-haze +
 polar-white COMPOUND (aesthetic call); dead severity fields flagged for a cleanup slice (not removed).
 compile + full suite green (21 new tests stay green).
+
+## B-3-P2 pass log (2026-07-09) — hemisphere titles + warning language (dev+18-tests+sweeper green, reviewer pending)
+
+Developer (Opus) recon: the N/S equator title WAS live but fired through the ZONE title's single display
+slot (the exact collision B-3c targeted) and even self-suppressed while a zone title showed. Implemented:
+new pure `core/HemisphereCrossing.java` (axis-agnostic sideOf/evaluate/composeLines; DEAD_ZONE=64,
+MAX_STEP=256 teleport guard, COOLDOWN 15s — constants carried from the old N/S logic) + new dedicated
+`client/HemisphereTitleOverlay.java` (ONE shared window, two slots, N/S-first stacking, fixed anchor
+-40 independent of the draggable zone title, reuses the extracted ZoneEnterTitleOverlay.drawTitleLineAt
+for identical styling) + GlobeWarningOverlay rewired per-axis + InGameHudMixin renders it after the zone
+title + disconnect reset. E/W = prime-meridian (centerX) crossing, "Eastern/Western Hemisphere"; 0,0
+same-window = single stacked two-line title by construction. Warning-language pass: exactly ONE string
+tightened (POLE_WARN_1 "You should consider turning back." -> "Consider turning back."); other six judged
+already good. Test-writer (Sonnet): HemisphereCrossingTest 18/18 (fire-on-cross, dead-zone wobble never
+fires, no-fire-without-stable-side, teleport guard incl. ==256 boundary, deterministic cooldown re-arm,
+composeLines ordering/null-drop, translation-invariance proving axis-agnosticism); suite 111/111.
+Sweeper (Opus): **ACCEPT-WITH-NOTES, zero defects** — old-fires ⊆ new-fires (nothing regressed, formerly
+zone-suppressed crossings now fire into their own channel); 0,0 stacked-single-title traced same-tick;
+zone-slot collision structurally dead (only the real zone title calls ZoneEnterTitleOverlay.trigger);
+drawTitleLineAt extraction byte-equivalent; antimeridian teleport-back can NEVER fake a prime-meridian
+crossing (never crosses centerX + 256 guard). B-4 eyeball notes: late-joining second line skips its
+fade-in (cosmetic); a zone title dragged to ~center-40 could visually neighbor the hemisphere block.
 
 ## B-2 runtime gates (2026-07-09 — RESOLVED, push authorized ba9b1099)
 
