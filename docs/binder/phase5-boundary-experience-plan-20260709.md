@@ -112,12 +112,29 @@ Push cadence: commit per green pass; push after B-2's atlas gate (geography) and
 ## Peetsa's B-3/B-5 design intents (2026-07-09 — recorded, not yet scheduled to a dev pass)
 
 **Poles — tight continuous hazard window (B-3a).** Onset ~87° (≈0.967·zRadius), full lethal at 90°, so the
-2-3° window `[87,90]` is the only hazardous band and the rest of the polar region stays explorable. Replace
+2-3° window `[87,90]` is the only HAZARDOUS band and the rest of the polar region stays explorable. Replace
 the current stage-STEPPED ladder with CONTINUOUS scaling across the window: slowness amplifier and
 freeze-tick rate both ramp smoothly with progress→90° (progress = clamp01((|lat|-87)/3)). Reuses the
 existing `LatitudeMath.hazardProgressZ`/`borderUxTick` plumbing (recon item 2/3) — retune constants +
 make the effect magnitude a function of progress rather than a stage index. Open Q for B-4: keep the
 whiteout screen effect at the deep end, or let freeze damage carry it.
+
+**Poles — persistent snow + fog ramp (B-3b), Peetsa's request, with the anti-backlog guardrail.** Snow
+begins ~85° (BEFORE the 87° hazard onset — atmosphere first, then danger) and ramps particle density up
+to VERY heavy by 90°, with increasing fog toward the edge (share the existing `computePoleWhiteoutFactor`
+screen-fog path). Extend the EXISTING `GlobeModClient.polarCapClientTick` (which is already built the
+right way: `END_CLIENT_TICK`-driven, a CAPPED per-tick count, NO time accumulator / NO
+`System.currentTimeMillis`). Move the onset out to ~85° and make the per-tick count a smooth function of a
+85→90° progress ramp (uncap the current `count>6` clamp to a higher heavy-snow ceiling near 90°, still a
+FIXED per-tick budget).
+- **THE BUG PEETSA HIT BEFORE ("particles store up while paused, then dump the whole backlog on
+  resume"):** two known anti-patterns cause it — (a) spawning off wall-clock time so resume fires a
+  catch-up burst; (b) spawning WHILE PAUSED (the client tick keeps firing but the particle engine doesn't
+  step them, so they pile at the spawn point and all animate on unpause). The current code already avoids
+  (a). **HARD REQUIREMENT for B-3b: add an explicit `if (client.isPaused()) return;` guard at the top of
+  the spawn tick** to kill (b), and keep the fixed-budget-per-tick / no-accumulator rule. Paused → spawns
+  nothing → resumes clean; the few flakes already airborne just freeze/resume (not a dump). Never
+  reintroduce a wall-clock or "how many do I owe since last spawn" accumulator for particle cadence.
 
 **Hemisphere titles (B-3c).** Geography: longitude runs -180..+180; **two** meridians flip the E/W
 hemisphere — the **prime meridian (0°, interior)** and the **antimeridian (±180°, the world edge)**.
