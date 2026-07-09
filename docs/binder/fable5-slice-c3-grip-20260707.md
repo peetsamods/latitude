@@ -1,9 +1,34 @@
 # Slice C-3 — grade the grip (the TEST 29 wall fix) + TEST 30 staging (2026-07-07)
 
-`status: ALL GATES GREEN; TEST 30 STAGED (SHA 13a5cd19…)`
+`status: LIVE GREEN — the wall is gone; continental shelves confirmed in-game (TEST 30, 2026-07-08)`
 Authorization: Peetsa, same night as the TEST 29 findings ("yes continue with those two decisions" =
 stage TEST 30 + fix the wall). Design origin: `test29-r1-look-and-ui-round2-20260707.md` (the
 carve-onset-cliff diagnosis).
+
+## LIVE CONFIRMATION (2026-07-08, TEST 30 world)
+
+Peetsa flew the TEST 30 r=1 world (log-verified `strength=0.4, oceanStrengthRatio=1.0`, gripWidth at
+its 0.8 default; Regular/10000 Mercator) around 38-46°S / 131-137°E — the same coastal region as the
+TEST 29 wall. Screen recording `~/CascadeProjects/Proofs/Screen Recording 2026-07-08 at 7.53.36 PM.mov`.
+**The wall is GONE.** Every coastline now reads as a graded continental shelf: terraced sandy shallows
+descending into water, the old "believable?" massif is now an island whose flanks slope into the sea,
+carved deep-ocean floor with kelp forests below. No sheer stone cliff, no aquifer/lava bleed face
+anywhere in the flight. Peetsa: "This is looking very continental-shelfy right?... I don't see the
+weird walls. It looks good." C-3 is live-closed.
+
+Peetsa also flagged three BIOME (not terrain) mismatches, all correctly observed and all ONE root
+cause — the three-map decoupling from the TEST 28 diagnosis (`test28-deep-ocean-decoupling-20260707.md`),
+NOT anything C-3 touched: (a) "forest-ocean" — a Forest biome label/surface over what carved down into
+water (the flooded apron keeps its land-biome tag); (b) "ships in a forest" — shipwreck structures
+place by the pre-carve ocean/biome map, so they land on now-forested carved ground; (c) "meadow at low
+elevation" — Meadow is vanilla's high/mountain-grove biome, appearing at the waterline because the
+terrain carved down under it while its biome tag stayed put (seen ~40°S 135°E, flower-covered slope to
+the sea). The fix path is unchanged: the consumer law-compliance slice, with the interim label-side
+veto + depth-honest ocean-family candidates already enumerated in the TEST 28 row. No new work implied
+by this session beyond what's already queued.
+
+---
+
 
 ## What changed (plain language)
 

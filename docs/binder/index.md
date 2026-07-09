@@ -487,6 +487,18 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-08 addition (Slice C-3 LIVE GREEN — the wall is gone; continental shelves confirmed in-game)
+- Registry row `20260708-c3-live-green` (and a LIVE CONFIRMATION block prepended to
+  `fable5-slice-c3-grip-20260707.md`). Peetsa flew the TEST 30 r=1 world across the same 38-46°S /
+  131-137°E coast as the TEST 29 wall: it's GONE — every coastline now grades into water as a
+  continental shelf (terraced shallows, the old massif is an island sloping into the sea, carved
+  deep-ocean floor + kelp). C-3 live-closed. His three biome complaints (Forest-over-water,
+  shipwreck-in-forest, Meadow-at-waterline) are all correctly seen and all the SAME known issue — the
+  TEST 28 three-map decoupling (biome layer on the pre-carve map; consumer not wired) — NOT a C-3
+  regression; fix path is the already-queued consumer law-compliance slice + interim label-side
+  candidates. Terrain half of Phase 4 is now live-verified on both legs (land-lift TEST 27, carve/shelf
+  TEST 30); remaining worldgen work is all biome-side.
+
 ## 2026-07-08 addition (TEST 30 UI pass round 3 — three bugs, three independent root causes)
 - `ui-pass-round3-fixes-20260708.md` — Peetsa's screen recording of a TEST 30 HUD Studio + create-screen
   pass, reviewed frame-by-frame at native resolution before any code change. (1) Atlas position
