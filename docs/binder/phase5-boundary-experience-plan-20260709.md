@@ -1,6 +1,28 @@
 # Phase 5 — Boundary Experience: plan & run log (2026-07-09)
 
-`status: IN PROGRESS — slice B-0 (scoping + edge truth) underway`
+`status: IN PROGRESS — B-0/B-1 complete (committed 23908d7a); B-2 implemented (dev+tests+sweeper green,
+reviewer pending); B-2 atlas gate + B-3 UX + B-4 live look pending`
+
+## B-2 pass log (2026-07-09)
+
+Developer (Opus): both fixes per the amended design. New pure helper `core/geo/EdgeOceanRamp.java`
+(START=0.10 / FULL=0.70 / MAX_SHARE=0.94 — cap deliberately <1.0 so the border is a frayed island coast,
+not a solid ring); new flags `latitude.boundaryV2.enabled` + `latitude.terrainV2.floorSightedVeto`
+(default false, build.gradle-forwarded); GeoSummary gains trailing additive `projectionEdgeXOnly01`
+(X-only edgeB — poles untouched); Fix-1 in BOTH pick() copies AFTER the raised-land veto, gated on
+BOUNDARY_V2 + geoV2 summary + terrainBiasActivelyBiasing + oceanStrengthRatio≠0, frayed via ValueNoise2D
+salt "edge_ocn" (~900-block provinces at R7500, floor 256); Fix-2 flag-ternary in BOTH mirror-veto
+copies (skipPreview arm → previewFloorHeight/OCEAN_FLOOR_WG; !skipPreview untouched). 4 GeoSummary
+constructor call-sites across 2 test files gained the trailing neutral arg (arity-only).
+Test-writer (Sonnet): `EdgeOceanRampTest` 13/13 green (containment invariant incl. negative/NaN-class
+inputs, monotonicity over 200 samples, 0.94 cap, strict-< fray boundary, formula-derived anchor).
+Sweeper (Opus): **ACCEPT-WITH-NOTES, zero defects** — amendment compliance verified (X-only edgeB;
+insertion after the raised-land veto both copies; boundaryV2-on+terrainV2-off cannot fire), flag-off
+byte-identity structural (lazy ternary; current live config inert), twins character-identical, salt
+unique across ~45, Art VI clean, build.gradle keys exact. Notes: "4 test files" = 4 call-sites in 2
+files; Fix-1's river comment wording imprecise (edge-river behavior intentionally parked for B-4).
+Runtime gates remaining: terrain-aware atlas proof (flag-off identity + flag-on edge targets re-derived
+at the proof radius) + empirical OCEAN_FLOOR_WG-sees-carve check — the director's next step.
 Authorized by Peetsa 2026-07-09 ("Proceed with Phase 5 using workflow"). Objective per
 `docs/LATITUDE_2_0_OVERHAUL.md` §Phase 5: make the world edge intentional and less wall-like WITHOUT
 claiming seamless topology — bias the projection edge toward ocean/ice/storm geography, adjust warning
