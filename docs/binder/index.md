@@ -487,6 +487,21 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-08 addition (legacy binder docs retroactively indexed — closing pre-Fable-arc indexing gaps)
+- A sweep for orphaned binder docs (not referenced in index or registry) found five, all pre-dating the
+  Fable-5 arc; indexed here for discoverability (no new registry evidence rows fabricated — these record
+  their own prior proof):
+  - `arid-belt-earthlike-20260625.md` — subtropical arid belt (badlands/desert/mesa) Earth-like design +
+    anti-regression spec; staged jar `d39de6a2` (2026-06-25 worldgen work).
+  - `atlas-viewer-modernization-brief-20260605.md` — super-handoff brief for the Atlas Viewer
+    modernization all-nighter (dev-only tooling; see memory `atlas-viewer-modernization`).
+  - `headless-live-test-20260630.md` — what a headless run can vs can't stand in for vs an in-game
+    eyeball; staged jar `d8657778` (2026-06-30 snow-line/world-creation validation).
+  - `headless-verification-playbook.md` — the standing methodology doc for proving worldgen behavior
+    headlessly (agent can't reliably pilot the GLFW client); cross-agent (Codex/Claude).
+  - `version-bump-2.0-20260701.md` — the 1.4.1-beta.2 → 2.0-beta.1 rename decision (Peetsa, 2026-07-01;
+    see memory `latitude-versioning-convention`).
+
 ## 2026-07-08 addition (documentation catch-up — LESSONS L21-L25 + C-4 bathymetric-relief design)
 - **LESSONS L21-L25** landed in the MAIN worktree `docs/LESSONS.md` (commit `0fa11aa6` on `Latitude
   (Globe)` main; per L10 lessons live in that one surface). L21 = changing one layer of a multi-map
