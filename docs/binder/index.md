@@ -487,6 +487,22 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-08 addition (create-screen round 4 — atlas label misalignment fixed; "Ginormous!" flourish)
+- `ui-pass-round4-fixes-20260708.md` — Peetsa: atlas latitude LABELS don't line up with the atlas's own
+  gridlines, worst at Itty Bitty ("0° almost at the North Pole"), better at larger sizes. Root cause:
+  `computePreviewLabelYs()`'s overflow recovery SLID THE WHOLE COLUMN UP uniformly (including the 0°
+  label, which starts at its exactly-correct true position) whenever the de-collision cascade pushed the
+  last label past the bottom — at small radii the true gaps are smaller than the comfort gap, so the
+  cascade + its corrective shift both fire hard, dragging 0° far from its own gridline. Confirmed the
+  true-position formula already matches `LatitudePlanisphereRenderer.renderCompact()`'s band-line math
+  exactly — the bug was purely in the recovery step, not a label/gridline formula mismatch. FIX: never
+  move the 0° label (the column's one guaranteed-correct anchor); when overflow would occur, compress the
+  cascade's GAPS toward a bare no-overlap floor instead of shifting the column — 0° stays pinned, no
+  overlap ever, and interior labels only compromise when truly necessary (hand-verified at several
+  simulated radii). Also: "Ginormous" world size now renders italicized as "Ginormous!" (Peetsa's ask;
+  every other size name unaffected). compile+pure-JVM suite green; zero worldgen files touched. `TEST
+  32.jar` STAGED (SHA `c7cdce7c…`), supersedes TEST 31. Row `20260708-ui-pass-round4-fixes`.
+
 ## 2026-07-08 addition (legacy binder docs retroactively indexed — closing pre-Fable-arc indexing gaps)
 - A sweep for orphaned binder docs (not referenced in index or registry) found five, all pre-dating the
   Fable-5 arc; indexed here for discoverability (no new registry evidence rows fabricated — these record
