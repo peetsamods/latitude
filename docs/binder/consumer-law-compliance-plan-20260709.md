@@ -1,6 +1,6 @@
 # Consumer law-compliance slice — plan & working record (2026-07-09)
 
-`status: IN PROGRESS — passes 0 (scoping+baselines), 1 (P1-A), 2 (P1-B) complete; pass 3 (map proof) pending`
+`status: COMPLETE — all 4 passes green; map acceptance MET; the Phase-5 consumer-flip prerequisite is satisfied`
 Authorized by Peetsa 2026-07-09 ("pull up the P1-A/P1-B bug diagnosis and scope the slice"). This is the
 prerequisite slice gating any Phase-5 `biomeConsumerV2` flip, per
 `fable5-biome-geography-audit-20260707.md` §6. Run under the tiered multi-agent workflow (AGENTS.md):
@@ -110,3 +110,33 @@ Push to origin only after Pass 3 is green (map-based proof is law).
   Pass 3's atlas closes RISK-1; do not declare acceptance from code inspection alone. Sweeper note 2:
   registry-level absence is delivered by the Pass-3 atlas metric (LatitudeBiomes is atlas-proven by repo
   convention), not JUnit.
+- **Pass 3 — map proof (2026-07-09): ALL GATES GREEN.** Post-fix runs at `b381ffdc` in the main tree,
+  sequenced: A′ = `20260709-113845` (consumer OFF), B′ = `20260709-114225` (consumer ON), same
+  seed/size/step/flags as the pinned baselines (manifest-verified).
+  - **Byte-identity**: A′ vs baseline A = **0/110,215 cells changed** — the live (consumer-off) config is
+    provably untouched by both fixes. This also stands in for the terrain tripwires (T1-T3): zero terrain
+    files were touched by the slice and the terrain-derived biome placements are byte-identical.
+  - **band_correctness on B′: PASS** (hard-failures 0) — tropical arid **0.02%** vs max 0.50 (pre-fix B:
+    2.17% FAIL).
+  - **P1-A acceptance**: dry share 0-20° = **0.027%** (4 cells) — EXACTLY equal to consumer-off A′; the
+    consumer now contributes zero tropical arid (target was ≤0.1%; pre-fix 1.681%). Zero changed cells of
+    any kind below 24° (pre-fix: 582).
+  - **P1-B acceptance**: snowy_plains <45° = **0** (pre-fix 174). Sweeper RISK-1 closed by the map: the
+    base path contributes none and the reroll can no longer inject any.
+  - **Corrections retained** (the audit's "working" classes, B′ vs A′ = 178 cells, 0.162%, all at 24-45°):
+    wet-windward desert→forest/flower_forest/plains/etc at 24-35° (~100 cells); lawful arid-belt
+    jungle→desert/badlands at 24-35° (~40 cells — the ramp's own keep-noise deciding, exactly as the law
+    does); cooled warm-band mountains now repaint to **grove/snowy_slopes** at 35-45° (~37 cells) — the
+    altitude families the audit asked for, replacing the flat-polar snowy_plains cells.
+  - Total consumer influence: 980 cells (0.889%, half bugs) pre-fix → **178 cells (0.162%, all lawful)**
+    post-fix.
+
+## Slice verdict
+
+The consumer law-compliance prerequisite for Phase 5's `biomeConsumerV2` flip is **satisfied**: both
+CONFIRMED audit bugs are fixed, proven on the audit's own acceptance metrics, with the live config
+byte-identical. Remaining Phase-5-era items (unchanged by this slice, from the audit's P2 list):
+windwardLift01 placement quirk (P2-A), polar precip high (P2-B), arid ladder near-sharp steps (P2-C),
+and the deliberate live-worldgen veto-dominance characteristic (enable preview-height for worldgen via
+`-Dlatitude.skipPreviewHeightForWorldgen=false` if grove/snowy_slopes repaints are ever wanted live —
+a tuning decision for the Phase-5 flip session, not a defect).
