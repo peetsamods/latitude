@@ -487,6 +487,25 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-08 addition (HUD Studio round 5 — Title tab bugs, tooltip pass, Tape legibility floor)
+- `ui-pass-round5-fixes-20260708.md` — (1) "Show Degrees" did nothing: the title preview's RENDER call
+  site duplicated the sample-title logic inline instead of calling the already-existing shared
+  `studioPreviewTitle()` helper (used only by the drag hit-test), so the one place that mattered never
+  checked the flag. Fixed by deleting the duplicate and having the shared helper (now flag-aware) serve
+  both. (2) Title Case "duplicate": NORMAL's no-op transform was indistinguishable from UPPERCASE because
+  the Studio's no-world SAMPLE title was hardcoded all-caps — exactly the scenario Peetsa tests from.
+  Per his explicit instruction, NORMAL removed entirely (UPPERCASE/LOWERCASE/MOCKING remain, new default
+  UPPERCASE); 5 consumers updated + a new regression test proves an old saved "NORMAL" config degrades
+  safely (Gson→null→sanitize) rather than failing to load. (3) Tooltip pass: stripped "(Folded in from
+  the old F9 Settings screen.)" from both occurrences; rewrote ~15 jargon-first tooltips into plain
+  sentences; the two Zone/Biome Text Grow tooltips Peetsa flagged directly were rebuilt with concrete
+  examples instead of internal "pin" vocabulary. (4) Tape look illegible at small Analog Size: gave Tape
+  its own 32-unit floor at the single existing `analogDiameter()` choke point (not a new width/box split —
+  avoids the L23 class of bug just documented), plus the Studio slider's own minimum raises to match so
+  the displayed number is never a lie. compile+suite green (incl. the new Gson-compat regression test);
+  zero worldgen files touched. `TEST 33.jar` STAGED (SHA `17f528d2…`), supersedes TEST 32. Row
+  `20260708-ui-pass-round5-fixes`.
+
 ## 2026-07-08 addition (create-screen round 4 — atlas label misalignment fixed; "Ginormous!" flourish)
 - `ui-pass-round4-fixes-20260708.md` — Peetsa: atlas latitude LABELS don't line up with the atlas's own
   gridlines, worst at Itty Bitty ("0° almost at the North Pole"), better at larger sizes. Root cause:
