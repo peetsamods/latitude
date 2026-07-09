@@ -1,7 +1,8 @@
 # Phase 5 — Boundary Experience: plan & run log (2026-07-09)
 
-`status: IN PROGRESS — B-0/B-1 complete (committed 23908d7a); B-2 implemented (dev+tests+sweeper green,
-reviewer pending); B-2 atlas gate + B-3 UX + B-4 live look pending`
+`status: IN PROGRESS — B-0/B-1 (23908d7a) + B-2 incl. runtime gates complete (pushed ba9b1099);
+B-3-P1 polar approach done (dev+tests+sweeper+re-sweep green, reviewer PASSED); NEXT B-3-P2 hemisphere
+titles/warning language → B-4 live look`
 
 ## B-2 pass log (2026-07-09)
 
@@ -24,7 +25,31 @@ files; Fix-1's river comment wording imprecise (edge-river behavior intentionall
 Runtime gates remaining: terrain-aware atlas proof (flag-off identity + flag-on edge targets re-derived
 at the proof radius) + empirical OCEAN_FLOOR_WG-sees-carve check — the director's next step.
 
-## B-2 runtime gates (2026-07-09, in progress — do NOT push until resolved)
+## B-3-P1 pass log (2026-07-09) — polar approach (dev+tests+sweeper+re-sweep green, reviewer pending)
+
+Developer (Opus): new pure helper `core/PolarHazardWindow.java` — hazard [87,90]: progress=(deg-87)/3,
+slowness 0..II / weakness 0..I integer tiers, freezeTicks 0..140 (vanilla freeze-death threshold),
+miningFatigue >=~88 deg, blindness >=~89 deg; ambient [85,90]: snowCount 2..30 FIXED per-tick budget,
+fogIntensity 0..1. OLD window was stage-stepped from ~84.6 deg (progress 0.94 x 4 rungs); NEW = hazard-free
+below 87 (more explorable pole) + continuous bite to 90. Server leg: borderUxTick re-driven by the helper,
+private PolarStage enum removed. Client leg: `if (client.isPaused()) return;` guards ALL particle paths
+(the anti-backlog HARD REQ); ambient snow hoisted out of enableWarningParticles (always-on atmosphere,
+sandstorm-haze precedent); EW storm particles keep their config gate. Ordering achieved: warn text ~84.6 ->
+snow 85 -> hazard 87 -> lethal 90 (atmosphere first, then danger).
+Test-writer (Sonnet): `PolarHazardWindowTest` 21/21 (exact-87.0 boundary = bitwise 0, monotonic over 1200
+samples, endpoint/clamp/tier assertions).
+Sweeper (Opus): ACCEPT-WITH-NOTES + ONE real find — the fog re-point fed DEAD code (polar screen fog never
+rendered anywhere, pre-existing; all severity plumbing was uncalled). Fix-up (same dev, resumed): NEW
+`client/PolarWhiteoutOverlayHud.java` (first-ever visible polar whiteout: full-screen fill on the proven
+EwSandstormOverlayHud precedent, alpha=min(0.90, intensity^2*0.90), tint 238/242/248, guards incl. F1 +
+surfaceOk so no cave whiteout) + one call in InGameHudMixin after the EW haze + comments corrected
+(computePoleFogEnd explicitly UNCONSUMED). Re-sweep (Opus, delta-scoped): **ACCEPT-WITH-NOTES** — claim
+"no prior visible polar fog" CONFIRMED; mixin guard identical to proven EW path; alpha bounded <=229 (text
+legible); both hemispheres via |lat|; comments accurate. Notes for B-4 eyeball: cold-corner EW-haze +
+polar-white COMPOUND (aesthetic call); dead severity fields flagged for a cleanup slice (not removed).
+compile + full suite green (21 new tests stay green).
+
+## B-2 runtime gates (2026-07-09 — RESOLVED, push authorized ba9b1099)
 
 - **Gate 1 GREEN**: flag-off plain atlas @ `94bed4ac` (run `20260709-123627`) = byte-identical to A′
   `20260709-113845` (0/110,215). Both new flags are provably inert off.
