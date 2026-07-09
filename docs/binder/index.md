@@ -487,6 +487,64 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-09 addition (UI pass round 9 — 3-agent sanity sweep over the uncommitted diff + 7 fixes)
+- `ui-pass-round9-sanity-sweep-20260709.md` — before Peetsa re-tests the whole HUD Studio + create-screen
+  arc by hand, an adversarial sanity sweep ran three independent review agents over the ENTIRE uncommitted
+  rounds 7+8 diff: (1) adversarial UI bug hunt [Opus], (2) contradiction/duplication/staleness [Sonnet],
+  (3) clean/efficient code review [Sonnet]. The Opus hunt found NO critical/high crash and positively
+  cleared import null-safety, Aurora divide-by-zero (guarded twice), the reflection field copy, Gson
+  round-trip of a preset saved before a field existed, all 4 new clamped fields (slider ranges == clamps),
+  the Tape pin offset (not double-applied), the tab reindex, and the atlas scale. SEVEN fixes applied,
+  now in the tree: [HIGH] `LatitudeHudStudioScreen.applyDefaults` (Reset HUD) silently skipped all 4 new
+  fields (rainbowCycleSeconds/zone/biome/coordsTextScale) even though the narrower Reset Compass/Labels
+  were updated — the hand-maintained mirror rotted while the reflection preset path didn't (L27);
+  [MEDIUM] `CompassHudPreset.applyToLive` wrote title numerics to the LIVE config unclamped (saveCurrent
+  only sanitizes disk) — new `LatitudeConfig.sanitizeLive()` (= applyFrom(captureTo()), reuses
+  LatitudeConfigData.sanitize) called before saveCurrent (L28); [MEDIUM] Zone/Biome Text Size sliders
+  stayed live when the label was OFF — gated in `updateSidebarVisibility`; [MEDIUM] index.md round-8 entry
+  still said 0.62f/TEST 37, contradicting its own registry row — corrected to 0.82f/TEST 39; [LOW]
+  biome-attached-alone drew with zoneTextScale (biomeTextScale a no-op) — new
+  `CompassHud.attachedZoneScale` helper; [LOW] scaled-up attached text overflowed its hitbox/border
+  vertically (width scaled, height not) — new `CompassHud.attachedTextLineHeight` used in both
+  computeAnalogBounds and renderAnalogAt; [LOW] `CompassHudPresetSlots.isOccupied` counted a corrupt
+  (compass==null) slot as occupied — now requires p != null && p.compass != null. Deferred/flagged (not
+  bugs to fix now): themeShort() default-fallback future-proofing; a PRE-EXISTING TitleFields-vs-Reset
+  Title default-literal drift (Peetsa to pick canonical); presetFormatVersion written-but-never-read stub;
+  the documented zone+biome-both-attached fused-line scope boundary. compile+suite+build green; `TEST
+  40.jar` STAGED (SHA `283a3bb5…`), supersedes TEST 39. Row `20260709-ui-pass-round9-sanity-sweep`.
+
+## 2026-07-08 addition (Create-screen round 8 — Classic (1:1) atlas oversized/clipping, Mercator untouched)
+- `ui-pass-round8-fixes-20260708.md` — Peetsa: the atlas clips off the panel at Tiny world size on the
+  Classic (1:1 square) shape, and Itty Bitty still looks very large; fix the 1:1 only, leave 2:1 Mercator
+  alone. ROOT CAUSE: the atlas radius fit-budget's `widthDivisor` (2.0 Classic vs 4.0 Mercator, since a
+  Mercator globe is 2x as wide as tall for the same radius) means Classic's width budget comes out roughly
+  DOUBLE Mercator's for the same panel — in practice that made Classic almost always height-bound (same
+  height budget for both shapes wins the `min()`), so `previewDiscFill`'s per-size grading barely mattered
+  (even Itty Bitty rendered near the height ceiling) and there was little margin left once real label/
+  padding/frame math was subtracted, clipping at Tiny. FIX: new `CLASSIC_ATLAS_SCALE` applied to the
+  radius ONLY when shape isn't Mercator, after the shared budget math, before the existing fit-shrink
+  loop — Mercator's code path reads nothing new, byte-identical. First try `0.62f` overshot (bunched the
+  world sizes together — a flat multiplier shrinks the pixel GAP between sizes along with overall size);
+  raised to **`0.82f`** (happy medium between 1.0-too-big/clipping and 0.62-too-small/bunched).
+  compile+suite+build green; `TEST 39.jar` STAGED (SHA `84f6c803…`), supersedes TEST 38 (which superseded
+  the 0.62 TEST 37 attempt, TEST 36 before that). Row `20260708-ui-pass-round8-fixes`.
+
+## 2026-07-08 addition (HUD Studio round 7 — Tape pin fix, Rainbow theme, presets/export, per-label text size)
+- `ui-pass-round7-fixes-20260708.md` — (1) fixed the Tape-only pin-marker bug Peetsa's screenshot
+  confirmed ("+ crosshairs" floating above the tape strip): a recurrence of LESSONS L23 (content-vs-box
+  mismatch) in `drawPinMarkers()`, which the original L23 pass never touched — same
+  `(diameter - contentH) / 2` offset applied elsewhere now applied there too, ANALOG-only, no-op for
+  every look but Tape. (2) added a `RAINBOW` analog color-scheme theme (time-based hue rotation via
+  `System.currentTimeMillis()`, ring/needle opposite on the wheel) — inserted mid-enum before `CUSTOM`
+  (safe: no ordinal dependencies anywhere, Gson persists by name), auto-appears in the existing Color
+  Scheme cycle button. (3) new "Presets" tab: 8 numbered save/load/clear slots + Export/Import-to-clipboard,
+  backed by new `CompassHudPreset`/`CompassHudPresetSlots` classes (single snapshot shape shared by both
+  features; reflection-based field copy so new config fields can't be silently missed). (4) three new
+  Labels-tab sliders (Zone/Biome/Coords Text Size, 0.5-3.0, default 1.0) — full independent control when
+  detached or (coords) always; when zone+biome BOTH ride attached to the compass they still share one
+  fused line/size (documented scope boundary, sidestepped by detaching either one). compile+suite green;
+  `TEST 35.jar` STAGED (SHA `08b3da58…`), supersedes TEST 34. Row `20260708-ui-pass-round7-fixes`.
+
 ## 2026-07-08 addition (HUD Studio round 6 — real CycleButton tooltip-wipe bug found + fixed)
 - `ui-pass-round6-fixes-20260708.md` — (1) restored "opacity" wording in the three tooltips round 5
   changed to "see-through" (Peetsa: not jargon). (2) A REAL, confirmed bug: "after you click on a button
