@@ -103,17 +103,62 @@ Sweeper Opus adversarial per pass; Reviewer read-only docs-vs-actions). This doc
 | B-0 | Architect | Edge-truth diagnosis: WHY doesn't the authority's edge ocean reach the visible map? Distance-graded X/Z edge bins incl. ice category; land01-vs-height-vs-biome cross-check from existing artifacts | Written mechanism diagnosis in this doc |
 | B-1 | Architect designs, Sweeper adversarially reviews | Design: latitude-aware EDGE INTENT through shared authority (warm/temperate → ocean, polar → ice shelf; storm = UX layer, not biome), consuming/extending the existing edge terms + the unused projectionEdgeSuitability01 hook; NEW FLAG (house LatitudeV2Flags pattern) so flag-off is byte-identical incl. the current live config | Design section approved in this doc |
 | B-2 | Developer(Opus) → Test-writer(Sonnet) → Sweeper(Opus) → Reviewer | Implement geography leg | compile+suite; flag-off atlas byte-identity; flag-on edge acceptance (targets set in B-1 from B-0 numbers); commit |
-| B-3 | Developer(Opus) → Sweeper → Reviewer | UX leg: warning language pass + decide/revive the 3D storm wall on 26.2 (client-only) | compile+suite; commit; live eyeball queued |
-| B-4 | Peetsa live | Fly east edge at equator/temperate/pole on a fresh flag-on world; judge the boundary experience + storm/haze visuals | Written live verdict; only then default-flip discussion |
+| B-3 | Developer(Opus) → Sweeper → Reviewer | UX leg: (a) tighter continuous POLE hazard window (Peetsa: 87-90°, smooth slowness+freeze ramp, not stair-steps); (b) warning-language pass; (c) HEMISPHERE TITLES — E/W title at the prime meridian + keep N/S equator title + the 0°,0° non-overlap rule (spec below); (d) decide/revive the 3D storm wall on 26.2 (client-only) | compile+suite; commit; live eyeball queued |
+| B-4 | Peetsa live | Fly the east edge (equator/temperate/pole) + cross the equator and the prime meridian on a fresh flag-on world; judge the boundary experience, hazard window, hemisphere titles, storm/haze visuals | Written live verdict; only then default-flip discussion |
+| B-5 (proposed) | Architect design → sweeper → dev/test/sweeper/review | HEMISPHERE PASSAGE at the E/W world edge (±180° antimeridian): fog-advisory prompt → consensual blur-through → arrival title. Peetsa's reopening of the E/W crossing — DIFFERENT design from the SCRAPPED seamless-wrap (see note). Builds on the B-2 ocean shore | design approved; then normal impl passes + live |
 
 Push cadence: commit per green pass; push after B-2's atlas gate (geography) and after B-3 (client).
+
+## Peetsa's B-3/B-5 design intents (2026-07-09 — recorded, not yet scheduled to a dev pass)
+
+**Poles — tight continuous hazard window (B-3a).** Onset ~87° (≈0.967·zRadius), full lethal at 90°, so the
+2-3° window `[87,90]` is the only hazardous band and the rest of the polar region stays explorable. Replace
+the current stage-STEPPED ladder with CONTINUOUS scaling across the window: slowness amplifier and
+freeze-tick rate both ramp smoothly with progress→90° (progress = clamp01((|lat|-87)/3)). Reuses the
+existing `LatitudeMath.hazardProgressZ`/`borderUxTick` plumbing (recon item 2/3) — retune constants +
+make the effect magnitude a function of progress rather than a stage index. Open Q for B-4: keep the
+whiteout screen effect at the deep end, or let freeze damage carry it.
+
+**Hemisphere titles (B-3c).** Geography: longitude runs -180..+180; **two** meridians flip the E/W
+hemisphere — the **prime meridian (0°, interior)** and the **antimeridian (±180°, the world edge)**.
+Requirements:
+- KEEP the existing N/S hemisphere title at the **equator (lat 0)** crossing — verify it still fires
+  (recon: GlobeWarningOverlay drives hemisphere-crossing titles today; confirm the N/S one is live).
+- ADD an E/W hemisphere title at the **prime-meridian (lon 0)** crossing during normal interior play —
+  announces the hemisphere being ENTERED ("EASTERN HEMISPHERE" / "WESTERN HEMISPHERE"). The Longitude
+  readout already flips sign at lon 0, so this is a clean trigger.
+- **0°,0° NON-OVERLAP RULE (hard requirement):** crossing the equator and the prime meridian on the same
+  tick (or within the same title display window) must NOT render two single-line titles on top of each
+  other. Architect ruling for the dev: a SINGLE shared hemisphere-title channel — if both crossings are
+  active within the window, render ONE stacked two-line title (e.g. "NORTHERN HEMISPHERE" /
+  "EASTERN HEMISPHERE"); otherwise an independent single-line title. De-dupe so the intersection can never
+  double-fire. This is distinct from the zone-enter title (which has its own draggable placement in HUD
+  Studio) — hemisphere titles are their own channel; make sure they don't collide with the zone title
+  either.
+- The B-5 passage's ARRIVAL title (at the ±180 edge) is the SAME E/W hemisphere concept — share the
+  channel/renderer, just a different trigger (edge passage vs interior meridian).
+
+**B-5 Hemisphere Passage (E/W edge crossing) — proposed slice.** Player nears the ±180 world edge →
+increasingly opaque fog → "Heavy fog advisory — pass through?" yes/no prompt. NO: gentle turn + soft
+push-back current away from the border (NOT a hard camera yank — feels janky). YES: blur/opaque-fog
+transition (which also masks destination-chunk preload) → teleport to the mirrored X → fog thins →
+"WESTERN/EASTERN HEMISPHERE" arrival title. Anti-spam: band-state HYSTERESIS — the prompt arms once on
+ENTERING the fog band and cannot re-arm until the player has left it (>~200 blocks inland), so sliding
+N/S along the edge never re-prompts. **NOT a retry of the SCRAPPED seamless wrap** (2026-06-24): that
+attempt tried to make the crossing INVISIBLE and died on cloud-snap/ocean-mismatch/fake-carve at the
+seam; this design makes the crossing EXPLICIT and CONSENSUAL (framed, not denied), and the B-2 boundary
+ocean gives both shores the open water the old ocean-seam plan never had. Feasibility/UX design is its
+own slice AFTER B-3/B-4 (judge the new edge live first). Recommended sequence: B-3 → B-4 → B-5.
 
 ## Open decisions (Peetsa's, queued for the B-4 live session)
 1. Flip `biomeConsumerV2` default-ON? (Its law gate is cleared; flip is a Phase-5-era decision, separable
    from the boundary work. Recommend eyeballing consumer-on in the same B-4 world.)
 2. Storm wall 3D: revive vs retire-for-good (haze+warnings may be enough — B-3 presents both options).
 3. Z-edge hard stop: today a determined player can tank the debuffs and walk past the pole — accept
-   (soft lore boundary) or harden?
+   (soft lore boundary) or harden? (Peetsa leans toward the tight 87-90° hazard window as the answer —
+   see B-3a; a hard wall may be unnecessary if the freeze window is punishing enough.)
+4. B-5 Hemisphere Passage: build it (explicit fog-gated E/W crossing) — Peetsa wants it; schedule after
+   the B-4 live look confirms the new edge feels right to build a passage onto.
 
 ## Pass log (appended as slices complete)
 
