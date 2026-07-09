@@ -487,6 +487,21 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-09 addition (Create-screen round 10 — animated "Random" spawn-zone Atlas sweep)
+- `ui-pass-round10-random-sweep-20260709.md` — Peetsa wanted the Random spawn zone to feel special on the
+  atlas: start colored in the middle, bands "strobe/cycle outward in opposing directions," a colorful
+  double scroll. Implemented in `LatitudePlanisphereRenderer.renderCompact` for the `selectedBand == null`
+  (Random) case only: a Gaussian glow PULSE starts at the equator and travels outward to the poles; since
+  every band is drawn mirrored N+S, one pulse reads as two lit regions moving apart. Each band brightens in
+  its own native climate color as the pulse passes (same pop the selected band uses), a gold crest line
+  rides the front (sine-eased so no seam blink), and the loop restarts at the equator after the polar band
+  fades past 90°. Wall-clock driven (System.currentTimeMillis, same as Aurora). Non-Random rendering
+  byte-identical. Cosmetic tuning constants (period 3200ms / sigma 16° / pole-fade 108°). FOLLOW-UP:
+  Peetsa wanted the loop seam softened — added a `sweepEnv` smoothstep envelope (SWEEP_FADE_FRAC=0.22) that
+  eases the pulse IN at the equator restart and OUT past the pole instead of popping. compile+suite+build
+  green; `TEST 42.jar` STAGED (SHA `04c1cd78…`), supersedes TEST 41→40. NOT committed (held for live look).
+  Row `20260709-ui-pass-round10-random-sweep`.
+
 ## 2026-07-09 addition (UI pass round 9 — 3-agent sanity sweep over the uncommitted diff + 7 fixes)
 - `ui-pass-round9-sanity-sweep-20260709.md` — before Peetsa re-tests the whole HUD Studio + create-screen
   arc by hand, an adversarial sanity sweep ran three independent review agents over the ENTIRE uncommitted
