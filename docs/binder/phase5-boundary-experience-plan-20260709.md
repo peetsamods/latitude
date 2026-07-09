@@ -23,6 +23,40 @@ unique across ~45, Art VI clean, build.gradle keys exact. Notes: "4 test files" 
 files; Fix-1's river comment wording imprecise (edge-river behavior intentionally parked for B-4).
 Runtime gates remaining: terrain-aware atlas proof (flag-off identity + flag-on edge targets re-derived
 at the proof radius) + empirical OCEAN_FLOOR_WG-sees-carve check — the director's next step.
+
+## B-2 runtime gates (2026-07-09, in progress — do NOT push until resolved)
+
+- **Gate 1 GREEN**: flag-off plain atlas @ `94bed4ac` (run `20260709-123627`) = byte-identical to A′
+  `20260709-113845` (0/110,215). Both new flags are provably inert off.
+- **Gate 2 INCONCLUSIVE — confounded, honestly recorded**: flag-ON terrain-aware run `20260709-124004`
+  (37 min) nominally hits the X-edge target (edge land 46%→0.7%; frayed latitude-correct oceans, frozen
+  at poles, warm at equator; pole edge = frozen ocean at the rim) BUT the diff vs the PLAIN flag-off run
+  changed 54.6% of the whole map and interior land collapsed to 8.9% — THREE variables changed at once
+  (atlasTerrainAware sampler mode + boundaryV2 + floorSightedVeto), so the mass conversion cannot be
+  attributed. Hypotheses: (a) terrain-aware mode alone activates the C-2 mirror veto atlas-wide (its
+  designed behavior finally visible), (b) the OCEAN_FLOOR_WG estimator over-fires under the wrapper
+  (L24 class), (c) fix-2's effect. **Run E in flight**: terrain-aware + BOTH new flags OFF — E vs D
+  isolates the two flags; E vs C isolates the sampler mode. If E already shows the interior collapse,
+  the collapse is pre-existing C-2-veto/estimator behavior surfaced by the atlas mode, NOT this slice's
+  regression — but then the flag-attribution diff (D vs E) must still show fix-1 confined to the edge
+  band and fix-2's conversions floor-justified. NO PUSH until attribution is clean.
+- **Gate 2 RESOLVED (runs C=20260709-123627, D=20260709-124004, E=20260709-131833)**: E vs C (flags off
+  both, sampler mode isolated) = 54.54% changed -> the mass conversion is ENTIRELY pre-existing C-2
+  mirror-veto behavior surfaced by terrain-aware sampling, NOT this slice. D vs E (flags isolated,
+  terrain-aware both) = **22 cells (0.020%)**, all land->latitude-correct ocean at 35-66.5 deg (the edge
+  band's residual after the veto already converted most flooded edge columns). Edge targets met in the
+  terrain-aware view (X-edge land 46%->0.7%, frayed frozen/warm oceans by latitude, poles' rim frozen
+  ocean). ATTRIBUTION CLEAN -> push authorized (all new behavior flag-gated + inert off, gate 1
+  byte-identity green).
+- **OPEN FINDING (pre-existing, surfaced today, gates any floorSightedVeto default-flip)**: in
+  terrain-aware view the C-2 veto + OCEAN_FLOOR_WG converts the interior to ~77% ocean vs GeoAuthority's
+  ~39%-land intent -- the floor estimator plausibly over-reads the carve (L24 class). Fix-2 stays
+  default-off until this is calibrated (a future slice: compare OCEAN_FLOOR_WG vs the density ladder on
+  carved columns). NOT a B-2 regression: D-vs-E proves our flags did not cause it.
+- NOTE: fix-2's live (skipPreview) branch is NOT exercised by the terrain-aware atlas (which uses the
+  !skipPreview arm) -- its live behavior is code-identical to the proven previewFloorHeight source, but
+  its MAP-WIDE live effect (~the E-vs-C picture on new chunks) is exactly why it has its own flag and a
+  B-4 live decision.
 Authorized by Peetsa 2026-07-09 ("Proceed with Phase 5 using workflow"). Objective per
 `docs/LATITUDE_2_0_OVERHAUL.md` §Phase 5: make the world edge intentional and less wall-like WITHOUT
 claiming seamless topology — bias the projection edge toward ocean/ice/storm geography, adjust warning
