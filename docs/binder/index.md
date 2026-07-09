@@ -487,6 +487,19 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-09 addition (Phase 5 — Boundary Experience: plan + run log)
+- `phase5-boundary-experience-plan-20260709.md` — Phase 5 opened per Peetsa ("Proceed with Phase 5 using
+  workflow"). Measured current red from the A′ atlas: poles already intentional (67% ice/snow) but the
+  X (east/west) edge is 46-54% ordinary land — statistically identical to the interior, zero ocean bias
+  on the VISIBLE map, despite GeoAuthority already suppressing continentality hard past 0.80·xRadius
+  (EDGE_STR=1.30) and exposing an UNCONSUMED projectionEdgeSuitability01 hook. Central B-0 puzzle: why
+  the authority's edge-ocean intent never reaches the visible biome layer (mirror-veto gating / carve
+  behavior / atlas-context blindness — code-trace in flight). Slices B-0 truth → B-1 design (latitude-aware
+  edge intent, own flag, shared authority — never clamps) → B-2 geography impl → B-3 UX (dead 3D storm
+  wall decision + warning language) → B-4 Peetsa live look. NB: bundle height layer is L24-unreliable
+  under terrainV2 (WORLD_SURFACE_WG lies on carved columns) — height axis of edge cross-checks needs the
+  density ladder, not the atlas PNG. Row `20260709-phase5-boundary-experience`.
+
 ## 2026-07-09 addition (Consumer law-compliance slice — plan + working record)
 - `consumer-law-compliance-plan-20260709.md` — the Phase-5-gating slice, authorized by Peetsa: fix P1-A
   (reroll undoes the tropical dry law — make `applyClimateCompatReroll` law-aware IN PLACE via the same
