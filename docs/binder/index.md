@@ -487,6 +487,26 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-08 addition (documentation catch-up — LESSONS L21-L25 + C-4 bathymetric-relief design)
+- **LESSONS L21-L25** landed in the MAIN worktree `docs/LESSONS.md` (commit `0fa11aa6` on `Latitude
+  (Globe)` main; per L10 lessons live in that one surface). L21 = changing one layer of a multi-map
+  system exposes the other layers' latent mismatches (terrain carve revealed the un-wired biome
+  decoupling; reads-as-regression-but-isn't). L22 = grade a boundary-triggered transform's ONSET not just
+  its magnitude (the carve-onset wall), and grade the clamp TARGET never the clamped OUTPUT (the
+  density-blend hollowing dead end). L23 = when one value becomes two (content-box vs layout-box) re-audit
+  every consumer's contract; equal-case call sites hide the bug (Tape-only Studio dock). L24 = vanilla
+  estimators (getBaseHeight/_WG) misreport under a custom density wrapper; audit against the ground-truth
+  field (nearly a false "oceans got shallower" report). L25 = a framework focused/active flag can be
+  sticky; track the interaction lifecycle yourself (stuck transparency checkerboard).
+- `docs/design/bathymetric-relief-c4-design-20260708.md` — DESIGN ONLY (not authorized): deeper oceans +
+  earth-y trenches. Key finding: the geology already exists — `GeoSummary` exposes `coastDistanceBlocks`
+  (abyssal profile) and `islandArc01` = `seamProx·typeContrast·arcN` (subduction/arc-trench signal), both
+  already populated by GeoAuthority, so C-4 is a carve DEPTH-formula change consuming existing signals,
+  zero geology-engine change. ~83-block trenches fit under the Y-64 floor. Constraints from earned lessons
+  baked in (grade trench walls per L22, deep-flood gate, density-ladder audit per L24, r=0 identity +
+  gap-delta gates, live knobs per L17). Recommended first step = MAP where trenches fall on Peetsa's seed
+  (add islandArc01/seamProx to the coherence probe) before carving. Row `20260708-c4-bathymetric-design`.
+
 ## 2026-07-08 addition (Ocean depth anchor — "shallower than vanilla?" measured; answer: no, it deepens)
 - `ocean-depth-anchor-20260708.md` — Peetsa asked whether the ocean is shallower than vanilla. Measured
   on his seed (r=0==vanilla vs r=1): where geography wants ocean, VANILLA mostly put land (median floor
