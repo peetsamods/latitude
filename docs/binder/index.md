@@ -487,6 +487,26 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-08 addition (TEST 30 UI pass round 3 — three bugs, three independent root causes)
+- `ui-pass-round3-fixes-20260708.md` — Peetsa's screen recording of a TEST 30 HUD Studio + create-screen
+  pass, reviewed frame-by-frame at native resolution before any code change. (1) Atlas position
+  "bouncing" when cycling world size: `computeSizeLabelBottom()` reserved space using only the
+  SELECTED size's wrapped description line count, so `leftPreviewTopY` (and the "ATLAS" heading with
+  it) moved whenever a different size's description wrapped to a different line count — fixed by
+  reserving the worst-case line count across all sizes (same pattern as the compass HUD's
+  reservedTextWidth). (2) Tape + Attach-to-Hotbar rendering off-screen in the Studio preview only
+  (correct live in-game): the Studio-preview render call site fed `computeAnalogBounds()`'s
+  content-true hitbox `y` into `renderAnalogAt`, which expects the DIAL-BOX top-left — double-applying
+  round 2's content-vs-box adjustment for looks where they differ (Tape only; every other look has
+  content==box so the bug was invisible elsewhere). Fixed by computing the actual box position at that
+  call site the same way the live path does; the now-dead `computePreviewBounds()` was deleted.
+  (3) Transparency checkerboard "locked on" after the first slider touch: `transparencyAdjustActive()`
+  checked `isFocused()`, which is STICKY in vanilla (persists past mouseUp until another widget is
+  focused) — fixed by having `FloatSlider` track its own click→release lifecycle explicitly
+  (`isDragging()`), dropping `isFocused()` entirely. All three: compile + pure-JVM suite green; zero
+  worldgen files touched (C-3 untouched). `TEST 31.jar` STAGED (SHA `1c589a15…`), supersedes TEST 30.
+  Row `20260708-ui-pass-round3-fixes`.
+
 ## 2026-07-07 addition (Slice C-3 grade-the-grip GREEN + TEST 30 staged — the wall fix)
 - `fable5-slice-c3-grip-20260707.md` — Peetsa authorized the wall fix same night. SHIPPED DESIGN: the
   carve CEILING descends from Y160 (taper top) to the C-2 depth target across `smoothstep(|d|/gripWidth)`
