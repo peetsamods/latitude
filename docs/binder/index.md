@@ -487,6 +487,19 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-08 addition (Ocean depth anchor — "shallower than vanilla?" measured; answer: no, it deepens)
+- `ocean-depth-anchor-20260708.md` — Peetsa asked whether the ocean is shallower than vanilla. Measured
+  on his seed (r=0==vanilla vs r=1): where geography wants ocean, VANILLA mostly put land (median floor
+  at sea level, up to Y139); the carve pulls it to open water, and `min()` semantics mean it can only
+  deepen or equal a column, never shallow it. What reads as "shallow" is two intended things: the
+  deliberately-shallow continental-shelf apron near shore, and carved basins settling to a uniform ~24
+  blocks (max depth = strength 0.4 × K_DEPTH 60) instead of vanilla's abyssal trenches — a TUNABLE knob
+  (`K_DEPTH_BLOCKS`, ocean-only), not a design floor. Two secondary findings: (A) tooling — getBaseHeight
+  OCEAN_FLOOR_WG mis-estimates deeply-carved columns as high (Y94-118) though the density ladder proves
+  them carved below Y40; metric artifact, world is correct; trust the density ladder on carved columns.
+  (B) hypothesis — that same _WG estimate feeding structure placement is a plausible mechanism for
+  "ships in a forest"; UNVERIFIED, belongs with the biome/structure-side work. Row `20260708-ocean-depth-anchor`.
+
 ## 2026-07-08 addition (Slice C-3 LIVE GREEN — the wall is gone; continental shelves confirmed in-game)
 - Registry row `20260708-c3-live-green` (and a LIVE CONFIRMATION block prepended to
   `fable5-slice-c3-grip-20260707.md`). Peetsa flew the TEST 30 r=1 world across the same 38-46°S /
