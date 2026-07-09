@@ -487,6 +487,22 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-08 addition (HUD Studio round 6 — real CycleButton tooltip-wipe bug found + fixed)
+- `ui-pass-round6-fixes-20260708.md` — (1) restored "opacity" wording in the three tooltips round 5
+  changed to "see-through" (Peetsa: not jargon). (2) A REAL, confirmed bug: "after you click on a button
+  and go back and hover over it, the tooltip is gone and will not come back." Decompiled the 26.2
+  `CycleButton` class and found the exact mechanism — it has its OWN internal tooltip mechanism (a private
+  `tooltipSupplier` field + an auto-called `updateTooltip()` that fires on EVERY value change, no
+  null-check) that this codebase never populates (tooltips are attached externally via `setTooltip`
+  after the builder chain) — so the FIRST click on ANY of the Studio's ~30 dropdown-style controls
+  silently overwrites its tooltip with `null`, permanently. Fixed by patching `tooltipSupplier` via
+  reflection inside the one shared `tooltip()` helper (CycleButton exposes no post-construction setter)
+  to a constant supplier returning the same `Tooltip` — correct behavior since every Studio tooltip is
+  static text, not value-dependent. Falls back gracefully if the field is ever renamed upstream. (3) Title
+  Case tooltip already lists Normal correctly (from the prior correction commit `30a5f7fd`) — confirmed,
+  no further change needed. compile+suite green; zero worldgen files touched. `TEST 34.jar` STAGED (SHA
+  `f656dc5b…`), supersedes TEST 33. Row `20260708-ui-pass-round6-fixes`.
+
 ## 2026-07-08 addition (HUD Studio round 5 — Title tab bugs, tooltip pass, Tape legibility floor)
 - `ui-pass-round5-fixes-20260708.md` — (1) "Show Degrees" did nothing: the title preview's RENDER call
   site duplicated the sample-title logic inline instead of calling the already-existing shared
