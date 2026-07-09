@@ -487,6 +487,35 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-09 addition (Round 12 — undo/redo icons + selected-band left→right glow)
+- `ui-pass-round12-undo-redo-selband-sweep-20260709.md` — two requests off the TEST 43 screenshot. (1)
+  Replaced round 11's verbose "Undo Last Load" text button with a compact `↶`/`↷` icon PAIR, extending the
+  one-shot undo into a one-level undo↔redo toggle (`CompassHudPreset` gains `redoSnapshot` + `redoLastLoad()`
+  + `hasRedo()`; fresh Load/Import arms Undo & clears Redo; each button disabled when its stack is empty).
+  (2) A picked Atlas band now shimmers with a Gaussian glow crest sweeping LEFT→RIGHT across its own
+  highlighted color — the round-10 Random idea turned on its side — via new
+  `LatitudePlanisphereRenderer.fillSelectedGlowStrip()` (column-slice strip, floored at SELECTED_BASE_GLOW=0.5
+  so it always reads selected, rising to the full pop at the crest; reuses the Random bright/alpha mapping +
+  SWEEP_FADE_FRAC seam-fade). NOTE: ↶/↷ are U+21B6/U+21B7 — if they box out on some setup, swap to ↺/↻.
+  FOLLOW-UP (TEST 45): Peetsa found the selected shimmer too subtle and the icons too small — made the glow
+  BOLDER (base-glow 0.5→0.35, bright gain →0.45 peaking ~1.45×, alpha →0xFF) and drew the ↶/↷ glyphs
+  manually scaled ~1.9× on empty-labelled buttons (`drawButtonGlyph`, after super.extractRenderState) since
+  MC's unicode font renders them tiny at button-message size. FOLLOW-UP 2 (TEST 46): when a specific zone is
+  picked, the OTHER bands now render fully TRANSPARENT (map graphic shows through) instead of a muted color
+  wash — only the selected band colors in; graticule + gold edges still draw; Random unchanged. compile+
+  suite+build green; `TEST 46.jar` STAGED (SHA `aeba2d73…`), supersedes TEST 45→44→43.
+  Row `20260709-ui-pass-round12-undo-redo-selband-sweep`.
+
+## 2026-07-09 addition (HUD Studio round 11 — "Undo Last Load" in the Presets tab) [SUPERSEDED by round 12]
+- `ui-pass-round11-preset-undo-20260709.md` — Peetsa wants to recover from an accidental preset Load/Import.
+  New "Undo Last Load" button, disabled when there's nothing to undo, restores the HUD to exactly what it
+  was right before the last Load-a-slot or Import action — one level, consumed on use. Snapshot is taken
+  automatically at the TOP of `CompassHudPreset.applyToLive()` (the single choke point BOTH Load and Import
+  already pass through), not at each button — the same single-source-of-truth reasoning round 9's sweep
+  used to fix the "hand-maintained sibling list rots" bug (L27), so no future caller can forget to arm it.
+  Guarded against the restore itself re-arming the undo point. compile+suite+build green; `TEST 43.jar`
+  STAGED (SHA `25993594…`), supersedes TEST 42. Row `20260709-ui-pass-round11-preset-undo`.
+
 ## 2026-07-09 addition (Create-screen round 10 — animated "Random" spawn-zone Atlas sweep)
 - `ui-pass-round10-random-sweep-20260709.md` — Peetsa wanted the Random spawn zone to feel special on the
   atlas: start colored in the middle, bands "strobe/cycle outward in opposing directions," a colorful
