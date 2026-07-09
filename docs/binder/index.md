@@ -492,18 +492,22 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   site duplicated the sample-title logic inline instead of calling the already-existing shared
   `studioPreviewTitle()` helper (used only by the drag hit-test), so the one place that mattered never
   checked the flag. Fixed by deleting the duplicate and having the shared helper (now flag-aware) serve
-  both. (2) Title Case "duplicate": NORMAL's no-op transform was indistinguishable from UPPERCASE because
-  the Studio's no-world SAMPLE title was hardcoded all-caps — exactly the scenario Peetsa tests from.
-  Per his explicit instruction, NORMAL removed entirely (UPPERCASE/LOWERCASE/MOCKING remain, new default
-  UPPERCASE); 5 consumers updated + a new regression test proves an old saved "NORMAL" config degrades
-  safely (Gson→null→sanitize) rather than failing to load. (3) Tooltip pass: stripped "(Folded in from
+  both. (2) Title Case "duplicate" — **CORRECTED same session**: NORMAL's no-op transform was
+  indistinguishable from UPPERCASE because the Studio's no-world SAMPLE title was hardcoded all-caps —
+  exactly the scenario Peetsa tests from. The diagnosis was right; removing `NORMAL` entirely was NOT
+  what Peetsa wanted (he values "Tropical" natural-case and asked for it back immediately). Reverted the
+  removal in full and fixed the actual bug instead: `studioPreviewTitle()`'s no-world fallback is now
+  natural-case ("Tropics 12°S", not "TROPICS 12°S"), matching the live in-world title — Normal and
+  Uppercase now genuinely differ everywhere, no option removed. See registry row
+  `20260708-ui-pass-round5-correction`. (3) Tooltip pass: stripped "(Folded in from
   the old F9 Settings screen.)" from both occurrences; rewrote ~15 jargon-first tooltips into plain
   sentences; the two Zone/Biome Text Grow tooltips Peetsa flagged directly were rebuilt with concrete
   examples instead of internal "pin" vocabulary. (4) Tape look illegible at small Analog Size: gave Tape
   its own 32-unit floor at the single existing `analogDiameter()` choke point (not a new width/box split —
   avoids the L23 class of bug just documented), plus the Studio slider's own minimum raises to match so
-  the displayed number is never a lie. compile+suite green (incl. the new Gson-compat regression test);
-  zero worldgen files touched. `TEST 33.jar` STAGED (SHA `17f528d2…`), supersedes TEST 32. Row
+  the displayed number is never a lie. compile+suite green; zero worldgen files touched. `TEST 33.jar`
+  STAGED (SHA `b18c50ed…`, corrected build — the removal-era `17f528d2…` was never tested live), supersedes
+  TEST 32. Row
   `20260708-ui-pass-round5-fixes`.
 
 ## 2026-07-08 addition (create-screen round 4 — atlas label misalignment fixed; "Ginormous!" flourish)

@@ -27,13 +27,18 @@ from the create-world screen, before any world exists — Peetsa's exact usage) 
 `"TROPICS 12°S"`, already all-caps. NORMAL applied to an already-uppercase string is indistinguishable
 from UPPERCASE applied to it — a real, reproducible duplicate in exactly the scenario being tested.
 
-**Fix (per Peetsa's explicit instruction):** removed `NORMAL` from `TitleCaseMode` entirely — three
-options remain: `UPPERCASE`, `LOWERCASE`, `MOCKING`. New default is `UPPERCASE` (matches the pre-existing
-sample/fallback look). Five consumers updated (the enum declaration, the field default, `sanitize()`'s
-null-guard default, `applyCase()`'s switch, the Studio's cycle-button label map, and "Reset Title"'s
-default). Backward compatible by construction: Gson maps an unrecognized saved enum constant to `null`
-(not a parse failure — confirmed by a new regression test), and `sanitize()` already null-guards to the
-new default, so an existing config that saved `"NORMAL"` degrades safely on next load.
+**CORRECTED same session:** the first fix removed `NORMAL` from `TitleCaseMode` entirely, on the reading
+that Peetsa wanted the option gone. He clarified immediately after: he wants `NORMAL` kept — it's the
+"Tropical" natural-case look, genuinely distinct from `UPPERCASE`'s "TROPICAL" on any real zone name, and
+he values it. The removal was reverted in full (enum restored to `{NORMAL, UPPERCASE, LOWERCASE,
+MOCKING}`, default back to `NORMAL`, all five consumers reverted, the now-moot regression test deleted).
+
+**The actual fix:** the diagnosis was correct, the response to it wasn't — the real bug was narrower than
+"delete the option." `studioPreviewTitle()`'s no-world fallback strings are now natural case
+(`"Tropics 12°S"` / `"Tropics"`, not `"TROPICS 12°S"` / `"TROPICS"`), matching the live in-world
+`zoneTitleWord()` (which was already natural-case). With that one casing fix, `NORMAL` and `UPPERCASE`
+now visibly differ in every context, including the exact no-world Studio preview Peetsa was testing from
+— no option needed to disappear.
 
 ## Finding 3: Tooltip cleanup
 
@@ -65,18 +70,19 @@ matches what's actually rendered (never a lie) — every other look keeps the fu
 
 ## Verification
 
-- `compileJava` + pure-JVM suite (`cleanTest test`) green, including a new regression test
-  (`removedNormalTitleCaseDegradesToUppercaseDefault`) that actually round-trips a `"NORMAL"`-valued
-  config through Gson + `sanitize()` and asserts it lands on `UPPERCASE` — proof, not just a claim in a
-  comment.
+- `compileJava` + pure-JVM suite (`cleanTest test`) green (the `NORMAL`-default assertions in
+  `LatitudeConfigDataTest` are back to asserting `NORMAL`; the transient "removed" regression test was
+  deleted along with the removal it was guarding).
 - NOT live-verified yet (visual/UI class of bug): Show Degrees toggling the Title preview; Title Case
-  cycling only through the three remaining options with a fresh (no-legacy) config; Tape's Analog Size
-  slider bottoming out at 32 (not 16) and staying legible there; every rewritten tooltip reads clearly at
-  a glance.
+  cycling through all FOUR options (Normal/UPPERCASE/lowercase/mOcKiNg) with Normal now genuinely reading
+  as "Tropics" (not "TROPICS") even from the no-world create-screen Studio; Tape's Analog Size slider
+  bottoming out at 32 (not 16) and staying legible there; every rewritten tooltip reads clearly at a
+  glance.
 - Worldgen isolation by diff scope: only `client/LatitudeHudStudioScreen.java`, `client/CompassHud.java`,
   `client/CompassDialRenderer.java`, `client/ZoneEnterTitleOverlay.java`,
   `core/config/LatitudeConfigData.java`, plus the one test file. Zero `world/`, `terrain/`, `mixin/`
   changes — C-3 and the TEST 30 args remain untouched.
 
-`TEST 33.jar` staged (SHA-256 `17f528d28db8a086fd81f72f1e9de669803b6c3df58af1667d1d0e19447aee7d`),
-superseding `TEST 32.jar`. Same worldgen args as TEST 30/31/32.
+`TEST 33.jar` staged (SHA-256 `b18c50ed3bd63cf284be6e886b8498dd90100b86c960d6e5d30e9660bc113de9` —
+replaces the SHA `17f528d2…` build that briefly removed Normal; same TEST 33 name since that build was
+never actually tested live), superseding `TEST 32.jar`. Same worldgen args as TEST 30/31/32.
