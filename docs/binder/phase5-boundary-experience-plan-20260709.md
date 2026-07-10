@@ -133,6 +133,31 @@ fixed budget + isPaused guard untouched (anti-backlog law). Suite 120/120. Sweep
 are eyeball picks pending Peetsa). REVIEWER SKIPPED this pass (session budget) — sweeper + fix-up
 verified; flag for a catch-up docs-vs-actions review next session. HELD UNPUSHED pending Peetsa approval.
 
+## B-4 polish pass 2 — carve-aware ocean labels (2026-07-09; dev+6-tests+sweeper green; committed, HELD unpushed)
+
+Implements ocean-label-investigation-20260709.md behind flag `latitude.terrainV2.carveAwareLabels`
+(default off): public static carveTargetYOrMax (pure, thread-safe, +Infinity fallback = structurally
+inert without an active carve); label hook in BOTH pick() twins after all vetoes, NOT behind terrain
+inputs (fires in the input-less SOURCE path = the village-eligibility fix); rivers convert when sunk
+(IS_RIVER && !carveAwareOcean); cave-clamp measures min(estimate, carveTarget) (trench dripstone gets
+clamped); StructureBiomeMatchGuardMixin cancels land-only structures over carved sea (belt+suspenders).
+New CarveAwareLabelsTest 6/6 + flag default test; suite 127/127. Sweeper: **ACCEPT-WITH-NOTES, zero
+defects** (flag-off byte-identity airtight incl. live config; twins identical; SOURCE-path reachability
+proven — zero returns before the hook; union semantics with B-2/C-2 vetoes sane in all 8 flag combos;
+cave-clamp min() self-defusing at coasts). Noted R1/R2: structure guard rides terrainBiasActivelyBiasing
+only (consistent w/ existing pattern) and tests start-chunk center only (cancel-only belt+suspenders;
+pick()-side fix is primary). GATE BEFORE ANY DEFAULT FLIP: terrain-aware atlas flag-on run — village
+eligibility over carved sea spot-check + land fraction ≈ geo intent (~39%).
+
+## B-4 video evidence (2026-07-09)
+
+Peetsa's 13:55 recording frame-dissected (167 frames, 19 curated + manifest in session scratchpad
+b4curated/). Confirms: village-on-water at 7N 9W (3 frames); polar warnings firing at the new anchors;
+no title spam observed at the 0,0 crossing in-video (anti-spam shipped anyway per Peetsa's concern).
+TWO NEW ANOMALIES for next docket: (i) f0035 ~2:55 — bright ORANGE terrain patch at 83N among ice
+spikes (wrong-colored terrain, undiagnosed); (ii) f0165 ~13:45 — deep RED/PINK sky near 180E (possibly
+sunset/time-command artifact — commands visible in toasts — needs a second look before calling it a bug).
+
 ## B-2 runtime gates (2026-07-09 — RESOLVED, push authorized ba9b1099)
 
 - **Gate 1 GREEN**: flag-off plain atlas @ `94bed4ac` (run `20260709-123627`) = byte-identical to A′
