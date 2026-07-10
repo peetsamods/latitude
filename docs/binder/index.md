@@ -2,6 +2,15 @@
 
 `status: active`
 
+## 2026-07-10 addition (Phase 5 B-5 — Hemisphere Passage design [worktree branch])
+- `phase5-b5-hemisphere-passage-design-20260710.md` — explicit consensual E/W edge crossing: approach fog
+  → two-button "pass through?" prompt → opaque blur masking a chunk-ring preload → teleport to mirrored X
+  (targetX=-x, world centered at 0,0) → arrival hemisphere title; TURN BACK = gentle inland push. New flag
+  latitude.passageV2.enabled (default off). Every mechanic has an in-repo precedent (SpawnZoneScreen prompt,
+  SetSpawnPickerPayload netcode, tpEdge/applySpawnChoice teleport, loadSpawnTargetChunkRing preload,
+  HemisphereTitleOverlay arrival). Rides B-2's ocean shore; NO resurrection of the scrapped density-sink;
+  cloud-snap accepted+masked. Under adversarial review; passes P1 server / P2 client / P3 live.
+
 ## Purpose
 Provide one canonical map for Latitude documentation, record-keeping, and proof evidence links.
 
