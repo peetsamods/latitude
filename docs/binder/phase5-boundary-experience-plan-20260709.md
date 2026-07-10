@@ -102,6 +102,14 @@ suite 118/118. Hazard MECHANICS (PolarHazardWindow, degree-keyed) untouched.
 Ordering CLEAN (strict monotonic; each warning fires at/just-before its mechanic). Strings CLEAN (honest,
 short, RED+BOLD retained). Mechanics independence CLEAN. New test correctly pins the new boundaries.
 
+## TEST 49 staged + B-5 worktree opened (2026-07-10)
+
+TEST 49.jar staged (SHA 868dee21...) = all three B-4 fix packages (title+pole feel e2d915fa, ocean labels
+09c1e40a, zone-title anti-spam b6c829d7) for Peetsa's fly-test. All HELD UNPUSHED pending approval.
+B-5 (Hemisphere Passage) work moved to a SEPARATE worktree `/Users/joolmac/CascadeProjects/Latitude-b5-
+hemisphere-passage` on branch `phase5-b5-hemisphere-passage` (off b6c829d7), so title-drama adjustments
+from testing can land on port/canonical-26.2-pivot without B-5 WIP in the way. Recon in flight there.
+
 ## B-4 LIVE LOOK — Peetsa's verdict (2026-07-09, TEST 48)
 
 **GOOD:** generation with both new flags OFF "looks awesome" (live byte-identity confirmed by eyeball).
