@@ -102,6 +102,37 @@ suite 118/118. Hazard MECHANICS (PolarHazardWindow, degree-keyed) untouched.
 Ordering CLEAN (strict monotonic; each warning fires at/just-before its mechanic). Strings CLEAN (honest,
 short, RED+BOLD retained). Mechanics independence CLEAN. New test correctly pins the new boundaries.
 
+## B-4 LIVE LOOK — Peetsa's verdict (2026-07-09, TEST 48)
+
+**GOOD:** generation with both new flags OFF "looks awesome" (live byte-identity confirmed by eyeball).
+**FLAGS-ON looked "really cursed"** — consistent with the recorded open finding (the floor-sighted
+relabel over-floods the interior; calibration required before that flag can ever default on).
+**Punch list (Peetsa's order):**
+1. Village in ocean (cursed placement).
+2. Pole approach: fog ramps then WHAM full blindness with no warning — wants smooth increasing fog only;
+   snow-particle increase NOT visible; sky stays sunny/blue — wants stormy look.
+3. E/W borders still storm-warnings — wants the Hemisphere Passage (B-5) BUILT (green-lit now).
+4. Ocean depth status question (answered: base carve live, C-4 trenches designed-not-built).
+5. Dripstone caverns inside underwater trenches — origin?
+6. Wrong biomes in ocean: river, plains, etc.
+Title UX request: hemisphere titles must not spam when straddling a line — full title ONCE; while within
+3° of the line, re-crossings show only a small unobtrusive message; big title re-arms after leaving the
+3° band. Videos to be frame-dissected. Items 1/5/6 = one investigation (flooded-land label family +
+carve-depth interactions). Items 2 + title UX = client polish pass. Item 3 = B-5 build.
+## B-4 polish pass 1 (2026-07-09) — title anti-spam + pole feel (dev+sweeper+fix-up green; committed, HELD unpushed)
+
+Peetsa's live-feedback fixes. (A) TITLE ANTI-SPAM: HemisphereCrossing gains evaluateBanded (FULL once per
+approach; re-cross within a 3-deg band → SMALL action-bar message via gui.hud.setOverlayMessage; FULL
+re-arms only after leaving the band; bands latitudeRadius/30 and halfSize/60, FLOORED at dead-zone+32
+after the sweeper found xsmall-Classic bandX 62.5 < deadzone 64 made SMALL unreachable). +3 tests.
+(B) POLE FEEL: Blindness effect REMOVED entirely (ramping whiteout carries vision loss); whiteout alpha
+curve intensity^2 → pow(intensity,0.65) (visible from ~85.5 deg, no WHAM); two-color storm lerp
+grey-blue(92,108,132)→white (dims the sunny sky); snow budget 30→80, envelope 16, wind drift ±0.09 —
+fixed budget + isPaused guard untouched (anti-backlog law). Suite 120/120. Sweeper: ACCEPT-WITH-NOTES
+(R1 fixed same pass; R2 fast-crossing re-arm = by-design, cooldown-throttled; fog exponent + storm color
+are eyeball picks pending Peetsa). REVIEWER SKIPPED this pass (session budget) — sweeper + fix-up
+verified; flag for a catch-up docs-vs-actions review next session. HELD UNPUSHED pending Peetsa approval.
+
 ## B-2 runtime gates (2026-07-09 — RESOLVED, push authorized ba9b1099)
 
 - **Gate 1 GREEN**: flag-off plain atlas @ `94bed4ac` (run `20260709-123627`) = byte-identical to A′

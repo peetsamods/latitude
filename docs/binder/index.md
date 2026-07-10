@@ -487,6 +487,15 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   recommended. Expectations + the not-fixed phantom-ocean caveat in
   `test28-deep-ocean-decoupling-20260707.md`; UI re-check matrix in `ui-pass-round1-fixes-20260707.md`.
 
+## 2026-07-09 addition (Ocean-label family investigation — villages/dripstone/rivers in ocean)
+- `ocean-label-investigation-20260709.md` — Peetsa's B-4 punch-list items 1/5/6 root-caused (all
+  CONFIRMED): structure path has no terrain inputs so flooded labels feed vanilla village placement;
+  carve exposes untouched vanilla 3D cave biomes and the cave-clamp measures the waterline not the floor;
+  rivers are hard-excluded from the relabel (7,469 cells byte-invariant, 67% inside ocean). FIX SHAPE:
+  one shared pure oracle `carveCeilYOrInfinity` (the carve's own target) drives the relabel in ALL
+  contexts + a floor-aware cave clamp + river inclusion — one flag, default off, atlas-proven. Row shares
+  `20260709-phase5-boundary-experience`.
+
 ## 2026-07-09 addition (Phase 5 — Boundary Experience: plan + run log)
 - `phase5-boundary-experience-plan-20260709.md` — Phase 5 opened per Peetsa ("Proceed with Phase 5 using
   workflow"). Measured current red from the A′ atlas: poles already intentional (67% ice/snow) but the
