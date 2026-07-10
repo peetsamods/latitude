@@ -133,6 +133,24 @@ fixed budget + isPaused guard untouched (anti-backlog law). Suite 120/120. Sweep
 are eyeball picks pending Peetsa). REVIEWER SKIPPED this pass (session budget) — sweeper + fix-up
 verified; flag for a catch-up docs-vs-actions review next session. HELD UNPUSHED pending Peetsa approval.
 
+## B-4 polish pass 3 — zone-title anti-spam (2026-07-10; dev+7-tests+sweeper green; committed, HELD unpushed)
+
+Peetsa: apply the hemisphere band anti-spam to the climate-ZONE titles too, so building/walking a band
+edge (temperate↔subtropical etc.) doesn't spam the full title. `canonicalTitleZoneKey` is a PURE climate
+band (|lat|-derived, boundaries 23.5/35/50/66.5°, no hemisphere/longitude). New pure
+`core/ZoneTitleBanding.java` (Fire{NONE,FULL,SMALL} + evaluate + nearestBoundaryDistanceDeg); GlobeWarningOverlay
+gains a single `zoneFullArmed` flag (latitude axis only): FULL on a genuine new-zone entry ONCE, SMALL
+action-bar note on re-cross while within 3° of the boundary, FULL re-arms once settled >3° deep. Reuses
+the hemisphere action-bar (renamed showActionBarMessage — hemisphere behavior byte-identical). Coarse
+throttle + zoneEnterTitleEnabled gate kept. New ZoneTitleBandingTest 7/7; suite 134/134 (verified by
+director directly, not just agent claim). NOTE — a duplicate developer collision occurred (a stalled
+resume actually completed while a fresh dev was launched); resolved cleanly (only one version on disk,
+the fresh dup killed before writing). Sweeper: **ACCEPT-WITH-NOTES, zero defects** — the feared
+"re-arm never reachable at small radius" bug does NOT occur (3° band = latRadius/30 = 125 blocks at
+xsmall, dominates the 96 floor; reachable inside the narrowest zone subtropical 11.5°); legitimate
+first-entries preserved (FULL cannot fire twice / SMALL cannot fire without a real zone change). Cosmetic:
+small message uses natural case (matches the pre-existing hemisphere small-message behavior). HELD UNPUSHED.
+
 ## B-4 polish pass 2 — carve-aware ocean labels (2026-07-09; dev+6-tests+sweeper green; committed, HELD unpushed)
 
 Implements ocean-label-investigation-20260709.md behind flag `latitude.terrainV2.carveAwareLabels`
