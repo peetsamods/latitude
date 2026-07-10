@@ -102,6 +102,18 @@ suite 118/118. Hazard MECHANICS (PolarHazardWindow, degree-keyed) untouched.
 Ordering CLEAN (strict monotonic; each warning fires at/just-before its mechanic). Strings CLEAN (honest,
 short, RED+BOLD retained). Mechanics independence CLEAN. New test correctly pins the new boundaries.
 
+## World-shape decisions (2026-07-10, Peetsa)
+
+- RENAME agreed: player-facing shape names become **"Square 1:1"** and **"Wide 2:1"** (drop "Mercator";
+  "Legacy" rejected as pejorative). Small UI/label pass, to be scheduled (create screen + anywhere the
+  shape is named to players). Internal code/flag names unchanged.
+- **1.5:1 third shape REJECTED for now** — a third aspect multiplies every edge/pole/atlas test surface;
+  revisit only if Wide still feels sprawly AFTER Phase 5B lands.
+- **Phase 5B "Moisture-Driven Biome Selection (Longitude Matters)" QUEUED** in the overhaul roadmap
+  (before Phase 6): the real answer to "is 2:1 too wide" is making longitude meaningful, not shrinking
+  the world. Emergent per-seed hemisphere personalities via the existing Fetch & Lift fields; never
+  scripted. Prereq (consumer law-compliance) already complete.
+
 ## TEST 49 staged + B-5 worktree opened (2026-07-10)
 
 TEST 49.jar staged (SHA 868dee21...) = all three B-4 fix packages (title+pole feel e2d915fa, ocean labels
