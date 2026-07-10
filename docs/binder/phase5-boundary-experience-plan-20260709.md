@@ -102,6 +102,24 @@ suite 118/118. Hazard MECHANICS (PolarHazardWindow, degree-keyed) untouched.
 Ordering CLEAN (strict monotonic; each warning fires at/just-before its mechanic). Strings CLEAN (honest,
 short, RED+BOLD retained). Mechanics independence CLEAN. New test correctly pins the new boundaries.
 
+## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
+
+Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
+title once per visit-episode, repeats SMALL, leave-band resets (his design, adopted). (2) E/W title
+never fired — ROOT CAUSE: the teleport guard measured steps against the HELD dead-zone reference, so
+walked meridian crossings on Wide 2:1 (1 deg ~111 blocks) read as >256-block teleports and were
+suppressed; fixed with a separate RAW per-sample guard reference + regression test documenting the old
+bug. (3) Pole warnings now EPISODIC: each tier (85/87/89/89.7) fires once per incursion, ~10 s display
+with fade in/out, all tiers re-arm only below 84 deg (pure PolarWarningEpisode + 7 tests; persistent
+draw removed; pole episode owns the line over EW storm during its window — intentional). (4) STORM SKY:
+client-only mixin lifts ClientLevel rain level with the 85-90 ambient ramp — vanilla itself greys the
+sky, hides sun/moon, renders REAL snowfall; registered client-only, instanceof guard makes server
+leakage structurally impossible (sweeper-verified; note: storm AMBIENT SOUND also comes free — Peetsa
+to judge by ear). (5) Snow mystery SOLVED WITH EVIDENCE: counts were always correct (33/64/80 at
+87/89/90) — pure visibility (white flakes vs white fog); vanilla snowfall now carries density,
+SNOW_MAX_COUNT 80->30 (subtle texture), evidence log behind -Dlatitude.debugPolarSnow. Suite 141/141.
+Sweeper: ACCEPT-WITH-NOTES zero defects (dead computeWarningState flagged for a cleanup slice).
+
 ## World-shape decisions (2026-07-10, Peetsa)
 
 - RENAME agreed: player-facing shape names become **"Square 1:1"** and **"Wide 2:1"** (drop "Mercator";
