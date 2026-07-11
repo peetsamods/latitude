@@ -274,6 +274,32 @@ icon glow 0.85→0.9) and restored in-pass. Suite 228/228. TEST 60 staged next. 
 his existing config keeps WHITE fill but gains the outline and loses the hard shadow (new keys) — the
 Title tab toggles restore any prior look.
 
+### TEST 61 staged + FIRST DIRECTOR-DRIVEN LIVE VERIFICATION via Modrinth (2026-07-11)
+
+Peetsa directed live checks through the Modrinth App. Established a WORKING live-control lane from this
+session: Modrinth App driven via computer-use (Play/Stop; stuck-"Stopping" cleared via the instance
+chip), game window captured via `screencapture -l` + `tools/mc-window`, input via CGEvent helpers
+(scratchpad mc-click/mc-scroll wrapping tools/mc-window geometry; ESC unreliable in bespoke screens —
+click Done/Cancel instead; helper Swift compiles can exceed short Bash timeouts — use >=90s and
+one-step-per-call). Window moves to the built-in display fullscreen sometimes — re-raise via System
+Events AXRaise (mc-focus aborts when the window is on another Space; raise directly).
+
+VERIFIED LIVE ON TEST 61 (SHA 4054de87..., ghost fix + glimmer commits d4eaea4e/0aa3d840):
+- GHOST FIX CONFIRMED: HUD Studio round-trip from the Rules panel then scroll — ONE coherent layer,
+  steppers + icon rows each rendered once, scroll-locked (the TEST 60 bug is gone).
+- Header-band clip: all three panel headings clean in three-column mode.
+- Icon rows: lit compass rose (On), dim '/' (Off), monitor+rainbow HUD Studio, CENTERED house roof,
+  closed dim chest (Off), scroll glyph — all live.
+- Side-anchored tooltips: Commands tooltip opened LEFT of the rail per design.
+- Wide 2:1 + "40,000 x 20,000 blocks" dims label; LATITUDE wordmark glow + twinkle sparkles.
+- Selected-zone brightness lift (Temperate name gold + brighter subtitle).
+- HUD Studio: narrow-mode Done|Cancel right-anchor at small window; full-width layout normal at
+  fullscreen; Rose/Sunset/0.85 fresh defaults; Look as dropdown; griddy snap icon.
+- Title RAINBOW preset renders as STATIC ROYGBIV gradient in the Studio preview (parity fix live).
+NOT yet eyeballed live: glimmer motion (needs an actual zone crossing), accessibility dropdown flip,
+freeze/blizzard/pole work (needs in-world flight — Peetsa's). Game left running at the world-select
+screen. TEST 61 = TEST 60 + ghost fix + color-aware title glimmer (suite 230/230).
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
