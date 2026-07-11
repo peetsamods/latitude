@@ -332,6 +332,21 @@ law untouched -- sweeper re-verified isPaused/spawnTick/no-new-state/no-per-tick
 E/W border-storm particles are a separate system, deliberately untouched. Suite 236/236. TEST 64 staged
 SHA 33165fe5...
 
+### Studio contrast plate, bright glimmer, /latdev title (2026-07-11, 68a0ee2d/2c5b35f6/b0c6f2f3)
+
+Peetsa's flight-2 feedback, three parallel passes: (1) HUD Studio title preview now sits on a neutral
+contrast plate (sized/positioned to exactly track the real un-fitted/un-clamped renderStaticAt geometry)
+so outline/shadow/glow are always evaluable regardless of the world behind the editor. (2) Bright glimmer
+-- ROOT-CAUSED a real bug along the way: the old multiplicative brighten() was near-invisible on
+saturated colors (pure red got literally zero visible glimmer at any amplitude, since 255*x clamps and
+0*x stays 0). Switched to lerp-toward-white (channel + (255-channel)*boost, no clamping needed by
+construction), amplitude 0.34->0.85 -- new regression test pins primaries actually changing, would have
+failed under the old code. (3) /latdev title -- genuine CLIENT command (Fabric's ClientCommands API,
+not the server-side /latdev tree, since the title overlay is client-only rendering) fires the real zone
+title on demand, bypassing the anti-spam banding but leaving every real-crossing state field untouched
+(sweeper traced each one). All three swept together for cross-pass interaction (glimmer is color-only,
+never affects geometry, so the plate padding holds regardless). Suite 237/237. TEST 65 next.
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
