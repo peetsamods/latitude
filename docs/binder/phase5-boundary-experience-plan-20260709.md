@@ -189,6 +189,30 @@ missing new classes). Correct build = `./gradlew build -x test`; ALWAYS verify a
 `unzip -l` for a class added in the round. Live-look notes for Peetsa: vegetation fade needs JVM arg
 `-Dlatitude.polarVegetationFade.enabled=true` (default-off); everything else is on by default.
 
+### UI round 13 (2026-07-10) — Peetsa's 7-item UI/UX list, audit-driven, committed 2da8c065/56628039/885b3da4/748605cb
+
+While Peetsa flew TEST 53 he filed 7 UI/UX asks. Audit first: `docs/binder/latitude-ui-ux-audit-20260710.md`
+(24 findings, 3 CRITICAL — 13-state blind color cycle, buried snap-to-grid, no HUD Studio front door;
+committed da495ce0). Then four swept passes:
+**Pass 1 (2da8c065)**: selected-zone letter-wave bounce + tab shimmer (quieter than the atlas crest);
+rainbow text unified onto pure FlowingGradient (continuous hue, all 4 renderers match; discrete palette
+removed); HUD Studio Cancel (constructor snapshot of BOTH config singletons, restored AND re-saved on
+Cancel since the screen live-saves; preset undo/redo memory cleared — sweeper find fixed in-pass).
+**Rename (56628039)**: shapes now "Wide 2:1"/"Square 1:1" everywhere player-facing (persistence proven
+display-independent); loading line gains the shape word ("Regular · Wide 2:1 · 40,000 × 20,000 ·
+tropical start") — closes Peetsa's two live reports.
+**Pass A (885b3da4)**: 6 blind CycleButtons → SwatchDropdown modal picker (all options visible, chips,
+keyboard nav, no click fall-through — sweeper traced routing); conditional controls roll out/in on a
+cumulative eased-height layout (UiEase, identical at rest); NEW Reduce Motion setting (snapshot-covered);
+grid-snap surfaced as a lit/dim canvas icon beside undo/redo + "Grid Snap" rename.
+**Pass B (748605cb)**: create-screen options rail → code-drawn illuminated icon+label rows (compass rose,
+'/' chip, village house, chest that opens lit with gold sparkles, monitor+rainbow wordmark, scroll);
+accessible pattern icon+text+tooltip+On/Off+sound; backing writes byte-identical; audit H5 silent
+mouse-select fixed. Suite 183/183. Commit order note: A before B (B reads reduceMotion).
+STILL OPEN from the list: HUD Studio pause-menu front door (audit C3, queued Pass C), reduce-motion
+wiring into create-screen bounce/shimmer/crest + zone-title/Aurora anims (field exists, consumers
+partially wired), item 7's broader audit MEDIUM/POLISH backlog.
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
