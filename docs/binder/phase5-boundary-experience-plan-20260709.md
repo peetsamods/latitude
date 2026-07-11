@@ -179,6 +179,16 @@ wrap, fixes the scrapped attempt's terrain mismatch by construction; hard parts 
 multiplayer sightlines; sequenced as B-6 candidate after B-5). All commits HELD UNPUSHED pending
 Peetsa approval.
 
+### TEST 53 staged (2026-07-10)
+
+`TEST 53.jar` staged in the Modrinth `LATITUDE 26.2` profile, SHA-256 `417fab10679ee779…`, built from
+3f48633a (all three round-3 passes + docs). Replaces TEST 52. STAGING TRAP LOGGED: this project has NO
+`remapJar` task — `./gradlew remapJar` fails instantly and a masked failure (`; ls` after it) made a
+stale 15:20 jar look freshly built; the staged jar was byte-identical to TEST 52 (caught by SHA match +
+missing new classes). Correct build = `./gradlew build -x test`; ALWAYS verify a staged jar by grepping
+`unzip -l` for a class added in the round. Live-look notes for Peetsa: vegetation fade needs JVM arg
+`-Dlatitude.polarVegetationFade.enabled=true` (default-off); everything else is on by default.
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
