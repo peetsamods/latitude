@@ -213,6 +213,22 @@ STILL OPEN from the list: HUD Studio pause-menu front door (audit C3, queued Pas
 wiring into create-screen bounce/shimmer/crest + zone-title/Aurora anims (field exists, consumers
 partially wired), item 7's broader audit MEDIUM/POLISH backlog.
 
+### UI round 13 follow-ups (2026-07-10) — live regression + delight passes (fca6a5f1, 350be841)
+
+Peetsa (flying TEST 54, loved the round: "everything is beautiful"): (a) Random row missed the letter
+ripple — fixed (same wave constants, aurora colors kept); (b) requested LATITUDE wordmark glow +
+sparkles — breathing bloom + 4 deterministic twinkle motes; (c) SCREENSHOT REGRESSION: 885b3da4's eased
+layout staircased the Presets tab (cursor advanced per WIDGET; same-line Load|Save|× and undo|redo
+exploded into stacked rows) + reveal popped at the 0.85 threshold. LESSON: the prior sweep verified the
+telescoping only for single-widget rows — the fix pass re-verified per-tab against git ground truth
+(885b3da4^), extracted pure GroupRowLayout with a staircase regression-pin test, made mid-roll rows
+scissor-slide continuously, and restored disabled greying (pre-existing bug: dead undo/empty slots were
+clickable). (d) Rainbow/Aurora parity (Peetsa): title Rainbow = STATIC ROYGBIV, new appended Aurora
+preset = flowing (by-name persistence, saved values unshifted), compass toggle renamed "Aurora Text" —
+Aurora=flowing / Rainbow=static everywhere. (e) Reduce Motion now covers the ENTIRE create screen +
+atlas planisphere (title/bounce/shimmer/crest/sweep/icon anims → static equivalents). Suite 188/188
+(+GroupRowLayoutTest, static-gradient determinism tests). TEST 55 staging next.
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
