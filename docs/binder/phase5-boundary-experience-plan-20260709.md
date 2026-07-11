@@ -363,6 +363,21 @@ fresh default (ON at 0.75 — Peetsa's config keeps its explicit off until toggl
 loading-screen summary line = gentle circular word-illumination wave (1.5s/element, 30% lift, seamless
 wrap, reduceMotion=static, 9 tests). Suite 249/249. TEST 66 staged next.
 
+### Glimmer visible on white + loading Sunset/wave (2026-07-11, bc352dbf/1f4d7cb0)
+
+TWO more near-white-headroom fixes (this bug keeps recurring in two forms — brighten-toward-white is
+blind to near-white fills, brighten-multiply was blind to saturated fills). (1) TITLE glimmer was
+invisible on the OFF_WHITE default → replaced brighten-toward-white with a SHINE-SWEEP (dim baseline
+0.75 + bright white-pop crest 0.70), proven exact no-op when not glimmering so no resting dim; dead
+GLIMMER_AMPLITUDE/glimmerBoost removed. (2) LOADING screen: compass recolored to Sunset (amber/coral/
+plum, sourced from CompassHud DialColors) + 8-point Rose star; the word-illumination wave had the SAME
+invisible-on-warm-white bug → LoadingWave.shade (rest-dim 0.75 + gentle pop 0.40, separators dimmed to
+match) so words visibly rest-dim and light up in turn. LESSON (write to LESSONS): "brightness effect
+invisible on X-colored fills" is now a KNOWN recurring trap — any brighten-toward-a-target effect is
+blind to fills already near that target; the fix is always relative contrast (dim the surroundings),
+never a bigger amplitude. Suite 259/259. TEST 67 staged. NOTE: brighten() now has no live caller (kept
+as a tested primitive).
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
