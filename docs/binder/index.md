@@ -536,6 +536,22 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   the layout-primitive lens in `ui-audit-20260707.md` + `../design/hud-layout-overhaul-design-20260707.md`.
   PROPOSED, awaiting Peetsa. No `src/` changes; doc-only.
 
+## 2026-07-10 addition (GUI-scale parity audit — bespoke screens + HUD overlays, PROPOSED)
+- `latitude-gui-scale-parity-audit-20260710.md` — read-only pass answering Peetsa's "does a higher/lower
+  GUI ratio break everything?" Anchored on the fact that MC's GUI Scale changes the *effective
+  resolution* (floor 320×240, 480×270 at scale 4/1080p) rather than rescaling widgets. 12 findings
+  (0 CRITICAL / 3 HIGH / 5 MEDIUM / 4 POLISH), each with `file:line` + S/M/L fix. Headline: the create
+  screen and compass are well-defended (create drops to a tabbed layout below 530 gui-px and scroll-clips
+  every pane; compass/labels are fraction-anchored + re-clamped every frame — the reference pattern).
+  Real bugs: the zone-enter title stores an *absolute* pixel offset and is never re-clamped at render, so
+  it drifts off-screen after a scale change (`ZoneEnterTitleOverlay.java:79-81`, `LatitudeConfigData.java:68-72`);
+  HUD Studio's sidebar is a fixed 208 px with no narrow fallback and its centered Done/Cancel underlaps it
+  (`LatitudeHudStudioScreen.java:57, 973-984`); `scaledUi()/compactUi()` are no-op stubs and `isCompact()`
+  is dead code (`LatitudeCreateWorldScreen.java:671-677, 388-390`). SwatchDropdown up-flip/scroll and the
+  bounded/ellipsize text helpers are confirmed scale-safe. Ends with a 3-lane parallel fix plan (A overlays
+  ∥ B HUD-Studio ∥ C create-screen, all file-disjoint) and a 5-minute live GUI-scale test checklist.
+  PROPOSED, awaiting Peetsa. No `src/` changes; doc-only.
+
 ## 2026-07-09 addition (Round 12 — undo/redo icons + selected-band left→right glow)
 - `ui-pass-round12-undo-redo-selband-sweep-20260709.md` — two requests off the TEST 43 screenshot. (1)
   Replaced round 11's verbose "Undo Last Load" text button with a compact `↶`/`↷` icon PAIR, extending the
