@@ -102,6 +102,83 @@ suite 118/118. Hazard MECHANICS (PolarHazardWindow, degree-keyed) untouched.
 Ordering CLEAN (strict monotonic; each warning fires at/just-before its mechanic). Strings CLEAN (honest,
 short, RED+BOLD retained). Mechanics independence CLEAN. New test correctly pins the new boundaries.
 
+## B-4 round 3 — Peetsa's TEST 52 verdict + new ideas (2026-07-10)
+
+**LOVES the terrain generation** ("WOW"). Punch list: (1) loading-screen dims say 20k x 20k on a Wide
+world (should be 40k x 20k); (2) small hemisphere whisper should fade IN and out, translucent + italic
+(currently pops in stark white via the vanilla action bar); (3) NEW FEATURE REQUEST: /latdev "survey" /
+"what am I looking at" — explains the region's geology/geography in plain language from the authority
+fields (why this massif, why this desert); future player-facing item (binoculars/survey kit) noted for
+an official update; (4) F1 hide-HUD must hide the compass/labels too; (5) snap-to-grid NOT lost —
+answered: it's the Labels tab's "Dragging" toggle; (6) IDEA SAVED: LATITUDE ACHIEVEMENTS (World
+Traveler = all hemispheres, Nomad = keeps moving, etc.) — exploration incentives, future phase;
+(7) polar VEGETATION should thin/vanish at high latitude (grass/sugarcane/flowers at 84-86 deg feels
+wrong) — worldgen, flag-gated; (8) sun STILL visible at 86 deg (storm ramp too shallow — ambient 0.2
+at 86 barely dents vanilla sun; steepen so full storm by ~87-88); (9) freeze PULSING bug — hearts
+flash blue/red rapidly, damage never lands: the 10-tick throttled setTicksFrozen(max) sawtooths against
+vanilla's 2/tick decay, so the frozen state oscillates and never sustains the 140 damage threshold —
+needs per-tick maintenance; (10) wants a real BLIZZARD by warning level 2 (faster fall, sideways drive,
+heavier density — current reads as regular snowfall); (11) E/W: Peetsa proposed the "teleport-evator"
+MIRROR-BAND wrap — reserve the last ~5 deg as terrain generated as a COPY of the opposite edge, teleport
+player inside identical terrain = seam invisible by construction. Assessment: this IS the classical
+periodic-wrap technique and fixes the scrapped attempt's terrain-mismatch failure by construction;
+remaining hard parts = cloud-layer snap on teleport, map mods, multiplayer sightlines. DECISION: ship
+B-5 fog-passage first (machinery reusable), then prototype the mirror-band as a B-6 "invisible upgrade"
+that can retire the prompt if it works. Storm warnings at the EW border retire whenever wrap ships.
+
+### B-4 round 3 pass log (2026-07-10) — three parallel crews, all swept, committed 06404a9b/08dbc15e/68fb7289
+
+**Pass 1 — /latdev survey (06404a9b).** Dev (Opus): pure `core/GeoSurveyNarrator` (terrain story from
+plate/mountain/shelf signals, climate story from rain-shadow/windward/fetch/continentality, latitude-belt
+line, traveler's note from prevailing wind + coast distance; zero MC imports) + `/latdev survey`
+subcommand reusing the LIVE GeoAuthority instance and reconstructing `new ClimateAuthority(geo)`.
+Sweeper (Opus): **ACCEPT-WITH-NOTES, zero defects** — the reconstruction is PROVABLY identical to the
+live climate path (same (seed,zRadius,xRadius) triple, single-arg ClimateAuthority derives everything,
+no static mutable state); NoOp/console/edge-of-world paths safe; rule branches mutually exclusive; no
+jargon leaks. Notes: flat-column rain-shadow phrasing is geographically valid; geoV2-only gate
+intentional. 8 scenario tests.
+
+**Pass 2 — pole feel + UI fixes (08dbc15e).** Dev (Opus), 6 items:
+(1) FREEZE PULSING root-caused — the 10-tick setTicksFrozen re-apply sawtoothed against vanilla's
+2/tick thaw, so hearts flickered and the fully-frozen threshold (140) never sustained → freeze is now
+maintained EVERY server tick via `steadyFreezeTicks = freezeTicks + 3`; sweeper verified against the
+real tick order (END_SERVER_TICK set → −2 decay → 141 ≥ 140 still frozen at damage check; margin 1
+would have failed). Old throttled call removed (no double-apply); max() never fights powder snow;
+creative/spectator exempted (follow-up guard after sweep note — no steady blue vignette while test-flying).
+(2) BLIZZARD ≥87°: wind 0.09→0.43 + fall 0.04→0.15 scaled by blizzardDrive + second dense pass
+(≤60/tick fixed budget, isPaused guard — anti-backlog law intact).
+(3) STORM SKY steepened: stormLevel=(deg−85)/2.5 → fully overcast by 87.5° (was 0.2 at 86°); real
+weather never reduced (only lifts).
+(4) Loading dims label shape-aware: Wide Regular now "40,000 × 20,000" (matches create screen z*4 × z*2).
+(5) Whispers off the vanilla action bar → new `LatitudeWhisperOverlay`: fade-in/hold/fade-out,
+translucent ≤70%, italic; reset on world switch; sole action-bar writer replaced (grep-proven).
+(6) F1 now hides compass/labels/titles/whispers but KEEPS atmosphere (fog/haze = weather, not HUD);
+sweeper decompiled Hud.class and proved no double-render on either branch (hidden path draws atmosphere
+exactly once via the TAIL, visible path via the HEAD injection). Sweeper: **ACCEPT-WITH-NOTES** (vignette
+note fixed in-pass; whisper per-frame alloc = cosmetic). +8 PolarHazardWindow tests.
+
+**Pass 3 — polar vegetation fade (68fb7289).** Dev (Opus): new flag `latitude.polarVegetationFade.enabled`
+(default OFF, build.gradle-forwarded). 26.2 re-typed the old RandomPatch small vegetation into
+simple_block/block_column features (verified vs the merged jar — sugarcane = block_column, flows through);
+new `PolarVegetationFadeGuardMixin` on both classes (HEAD-cancellable place, the proven tree-guard
+pattern), keep-chance smoothstep 1.0@78° → 0@86° (half at 82°), frayed on coherent ValueNoise2D salt
+"polveg" (48-block blobs, Art VI — thinning, not a ring). Trees untouched (tree-line guards own them).
+Sweeper (Opus): **ACCEPT-WITH-NOTES + 1 MAJOR flag-on find** — no Y gate meant lush caves UNDER the
+polar cap would be stripped of moss/dripleaf/glow berries, and Nether simple_block features (crimson
+roots, patch_fire, sulfur pools) were exposed at far-Z. Fix-up (fresh Opus): 4 short-circuit gates in
+order (flag → overworld-only → latitude+fray → surface proximity WORLD_SURFACE_WG margin 5, with a
+4–6-margin guard test so it can't drift into cave territory), require 0→1 (remap breakage now loud),
+redundant max() dropped. 16 pure tests. Salt uniqueness verified across all 48 codebase salts.
+Flag-off byte-identity structural (first-statement return; new helper called only by the mixin).
+PROOF NOTE: the atlas renders biomes, not decoration features — flag-on proof is an in-game eyeball
+at 80–86° (sparse → bare, blobby edge), flag-off needs no atlas (no existing code path altered).
+
+**Suite: 173/173.** Remaining round-3 items answered without code: #5 snap-to-grid never lost (Labels
+tab "Dragging" toggle); #6 achievements idea saved; #10 mirror-band wrap assessed (classical periodic
+wrap, fixes the scrapped attempt's terrain mismatch by construction; hard parts cloud-snap/map-mods/
+multiplayer sightlines; sequenced as B-6 candidate after B-5). All commits HELD UNPUSHED pending
+Peetsa approval.
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
