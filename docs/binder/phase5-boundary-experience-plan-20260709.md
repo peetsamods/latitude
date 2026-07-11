@@ -320,6 +320,18 @@ handlers to match (same class of bug the compass pass caught earlier -- these du
 drifts keep recurring, worth a dedicated grep next cleanup pass). Existing saved configs untouched
 (both keys always existed). Suite 230/230. TEST 63 staged SHA 4e56c0e5...
 
+### Polar particles respect vanilla's Particles setting (2026-07-11, 6cf7b602)
+
+Peetsa (performance): decreasing vanilla's Particles option should decrease the pole snow/blizzard
+particles too, so it can't slow anyone's game down. Vanilla only has THREE tiers (verified against the
+mapped jar: ALL/DECREASED/MINIMAL -- no "off"), so MINIMAL is the floor (thin but still snowy). New pure
+core/ParticleDensity (FULL=1.0/DECREASED=0.5/MINIMAL=0.15, 6 tests) scales the polar ambient-snow +
+blizzard second-pass budget, read fresh every spawn-tick from the live vanilla option via an exhaustive
+switch expression (a future MC particle tier would fail to COMPILE, not silently mis-map). Anti-backlog
+law untouched -- sweeper re-verified isPaused/spawnTick/no-new-state/no-per-tick-allocation from scratch.
+E/W border-storm particles are a separate system, deliberately untouched. Suite 236/236. TEST 64 staged
+SHA 33165fe5...
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
