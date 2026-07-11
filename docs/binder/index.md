@@ -520,6 +520,22 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   (dry 0-20° ≤0.1% w/ 25.5° corrections retained; zero snowy_plains <45°; T1-T3 green). Push only after
   map proof. Row `20260709-consumer-law-compliance`.
 
+## 2026-07-10 addition (UI/UX + accessibility audit — bespoke menus, PROPOSED)
+- `latitude-ui-ux-audit-20260710.md` — read-only accessibility/UX pass over every Latitude-owned
+  screen (create-world, HUD Studio, SpawnZoneScreen, in-game HUD surface) for Peetsa's "menu-hell →
+  so easy!" goal. 24 findings (3 CRITICAL / 7 HIGH / 8 MEDIUM / 6 POLISH), each grounded in a named
+  principle (Nielsen heuristics, WCAG contrast/target-size/motion) with `file:line` citations and an
+  S/M/L sized fix. Top hits: the 13-state "Color Scheme" cycle is un-navigable
+  (`LatitudeHudStudioScreen.java:295-305`); snap-to-grid is buried under a "Dragging" cycle on the
+  Labels tab (`:577-586`, Peetsa couldn't find it); HUD Studio has no in-game front door but F9
+  (`GlobeModClient.java:184-193`); toggles collapse the layout with no transition (motion-sensitivity,
+  `:1382-1442`); no Cancel/discard in the Studio (`:860-866`). Ends with an accessible icon+label+
+  tooltip+lit-state+sound pattern for Peetsa's iconography sidebar (cites the `drawButtonGlyph` 1.9×
+  scaled-draw precedent, `:965-983`) and a 3-pass sequence — A (HUD Studio) ∥ B (create-screen
+  iconography) parallel-safe by file, C (reduce-motion + cross-cutting) sequential after. Complements
+  the layout-primitive lens in `ui-audit-20260707.md` + `../design/hud-layout-overhaul-design-20260707.md`.
+  PROPOSED, awaiting Peetsa. No `src/` changes; doc-only.
+
 ## 2026-07-09 addition (Round 12 — undo/redo icons + selected-band left→right glow)
 - `ui-pass-round12-undo-redo-selband-sweep-20260709.md` — two requests off the TEST 43 screenshot. (1)
   Replaced round 11's verbose "Undo Last Load" text button with a compact `↶`/`↷` icon PAIR, extending the
