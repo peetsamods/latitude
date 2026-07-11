@@ -347,6 +347,22 @@ title on demand, bypassing the anti-spam banding but leaving every real-crossing
 (sweeper traced each one). All three swept together for cross-pass interaction (glimmer is color-only,
 never affects geometry, so the plate padding holds regardless). Suite 237/237. TEST 65 next.
 
+### /latdev un-shadowed + Studio title round + loading wave (2026-07-11, 14a081f1/bf6cc543/0f8c90d0)
+
+LIVE REGRESSION FIXED: the new client-side /latdev title root shadowed EVERY server /latdev subcommand
+(Fabric intercepts any line whose root the client knows; parse failures surface instead of forwarding —
+the earlier pass's "falls through" claim was FALSE, disproven from fabric-command-api-v2 3.1.0 bytecode).
+Fix = greedy passthrough forwarding via a direct ServerboundChatCommandPacket (vanilla's unsigned branch;
+the polite sendCommand() path would re-enter the interceptor and recurse infinitely). LESSON: client
+command roots that share a server root REQUIRE passthrough; claims about framework dispatch behavior
+must be verified from bytecode, not docs-folklore — the original sweep accepted the claim unverified.
+Also: title-preview plate → Title-tab-only photoshop CHECKERBOARD (misleading-background complaint);
+preset OVERWRITE now confirms (Overwrite/Keep It, empty slots instant); Outline Thickness slider (1-4px,
+precomputed Chebyshev stamp sets); Glow Intensity slider (0.2-2.0, 0.5 halo cap); gentle glow now the
+fresh default (ON at 0.75 — Peetsa's config keeps its explicit off until toggled/Reset, disclosed);
+loading-screen summary line = gentle circular word-illumination wave (1.5s/element, 30% lift, seamless
+wrap, reduceMotion=static, 9 tests). Suite 249/249. TEST 66 staged next.
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
