@@ -229,6 +229,31 @@ Aurora=flowing / Rainbow=static everywhere. (e) Reduce Motion now covers the ENT
 atlas planisphere (title/bounce/shimmer/crest/sweep/icon anims → static equivalents). Suite 188/188
 (+GroupRowLayoutTest, static-gradient determinism tests). TEST 55 staging next.
 
+### UI round 14 (2026-07-10) — digital compass glow-up, Studio fixes, GUI-scale hardening (ec9050b8..bf6f5e22)
+
+Peetsa (flying TEST 57): digital compass "ugly, old, un-cute"; wants accessibility dropdown; grid glyph
+"more griddy"; Compass Look tooltip wrong (= the audit's tooltip-leak note made user-visible); Disc vs
+Ring indistinguishable; Color Cycle Speed direction backwards + wants a rightward speed ripple + lightning
+bolt; assign a GUI-scale parity check. Delivered in 6 commits, all swept:
+**ec9050b8** digital = themed rounded chip (ring underline / muted frame / needle-tinted direction token,
+Aurora flows automatically); Disc-vs-Ring root cause = 0.50 inner alpha over dark faces → default 0.85;
+NEW fresh default Rose+Sunset (5 default changes, migration-safety per-field verified — analogLook is
+4 days old so pre-07-07 configs would adopt ROSE: accepted PRE-RELEASE ONLY, disclosed in-code, sanitize
+fallbacks aligned). **d4f10cba** Studio: tooltip leak fixed at the source (off-screen cursor for
+underlying passes while a picker is open); SpeedSlider left=slow/right=fast (storage unchanged), gold
+crest drifting right + hand-drawn bolt, tooltip rewritten; grid glyph on exact integer thirds + node
+dots; NEW AccessibilityMode enum {STANDARD, HIGH_CONTRAST, COLORBLIND_FRIENDLY} (General tab, Cancel-
+covered, HUD-side application specced in javadoc = follow-up); scheme picker + Aurora speed + Custom
+RGB unlocked for Digital style. **50ee7dc7** GUI-scale parity audit (0 CRITICAL / 3 HIGH — compass +
+create screen already fraction-anchored/clamped; doc has a 5-min live checklist). Fix lanes:
+**fdf9bccb** (A) zone-title render-clamp = un-strandable at any scale, titles fit-to-width, warnings
+word-wrap stacking upward, pure OverlayLayout + 11 tests; **11f95e13** (B) Studio narrow layout —
+threshold 636, Done|Cancel re-anchors clear of the card, sidebar shrinks to 150 floor keeping a 140px
+preview strip, >=636 pixel-identical (test-pinned), HudStudioLayout + 8 tests; **bf6f5e22** (C)
+scaledUi/compactUi no-op stubs deleted, 106 sites inlined token-verified, behavior-neutral.
+Suite 208/208. TEST 58 next. Follow-ups queued: HUD-side accessibility application (CompassHud),
+editor-preview clamp parity (WYSIWYG at edges), audit M5 atlas-vanish placeholder, Math.max residue.
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
