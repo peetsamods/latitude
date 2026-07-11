@@ -254,6 +254,26 @@ scaledUi/compactUi no-op stubs deleted, 106 sites inlined token-verified, behavi
 Suite 208/208. TEST 58 next. Follow-ups queued: HUD-side accessibility application (CompassHud),
 editor-preview clamp parity (WYSIWYG at edges), audit M5 atlas-vanish placeholder, Math.max residue.
 
+### UI round 15 (2026-07-11) — accessibility modes for real + title styling overhaul (6c4d09bb/50fb00c8/9a833b1b)
+
+Peetsa: "no meaningful change with the accessibility options at all" (correct — only Studio chrome ever
+responded) + title wishlist (black outline w/ configurable color, drop-shadow toggle, diffuse glow,
+off-white-outlined default, rainbow fade-in shimmer). Three passes, one sweep, one identity-deviation
+fix: NEW pure core/ui/AccessibilityPalette (ONE rulebook, 15 tests — HC floors text/bg opacity + lifts
+dim greys toward white; CB remaps only red/green-RELIANT signals via isRedReliant, gold provably passes)
+applied across CompassHud (backing disc + rim, opaque digital plate, cyan needle under CB), create
+screen (all leaf text helpers, icon plates), RulesIcons, AND the Studio itself (card/tabs/dropdown
+rows/open list/glyphs — the screen he flips the dropdown on responds instantly). Titles: NEW pure
+TitleStyle — 8-dir outline at constant 1 screen-px (1/scale in the scaled pose), explicit drop-shadow
+toggle, 3-ring diffuse glow, one-sweep fade-in Gaussian shimmer for RAINBOW/AURORA (reduceMotion-gated);
+NEW default = black outline + OFF_WHITE 0xF3ECDD fill, shadow off (pre-release migration disclosed
+in-code; existing saves keep their fill color, adopt outline). Studio Title tab: outline toggle +
+conditional RGB picker + shadow/glow toggles, preview live; hemisphere titles inherit w/ threaded fade.
+Sweeper: ACCEPT-WITH-NOTES — STANDARD identity verified at 40+ sites, ONE deviation caught (reduce-motion
+icon glow 0.85→0.9) and restored in-pass. Suite 228/228. TEST 60 staged next. NOTE FOR PEETSA'S FLIGHT:
+his existing config keeps WHITE fill but gains the outline and loses the hard shadow (new keys) — the
+Title tab toggles restore any prior look.
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
