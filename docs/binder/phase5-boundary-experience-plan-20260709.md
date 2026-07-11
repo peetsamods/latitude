@@ -310,6 +310,16 @@ Color dropdown gained an honest "Off-White" entry (name/rgb/title mappings) inst
 new default "White". Verified the constant is actually compiled in via javap disassembly (int 15985885
 = 0xF3ECDD present in the CompassHudConfig constructor). Suite 230/230. TEST 62 staged SHA d6f63fcd...
 
+### Title defaults refined: ALL CAPS, outline removed (2026-07-11, 8fa6fcff)
+
+Peetsa flew with the outline and decided against it: "make the default titles ALL CAPS. Remove the
+outline b/c I don't think I like it." zoneEnterTitleCase fresh default NORMAL->UPPERCASE;
+zoneEnterTitleOutline fresh default true->false (toggle + RGB picker remain in the Studio for anyone
+who wants it). Fixed the two duplicated hardcoded literals in the Studio's Reset Title / Reset HUD
+handlers to match (same class of bug the compass pass caught earlier -- these duplicate-default-site
+drifts keep recurring, worth a dedicated grep next cleanup pass). Existing saved configs untouched
+(both keys always existed). Suite 230/230. TEST 63 staged SHA 4e56c0e5...
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
