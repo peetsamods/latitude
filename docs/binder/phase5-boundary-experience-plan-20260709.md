@@ -300,6 +300,16 @@ NOT yet eyeballed live: glimmer motion (needs an actual zone crossing), accessib
 freeze/blizzard/pole work (needs in-world flight — Peetsa's). Game left running at the world-select
 screen. TEST 61 = TEST 60 + ghost fix + color-aware title glimmer (suite 230/230).
 
+### Compass text default matches title off-white (2026-07-11, f38108d3)
+
+Peetsa: "Change the default compass text to the same gentle warm white of the titles." Fresh-config
+`CompassHudConfig.textRgb` changed 0xFFFFFF -> 0xF3ECDD (LatitudeConfigData.OFF_WHITE_RGB, the same
+constant the title's OFF_WHITE preset uses) -- one shared warm-white across compass and titles.
+Existing saved configs keep their own textRgb untouched (present key, no migration). Studio's Text
+Color dropdown gained an honest "Off-White" entry (name/rgb/title mappings) instead of mislabeling the
+new default "White". Verified the constant is actually compiled in via javap disassembly (int 15985885
+= 0xF3ECDD present in the CompassHudConfig constructor). Suite 230/230. TEST 62 staged SHA d6f63fcd...
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
