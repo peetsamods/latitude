@@ -1,6 +1,6 @@
 # Phase 5 B-5 — Hemisphere Passage: design (2026-07-10)
 
-`status: DESIGN — under adversarial review; no code yet`
+`status: DESIGN APPROVED-WITH-AMENDMENTS 2026-07-12 (sweep below); build authorized (B-5 first, then B-6 evator — Peetsa confirmed sequence)`
 Worktree `Latitude-b5-hemisphere-passage` (branch phase5-b5-hemisphere-passage, off b6c829d7). Authorized
 by Peetsa (B-4 green-lit the passage). Recon (this session) mapped every mechanic to a working in-repo
 precedent; file:line pointers below are from that recon.
@@ -78,3 +78,33 @@ Held in the worktree branch; merged to port/canonical-26.2-pivot only after P3 +
 4. NO/turn-back push-back that isn't a "hard yank" — does a per-tick velocity impulse fight player input
    annoyingly? alternative: one-time impulse + let them fly back.
 5. Re-arm band width vs the prompt distance — ensure you can't get stuck oscillating prompt/dismiss.
+
+
+## Adversarial design sweep — verdict 2026-07-12 (rebased onto 27ce06d6)
+
+**APPROVE-WITH-AMENDMENTS (14).** Core architecture sound; state machine / mirror target / pass split
+survive. Corrected pointer table produced (several pointers drifted ~54 lines; two precedents DEAD).
+Must-fix trio before code: (1) NETCODE — the SetSpawnPickerPayload/OpenSpawnPicker precedent is
+ORPHANED dead code (SpawnZoneScreen deleted this week); build fresh C2S PassageAnswerPayload + S2C
+PassageArrivalPayload on the LIVE GlobeStatePayload idiom. (2) TARGET SAFETY — placeSafeY returns null
+on fluid; the B-2 shore is boundaryV2-dependent, so mirrored X often = ocean with passage-on/boundary-
+off; must null-handle w/ outward ±Z safe-column search. (3) ARRIVE-IN-BAND — targetX=-x lands at the
+IDENTICAL border distance; S2C arrival must seed client state in-band+DISARMED or it self-reprompts
+forever. Honesty: EW "Turn back." warning strings must be gated/reworded when passageV2 on (the edge
+becomes passable; stage-2 text fires in the same band as the prompt). Post-marathon integration:
+approach fog = REAL DEPTH FOG (FogRendererPolarSetupMixin discipline; Peetsa vetoed a flat tint this
+session), crossing curtain = short opaque screen fill (teleport mask only); both EXPOSURE-INDEPENDENT;
+suppress EwSandstormOverlayHud + reconcile clampEwViewDistance inside the band. Q answers: client-
+authoritative prompt OK but server MUST re-validate edge distance on the C2S (anti-exploit); dismount
+before teleport (no mount-carry), momentum-zero handles elytra; 3x3 FULL ring sufficient under the
+curtain (5x5 only if P3 shows pop-in); turn-back = ONE-SHOT gentle impulse (per-tick fights input =
+the vetoed yank), host borderUxTick, skip creative/spectator; re-arm hysteresis asymmetric (PROMPT_AT
+< FOG_START, re-arm > FOG_START+margin, margin >= DEAD_ZONE 64, floor DEAD_ZONE+32; FOG_START absolute
+blocks <= ~15% of smallest xRadius 3750). Also: per-player S2C only (never broadcast); prompt only when
+client.gui.screen()==null; guard dead/offline between answer and teleport; creative/spectator free
+passage; P3 matrix = passageV2 x boundaryV2 x Classic/Mercator (X-radius, never Z). One-shot crossing
+whoosh in P2; approach wind bed deferred. L17: the flag's build.gradle forwarding line lands in the
+SAME PASS the flag is born (three prior bites). B-6 NOTE (Peetsa confirmed sequence 2026-07-12): P1
+must build the teleport core (mirror math, ring, dismount/momentum, safety search, crossing state) as
+a CLEAN LAYER the ceremony sits ON TOP of — the evator reuses the core and swaps the ceremony for
+silence + mirrored terrain.
