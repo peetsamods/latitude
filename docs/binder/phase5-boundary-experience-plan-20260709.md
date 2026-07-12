@@ -448,6 +448,22 @@ reduceMotion static, F1-hides with the text, whiteout→vignette→text order ve
 one home for the scaled-glyph trick (3 prior reinventions cited; pure code-motion, pixel-verified).
 Ginormous keeps its "!" (director design verdict: deliberate crescendo). Suite 272/272. TEST 73 staged.
 
+### TEST 78 feedback round: graded exposure kills the binary shelter check, storm becomes a volume (2026-07-12, 5247a073)
+
+Peetsa at 90 deg under a freestanding ARCH: counted as "inside" (wind muffled, particles cut, whiteout
+dropped), blizzard read as one thin diagonal sheet, fog through openings much lighter than outdoors.
+ONE root cause for the shelter symptoms: every presentation system keyed off the binary single-column
+canSeeSky check -- one lintel block overhead = fully indoors. Fix: new PolarExposure (pure core class +
+GlobeClientState shim) samples sky at 13 points (center + ring r=3 + cardinals r=5, cached 5 ticks),
+grades shelter 0..1; arch ~0.92 = outdoors. Wind blends full->0.35 floor continuously, whiteout alpha
+scales, particle budgets scale (anti-backlog intact); warning text + danger vignette DELIBERATELY stay
+binary (episode punctuation, not atmosphere); server hazard untouched. VOLUME: flakes were a py+2..+8
+overhead band -> now py-2..+14 triangular (peak eye level), SNOW_MAX 30->60. FOG: END_NEAR 24->16,
+curve 0.85->0.80 (end-dist 86/88/90 = 143/75/16 blocks) so the ungated depth fog carries more of the
+heaviness through real windows. Sweep ACCEPT-WITH-NOTES (consumer split verified exhaustively; ~2x pole
+particle ceiling flagged for a low-end perf glance; stale comment fixed in-pass). Suite 337/337.
+TEST 79 staged.
+
 ### TEST 77 feedback round: blue hearts return, copy escalates, real depth fog built, blizzard finally blows sideways (2026-07-12, 230d8952)
 
 Two more Peetsa reports off TEST 77. BLUE HEARTS: last round's 139-tick cap (to stop vanilla's own
