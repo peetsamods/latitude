@@ -448,6 +448,22 @@ reduceMotion static, F1-hides with the text, whiteout→vignette→text order ve
 one home for the scaled-glyph trick (3 prior reinventions cited; pure code-motion, pixel-verified).
 Ginormous keeps its "!" (director design verdict: deliberate crescendo). Suite 272/272. TEST 73 staged.
 
+### TEST 75 feedback round: smear fix, honest cold timing, the cap goes bare (2026-07-12, 5ec0d475/6678d367/35ba69e8)
+
+Wind bed LOCKED IN (Peetsa: "epic"). Three fixes off his polar flight: (1) warning SMEAR root-caused --
+the fill's vanilla drop shadow stacked on the keyline (9th dark stamp, 1px off); fill is shadow-free
+under a keyline now, and ALL FOUR tiers are keylined (white 85/87 lines were illegible on snow). Copy:
+89.7 -> "Hypothermia sets in." (qualifier dropped), 87 -> "Blizzard conditions worsening. Turn back
+while you can." (honesty: slowness moved). (2) COLD TIMING: hazard onset 87 -> 88.5, severe AT 90
+(freeze crosses damage threshold ~89.96); ambient untouched (snow/wind 85, storm sky 85-87.5) and
+blizzardDrive decoupled onto its own 87 ramp so the storm still LOOKS like it builds before it bites;
+warning-ladder degrees unmoved (EW KEEP-SHARED). (3) FOLIAGE at 88 deg (flowers/sugarcane/FIREFLY
+BUSHES) = the polar vegetation fade shipped default-OFF; vanilla 26.2 decorates snowy_plains/frozen_river
+themselves, so the fade is mandatory for a bare cap. Default flipped TRUE (both sites), ONSET/FULL now
+-D-tunable (onsetDeg/fullDeg). Sweeper ACCEPT-WITH-NOTES, 5 LOW all resolved in-pass (2 stale comments,
+1 test-default coupling, doc reconcile = this entry; informational: new chunks in old saves get a soft
+fray-noise seam at the cap -- intended). Suite 295/295. TEST 76 staged.
+
 ### The pole gets its voice + the loading screen its nameplate (2026-07-11, d5b40d29/d7444a02)
 
 Peetsa approved the full CD slate ("Sound yes... yes on all of your other recs") + his warning register.
