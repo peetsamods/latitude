@@ -404,6 +404,20 @@ right). PARKED FOR PEETSA: art-direction review (title-art-direction-review-2026
 review wants the 1px outline back ON by default); + gold hairline rule, two-line lockup, eased motion,
 per-zone accent recs. His call pending. Suite 263/263. TEST 69 staged.
 
+### APPROVED title moment shipped: C v2 glimmer + lockup (2026-07-11, 6c305cb7)
+
+NEW WORKFLOW PRECEDENT — mock-first approval: built an interactive HTML artifact (title-glimmer-mock,
+claude.ai artifact 2091b90e) with the current shine + 3 candidate choreographies on 4 backdrops; Peetsa
+picked C, gave 3 notes (no pre-flicks, slower/more dramatic, melt-don't-snap); round-2 mock (C v2) at
+the same URL; approved "It's beautiful!" — THEN implemented the approved ms values 1:1 as a contract
+(sweep verified every boundary independently). Choreography: appear 350ms → hero sweep 900ms (pop .85,
+sin-arch dim) → bloom .65 + 2% swell 250ms → cubic melt 850ms → rest. Plus creative-director rec D:
+two-line lockup (name full-scale, degrees .55x beneath, split only on a regex-anchored degrees token —
+hemisphere titles unsplittable). Swell folded into scale pre-clamp; plate/hitbox/clamp share one
+measure(). Bounce feel fix same round (2868b9a8-adjacent: sub-pixel glide + 0.95s period, TEST 70).
+Mock-first + approved-values-as-contract worked extremely well — reuse for future signature moments.
+Suite 266/266. TEST 71 staged.
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
