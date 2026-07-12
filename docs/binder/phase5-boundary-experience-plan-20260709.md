@@ -448,6 +448,19 @@ reduceMotion static, F1-hides with the text, whiteout→vignette→text order ve
 one home for the scaled-glyph trick (3 prior reinventions cited; pure code-motion, pixel-verified).
 Ginormous keeps its "!" (director design verdict: deliberate crescendo). Suite 272/272. TEST 73 staged.
 
+### TEST 79 feedback round: storm-ceiling clouds + loading footer breathing room (2026-07-12, 9088ab0d)
+
+Peetsa's TEST 79 look: polar clouds read as bright white puffs with "clear sky beyond" (breaking the
+overcast), and the loading screen's F9 hint/bar/status line were jammed. CLOUDS: the sky dome behind is
+ALREADY storm-grey by 87.5 (storm-sky lift) — the offender was the deck itself staying bright. New
+CloudRendererPolarOvercastMixin tints the whole deck to heavy storm grey (74,84,100, darker than the
+ground haze = reads as the dark lid above the storm) easing opaque to the pole, on the shared 85-90
+ambient envelope; seam-free, passthrough elsewhere, fast+fancy covered, geometry deliberately untouched
+(gap-fill = fragile + fancy-mode artifact boxes; contrast-kill is the bet, gap-fill the fallback lever).
+FOOTER: F9 hint 60% alpha + 4px lift; collision-free at min pane; alpha-respect proven on the real text
+path. Sweep clean ACCEPT — the int-arg ordinal trap checked against real bytecode (ordinal 0 = color,
+not distance), ARGB order verified no warm swap. Suite 343/343. TEST 80 staged.
+
 ### TEST 78 feedback round: graded exposure kills the binary shelter check, storm becomes a volume (2026-07-12, 5247a073)
 
 Peetsa at 90 deg under a freestanding ARCH: counted as "inside" (wind muffled, particles cut, whiteout
