@@ -144,3 +144,27 @@ HIGH fixed). Whisper black keyline folded in via rebase onto pivot 89813c2d. Sui
 Peetsa: underground dark fog (plain wall instead). NEXT: TEST 84 flight — re-offer after ~250-block
 walk-out, structure-free belt (new chunks), no prompt/fog underground, warnings under trees, crisp
 whisper; then the B-6 teleport-evator design (reusing the P1 engine).
+
+
+## P3 round 2 feedback + root-cause fix batch (2026-07-12, 480c0790/e5de9981, TEST 85 staged)
+
+Peetsa flew TEST 84: leaf-proof warnings confirmed working, but re-arm STILL broken (repro survived the
+"564->250" fix). Verified via bytecode that TEST 84 genuinely shipped REARM_AT=250 (ruled out a stale-
+build explanation) -- the bug was real and live. ROOT CAUSE (second, deeper pass): the surface-only
+passage's isDeepUnderground early-return froze the ENTIRE client-tick state machine, not just the
+prompt ceremony -- a snowy valley dip under tree canopy (y<sea-2 AND no sky, Peetsa's exact terrain) was
+enough to skip the DISTANCE-based re-arm commit on that tick, with no path to catch up later. The 29
+pure tests never caught it because the freeze lived only in the MC-coupled caller. Fixed by moving the
+distinction into the tested core: new HemispherePassage.evaluateGated separates "can the prompt open"
+(underground/screen -- correctly gated) from "should armed re-arm" (pure distance -- now commits every
+tick, unconditionally). +5 tests incl. the exact repro. Same flight, 3 more reports: (1) EW banner never
+got the polar warnings' outline fix (scoped polar-only at the time) -- now shares the same proven
+keyline technique + bold dropped from the severe tier; (2) a genuine leftover per-tick sine alpha pulse
+(~7.8s, 55-100%) was found and removed from the EW text -- Peetsa's "strobing" hunch was correct;
+(3) chasing "severe warning fires too close to crossing" found the function everyone believed governed
+the timing was DEAD CODE -- the real threshold swung wildly by world size (barely any lead on small
+worlds, firing outside the fog entirely on large ones); fixed with an independent fixed-175-block gate,
+consistent ~75-block lead on every world size, layered on the unchanged onset. LEVEL_1 (mild) now fades
+in/hold/out and re-arms on band exit+reentry instead of persisting; LEVEL_2 (severe) stays persistent.
+Sweep ACCEPT with an explicit confidence statement on the re-arm mechanism: "no remaining code path that
+can strand a declining-then-returning player disarmed." Suite 397/397. TEST 85 staged.
