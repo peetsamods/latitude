@@ -448,6 +448,19 @@ reduceMotion static, F1-hides with the text, whiteout→vignette→text order ve
 one home for the scaled-glyph trick (3 prior reinventions cited; pure code-motion, pixel-verified).
 Ginormous keeps its "!" (director design verdict: deliberate crescendo). Suite 272/272. TEST 73 staged.
 
+### The pole gets its voice + the loading screen its nameplate (2026-07-11, d5b40d29/d7444a02)
+
+Peetsa approved the full CD slate ("Sound yes... yes on all of your other recs") + his warning register.
+WIND BED shipped (highest-impact CD rec): vanilla wind-rush loop, Weather slider, 0.8*((|lat|-85)/5)^2
+envelope (whisper 87 -> howl 90), 0.5-deg hysteresis, single-instance lifecycle sweeper-walked, re-arm
+cooldown for the muted-channel churn nit. WARNINGS in Peetsa's blizzard-conditions voice (DANGER = his
+line verbatim); near-black keyline on the two red lines (whiteout washout fixed); LETHAL differentiated
+(1.15x + ember warmth pulse in the vignette, DANGER stays cold). LOADING SCREEN v2: shared
+LatitudeWordmark helper (create screen verbatim-extracted, unified brand gold 0xE8B64A wordmark-only),
+loading screen draws the real wordmark 1.4x/2 sparkles, specs line gilded kind-gold/size-white through
+the wave, F9 hint to the mechanics zone, gold-tinted graticule. OPEN for Peetsa: screen-wide gold
+convergence; gild the size word? Suite 291/291. TEST 75 staged.
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
