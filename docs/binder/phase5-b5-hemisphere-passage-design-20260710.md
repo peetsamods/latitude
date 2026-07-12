@@ -108,3 +108,21 @@ SAME PASS the flag is born (three prior bites). B-6 NOTE (Peetsa confirmed seque
 must build the teleport core (mirror math, ring, dismount/momentum, safety search, crossing state) as
 a CLEAN LAYER the ceremony sits ON TOP of — the evator reuses the core and swaps the ceremony for
 silence + mirrored terrain.
+
+
+## Build log (2026-07-12): P1 + P2 COMPLETE — staged for P3
+
+P1 (76ef2d0a): the ceremony-free mirror-teleport engine (HemispherePassageService), fresh netcode on the
+live idiom, guard chain, 60-tick cross cooldown, 40-probe budgeted safety search, one-shot turn-back
+nudge, pure arm/re-arm state machine (PROMPT 100 / FOG 500 / REARM 564, arrived-in-band-disarmed).
+Sweep ACCEPT-WITH-NOTES; both HIGHs (probe-budget freeze, double-cross ping-pong) fixed in-pass.
+P2 (91795e64): depth-fog approach (polar mixin discipline, storm palette, provably clash-free with the
+polar fog), EW warning honesty reword (flag-gated), the advisory prompt (double-send-proof, ESC=turn-
+back, waits armed behind containers per the sweep-endorsed A10 third option), crossing curtain
+(300ms/850ms wall-clock, 5s timeout = never stuck, stale-arrival drain), arrival = disarmed-in-band seed
++ hemisphere title + one-shot wind rush. Sweep ACCEPT-WITH-NOTES all-LOW; both notes fixed in-pass.
+Staging commit (branch-local, REVISIT BEFORE MERGE): passageV2 default ON so the Modrinth profile can
+fly it without -D args; revert restores default-off. Suite 363/363. TEST 83 staged from this branch.
+P3 checklist: fog rolls in ~500, prompt ~100 (once per approach, never over a chest), cross = curtain/
+title/whoosh, far side must NOT re-prompt until a 564-block walk-out, turn-back nudge gentle, timeout
+path (deny a cross via cooldown spam) melts the curtain, matrix = Classic + Mercator (X geometry).
