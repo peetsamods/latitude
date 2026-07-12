@@ -520,6 +520,24 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   (dry 0-20° ≤0.1% w/ 25.5° corrections retained; zero snowy_plains <45°; T1-T3 green). Push only after
   map proof. Row `20260709-consumer-law-compliance`.
 
+## 2026-07-11 addition (polar approach experience + warning copy review — READ-ONLY, PROPOSED)
+- `polar-experience-review-20260711.md` — creative-director pass over the complete 84°→90° polar
+  escalation as ONE composition + warning-message copy alternatives. Grounded in every draw/copy path
+  (`GlobeModClient.spawnAmbientPolarSnow`, `ClientLevelStormSkyMixin`, `PolarWhiteoutOverlayHud`,
+  `PolarVignetteOverlayHud`+`core/ui/PolarWarningVignette`, `GlobeWarningOverlay`+`core/PolarWarningEpisode`,
+  `core/PolarHazardWindow`). **Part 1 (copy):** three coherent-voice SETS of the four tier lines
+  (Expedition-Log / Stark-Minimal / Sharpened-Current) in a tier×set table; recommendation is a HYBRID —
+  Set A's flavored approach lines (85°/87°) + Set C's sharp red imperatives (89°/89.7°, current DANGER line
+  kept). **Part 2 (whole look):** 84→90 storyboard table; escalation is monotonic with two soft spots (85°
+  text over-promises the still-empty visuals; DANGER 89° and LETHAL 89.7° are near-identical beats 0.7°
+  apart). Ranked findings: **F1 red DANGER/LETHAL text is ~2.7:1 on the near-white whiteout fill and the
+  vignette deliberately keeps the center clear = the climax washes out** (fix: dark keyline/backing on the
+  red lines, reusing the shipped-OFF title outline idiom); **F2 the entire polar experience is SILENT** (grep
+  confirms zero `playSound` in the globe client); F3 DANGER/LETHAL under-differentiated; F4 85° over-promise;
+  F5 no gold/parchment identity thread. v2 recipe + single highest-impact change = **add a ramping wind
+  sound bed 85→90°** (the pole is the mod's emotional peak and makes no sound of its own). No `src/` changes;
+  doc-only. PROPOSED, awaiting Peetsa.
+
 ## 2026-07-11 addition (zone-title art-direction & readability review — READ-ONLY, PROPOSED)
 - `title-art-direction-review-20260711.md` — art-director creative/readability pass over the zone-enter
   title (the "SUBPOLAR 66°N" signature moment), grounded in the real draw path (`ZoneEnterTitleOverlay.java`,
@@ -536,6 +554,24 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   + 3% set-down (S), **F** future per-zone band-tint on the accent rule only (M). Ends with a full "Title v2"
   default recipe. Single highest-impact change: default the 1 px dark outline ON. PROPOSED, awaiting Peetsa.
   No `src/` changes; doc-only.
+
+## 2026-07-11 addition (loading-screen LOOK review — visual hierarchy, READ-ONLY, PROPOSED)
+- `loading-screen-look-review-20260711.md` — creative-director LOOK pass (follow-up to the same-day copy
+  pass) on the bespoke loading card's visual hierarchy (`LevelLoadingScreenLatitudeOverlayMixin.java`):
+  title L276, specs "passport" line L281 (built at `LatitudeWorldLauncher.java:103`), F9 hint L285,
+  compass L291, grid L556. Readability is SOUND (opaque pane = constant dark substrate defeats all backdrop
+  worst-cases). Findings are hierarchy/coherence: **F1 (HIGH)** the most-seen nameplate is the LEAST special
+  — plain 9px gold text on the loading screen vs the glowing letterspaced rule-flanked
+  `drawLatitudeWordmark` (`LatitudeCreateWorldScreen.java:1991`) the create screen already got; **F2 (HIGH)**
+  two different golds for the same mark (`0xFFE8B64A` loading vs `0xFFD4A74A` create — converge on
+  `0xE8B64A`); **F3 (MED)** the passport line is one flat weight — gild the qualitative tokens ("Wide 2:1",
+  "Tropical") gold, keep numerals white; **F4 (MED)** the F9 hint sits inside the top identity lockup, move
+  it to the bottom mechanics zone; **F5 (LOW)** the 8%-opacity graticule barely registers and could take a
+  cheap gold tint. v2 recipe groups the card into identity (wordmark → optional "YOUR WORLD" eyebrow →
+  gilded passport) / hero (compass, phrase) / mechanics (progress, stage, hint). **Highest-impact change:
+  lift `drawLatitudeWordmark` into a shared helper (precedent: `drawAtlasFrame` is already shared) and give
+  the loading screen the real wordmark with one unified gold and a quieter sparkle count.** No `src/`
+  changes; doc-only.
 
 ## 2026-07-11 addition (loading-screen copy pass + whisper-position decision — READ-ONLY; whisper = DELEGATED VERDICT)
 - `loading-text-and-whisper-review-20260711.md` — creative-director two-part pass. **Part 1 (copy):**
