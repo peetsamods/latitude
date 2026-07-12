@@ -126,3 +126,21 @@ fly it without -D args; revert restores default-off. Suite 363/363. TEST 83 stag
 P3 checklist: fog rolls in ~500, prompt ~100 (once per approach, never over a chest), cross = curtain/
 title/whoosh, far side must NOT re-prompt until a 564-block walk-out, turn-back nudge gentle, timeout
 path (deny a cross via cooldown spam) melts the curtain, matrix = Classic + Mercator (X geometry).
+
+
+## P3 round 1 feedback + fix batch (2026-07-12, 69b3a89d/2364b0a9, TEST 84 staged)
+
+Peetsa flew TEST 83: crossing WORKS ("the mechanic works when it works"), but the prompt was one-shot-
+forever. Root cause = H2 not H1: the A10 commit logic was correct; REARM_AT=564 demanded a 464-block
+walk-out. Fixed 564 -> 250 (prompt 100 + margin 150, ~30x jitter; no-oscillation tests still 1 prompt);
++4 tests incl. the exact TEST-83 script. THREE more Peetsa calls same flight, all landed (2364b0a9):
+(1) structure-free 500-block edge belt (EdgeStructureVetoMixin, surface structures, anchor-keyed, own
+default-true worldgen flag, upgrade-frontier tear documented-accepted); (2) SURFACE-ONLY passage
+("underground there's just the world's edge wall") — shared client/server deep-underground definition,
+prompt machine freezes underground, fog vanilla underground, server rejects underground answers;
+(3) leaf-proof warnings — banner+vignette on graded exposure via one shared gate (full >=0.5, hidden
+only ~0), arming freezes at exposure 0 so a sealed-base tier crossing fires fresh on surfacing (sweep
+HIGH fixed). Whisper black keyline folded in via rebase onto pivot 89813c2d. Suite 384/384. DROPPED by
+Peetsa: underground dark fog (plain wall instead). NEXT: TEST 84 flight — re-offer after ~250-block
+walk-out, structure-free belt (new chunks), no prompt/fog underground, warnings under trees, crisp
+whisper; then the B-6 teleport-evator design (reusing the P1 engine).
