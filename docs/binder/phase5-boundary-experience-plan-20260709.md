@@ -378,6 +378,17 @@ blind to fills already near that target; the fix is always relative contrast (di
 never a bigger amplitude. Suite 259/259. TEST 67 staged. NOTE: brighten() now has no live caller (kept
 as a tested primitive).
 
+### Loading needle legibility + faded-shadow/spacing defaults (2026-07-11, 2868b9a8/4e5c7eba)
+
+Peetsa flight items: (1) loading compass needle was lost against the amber rose (amber tail+dot = same
+amber as the star) → tail off-white, dot plum, rose star muted rose-brown so the coral needle dominates.
+(2) default depth = FADED DROP SHADOW (directional down-right low-alpha stamps, distinct from the
+omnidirectional glow and the hard vanilla shadow; fill shadow-arg hard-false = no double-shadow) instead
+of the glow halo; glow off by default (still available). (3) default letter spacing 0→1. All four
+default sites updated; sweep caught + fixed two: Reset Title now resets letter spacing AND its
+scale/seconds corrected 1.6/4.0→1.8/6.0 (never matched the real defaults — pre-existing bug). Existing
+configs keep their explicit values (fresh/Reset only). Suite 260/260. TEST 68 staged.
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
