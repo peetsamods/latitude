@@ -389,6 +389,21 @@ default sites updated; sweep caught + fixed two: Reset Title now resets letter s
 scale/seconds corrected 1.6/4.0→1.8/6.0 (never matched the real defaults — pre-existing bug). Existing
 configs keep their explicit values (fresh/Reset only). Suite 260/260. TEST 68 staged.
 
+### Title flicker root-caused: tick-clock animation (2026-07-11, 9db7aeac) + art-direction review parked
+
+Peetsa: title "glitching out — delay, pop in, disappear, reappear" + glimmer "like a rubberband." ONE
+disease: visual animation on getGameTime(), which freezes during chunk-gen stalls (exactly when titles
+fire) and REGRESSES on integrated servers (client time snapped to authoritative) — frozen alpha, jump-
+pops, non-monotonic vanish/reappear; glimmer crest = 14 integer-tick hops. FIX: whole title family
+(zone/hemisphere/whisper) now animates on wall-clock ms captured at trigger (durations byte-identical,
+ticks x 50); plus a third real pop found en route (baseline dim snapping 0.75->1.0 at sweep end) eased
+with a sin(pi x progress) arch — sweeper proved first/last letters get identical shine. LESSON: never
+drive per-frame visuals from the tick clock; wall-clock is the family idiom (LoadingWave was already
+right). PARKED FOR PEETSA: art-direction review (title-art-direction-review-20260711.md, committed
+8888abd8) — headline finding CONFLICTS with his outline removal (off-white on snow = 1.11:1, invisible;
+review wants the 1px outline back ON by default); + gold hairline rule, two-line lockup, eased motion,
+per-zone accent recs. His call pending. Suite 263/263. TEST 69 staged.
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
