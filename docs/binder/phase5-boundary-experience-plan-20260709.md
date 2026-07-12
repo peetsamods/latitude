@@ -448,6 +448,16 @@ reduceMotion static, F1-hides with the text, whiteout→vignette→text order ve
 one home for the scaled-glyph trick (3 prior reinventions cited; pure code-motion, pixel-verified).
 Ginormous keeps its "!" (director design verdict: deliberate crescendo). Suite 272/272. TEST 73 staged.
 
+### TEST 80 feedback: cloud darkening VETOED + withdrawn; F9 hint shrunk (2026-07-12, see revert commit)
+
+Peetsa on the storm-ceiling clouds: "undo the sky fix... because the clouds are more contrasted, it
+actually looks WORSE and LESS foggy/blizzardy." Root lesson: at the pole everything is WHITE -- a
+darker deck gains DEFINITION against the pale whiteout, the opposite of overcast mush. DEAD END: do
+not retry cloud-COLOR-DARKENING; any future cloud pass should think lighter/washed-out tones or
+gap-filling instead. Withdrawn cleanly (mixin+core+6 tests deleted, registration removed; sky = TEST 79
+state). Loading footer kept ("text is better") + F9 hint now 0.75x actual smaller font per his ask.
+Suite 337/337. TEST 81 staged.
+
 ### TEST 79 feedback round: storm-ceiling clouds + loading footer breathing room (2026-07-12, 9088ab0d)
 
 Peetsa's TEST 79 look: polar clouds read as bright white puffs with "clear sky beyond" (breaking the
