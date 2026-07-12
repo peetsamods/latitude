@@ -520,6 +520,23 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   (dry 0-20° ≤0.1% w/ 25.5° corrections retained; zero snowy_plains <45°; T1-T3 green). Push only after
   map proof. Row `20260709-consumer-law-compliance`.
 
+## 2026-07-11 addition (zone-title art-direction & readability review — READ-ONLY, PROPOSED)
+- `title-art-direction-review-20260711.md` — art-director creative/readability pass over the zone-enter
+  title (the "SUBPOLAR 66°N" signature moment), grounded in the real draw path (`ZoneEnterTitleOverlay.java`,
+  `core/ui/TitleStyle.java`, shipped defaults) and Peetsa's 2026-07-10 screenshots. Headline (quantified with
+  contrast ratios): the default off-white fill `0xF3ECDD` is near-invisible on bright backgrounds — **1.11:1
+  on snow/whiteout** (the exact POLAR/SUBPOLAR bands where the signature fires hardest), 1.27–1.59:1 on bright
+  sky — because the faded directional drop shadow is a depth cue, not a legibility tool. Fix is nearly free: the
+  1–4 px dark keyline already exists in code but ships **OFF**; a 1 px dark outline scores 11–20:1 against every
+  bright background AND 17.9:1 against the ivory fill itself, so keyline+light-fill cover opposite background
+  brightnesses = readable everywhere. 6 recommendations (S/M/L sized, each with a plain-language "what Peetsa
+  would see"): **A** outline ON by default (the hero, S), **B** keep drop shadow, **C** hairline gold rule
+  `0xE8B64A` under the title to tie it to the loading-screen LATITUDE wordmark / create screen (S–M),
+  **D** two-line lockup (zone name big / degrees small, M), **E** eased fades + shine-start delayed to tick ~8
+  + 3% set-down (S), **F** future per-zone band-tint on the accent rule only (M). Ends with a full "Title v2"
+  default recipe. Single highest-impact change: default the 1 px dark outline ON. PROPOSED, awaiting Peetsa.
+  No `src/` changes; doc-only.
+
 ## 2026-07-10 addition (UI/UX + accessibility audit — bespoke menus, PROPOSED)
 - `latitude-ui-ux-audit-20260710.md` — read-only accessibility/UX pass over every Latitude-owned
   screen (create-world, HUD Studio, SpawnZoneScreen, in-game HUD surface) for Peetsa's "menu-hell →
