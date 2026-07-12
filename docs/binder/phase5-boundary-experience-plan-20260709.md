@@ -448,6 +448,29 @@ reduceMotion static, F1-hides with the text, whiteout→vignette→text order ve
 one home for the scaled-glyph trick (3 prior reinventions cited; pure code-motion, pixel-verified).
 Ginormous keeps its "!" (director design verdict: deliberate crescendo). Suite 272/272. TEST 73 staged.
 
+### TEST 76 feedback round: the REAL smear fix, cold retuned again, storm survives indoors, water freezes (2026-07-12, 5bf14fe1/70ac5c8c/e11037b0)
+
+Peetsa flew TEST 76 and found the previous round's "fixes" incomplete on two fronts + two new asks.
+SMEAR (round 2): the prior sweep's ACCEPT was wrong -- bytecode-verified this time (two prior sweeps
+missed it). Two compounding bugs: Font's PreparedTextBuilder discards a passed color in favor of the
+component's OWN style color (the near-black keyline was silently rendering RED), and Minecraft fakes
+bold by secretly double-drawing every glyph (8 keyline stamps -> 16 strokes). Fix: styleless keyline
+component (color finally sticks) + bold REMOVED from DANGER/LETHAL (required -- re-adding bold to the
+keyline reintroduces the 16-stroke doubling; matching advances is the only correct resolution). Still
+red, outlined, LETHAL still bigger+warmer -- just not bold-weight. COLD (round 2): onset 88.5->87.5;
+freeze damage no longer a near-binary flip at 90 -- builds continuously from ~88 deg (1HP/3s) to severe
+at the pole (3HP/0.5s), bypassing vanilla's fixed freeze-damage by capping the frost visual at 139.
+INDOOR STORM: every polar ambience system shared one "sheltered" switch and went silent together --
+split so the real grey-sky/heavy-snowfall storm (world atmosphere, vanilla wall-occludes it correctly)
+now shows through any window, while the screen-space whiteout haze and head-height snow particles stay
+shelter-gated on purpose. Wind muffles to ~1/3 volume indoors instead of cutting out. WATER FREEZE (new):
+same root cause as the rain-at-pole bug -- latitude-blind rivers keep vanilla's warmEnoughToRain true at
+the pole -- hooked Biome.shouldFreeze's temperature veto directly (same technique, new target), forcing
+freeze >=85 deg including player-placed water. Flag-gated, default true, dev-forwarding included from
+the start (this repo's forwarding gap has bitten twice before). Sweep ACCEPT-WITH-NOTES (2 LOW comment
+staleness fixed in-pass; leather-armor freeze-immunity is vanilla-unchanged, flagged for Peetsa's
+awareness only). Suite 312/312. TEST 77 staged.
+
 ### TEST 75 feedback round: smear fix, honest cold timing, the cap goes bare (2026-07-12, 5ec0d475/6678d367/35ba69e8)
 
 Wind bed LOCKED IN (Peetsa: "epic"). Three fixes off his polar flight: (1) warning SMEAR root-caused --
