@@ -537,6 +537,26 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   default recipe. Single highest-impact change: default the 1 px dark outline ON. PROPOSED, awaiting Peetsa.
   No `src/` changes; doc-only.
 
+## 2026-07-11 addition (loading-screen copy pass + whisper-position decision — READ-ONLY; whisper = DELEGATED VERDICT)
+- `loading-text-and-whisper-review-20260711.md` — creative-director two-part pass. **Part 1 (copy):**
+  full review of the bespoke loading card's text (`LevelLoadingScreenLatitudeOverlayMixin.java` PHRASES
+  L58–111 + featured-block bias L113–156, truthful stage lines, specs line built at
+  `LatitudeWorldLauncher.java:103`, F9 hint L262). Core finding: only the last 19 phrases are "featured"
+  and carry nearly all screen time, and inside them two look-alike clusters (7 mountain/peak lines, 6+
+  "host other mods' biomes" lines) crowd out the sharp cartography lines. Per-phrase verdicts —
+  **KEEP 31, CUT 14, REWRITE 6** — thins each cluster to its 2 best, cuts generic mob gags (Defusing
+  creepers / Cloning sheep / Training parrots…), fixes two word problems ("Plentifying" isn't a word;
+  "Untangling Terralith's roots" name-drops a pack against the vanilla-first rule), and adds new
+  navigate-by-latitude lines (Ruling in the parallels / Taking a sun-sighting / Boxing the compass /
+  Setting the prime meridian) placed in the array TAIL so the featured bias actually surfaces them.
+  Specs line + hint get low-priority polish (optional "blocks" unit; "HUD" → world-terms). The four
+  truthful stage lines are the tonal benchmark — leave unchanged. All Part-1 work is S-sized copy edits.
+  **Part 2 (DELEGATED DECISION — ships as written):** whisper linger line
+  (`LatitudeWhisperOverlay.java`) draws at `screenH/2 + 34`; Peetsa handed the call over. VERDICT:
+  **change `ANCHOR_OFFSET_Y` 34 → 42** — one line lower into the lower-third read, while holding a safe
+  gap above the hazard-warning band (`GlobeWarningOverlay.java:333`, `screenH − 68`, which also triggers
+  the whisper) even on small windows; do not go lower than 42. No `src/` changes; doc-only.
+
 ## 2026-07-10 addition (UI/UX + accessibility audit — bespoke menus, PROPOSED)
 - `latitude-ui-ux-audit-20260710.md` — read-only accessibility/UX pass over every Latitude-owned
   screen (create-world, HUD Studio, SpawnZoneScreen, in-game HUD surface) for Peetsa's "menu-hell →
