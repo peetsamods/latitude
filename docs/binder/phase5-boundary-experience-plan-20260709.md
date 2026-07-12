@@ -418,6 +418,24 @@ measure(). Bounce feel fix same round (2868b9a8-adjacent: sub-pixel glide + 0.95
 Mock-first + approved-values-as-contract worked extremely well — reuse for future signature moments.
 Suite 266/266. TEST 71 staged.
 
+### Five-crew round: box KILLED, copacetic sweep, CD copy pass, understudy debut (2026-07-11, 29a37881..230a0a4c)
+
+Peetsa's four asks ran as four parallel crews + fixes. (1) THE OCCLUDING BOX (third report) finally
+root-caused: NOT a fill — the Rules rail's scroll-clip started at panelTop+36 while the heading ends at
++18, leaving an 18px invisible shelf that erased scrolling content; the earlier heading fix rewired the
+OTHER two panels but the rail kept its own +36 constant, and investigation #1 wrongly blamed the tooltip.
+LESSON: "no such box exists" conclusions require enumerating every clip rect, not just fills. (2)
+Copacetic sweep: SHIP-SAFE; 3 default-drift LOWs fixed (Reset Title offsetY/-40 + color/case/rgb; preset
+outline/caseMode stale) + a 4th found in cross-check. (3) CD loading-copy verdicts implemented: phrases
+52->54 (14 cut, 6 rewrites, +8 navigation, +8 GEOLOGY lines per Peetsa: rain shadows/windward/island
+arcs/faults), featured tail 34; whisper offset 34->42 (CD's delegated final call). (4) CREATIVE
+UNDERSTUDY ROLE DEBUT (locked into the workflow, .claude/agents/creative-understudy.md): 25 pitches ->
+director triage -> mechanical fixes shipped (zone-word unification onto LatitudeBands.
+displayNameForZoneKey, x->×, failsafe tone, EW-haze log gate); PITCHED TO PEETSA (pending): SpawnZoneScreen
+restyle SWING, vignette-synced warnings, Ginormous flavor symmetry, World Type tooltip; zone-copy
+consolidation pass noted (SpawnZoneScreen range literals duplicated, marked for it). Suite 266/266.
+TEST 72 staged.
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
