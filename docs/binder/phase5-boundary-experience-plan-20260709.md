@@ -448,6 +448,13 @@ reduceMotion static, F1-hides with the text, whiteout→vignette→text order ve
 one home for the scaled-glyph trick (3 prior reinventions cited; pure code-motion, pixel-verified).
 Ginormous keeps its "!" (director design verdict: deliberate crescendo). Suite 272/272. TEST 73 staged.
 
+### TEST 81 feedback: F9 hint relocated under the title (2026-07-12, see relocation commit)
+
+Peetsa: "move the F9 line to under Latitude so it's less cluttered." Moved from the bottom mechanics
+zone (crowding bar/stage) to the open space under the title/summary block; unchanged faintness (60%
+alpha) and size (0.75x). Bottom stack simplifies to just bar + stage line. Suite 337/337. TEST 82
+staged.
+
 ### TEST 80 feedback: cloud darkening VETOED + withdrawn; F9 hint shrunk (2026-07-12, see revert commit)
 
 Peetsa on the storm-ceiling clouds: "undo the sky fix... because the clouds are more contrasted, it
