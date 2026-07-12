@@ -48,6 +48,19 @@ surface for the 2.0 line. Recorded 2026-07-01 during the binder/handoff/lessons 
   thread" — the actual chunk-gen worker pool (where Latitude/Terralith run) is invisible in it. Needs a re-profile
   with `--thread *`.
 
+## 2026-07-12 additions (polar experience consolidation)
+- `polar-experience-reference-20260712.md` — **single source of truth for the polar (N/S) experience
+  system** (TEST 53→82 outcome): the 85°→90° player journey, every subsystem (ambient/blizzard/hazard/
+  warnings/wind/exposure/fog/storm sky/snow/water-freeze/vegetation fade/particles) with source-verified
+  constants, the flag/dial table, dead ends (do-not-retry: cloud darkening, 139-cap, binary shelter
+  check, bold+keyline doubling), and the tests-vs-live-eyeball verification map. Supersedes nothing —
+  consolidates; the pass log below remains the historical record.
+- `phase5-boundary-experience-plan-20260709.md` — the run log grew through the full TEST 75→82
+  feedback marathon on 2026-07-12 (wind bed, smear root-cause, cold retune ×2, indoor storm, water
+  freeze, blue hearts, depth fog, graded exposure, storm-volume, cloud-darkening veto, loading footer);
+  each round's entry is at the top of its dated section. Branch pushed 2026-07-12 (102 commits,
+  `a1af3b63..e232d96e`).
+
 ## 2026-07-02 additions (future pass parking lot)
 - `../LATITUDE_2_0_OVERHAUL.md` — **canonical Latitude 2.0 overhaul front door**: 26.2 pivot, portability,
   projected-planet world-shape direction, measurement-first GeoAuthority/ClimateAuthority roadmap, stop rules,
