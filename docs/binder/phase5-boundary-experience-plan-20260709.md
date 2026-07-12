@@ -448,6 +448,27 @@ reduceMotion static, F1-hides with the text, whiteout→vignette→text order ve
 one home for the scaled-glyph trick (3 prior reinventions cited; pure code-motion, pixel-verified).
 Ginormous keeps its "!" (director design verdict: deliberate crescendo). Suite 272/272. TEST 73 staged.
 
+### TEST 77 feedback round: blue hearts return, copy escalates, real depth fog built, blizzard finally blows sideways (2026-07-12, 230d8952)
+
+Two more Peetsa reports off TEST 77. BLUE HEARTS: last round's 139-tick cap (to stop vanilla's own
+auto-damage double-dipping our curve) silently also killed vanilla's blue-heart freezing cue. Fixed
+properly: frost visual now crosses vanilla's 140 threshold right at the ~88 deg damage onset (hearts
+blue exactly when HP starts falling), and vanilla's own auto-damage is cancelled at its source
+(new LivingEntityFreezeDamageMixin, targeted redirect inside LivingEntity.aiStep, gated to in-band
+players only) so the mod's curve stays the sole damage source elsewhere untouched. COPY: ladder now
+escalates without repeating -- "hypothermia is setting in" (87) -> DANGER (untouched) -> "severe
+hypothermia -- you are freezing to death" (89.7). DEPTH FOG: chasing "why doesn't haze show through the
+window" found the mod's ONE existing latitude-fog mixin had been silently inert this whole time (dead
+target method, permissive registration masked it) -- no real depth fog ever existed. Built one
+(FogRendererPolarSetupMixin) on Minecraft's actual per-fragment distance fog -- correct automatically
+whether exposed or looking out a window, no gate needed; old flat whiteout demoted to a light
+"engulfed" top-coat. Deleted 3 confirmed-dead fog mixin files (the exact clutter that hid the bug).
+BLIZZARD MOTION: real bug -- vanilla snow kills its own sideways drift within ~1s regardless of spawn
+push; cranked wind magnitudes hard enough to survive the decay (pole 0.43->1.10 blocks/tick). Sweeper
+ACCEPT-WITH-NOTES both new mixins bytecode-bind-verified against the real jar (the exact failure class
+that killed the old one); 3 LOW fixed in-pass (defensive null-guard, dead-mixin cleanup, stale comment).
+Suite 324/324. TEST 78 staged.
+
 ### TEST 76 feedback round: the REAL smear fix, cold retuned again, storm survives indoors, water freezes (2026-07-12, 5bf14fe1/70ac5c8c/e11037b0)
 
 Peetsa flew TEST 76 and found the previous round's "fixes" incomplete on two fronts + two new asks.
