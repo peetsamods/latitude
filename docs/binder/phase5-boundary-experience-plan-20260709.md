@@ -436,6 +436,18 @@ restyle SWING, vignette-synced warnings, Ginormous flavor symmetry, World Type t
 consolidation pass noted (SpawnZoneScreen range literals duplicated, marked for it). Suite 266/266.
 TEST 72 staged.
 
+### Round close: fossil deleted, vignette shipped, glyph home (2026-07-11, bd3a7f68/343a69b4/fbdf3a53)
+
+Peetsa's dead-code hunch CONFIRMED: SpawnZoneScreen was a 1.1.x fossil (opener flag never set true,
+trigger payload never sent, join handler comments the legacy path retired) — DELETED with its client
+plumbing; orphaned senderless c2s payload + server receiver assessed LOW (idempotent/tag-locked/
+self-only) and earmarked for the dead-code cleanup slice. World Type stepper got its newcomer tooltip.
+Vignette pulse (understudy SWING, approved): DANGER/LETHAL warnings now punctuate the atmosphere —
+edge-dark pulse synced to the text (0.25/0.40 peaks, lethal 0.08 honest linger), wall-clock,
+reduceMotion static, F1-hides with the text, whiteout→vignette→text order verified. GlyphDraw = the
+one home for the scaled-glyph trick (3 prior reinventions cited; pure code-motion, pixel-verified).
+Ginormous keeps its "!" (director design verdict: deliberate crescendo). Suite 272/272. TEST 73 staged.
+
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
