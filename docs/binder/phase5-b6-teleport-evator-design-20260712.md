@@ -451,3 +451,121 @@ default-off byte-identical. Sweep ACCEPT-WITH-NOTES all-LOW (notable: the band r
 Suite 439/439. WAITING ON PEETSA: mechanism (b) fog-masked near-mirror (~2-block live wobble, cheap,
 spike-proven) vs (c) copy-and-flip bit-exact (guaranteed, heavy). Whichever wins plugs into these
 foundations; P2 (silent trigger + momentum via Relative.DELTA + prompt suppression) follows.
+
+
+## P1 BUILD LOG (2026-07-13 AM): mechanism (b) promoted to production, mirror-identity PROVEN
+
+Peetsa chose mechanism **(b) leaf-level near-mirror**. The spike's leaf reflection is now shipping code
+(the spike files stay untouched as evidence, still `-Dlatitude.evatorSpike`-gated).
+
+**Production install shape (files + gating chain).** Three new production classes in `terrain/`, plus a
+biome-path remap and a proof harness:
+- `terrain/EvatorMirror` -- the single source of truth for "is this column in the EAST band AND is the
+  evator live for THIS world?" `active()` = `EVATOR_V2_ENABLED (global flag) && LatitudeBiomes.isEvatorActive()
+  (per-world capture)`.
+- `terrain/EvatorReflectLeafFunction` -- the production leaf reflector (band-limited + gated successor of the
+  spike's `EvatorLeafReflectFunction`). Reflects `x -> -x` for a leaf's `FunctionContext` only when
+  `EvatorMirror.reflectEastBlock(ctx.blockX())`. `SimpleFunction` default per-cell `fillArray` (the property
+  that makes it fill interpolator slices at true corners, and makes a non-reflecting pass-through numerically
+  identical to the bare leaf).
+- `terrain/EvatorTerrainReflection` -- the install helper. Rebuilds the 15-field `NoiseRouter` with
+  `reflectLeaves(preliminarySurfaceLevel #11)` + `reflectLeaves(finalDensity #12)` and installs it through the
+  **house `RandomStateAccessor.globe$setRouter` seam** (the same seam Phase 4's `TerrainRouterWrapping` uses).
+- **Gating chain:** install is gated on `EVATOR_V2_ENABLED` + the caller's globe check (real gameplay:
+  `RandomStateRouterTerrainMixin` new TAIL inject + `isGlobeNoiseGenerator`; proof harness: controlled). The
+  install does NOT gate on the per-world capture -- that is re-checked PER SAMPLE inside `EvatorMirror`, the
+  exact Phase-4 ordering fix (the `ChunkMap` ctor can run before `LatitudeWorldState` pushes the capture). So
+  the wrapper installs structurally and no-ops per-sample until the capture arrives, and forever on a
+  captured-off world -> byte-identical.
+
+**Band predicate + overhead.** `MirrorGeometry.inEastBand(x,centerX,xR)` (new, unit-tested) is the pure form:
+`x > centerX && inBand(...)`. The hot-path form in `EvatorMirror.reflectEastBlock` is
+`blockX >= frontierAbsX(xRadius)` with `centerX == 0` (origin-centered world). Steady-state per-sample cost:
+two volatile reads (flag is a folded `static final`; capture + radius are volatile), one `int` subtract, one
+compare -- the band-width `MirrorGeometry.resolve` (which allocates a `Resolved`) is memoized per distinct
+`xRadius`, so **no per-sample allocation** on the density-fill path.
+
+**Unknown-leaf fail-loud guard.** Before rebuilding, the install walks #11+#12 and classifies every node's
+simple class name as a reflected coordinate leaf (`Noise/ShiftedNoise/ShiftA/ShiftB/Shift/BlendedNoise/...`)
+or a known X-independent/structural node (the full "skip" inventory the spike dumped from the live 26.2
+vanilla+Terralith router: `Marker/HolderHolder/MulOrAdd/Ap2/Mapped/Spline/Constant/YClampedGradient/
+BlendAlpha/BlendOffset/IntervalSelect/Clamp/RangeChoice/FindTopSurface`, + our own wrappers, + defensive cache
+names). Any class in NEITHER set = an UNKNOWN, possibly-coordinate-bearing leaf from a future MC/Terralith
+update -> the install LOGS it once and REFUSES (`REFUSED_UNKNOWN_LEAF`, router untouched), so the world
+generates unmirrored-but-sane instead of subtly-wrong. Proof run: unknown scan clean, install `INSTALLED`.
+
+**Biome remap point.** At the TOP of the sole biome chokepoint `LatitudeBiomeSource.getNoiseBiome` (quart
+coords): `sx = reflectEastQuart(x) ? -x : x`, then `sx` feeds BOTH the vanilla climate-sampler reads AND
+`pick`'s `blockX = sx<<2`. This is the design's "remap once" -- every X-keyed consumer inside `pick` (province
+/variant/humidity/ValueNoise2D) rides the reflected X automatically, so no separate treatment is needed
+(verified: `pick` consumes only the passed `blockX`). Z untouched (reflection is X-only). Gives whole-column
+identity (biome + terrain) between mirrored twins.
+
+**PROOF NUMBERS** (`EvatorProofHarness`, `-Dlatitude.evatorProof=true`, Regular Classic xR 7500, band 208 blk,
+21 east/west column pairs incl. frontier-adjacent d=205, LIVE `getChunk(NOISE)` fill path, evator captured ON):
+- install = `INSTALLED`; unknown-leaf guard = **0** (clean).
+- **biome identity = 21/21 (100%)** through the production `getNoiseBiome` remap.
+- **east interpolation-ran control = nonzero 7/21 (max 20)** -- proves interpolation genuinely runs on the
+  reflected east band (mechanism (a)'s tell was a forced-raw east with a zero control; GONE).
+- **surface-Y twin wobble: max 9 blocks; within +-2 on 20/21** columns.
+- terrain silhouette (near-mirror, informational) = 19/21.
+- **flag-off byte-identity = PASS**: an itty atlas `biomes.txt` from THIS tree (evatorV2=false) vs a clean
+  HEAD `git stash` run (evatorV2=false) is identical on every biome line (band counts, 45-biome inventory,
+  all distributions); the only diff is the `durationMs` timing metadata (volatile at HEAD too). Structurally
+  airtight anyway -- every evator path is behind the flag/capture check.
+- suite **441/441** (439 baseline + 2 new `inEastBand` tests); `compileJava`/`compileTestJava` green.
+
+**Surface-Y tolerance -- the rationale (updated per the P1 sweep, item 3).** The invisible-seam claim rests on
+the storm/approach FOG, not on bit-exactness -- mechanism (b) is a *near*-mirror by Peetsa's decision. The
+proof's HARD surface-Y gate is a **FIXED 12-block contract** (`SURFACE_Y_GATE_BLOCKS = 12`): 12 sits
+comfortably above mechanism (b)'s proven **9-block** steep-gradient ceiling (the known-good near-mirror passes
+with margin) and far below the fog's measured masking budget (avg 18.4), so any regression past it is caught.
+The fog budget itself -- the inner-frontier C0 seam the fog is already calibrated to hide, measured in-run
+(`plain(-xf)` vs `plain(+xf)` across 17 z-lanes) = **avg 18.4 / max 61 blocks** this world -- is reported as
+CONTEXT, not the gate: a run-measured budget could come out luckily large and mask a regression (the sweep's
+point), so **the fixed 12 is the contract and the fog measurement is the evidence** that 12-block wobbles are
+invisible in practice. `+-2` is reported as the *typical* wobble but is NOT the gate, because a handful of
+steep-gradient columns (the intrinsic cell-interpolation asymmetry the spike identified, e.g. d=80 z=-640 =
+9 blk) legitimately exceed 2 and are still fog-invisible. Bit-exact silhouette identity (0-block, mechanism
+(c) copy-and-flip) was deliberately NOT built.
+
+**The install-success SIGNAL + the P2 CONTRACT (P1 sweep HIGH fix).** `EvatorTerrainReflection` exposes
+`isTerrainMirrorInstalled()` -- a static, per-world-reset boolean set TRUE only when `install()` actually
+returned `INSTALLED`, forced FALSE on refusal (`REFUSED_UNKNOWN_LEAF`) or error, and reset with the other
+worldgen statics in `LatitudeBiomes.resetWorldgenStateForServerStop()`. `EvatorMirror.active()` folds it in:
+**active = flag && captured && mirrorInstalled** -- so the biome remap (and every current and future consumer)
+can never engage while the terrain is unmirrored. Without this, an unknown-leaf refusal on a captured-ON world
+would have painted MIRRORED biomes over UNMIRRORED terrain -- worse than either extreme, violating the guard's
+"unmirrored-but-sane" promise. **P2 CONTRACT: the silent crossing trigger MUST consult this same signal (via
+`EvatorMirror.active()`) and degrade to the B-5 prompt/curtain path when the mirror is not actually
+installed** -- a refused world has no identical-terrain guarantee, so the silent teleport's premise is void
+there.
+
+**Terrain/biome reflection-line registration (honesty note, P1 sweep item 4).** Terrain mirrors block-exact
+(`x -> -x`) while biomes mirror quart-exact (`q -> -q`, quart = 4 blocks). Off multiples of 4 the two
+reflection lines sit up to ~4 blocks apart, so biome-to-terrain registration on the mirror side shifts by up
+to one quart for 3 of 4 columns -- cosmetic (a biome boundary nudged <=4 blocks against its hill), fog-masked,
+accepted. The proof harness's west biome reference is now derived through the SAME production quart mapping
+(`EvatorMirror.reflectQuartX`), so all 21 pairs test the remap's actual output (the prior `floorDiv(westX,4)`
+reference compared the ADJACENT quart on 6/21 pairs -- P1 sweep item 2, fixed).
+
+**What P2 needs next.** Silent one-shot trigger + move: `EvatorCrossing` pure core (pre-warm 177 / trigger
+179.5 / disarm / 60-tick cooldown / re-arm hysteresis); `HemispherePassageService.crossHemisphereMomentum`
+(arrival AT the mirrored edge; momentum via `Relative.DELTA_X/Y/Z` inside the `teleportTo` EnumSet -- NOT
+post-hoc `setDeltaMovement`, sweep amendment 5); suppress the B-5 prompt/curtain inside the band when the
+evator is armed (keep the fog/storm ambience -- it is load-bearing, masking the frontier seam). No inland
+nudge on arrival (no-op-and-log, amendment 6).
+
+**Risks / accepted.** (1) evatorV2 x terrainV2 combo: the Phase-4 geo-bias root reads TRUE X while leaves read
+reflected X inside the band (incoherent) -- accepted for P1, terrainV2 is default-off and the evator is flown
+terrainV2-off; the new mixin inject runs after the Phase-4 wrap by declaration order but coherence for the
+combo is a later concern. (2) Aquifer/ore/carver #1-#4 + #13-#15 stay canonical (unmirrored underground),
+by design scope -- surface-only crossing, caves meet the wall. (3) The 9-block steep-gradient wobble is the
+proven ceiling of mechanism (b)'s near-mirror on this radius; if a future live look finds it visible despite
+the fog, the fallback is mechanism (c) copy-and-flip. (4) `centerX == 0` is assumed for the terrain + biome
+reflection (origin-centered globe border), consistent with all of Latitude's lat/long math. (5) THE REFUSAL
+PATH: on a future MC/Terralith density-graph change the install refuses and the whole evator quietly degrades
+to a plain B-5 world (canonical terrain + biomes, prompt-consensual crossing per the P2 contract) -- safe by
+design, but it means an evator-captured world can silently STOP being an evator world after a game update
+until the leaf inventory is re-audited; the one-shot ERROR log is the only tell. Accepted: correctness over
+availability.
