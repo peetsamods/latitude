@@ -420,3 +420,23 @@ reflected values and interpolation is preserved on both sides. Risks: generic le
 vanilla+Terralith routers, X/Z-coupled domain warps. Fallbacks if (b) fails: (c) copy-and-flip chunks
 (guaranteed, heavy) or drop the invisible-seam claim (silent crossing into different-but-fog-masked
 terrain). Pass/fail metric for (b): the SAME probe must go 15/15 + 4/4 with stack hashes matching.
+
+
+## Spike (b) verdict (2026-07-12 night): leaf-level reflection VIABLE-WITH-CAVEATS — the bar is Peetsa's call
+
+Mechanism (a)'s killer is PROVEN GONE: reflecting the coordinate-bearing leaves (Noise/ShiftedNoise/
+ShiftA/ShiftB/BlendedNoise — full inventory of the real 5756-node vanilla+Terralith router, coverage
+complete, ShiftedNoise coherence exact analytically + 15/15 empirically) fills the interpolator slices
+with reflected values, so interpolation runs on BOTH sides (east interp-control now nonzero, mirroring
+west; under (a) it was forced raw). Probe: batched 14/15 surface (was 8/15), live 3/4 with the one miss
+a 2-block wobble; residual proven NOT aquifer (leafall control), NOT rebuild-aliasing (perturbation
+0/15) — intrinsic cell-interpolation asymmetry at steep gradients, bounded ~2 blocks on the live path.
+CONTEXT: the fog must already mask a measured inner-frontier seam of avg 18 / max 61 blocks, so a
+2-block wobble is immaterial to "invisible" IF the bar is fog-masked-near-identical. DECISION FOR
+PEETSA (morning): accept (b) near-mirror (cheap, smooth, proven) vs require bit-exact -> mechanism (c)
+copy-and-flip (guaranteed by construction, heavier: ~2x gen near the band + chunk plumbing). NO-REGRET
+P1-PREP (needed by BOTH mechanisms, building overnight): evatorV2 flag + L17 forwarding + per-world
+capture (LatitudeWorldState birth-time pattern, REQUIRED per amendment 8); MirrorGeometry core band
+math (degree-anchored W, intendedXRadius, small-world floors); SYMMETRIC decoration+carver strips at
+the applyBiomeDecoration seam (both bands, fog-masked barren); probe promoted toward a proof harness.
+All default-OFF, flag-off byte-identical, headless-provable.
