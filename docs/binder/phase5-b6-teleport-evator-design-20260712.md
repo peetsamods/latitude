@@ -400,3 +400,23 @@ at-180 is the trigger's backstop (elytra cannot outrun the one-shot). (10) The f
 (masks the inner-frontier seam + far-chunk pop) — keep. P1 proof list: fill-path block-hash mirror
 identity; biome reflection; symmetric strips + carver-strip proven in the hash; flag-off atlas byte-
 identity; per-world capture persistence.
+
+
+## P1 STEP 0 spike verdict (2026-07-12 night): mechanism (a) REFUTED — with the false-green proven
+
+The hard gate fired exactly as designed. The finalDensity-seam context-remap does NOT mirror terrain on
+the real fill path — but the failure mode is subtler than "the remap drops": NoiseInterpolator.compute
+returns its interpolated slice value ONLY for the NoiseChunk's own context; a reflected context rides a
+FALLBACK to raw un-interpolated evaluation. Result: east band = raw noise, west = interpolated. Probe
+numbers (15 column pairs, real chunk paths): design's own proof path 15/15 GREEN (the predicted 100%
+FALSE GREEN); batched interp path 8/15 surface match (mismatch up to 11 blocks); live getChunk(NOISE)
+3/4. The 7 interpolation-error control deltas match B's 7 mismatches EXACTLY — causation proven.
+Spike artifacts (SPIKE-marked, -Dlatitude.evatorSpike gated, throwaway): EvatorMirrorSpikeFunction,
+EvatorSpike router rebuild, EvatorSpikeProbe (+ report JSON) — the PROBE is reusable as the proof
+harness for any successor mechanism. NEXT (per the spike's mechanism map): spike (b) leaf-level
+reflection — rewrite the coordinate-bearing LEAVES (Noise/ShiftedNoise/BlendedNoise/ShiftA/ShiftB/
+WeirdScaledSampler) at install-time mapAll, BELOW the interpolation markers, so slices fill with
+reflected values and interpolation is preserved on both sides. Risks: generic leaf coverage across
+vanilla+Terralith routers, X/Z-coupled domain warps. Fallbacks if (b) fails: (c) copy-and-flip chunks
+(guaranteed, heavy) or drop the invisible-seam claim (silent crossing into different-but-fog-masked
+terrain). Pass/fail metric for (b): the SAME probe must go 15/15 + 4/4 with stack hashes matching.
