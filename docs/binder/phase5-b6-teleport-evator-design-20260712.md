@@ -569,3 +569,65 @@ to a plain B-5 world (canonical terrain + biomes, prompt-consensual crossing per
 design, but it means an evator-captured world can silently STOP being an evator world after a game update
 until the leaf inventory is re-audited; the one-shot ERROR log is the only tell. Accepted: correctness over
 availability.
+
+
+## P2 BUILD LOG (2026-07-13): the SILENT CROSSING built -- suite 457/457, not committed (awaiting sweep)
+
+**Files.** New pure core `core/EvatorCrossing` (+16 tests `EvatorCrossingTest`); `HemispherePassageService.
+crossHemisphereMomentum`; server driver `GlobeMod.evatorCrossingTick` (in the borderUxTick per-player loop,
+before the latitude continue, beside the B-5 turn-back) + `EVATOR_STATE`/`EVATOR_LAST_CROSS_TICK` maps
+(disconnect-cleared); `GlobeNet.GlobeStatePayload` gains `evatorActive` (appended LAST, BOOL codec leg,
+pre-handshake false); client `GlobeClientState.isEvatorWorld` + the suppression gate at the top of
+`HemispherePassageClient.clientTick`; `handlePassageAnswer` rejects when `EvatorMirror.active()`.
+
+**The machine** (`EvatorCrossing.evaluate(state, distToEdge, canCross, triggerAt, preWarmAt)`): two one-shots
+per approach off MirrorGeometry's resolved lines -- PRE-WARM (177 deg; fires once, not gated by canCross) and
+TRIGGER (179.5 deg; gated fire with HOLD-not-burn, the evaluateGated lesson); BOTH re-arm only strictly past
+the pre-warm line (the asymmetric hysteresis band, >= 32 blk on every size incl. Itty's floored trigger=24/
+preWarm=62.5); NaN reads far; fresh tracking + post-crossing seed = DISARMED (an in-band login never
+insta-teleports; everyone else re-arms on their first tick). Server adds the B-5-pattern 60-tick ATTEMPT
+cooldown (stamped on success AND refusal -> refusal logs once per cooldown) and the eligibility gate
+(alive, not spectator, surface-only via isDeepUnderground; creative DOES cross).
+
+**The move** (amendments 5/6/10 honored): arrival AT `mirrorX(x)`, z unchanged, exact doubles; `placeSafeY`
+validates the ONE mirror column (3x3 FULL ring; null -> no-op-and-log, player stays at the wall -- no search,
+no nudge); momentum preserved via `Relative.DELTA_X/DELTA_Y/DELTA_Z` INSIDE the teleportTo EnumSet and facing
+preserved via relative `X_ROT/Y_ROT` with 0/0 (verified against the 26.2 mojmap jar by javap -- enum members
+X,Y,Z,Y_ROT,X_ROT,DELTA_X,DELTA_Y,DELTA_Z,ROTATE_DELTA; overload `teleportTo(ServerLevel,double,double,double,
+Set<Relative>,float,float,boolean)`; PositionMoveRotation.apply resolves DELTA-flagged axes as current+0);
+`fallDistance` NOT reset; dismount kept (logged). ONE deliberate refinement beyond the letter of the spec:
+arrival Y = `max(placeSafeY, playerY)` -- an AIRBORNE (elytra/creative-flight) player keeps their own altitude
+(any Y above the mirror surface+1 is free air by construction; snapping a flyer to the ground would be a
+visible slam), a grounded player still lands on the mirror surface.
+
+**Netcode decision.** The evator bit rides the GlobeStatePayload handshake (`evatorActive` = the server's
+EFFECTIVE `EvatorMirror.active()`, stable by JOIN time) -- authoritative, never inferred from position. NO
+per-crossing S2C: the mirror preserves border distance so every distance-driven client effect is continuous
+through the jump, and with the B-5 prompt machine fully stood down there is NO client evator state to seed
+(PassageArrivalPayload deliberately not sent on the silent path). The P2 contract holds end-to-end: a
+refused-mirror world reads active()=false -> no trigger, handshake bit false -> full B-5 prompt experience.
+
+**Suppression** = exactly the prompt/curtain path: one gate at the clientTick top (fog, storm ambience, EW
+advisory banner all STAY -- load-bearing/honest), plus the server-side answer rejection (belt-and-suspenders).
+
+**P3 needs a FRESH evator world** (`-Dlatitude.evatorV2.enabled=true` at creation -- birth capture; staging
+default is the architect's call). Live checklist: walk-cross both directions (E->W, W->E); elytra at speed
+(momentum + altitude carry, no rubber-band); sprint-cross (facing + stride); turn-around re-arm then re-cross;
+swim-at-the-edge (refusal: stays at wall, ONE log per 3 s); mounted cross (dismount + log); in-band relog (no
+insta-teleport; walk-out re-arms); B-5 prompt absent + fog/banner present; Classic AND Wide; a passageV2-only
+control world still prompts.
+
+**P2 SWEEP REFINEMENT (same pass, 2026-07-13): the arrival-Y probe.** The sweep adjudicated the build's
+`max(safeY, playerY)` arrival rule: airborne-keeps-altitude was CORRECT, but the playerY half was UNPROBED --
+(a) a walker under a solid non-leaf overhang at the trigger would pop onto its mirrored roof (a visible seam),
+(b) a flyer level with a mirrored floating island would arrive inside unvalidated blocks (suffocation). Fixed:
+the destination is now PROBED at (mirrorX, playerY, z) -- feet AND head must be loaded air (two block reads on
+the ring `placeSafeY` just force-loaded; unloaded reads as not-free). Free -> the player's EXACT Y (covers the
+flyer and the common matched-heights walker alike); not free -> the validated `placeSafeY` surface (a visible
+but SAFE pop, only in those rare cases); `placeSafeY` null -> the unchanged no-op-and-log refusal. The decision
+is the pure `EvatorCrossing.chooseArrivalY(playerYFree, safeY, playerY)` (+2 tests). No search, no nudge --
+amendment 6 untouched. ALSO PRECISED (sweep note on the amendment-10 phrasing): the vanilla border is a damage
+boundary that halts progress, NOT solid collision -- the real can't-outrun-it guarantee is the machine's HELD
+one-shot staying fire-eligible from the trigger line down to dist 0; the wall merely stops a player outrunning
+it from getting further. Wording softened in the EvatorCrossing javadoc, the service/driver comments and the
+refusal log. Suite after refinement: 459/459.
