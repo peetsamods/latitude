@@ -2,7 +2,10 @@
 
 `status-history: DESIGN DRAFT — awaiting adversarial sweep + Peetsa taste calls (see "Open questions")`
 Worktree `Latitude-b5-hemisphere-passage` (branch `phase5-b6-teleport-evator`, cut from the merged pivot
-HEAD `a21fb4dd` — B-5 Hemisphere Passage is SHIPPED and in this tree). Recon-grounded; every file:line
+HEAD `a21fb4dd` — B-5 Hemisphere Passage is SHIPPED and in this tree). [PROVENANCE UPDATE 2026-07-13:
+the branch has since been REBASED onto `35944e38`, so glimmer v3 + the TEST 89 edge round are included;
+note TEST 89 moved the B-5 re-arm to 178°, which now sits between the evator's 177° pre-warm and 179.5°
+trigger — harmless, B-5 is suppressed in evator worlds, but recorded.] Recon-grounded; every file:line
 pointer below is from THIS tree, this session.
 
 ---
