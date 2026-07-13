@@ -1,5 +1,14 @@
 # Phase 5 B-5 — Hemisphere Passage: design (2026-07-10)
 
+> **SUPERSESSION NOTE (2026-07-13).** B-5 SHIPPED: merged to `port/canonical-26.2-pivot` (a21fb4dd),
+> `latitude.passageV2.enabled` DEFAULT ON (Peetsa's post-P3 decision). The TEST 89 edge round
+> (35944e38) then RETIRED parts of what this doc describes: the two-tier EW banner is now ONE white
+> fading advisory ("Approaching the Prime Meridian. Heavy fog ahead—proceed with care."), the
+> passageV2 "honesty reword" strings are gone with the severe tier, EW dust particles are removed,
+> re-arm moved 177°→178°, and the structure ban is degree-based (173° + buffer). Read the sections
+> below as design history; the live truth is the code + the index's 2026-07-13 entry.
+
+
 `status: DESIGN APPROVED-WITH-AMENDMENTS 2026-07-12 (sweep below); build authorized (B-5 first, then B-6 evator — Peetsa confirmed sequence)`
 Worktree `Latitude-b5-hemisphere-passage` (branch phase5-b5-hemisphere-passage, off b6c829d7). Authorized
 by Peetsa (B-4 green-lit the passage). Recon (this session) mapped every mechanic to a working in-repo
