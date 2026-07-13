@@ -82,6 +82,18 @@ surface for the 2.0 line. Recorded 2026-07-01 during the binder/handoff/lessons 
   freeze, blue hearts, depth fog, graded exposure, storm-volume, cloud-darkening veto, loading footer);
   each round's entry is at the top of its dated section. Branch pushed 2026-07-12 (102 commits,
   `a1af3b63..e232d96e`).
+- `phase5-b6-teleport-evator-design-20260712.md` — **B-6 Teleport-Evator design** (the invisible upgrade to
+  the B-5 crossing): the outermost ~5° at each E/W edge generated as a REFLECTED mirror of the opposite edge
+  (`x↦−x`, reusing B-5's `HemispherePassage.mirrorX`), so a one-shot momentum-preserving teleport lands the
+  player in identical terrain — no prompt, no curtain. Recon-grounded: WEST-canonical/EAST-mirror copy
+  direction, the honest per-layer feasibility (biome remap CHEAP, terrain-density remap HARD/make-or-break,
+  decorations INFEASIBLE→strip the band, caves accepted-mismatch), the masked inner-frontier seam + echo
+  the storm fog now hides, the byte-comparable atlas mirror-identity proof, new `latitude.evatorV2.enabled`
+  flag (default OFF, per-world capture) + passageV2 interplay matrix, the scrapped-2026-06-24-wrap landmine
+  walk-through, P1/P2/P3 pass plan, and open questions for the sweep. Worktree
+  `Latitude-b5-hemisphere-passage`, branch `phase5-b6-teleport-evator` off pivot HEAD `a21fb4dd`. DESIGN
+  DRAFT — awaiting adversarial sweep + Peetsa taste calls (reflection-vs-translation, fog stay/go,
+  strip-vs-mirror decorations).
 
 ## 2026-07-02 additions (future pass parking lot)
 - `../LATITUDE_2_0_OVERHAUL.md` — **canonical Latitude 2.0 overhaul front door**: 26.2 pivot, portability,
