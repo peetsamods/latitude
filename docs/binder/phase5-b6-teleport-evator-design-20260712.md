@@ -440,3 +440,14 @@ capture (LatitudeWorldState birth-time pattern, REQUIRED per amendment 8); Mirro
 math (degree-anchored W, intendedXRadius, small-world floors); SYMMETRIC decoration+carver strips at
 the applyBiomeDecoration seam (both bands, fog-masked barren); probe promoted toward a proof harness.
 All default-OFF, flag-off byte-identical, headless-provable.
+
+
+## P1-prep complete (night shift): foundations committed, mechanism decision pending
+
+Flag + L17 + REQUIRED birth-capture (boundaryV2-refusal, old-worlds-false-forever), MirrorGeometry
+pure band math, symmetric decoration+carver strips (live-cache gated, pre-gen timing verified), all
+default-off byte-identical. Sweep ACCEPT-WITH-NOTES all-LOW (notable: the band reads wind-scoured bald
+-- the decoration veto also strips freeze_top_layer -- deliberate, fog-masked, Peetsa live-look later).
+Suite 439/439. WAITING ON PEETSA: mechanism (b) fog-masked near-mirror (~2-block live wobble, cheap,
+spike-proven) vs (c) copy-and-flip bit-exact (guaranteed, heavy). Whichever wins plugs into these
+foundations; P2 (silent trigger + momentum via Relative.DELTA + prompt suppression) follows.
