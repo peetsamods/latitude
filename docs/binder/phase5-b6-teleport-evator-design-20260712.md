@@ -631,3 +631,19 @@ boundary that halts progress, NOT solid collision -- the real can't-outrun-it gu
 one-shot staying fire-eligible from the trigger line down to dist 0; the wall merely stops a player outrunning
 it from getting further. Wording softened in the EvatorCrossing javadoc, the service/driver comments and the
 refusal log. Suite after refinement: 459/459.
+
+
+## P2 complete + TEST 91 staged (2026-07-13): the evator is flyable
+
+P2 (1ae37025): silent crossing built + swept ACCEPT-WITH-NOTES (teleport relative-delta semantics
+independently re-verified; the highest-suspicion attack — a spurious hemisphere title announcing the
+"invisible" seam — CLEARED, the teleport-jump guard provably swallows the sign flip; the arrival-Y gap
+fixed in-pass: exact-altitude arrival whenever the mirrored air is free, probed-surface fallback under
+solid overhangs, tested pure helper). Staging commit (branch-local, REVISIT): evatorV2 default ON so a
+FRESH Modrinth world births captured-on. Suite 459/459. TEST 91 staged from this branch.
+P3 CHECKLIST (FRESH world required — birth capture): walk-cross both directions (does the world just...
+continue?); elytra at speed (momentum, altitude, no rubber-band); sprint-cross (facing + stride);
+turn-around re-arm + re-cross; swim at the edge (refusal = stays at wall, one log per 3s); mounted
+(dismounts, logged); in-band relog (no insta-teleport); B-5 prompt ABSENT while fog + advisory remain;
+Classic AND Wide; a control world on the pivot branch still prompts (B-5 unaffected); the barren
+wind-scoured band look (freeze_top_layer stripped — taste call deferred from P1-prep).
