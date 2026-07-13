@@ -1,6 +1,6 @@
 # Phase 5 B-6 — Teleport-Evator: design (2026-07-12)
 
-`status: DESIGN DRAFT — awaiting adversarial sweep + Peetsa taste calls (see "Open questions")`
+`status-history: DESIGN DRAFT — awaiting adversarial sweep + Peetsa taste calls (see "Open questions")`
 Worktree `Latitude-b5-hemisphere-passage` (branch `phase5-b6-teleport-evator`, cut from the merged pivot
 HEAD `a21fb4dd` — B-5 Hemisphere Passage is SHIPPED and in this tree). Recon-grounded; every file:line
 pointer below is from THIS tree, this session.
@@ -374,3 +374,29 @@ before Peetsa ever flies it.
 8. **Mercator interplay.** With `MERCATOR_ASPECT = 2.0` the band is 2× wider in blocks (555 blk) but the
    same 5° in longitude — does the wider echo/seam change the fog calibration or the pre-warm ring size?
 ```
+
+
+## Adversarial design sweep — verdict 2026-07-12 (night shift)
+
+**APPROVE-WITH-AMENDMENTS (10), conditioned on a HARD GATE: P1 step 0 is a terrain-remap mechanism
+spike proven on the REAL chunk-fill path (fillArray/interpolated NoiseChunk), NOT getBaseHeight — if
+the finalDensity-seam remap drops there (the sweep's expected outcome), STOP AND ESCALATE: the feature
+is not viable as specified.** Key findings: (1) the designed atlas proof would FALSE-GREEN — 
+getBaseHeight is the single-column path where a context-remap flows through, while live chunks use the
+batched fill path where cache/interpolation nodes below the wrapper capture TRUE coords (the exact
+mapChildren/L14 lesson); proof must be real chunk columns + top-N blockstate hash. (2) INTERNAL
+CONTRADICTION fixed: the decoration strip must be SYMMETRIC (both bands) or a barren east mirrors a
+forested west = visibly broken; "west canonical" narrows to terrain/biome only; byte-identity is a
+FLAG-OFF property only. (3) Carver-strip pulled INTO P1 scope (a surface-breaching ravine at the
+landing is the top visible betrayer; underground mismatch is invisible and stays unmirrored).
+(4) Feature-strip lives at the DECORATION seam (applyBiomeDecoration mixin), not EdgeStructureVeto.
+(5) Momentum = Relative.DELTA_X/Y/Z inside the teleportTo EnumSet (post-hoc setDeltaMovement loses to
+the position packet). (6) NO inland-nudge fallback for the evator — no-op-and-log instead (the nudge
+silently breaks land-in-identical-terrain); target mirrorX directly. (7) Per-world flag capture is
+REQUIRED (LatitudeWorldState pattern) — a late flip onto unmirrored disk chunks defeats the feature.
+(8) NEW matrix row: evatorV2 x boundaryV2 are ANTAGONISTIC (the ocean-moat edge makes placeSafeY
+refuse the arrival) — mutually exclusive or an explicit mirrored-ocean arrival design. (9) The wall-
+at-180 is the trigger's backstop (elytra cannot outrun the one-shot). (10) The fog is LOAD-BEARING
+(masks the inner-frontier seam + far-chunk pop) — keep. P1 proof list: fill-path block-hash mirror
+identity; biome reflection; symmetric strips + carver-strip proven in the hash; flag-off atlas byte-
+identity; per-world capture persistence.
