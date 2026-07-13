@@ -57,6 +57,19 @@ surface for the 2.0 line. Recorded 2026-07-01 during the binder/handoff/lessons 
   thread" — the actual chunk-gen worker pool (where Latitude/Terralith run) is invisible in it. Needs a re-profile
   with `--thread *`.
 
+## 2026-07-13 additions (B-5 shipped; TEST 89 edge round; B-6 in flight)
+- **B-5 Hemisphere Passage: SHIPPED** — merged to this branch and pushed (a21fb4dd), `latitude.passageV2.enabled`
+  DEFAULT ON (Peetsa's post-P3 decision; the flag is the kill switch). The older entries below describing B-5 as
+  a default-off design under review are SUPERSEDED history.
+- **TEST 89 edge round (35944e38)** — the two-tier EW banner is RETIRED for one white fading advisory
+  ("Approaching the Prime Meridian. Heavy fog ahead—proceed with care."), EW dust particles REMOVED, the
+  structure ban is degree-based (173° + fan-out buffer), re-arm 177°→178°. `enableWarningParticles` is now
+  inert (cleanup pending).
+- **Title glimmer v3 (7e65d079)** — stronger default, HUD Studio "Glimmer Strength" slider, farewell glint.
+- **B-6 Teleport-Evator: IN FLIGHT on branch `phase5-b6-teleport-evator`** (NOT merged) — mirror-band worldgen
+  + silent momentum-preserving crossing, P1+P2 built and swept, awaiting Peetsa's P3 on a FRESH world (birth
+  capture). Design + full build/verdict log: `phase5-b6-teleport-evator-design-20260712.md` (branch-only file).
+
 ## 2026-07-12 additions (polar experience consolidation)
 - `polar-experience-reference-20260712.md` — **single source of truth for the polar (N/S) experience
   system** (TEST 53→82 outcome): the 85°→90° player journey, every subsystem (ambient/blizzard/hazard/

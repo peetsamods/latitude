@@ -185,7 +185,7 @@ unless noted:
 - **Exposure:** `SAMPLE_COUNT=13`, offset ring r=3 + cardinals r=5, `EXPOSURE_RECOMPUTE_TICKS=5` (`PolarExposure` / `GlobeClientState`).
 - **Freeze:** `FROZEN_THRESHOLD_TICKS=140`, `FROST_POLE_HEADROOM_TICKS=8`, interval 60→10, HP 1.0→3.0.
 - **Vignette timing/peaks:** see §2. **Storm palette / whiteout tint:** storm `(92,108,132)` → white `(238,242,248)`.
-- **Storm-ceiling clouds: GONE.** The TEST 79 cloud-deck darkening was **reverted** (commit `734d710d`). There is no live cloud mixin — the only `ParticleTypes.CLOUD` use in `GlobeModClient` is the *E/W* sandstorm haze ring, unrelated to the polar cap. Do **not** document clouds as a live polar feature.
+- **Storm-ceiling clouds: GONE.** The TEST 79 cloud-deck darkening was **reverted** (commit `734d710d`). There is no live cloud mixin — the only `ParticleTypes.CLOUD` use in `GlobeModClient` is the *E/W* sandstorm haze ring, unrelated to the polar cap. Do **not** document clouds as a live polar feature. (SUPERSEDED 2026-07-13: TEST 89 removed the EW dust/sandstorm particles entirely; the guidance stands — clouds are not a polar feature.)
 
 ---
 

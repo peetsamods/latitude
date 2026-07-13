@@ -1,8 +1,6 @@
 # Phase 5 — Boundary Experience: plan & run log (2026-07-09)
 
-`status: IN PROGRESS — B-0/B-1 (23908d7a) + B-2 incl. runtime gates complete (pushed ba9b1099);
-B-3-P1 polar approach done (4daf45d5); B-3-P2 hemisphere titles + warning language done (dev+18-tests+
-sweeper green, reviewer PASSED); NEXT: stage TEST jar → B-4 live look`
+`status: CLOSED as the running log through TEST 82 — B-0..B-4 + the polar experience arc COMPLETE and SHIPPED on this branch. The story continues in phase5-b5-hemisphere-passage-design-20260710.md (B-5: SHIPPED, merged, default ON) and phase5-b6-teleport-evator-design-20260712.md (B-6: in flight, branch phase5-b6-teleport-evator). Post-ship pivot rounds (glimmer v3 7e65d079, TEST 89 edge round 35944e38) are indexed in index.md 2026-07-13.`
 
 ## B-2 pass log (2026-07-09)
 
