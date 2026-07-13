@@ -168,3 +168,30 @@ consistent ~75-block lead on every world size, layered on the unchanged onset. L
 in/hold/out and re-arms on band exit+reentry instead of persisting; LEVEL_2 (severe) stays persistent.
 Sweep ACCEPT with an explicit confidence statement on the re-arm mechanism: "no remaining code path that
 can strand a declining-then-returning player disarmed." Suite 397/397. TEST 85 staged.
+
+
+## P3 round 3: degree geometry + ORCHESTRATOR LIVE SELF-VERIFICATION (2026-07-12, e6cb75c4, TEST 87)
+
+Peetsa directive: edge features begin 176-177 deg (not ~170); teleport arrival lands PAST the fog.
+Slice (e6cb75c4): all E/W geometry degree-anchored via pure EdgeGeometry (ramp 176.5 / re-arm 177 /
+severe 178 / prompt 179 / arrival 175.5-equiv; block floors for small worlds — Itty effective 160/104/
+48/40/184); every feature line re-anchored from the LIVE border to the mod's intended xRadius (new
+GlobeStatePayload field; server re-validates on the same anchor); border re-snapped per tick (kills the
+stale level.dat lerp found in the instrumented session — the border had been ANIMATING ~100 blocks
+during the first minutes of every session in Peetsa's test world, sliding all block-anchored lines
+underfoot: the missing piece of the re-arm mystery). Sweep ACCEPT-WITH-NOTES; all notes fixed in-pass
+(structure veto also intended-anchored; passage-flag javadoc updated honestly — the edge PRESENTATION
+redesign is GLOBAL per the directive, flag gates only the crossing; 2 dead methods removed). 423/423.
+
+LIVE SELF-VERIFICATION (orchestrator flew TEST 87 via the Modrinth control lane + flight recorder,
+world TEST 77, Itty-class 3750): (1) border EXACTLY 7500 at join, no lerp — snap works; (2) 170 deg
+CLEAR (no fog/banner/particles); (3) ramp wakes ~174 deg W on Itty (floor-driven; pure 176.5 on real
+sizes) with the OUTLINED L1 banner readable; (4) decline -> leave -> return -> PROMPT RE-OPENED (the
+re-arm bug fixed for real — recorder trace: disarm@6.13 / answer false / re-arm@200.5 / disarm+prompt
+@35.5); (5) FULL CROSSING: answer true -> curtain -> arrivalConsumed x=3566 -> curtain melt -> armed
+naturally @183.5 on the far side — arrival EXACTLY the designed 184-block past-the-fog landing, clear
+air, hemisphere flipped (179W -> 171E). Screenshots in session scratchpad. NOTE: integrated-server
+arrival ~100ms after curtain-raise, so the curtain is nearly instant locally (holds longer on slower
+gen; acceptable). READY FOR PEETSA: TEST 87 (SHA 72e58076) — his checklist: the felt geometry (176.5
+ramp on real-size worlds), banner fades, retreat-fires-nothing, arrival-past-fog feel, and the border
+snap on HIS other worlds (any world whose level.dat carries a stale lerp self-heals in one tick now).
