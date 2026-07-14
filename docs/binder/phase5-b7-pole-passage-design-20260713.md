@@ -444,3 +444,40 @@ with eyes, and if Peetsa wants parity later, `EdgeStructureVeto`'s pure shape ge
 | title-crossing debounce (teleport step guard, degree-first dead zone) | `src/main/java/com/example/globe/core/HemisphereCrossing.java:39-63`; `GlobeWarningOverlay.java:600-626` |
 | polar experience single source of truth | `docs/binder/polar-experience-reference-20260712.md` |
 | B-5 design + shipped history this design rhymes with | `docs/binder/phase5-b5-hemisphere-passage-design-20260710.md` |
+
+
+## Adversarial design sweep — APPROVE-WITH-AMENDMENTS (2026-07-13) + Peetsa stipulations folded
+
+SWEEP (all 9 questions answered; ~30 pointers spot-checked correct; survival math independently
+re-derived and HONEST — 89.2 prompt = 1.47 HP/s exact, dash ~38 HP walking on Regular, label the table
+"with food + Protection"): A1 yaw+180 is the same absolute-yaw mechanism B-5 already uses (+ wrap
+degrees; watch the half-opaque-curtain camera whip at P2 self-fly — whiteout stacking masks ~80%);
+A2 the corner X-clamp must bound EVERY ±X search candidate, not just the initial target; A3 the
+turn-back nudge must be AXIS-KEYED (pole declines nudge along Z; map or twin sets; same creative/
+spectator exemption); A4 placeSafeY must reject powder_snow landings (fluids-only today) + scan 1-2
+below top; A5 corner gesture tie: arm the larger facing-dot axis (or accept the serialized double-
+prompt — dev picks, states); A6 survival table honesty labels. Q-answers: DANGER/prompt coexist fine
+(different layers; 1.67 blocks apart on Itty — P3 feel check); corner serialization safe via HOLD-not-
+burn; mirrorX preserving EW distance is neutralized by the clamp (pin the corner test: EW phase ARMED,
+no EW prompt post-cross); keep flat 32-block slack; ceremony tax ~4.6 HP self-limiting (stalled server
+thread bills no ticks); shared 60t cooldown stays shared; netcode axis extension lockstep-safe (mixed-
+version already unsupported globally); pole geometry lerp-immune FOR FREE (synced latitudeZRadius —
+no new handshake field); frozen_ocean classifies ocean under ice so the surface-class probe works;
+ARRIVAL 88.0 affirmed over 87.9 — the blue hearts THAW as you walk out. ARRIVAL-REGIME INVARIANT to
+pin in P1 tests: on Itty arrival(83)<rearm(104) = SEEDED path live; on Regular arrival(222)>rearm(167)
+= re-arms to ARMED next tick; BOTH self-prompt-free (arrival > promptAt everywhere).
+
+PEETSA STIPULATIONS (owner, 2026-07-13, folded as design law):
+S1 COLD PROTECTION: a ColdProtection evaluator (vanilla freeze_immune_wearables tag — leather by
+default, datapack-extensible per the vanilla-first law; piece-count scaling, full set = freeze damage
+negated, slowness KEPT so the pole still resists) feeds BOTH the damage curve scaling AND the warning
+text: protected players see "The bitter cold envelops you." instead of the LETHAL line (one evaluator,
+one truth — the honesty law; the DANGER line stays his verbatim). Potions: v1 = armor tag only
+(no vanilla cold-resist exists; future "expedition tonic" idea noted).
+S2 THE WALL + UNDER-ICE: prompt suppressed for under-ice/underwater players (extend the surface gate:
+in-water OR no-sky suppresses at the pole), and Wide worlds get a MOD-BUILT HARD STOP at the pole line
+— a server-side motion clamp (pure movement logic, zero worldgen, vanilla-border-like; NOT the
+scrapped per-tick teleport wrap) so an ineligible traveler hits a wall exactly like east/west.
+SYNTHESIS with the sweep's mercy-exit: the clamp stops everyone; the crossing (surface, prompted,
+possibly protected) is the door THROUGH it — beyond-the-line rescue applies to eligible players at
+dist 0 pressed against the clamp. Classic worlds already have the vanilla border as the wall.
