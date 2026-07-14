@@ -57,6 +57,19 @@ surface for the 2.0 line. Recorded 2026-07-01 during the binder/handoff/lessons 
   thread" — the actual chunk-gen worker pool (where Latitude/Terralith run) is invisible in it. Needs a re-profile
   with `--thread *`.
 
+## 2026-07-13 addition (Phase 5 B-7 — Pole Passage design [worktree branch])
+- `phase5-b7-pole-passage-design-20260713.md` — the PROVEN B-5 ceremony at the N/S poles after Peetsa
+  parked B-6 ("B-5 gameplay was good enough… B-7 for the poles to have B-5 gameplay"): the existing
+  polar blizzard/whiteout IS the approach fog (no new fog, NO mirror-band worldgen, no per-world
+  capture — pure presentation+teleport, byte-identical worldgen, works on existing worlds); prompt
+  recommended at 89.2° (past the DANGER rung, survival math vs the 0.33→6 HP/s freeze curve included),
+  arrival 88.0° far meridian heading equatorward (yaw+180 — walk north over the pole, emerge walking
+  south), mirrorX reused, axis field added to the existing passage payloads, ±X arrival-parallel
+  search + equatorward nudge, surface-class (land/frozen-sea) arrival matching (polar water-freeze law
+  makes true water arrivals moot), warning-ladder honesty as OPTIONS only (DANGER verbatim-locked).
+  New flag `latitude.polePassageV2.enabled` default OFF + L17 forwarding same pass. Passes P1
+  core/server → P2 client → P3 Peetsa live.
+
 ## 2026-07-13 additions (B-5 shipped; TEST 89 edge round; B-6 in flight)
 - **B-5 Hemisphere Passage: SHIPPED** — merged to this branch and pushed (a21fb4dd), `latitude.passageV2.enabled`
   DEFAULT ON (Peetsa's post-P3 decision; the flag is the kill switch). The older entries below describing B-5 as
