@@ -545,3 +545,20 @@ Walking out re-arms past 88.5; turning back then prompts at 89.2 (fresh journey)
 seeded, only the 89.9 one-shot edge re-prompt speaks. Medium matching unchanged (sea at 89.5 is
 frozen solid — water-family arrival stands on the ice sheet). Net forward-carry: consent at 89.2,
 emerge at 89.5 far side — the crossing carries you through the worst 0.6 deg; story-true.
+
+S6 FROZEN WOUNDS (Peetsa 2026-07-13, "big idea", closes the S4 shelter-refill cheese): while
+SHELTERED (S4 predicate) inside the polar cold zone (|lat| >= 85) and NOT near warmth, ALL healing
+is cancelled — hearts stay frozen at their current level ("only the warmth of a fire mends them":
+food, natural regen, potions, gapples all wait). NEAR WARMTH (within a ~4-block box, lit
+NON-SOUL campfire / fire / lava incl. lava cauldron / LIT furnace-family) healing works normally —
+the snow-cave campfire ritual IS the mechanic; pack fire or bleed. Torches/lanterns/candles are
+light not heat; SOUL fire/campfire give no warmth (story detail). OUTDOORS unchanged (the flight-
+tested eat-vs-cold race stands — the lock is the INDOOR rule; no cumulative pool, zero new
+persistent state: lock = pure predicate sheltered && inZone && !nearWarmth applied at heal time).
+Below 85 deg: normal healing, always. PRESENTATION (P2): frozen-hearts tint PERSISTS while heal-
+locked indoors (hearts look frozen while they cannot mend — replaces the F3 sheltered-cue-pause in
+exactly this state); one-shot whisper on first blocked heal "Your wounds are frozen. Only warmth
+can mend them."; near warmth the tint clears (optional soft whisper on thaw). SERVER (P1): pure
+warmth-scanner core (block-set -> boolean) + thin shim; heal hook cancels/caps heals under the
+lock; client derives the same three predicates locally for presentation (skylight, zone, warmth
+scan) — NO new netcode.
