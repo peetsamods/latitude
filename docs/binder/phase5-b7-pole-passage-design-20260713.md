@@ -499,3 +499,15 @@ S2 ADDENDUM (invisible-wall feedback, Peetsa 2026-07-13): the Wide pole clamp mu
 ice, frozen to the seafloor, bars the way." / cave-or-surface "The ice of the world's end bars the
 way."; P2 adds frost particles at contact and evaluates a faint glacial keyline plane within a few
 blocks (vanilla-border-grid analogue). Classic worlds already show the vanilla border wall there.
+
+S1 ADDENDUM (hypothermia rung vs cold protection, Peetsa 2026-07-13, P2 scope): the 85-deg
+"Hypothermia sets in" rung fires ONLY when protection is below FULL (honesty law: full leather =
+zero frostbite = no hypothermia = no warning; partial protection still bleeds, so the rung shows).
+Equipping full protection in-zone earns silence — nothing new fires. REMOVAL-REACTIVE WHISPER: on
+losing full protection while >=85 deg, whisper "Hypothermia is imminent." (whisper presentation
+style, black outline family), one-shot; it REPLACES the rung re-fire at that moment (no back-to-back
+double message); re-arms on leaving the zone or regaining full protection. LETHAL 89.7 swap stays
+as S1 wrote it (protected: "The bitter cold envelops you."); DANGER 89 verbatim line untouched (it
+describes the place, not the body). Client evaluates ColdProtection locally for the OWN player
+(armor slots + freeze_immune_wearables tag are client-visible); P1 core exposes protectionLevel —
+no P1 change required.
