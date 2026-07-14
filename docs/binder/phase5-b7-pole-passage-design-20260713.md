@@ -511,3 +511,20 @@ as S1 wrote it (protected: "The bitter cold envelops you."); DANGER 89 verbatim 
 describes the place, not the body). Client evaluates ColdProtection locally for the OWN player
 (armor slots + freeze_immune_wearables tag are client-visible); P1 core exposes protectionLevel —
 no P1 change required.
+
+S4 SHELTER RULE FOR COLD DAMAGE (Peetsa 2026-07-13, P1 scope): cold DAMAGE (frostbite band AND
+lethal core — one rule, one story: walls stop the bleeding) PAUSES when the player is genuinely
+sheltered. Slowness/Mining Fatigue/atmosphere UNCHANGED (the cold seeps indoors; only the damage
+stops — also keeps under-pole tunnel traversal paced). Predicate (server, cheap, trap-proof):
+sheltered iff raw SKY LIGHT at eye position <= 3. This is graded enclosure — the single-overhead-
+log trap (Peetsa's explicit callout; the old warning-banner-under-a-tree bug class) reads ~11-13
+skylight (diffuse light floods in sideways) = still exposed; a sealed hut/cave/snow burrow reads
+0-2 = sheltered. Follows PolarWhiteoutOverlayHud's graded-exposure philosophy (never binary
+canSeeSky for gameplay — that predicate stays only where conservative-deny is correct: prompt
+gates). MANDATORY TEST: the log-trap case itself (solid block 1 above head, open sides -> NOT
+sheltered, damage continues) + sealed-box case (sheltered, damage paused) + threshold boundary.
+KNOWN EDGE (accepted, P3 feel item): a pure-glass roof passes skylight -> glass igloo counts as
+exposed ("the cold bites through the glass") — story-defensible, rare at the poles, revisit only
+if live feel demands. Balance note: this makes dig-in-and-survive real counterplay (snow-cave
+expedition fantasy) and keeps the warning ladder honest (no LETHAL text while safe in a hut —
+warnings already suppress NEW triggers under cover per B-3).
