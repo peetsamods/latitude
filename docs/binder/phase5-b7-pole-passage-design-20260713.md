@@ -481,3 +481,21 @@ scrapped per-tick teleport wrap) so an ineligible traveler hits a wall exactly l
 SYNTHESIS with the sweep's mercy-exit: the clamp stops everyone; the crossing (surface, prompted,
 possibly protected) is the door THROUGH it — beyond-the-line rescue applies to eligible players at
 dist 0 pressed against the clamp. Classic worlds already have the vanilla border as the wall.
+
+S3 TWO-STAGE COLD PACING (Peetsa decision 2026-07-13, "Two-stage cold" picked over literal
+lethal-from-85 and keep-current): the polar approach starts earlier without touching the flight-
+tested endgame. Snow visual onset 85->82 deg (world whitens before any text); first warning rung
+85->83 deg (approach wording); NEW FROSTBITE damage band [85,88): gentle ramp ~0.25->1.0 HP/s,
+interval-based like the lethal core, "Hypothermia sets in" rung at 85 = real damage onset (honesty
+law), ColdProtection (S1) multiplies BOTH bands (full leather = zero damage in both); blizzard-
+building rung 87, DANGER 89, LETHAL 89.7, lethal core [88,90] curve ALL UNCHANGED — the B-7 prompt-
+zone survival math the sweep verified stays true verbatim. GUARDS: PolarWaterFreezeRule keeps 85
+(the ice sheet is world-visible — decouple the constant if it references AMBIENT_ONSET_DEG; moving
+it would be a worldgen seam, forbidden here); PolarPrecipitationRule keeps its own anchors (verify
+the ambient move does not drag any worldgen-facing rule). Split: frostbite band + guards = P1
+(server); ladder rungs/wording + snow onset 82 = P2 (client).
+S2 ADDENDUM (invisible-wall feedback, Peetsa 2026-07-13): the Wide pole clamp must announce itself
+— server plays an ice-chime at the rate-limited contact point + actionbar line, underwater "Pack
+ice, frozen to the seafloor, bars the way." / cave-or-surface "The ice of the world's end bars the
+way."; P2 adds frost particles at contact and evaluates a faint glacial keyline plane within a few
+blocks (vanilla-border-grid analogue). Classic worlds already show the vanilla border wall there.
