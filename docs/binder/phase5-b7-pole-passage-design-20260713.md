@@ -496,9 +496,14 @@ dist 0 pressed against the clamp. Classic worlds already have the vanilla border
 S3 TWO-STAGE COLD PACING (Peetsa decision 2026-07-13, "Two-stage cold" picked over literal
 lethal-from-85 and keep-current): the polar approach starts earlier without touching the flight-
 tested endgame. Snow visual onset 85->82 deg (world whitens before any text); first warning rung
-85->83 deg (approach wording); NEW FROSTBITE damage band [85,88): gentle ramp ~0.25->1.0 HP/s,
-interval-based like the lethal core, "Hypothermia sets in" rung at 85 = real damage onset (honesty
-law), ColdProtection (S1) multiplies BOTH bands (full leather = zero damage in both); blizzard-
+85->82 deg (approach wording) [owner-revised 2026-07-14 from the P2 draft's 83: placed AT the
+82-deg snow onset so the first words land with the first snowflakes; verbatim copy "Entering polar
+storm country. Proceed with caution." replaces the old WARN_1 snow line; the ladder's retreat
+re-arm moved 82->81 with it, keeping the same 1-deg hysteresis width]; NEW FROSTBITE damage band
+[85,88): gentle ramp ~0.25->1.0 HP/s, interval-based like the lethal core, the 85-deg rung = real
+damage onset (honesty law) [copy owner-revised 2026-07-14: verbatim "The cold begins to bite."
+replaces the draft "Hypothermia sets in."; the removal whisper "Hypothermia is imminent." is
+unchanged], ColdProtection (S1) multiplies BOTH bands (full leather = zero damage in both); blizzard-
 building rung 87, DANGER 89, LETHAL 89.7, lethal core [88,90] curve ALL UNCHANGED — the B-7 prompt-
 zone survival math the sweep verified stays true verbatim. GUARDS: PolarWaterFreezeRule keeps 85
 (the ice sheet is world-visible — decouple the constant if it references AMBIENT_ONSET_DEG; moving
@@ -510,6 +515,10 @@ S2 ADDENDUM (invisible-wall feedback, Peetsa 2026-07-13): the Wide pole clamp mu
 ice, frozen to the seafloor, bars the way." / cave-or-surface "The ice of the world's end bars the
 way."; P2 adds frost particles at contact and evaluates a faint glacial keyline plane within a few
 blocks (vanilla-border-grid analogue). Classic worlds already show the vanilla border wall there.
+[P2 polish 2026-07-14, sweep INFO adopted: the frost presentation is flag-gated WITH the wall it
+presents (latitude.polePassageV2.enabled) — flag-off there is no clamp, so no frost may suggest
+one; the actionbar/chime are server-side behind the same flag already. The glacial keyline plane
+was deferred at P2 (P3+ candidate).]
 
 S1 ADDENDUM (hypothermia rung vs cold protection, Peetsa 2026-07-13, P2 scope): the 85-deg
 "Hypothermia sets in" rung fires ONLY when protection is below FULL (honesty law: full leather =
