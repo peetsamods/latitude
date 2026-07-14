@@ -528,3 +528,20 @@ exposed ("the cold bites through the glass") — story-defensible, rare at the p
 if live feel demands. Balance note: this makes dig-in-and-survive real counterplay (snow-cave
 expedition fantasy) and keeps the warning ladder honest (no LETHAL text while safe in a hut —
 warnings already suppress NEW triggers under cover per B-3).
+
+S5 ARRIVAL DEEPENED TO 89.5 (Peetsa 2026-07-13, "cinematic + no damage reprieve — still trekking
+for their lives"): pole arrival moves 88.0 -> 89.5 deg on the far meridian, heading equatorward.
+You emerge INTO the mirrored blizzard (at ~2.2-2.6 HP/s unprotected, Slowness III) and fight your
+way out; the frozen-hearts thaw now happens during the ESCAPE (~88 deg), not at touchdown — the
+reprieve is gone by design. GUARD-RAIL: cold damage is suppressed ONLY while the arrival curtain
+is up (~2 s, the ceremony window) so a low-health crosser cannot die inside the cutscene; the
+moment the curtain lifts, the blizzard owns them. CONSEQUENCES (all simplifying): arrival (0.5 deg
+from pole) is now INSIDE prompt (0.8) and rearm (1.5) on EVERY world size -> the two-regime split
+(Itty seeded vs Regular re-arm) COLLAPSES to one uniform SEEDED_DISARMED regime everywhere — the
+sweep's dual-regime pins are superseded; new pins: uniform seeded regime on all sizes; no self-
+prompt at arrival is guaranteed by SEEDING (state law), not geometry — the assertChain invariant
+"prompt < arrival" is retired for the pole axis and replaced by the seeded-arrival assertion.
+Walking out re-arms past 88.5; turning back then prompts at 89.2 (fresh journey); while still
+seeded, only the 89.9 one-shot edge re-prompt speaks. Medium matching unchanged (sea at 89.5 is
+frozen solid — water-family arrival stands on the ice sheet). Net forward-carry: consent at 89.2,
+emerge at 89.5 far side — the crossing carries you through the worst 0.6 deg; story-true.
