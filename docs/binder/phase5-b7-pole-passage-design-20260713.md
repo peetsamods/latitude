@@ -39,8 +39,13 @@ proof surface is the unit suite + P3 live feel only.
 `latitude.polePassageV2.enabled`, **default OFF** (`LatitudeV2Flags` idiom, `core/LatitudeV2Flags.java:156`).
 Born WITH its `build.gradle` client-run forwarding line in the SAME pass (L17 discipline — the
 forwarding block is `build.gradle:102-114`; `passageV2`'s line is L114; three prior bites documented at
-`LatitudeV2Flags.java:154,174`). Flag-off: the pole prompt/teleport/curtain/title/nudge never exist;
-the polar hazard/warning experience is byte-identical to today. NOT tied to `latitude.passageV2.enabled`
+`LatitudeV2Flags.java:154,174`). Flag-off: the pole prompt/teleport/curtain/title/nudge/`axis=POLE`
+netcode/Wide hard-stop clamp never exist — byte-identical FOR THE CROSSING SURFACE. [F2 honesty rescope,
+P1 sweep 2026-07-13: the original line here claimed the whole "polar hazard/warning experience" was
+byte-identical flag-off — no longer true once the S3/S4/S6 stipulations landed. The S3 cold pacing
+(frostbite band 85–88 + its F3 frost cue, ambient onset 85 → 82), the S4 shelter pause, and the S6
+frozen-wounds heal lock are GLOBAL, deliberately un-gated rebalances that ship with this pass regardless
+of the flag.] NOT tied to `latitude.passageV2.enabled`
 (EW), but P1 should share the server receiver — see §5 netcode. Default-flip is Peetsa's post-P3 call,
 same as B-5's history (`LatitudeV2Flags.java:157`).
 
@@ -87,21 +92,22 @@ move**; B-7's lines interleave between them:
 | (existing ladder WARN_1/2, DANGER, LETHAL) | 85 / 87 / 89 / 89.7 | — | — | — | — | untouched, the "advisory" is already built (§7) |
 | `REARM_DEG_POLE` | 88.5 | 1.5 | 62.5→**floored 104** | 125→**floored 130.7** | 166.7 | strict walk-out re-arm; floors: `prompt + DEAD_ZONE 64` then `+ ORDER_STEP` (same `EdgeGeometry.java:157-168` constants) |
 | `PROMPT_DEG_POLE` | **89.2 (recommended, §4)** | 0.8 | 33.3→**floored 40** | 66.7 | 88.9 | past the 89° DANGER rung so the ladder line lands FIRST, then the counter-offer; `PROMPT_MIN_DIST_BLOCKS 40` floor |
-| `ARRIVAL_DEG_POLE` | **88.0** | 2.0 | 83.3 | 166.7 | 222.2 | the freeze-damage onset line — the bite ends the instant you land (§4.3); same "2° from the wall" depth as B-5's `ARRIVAL_DEG` 178 (`EdgeGeometry.java:146`) |
+| `ARRIVAL_DEG_POLE` | ~~88.0~~ **89.5 (S5, supersedes)** | 0.5 | 20.8 | 41.7 | 55.6 | [S5 2026-07-13 — the binding tail section supersedes this row's original 88.0 rationale] deep-ceremony arrival: emerge INTO the far blizzard (~2.27 HP/s unprotected) and trek OUT; the only reprieve is the ~45-tick post-crossing cold grace (the curtain window); the frozen-hearts thaw happens during the escape at ~88°, not at touchdown |
 | `EDGE_REPROMPT_DEG_POLE` | 89.9 | 0.1 | floored 8 | 8.3 | 11.1 | the SEEDED walk-to-the-wall auto-re-prompt sibling (`EdgeGeometry.java:151`), floor 8 blocks |
 
-- **No FOG anchors.** The polar whiteout/depth-fog already ramps 85→90
+- **No FOG anchors.** The polar whiteout/depth-fog already ramps (ambient onset)→90
   (`PolarHazardWindow.java:253-303`, `FogRendererPolarSetupMixin`) — it IS the ceremony fog, free.
   B-7 must NOT add a `FogRendererPassageSetupMixin` sibling; the composition question B-5 solved
   (both fogs min-compose at a corner, `FogRendererPassageSetupMixin.java:40-42`) stays solved by
-  adding nothing.
-- Ordering chain (dist-from-pole): `edgeReprompt < prompt < arrival ≤/≥ rearm < (ladder, fixed)`.
-  NOTE the deliberate asymmetry vs B-5: **arrival (2.0°) sits EQUATORWARD of the prompt (0.8°)** —
-  B-5 lands you ON the prompt line because its band is benign; landing a pole-crosser back at
-  1.5 HP/s would be a death tax. On real sizes arrival is also outside the re-arm line
-  (2.0° > 1.5°), which degenerates the phase machine pleasantly (§5.1). On Itty the floors put
-  arrival (83.3) INSIDE rearm (104) — the machine's disarmed-seed handles it exactly as B-5 does
-  (`HemispherePassage.java:32-38`).
+  adding nothing. (S3 later moved the ambient onset 85 → 82 — a global cold-pacing change, not a
+  B-7 fog anchor.)
+- Ordering chain (dist-from-pole) **[S5 REVISED]**: `edgeReprompt < arrival < prompt < rearm <
+  (ladder, fixed)` — with floors respected on every size (Itty: 8 < 20.8 < 40 < 104). The original
+  paragraph here (arrival 2.0° equatorward of the prompt, the Itty-vs-Regular two-regime split) is
+  SUPERSEDED by the S5 tail: arrival (0.5°) is now INSIDE prompt AND rearm on EVERY size, so the
+  machine runs ONE uniform SEEDED_DISARMED regime everywhere; no-self-prompt at the arrival column
+  is guaranteed by the disarmed SEED (state law, `HemispherePassage.java:32-38`), not geometry, and
+  the "prompt < arrival" assertChain invariant is retired for the pole axis.
 
 ### 3.3 The crossing transform (over-the-pole continuity)
 
@@ -157,17 +163,22 @@ Round trip note: a decliner at 89.2° walks back out through the same band (~sym
 snow/powder snow and Slowness III make real runs worse — P3 calibrates feel, and the anchor is one
 constant if Peetsa wants it moved.
 
-### 4.3 Arrival at 88.0°, heading equatorward
+### 4.3 Arrival at ~~88.0°~~ 89.5° [S5 SUPERSEDES THIS SECTION — see the binding tail], heading equatorward
 
-`ARRIVAL_DEG_POLE = 88.0` — the exact `DAMAGE_ONSET_PROGRESS` line (`PolarHazardWindow.java:146-149`):
-standing chip there is 0.33 HP/s and it hits zero one step equatorward; frost visual is at the 140
-threshold so the hearts flip from blue as you walk out (`PolarHazardWindow.java:120-144`); whiteout
-intensity is still 0.6 and the blizzard drive 0.33 — you genuinely "emerge from the thinning
-whiteout," the polar mirror of B-5's arrive-in-thinning-fog. With yaw+180 (§3.3) the player is
-already FACING equatorward. NOT at the pole line — arrival at 90° = 6 HP/s = a death sentence behind
-an opaque curtain; rejected. (Range 87.9–88.3 is defensible; 88.0 keeps the "2° from the wall" B-5
-rhyme and makes "the bite ends on landing" literally true. If the sweeper prefers a zero-chip landing,
-87.9 is the alternative — state why in the sweep.)
+**[S5 UPDATE 2026-07-13 — the escape-trek numbers.]** `ARRIVAL_DEG_POLE = 89.5` (was 88.0; the
+original paragraph below is kept for the survival-math derivation only). The crosser lands at
+~2.27 HP/s unprotected under Slowness III behind the arrival curtain; the ~45-tick post-crossing
+cold GRACE (S5c, both damage bands + the F3 frost cue suppressed) covers the ceremony window, then
+the blizzard owns them. Escape trek, flat-terrain lower bounds: **~2.2–2.6 HP/s unprotected through
+89.5→89.0 under Slowness III, easing to 0 by 88.0** (the lethal curve's onset), **then the S3
+frostbite gauntlet (1.0→0.25 HP/s) down to 85 — unless sheltered (S4 pauses damage) or protected
+(S1 freeze-immune pieces scale it)**. The frozen-hearts thaw now happens mid-escape (~88°), not at
+touchdown. With yaw+180 (§3.3) the player is already FACING equatorward. Arrival at 90° itself
+(6 HP/s behind an opaque curtain) stays rejected.
+
+<em>(Original 88.0 rationale, superseded:)</em> the exact `DAMAGE_ONSET_PROGRESS` line
+(`PolarHazardWindow.java:146-149`): standing chip 0.33 HP/s, zero one step equatorward; hearts flip
+from blue as you walk out; whiteout 0.6, blizzard drive 0.33 — "emerge from the thinning whiteout."
 
 ### 4.4 Does freeze damage pause during the ceremony? NO — and it's fine (with numbers)
 
