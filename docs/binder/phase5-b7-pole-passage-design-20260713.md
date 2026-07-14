@@ -582,3 +582,12 @@ can mend them."; near warmth the tint clears (optional soft whisper on thaw). SE
 warmth-scanner core (block-set -> boolean) + thin shim; heal hook cancels/caps heals under the
 lock; client derives the same three predicates locally for presentation (skylight, zone, warmth
 scan) — NO new netcode.
+
+## STATUS 2026-07-14: BUILT THROUGH P2+POLISH — TEST 97 STAGED, MAIDEN POLE FLIGHT PENDING
+P1 server (c72aed96, suite 498, sweeps ACCEPT x2) + P2 client (6d12c86f, suite 519, delta sweep
+ACCEPT) + owner copy polish (rung 82 "Entering polar storm country. Proceed with caution.", 85
+"The cold begins to bite.", frost flag-gated with its wall) + branch-local flight staging flip
+(fc2279b5, B-6 precedent, REVISIT BEFORE MERGE). TEST 97 staged SHA e30223e6... (superset-verified
+vs pivot f5539e35; markers: polar-storm-country + cold-begins-to-bite + pack-ice + polePassageV2 +
+antimeridian). P3 = Peetsa maiden pole flight; EW TEST-96 regression rides along (EW proven
+byte-identical through both delta sweeps). Ship default = Peetsa's post-P3 call.

@@ -188,3 +188,5 @@
 - If a prior row is replaced, add a new row with the same scope and a `supersedes` value.
 - Old row status must be updated to `superseded` in a follow-up entry.
 - Keep historical rows for auditability.
+
+| 2026-07-14 | B-7 Pole Passage TEST 97 staged (SHA e30223e6, superset f5539e35, suites 519/519, sweeps ACCEPT x3) | phase5-b7-pole-passage fc2279b5 | docs/binder/phase5-b7-pole-passage-design-20260713.md |
