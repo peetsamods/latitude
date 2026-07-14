@@ -650,3 +650,26 @@ turn-around re-arm + re-cross; swim at the edge (refusal = stays at wall, one lo
 (dismounts, logged); in-band relog (no insta-teleport); B-5 prompt ABSENT while fog + advisory remain;
 Classic AND Wide; a control world on the pivot branch still prompts (B-5 unaffected); the barren
 wind-scoured band look (freeze_top_layer stripped — taste call deferred from P1-prep).
+
+
+## POST-MORTEM (2026-07-13, video-verified): PARKED by Peetsa after the maiden voyage
+
+The maiden voyage (fresh world, TEST 95, xRadius 10000) failed on THREE independent counts, video-
+measured: (1) FOG NEVER COVERED THE BAND -- decorations razor-cut at ~175.5-176 deg but fog onset
+measured ~178.5-179 live, leaving 2.5+ deg of stripped band in CLEAR AIR (the B-5 UX fog tightening
+across TEST 89-93 and the 175-deg band were never re-reconciled; the design's load-bearing masking
+assumption silently died). (2) THE MIRROR WAS NOT REAL LIVE: departure column LAND (taiga/mountains,
+east band showed east-real terrain + east-real biome labels), arrival column DEEP OCEAN underwater --
+the east band was NOT a copy of the west in the live world, despite the headless proof harness reading
+21/21 green (the false-green class ONE LAYER UP: harness environment != live world creation path).
+Biome labels on the east band read taiga/plains/birch (unmirrored) => the biome remap was not
+reflecting live; the strips DID run (no decorations) => the strips' gate (live cache) diverged from
+the mirror's gate (install signal) -- the sweep's one-gate HIGH fix did not actually cover the strip
+mixins. (3) THE CROSSING FIRED ANYWAY -- silent auto-teleport with no prompt, violating the P2
+contract (crossing must degrade to B-5 when the mirror is not genuinely installed), and the arrival
+placed the player UNDERWATER (the arrival probe/safety chain did not refuse a fluid landing on this
+path). REVIVAL BAR (if ever): a LIVE-WORLD proof gate (not headless-only), ONE gate for strips+mirror+
+biome+crossing verified as actually-one in bytecode, fog geometry >= band geometry enforced by a test,
+and a fluid-arrival refusal proven live. Peetsa: "B-5 was good enough. B-6 scrapped for now." B-7
+(pole passage, B-5 ceremony) is the successor line. Full video timeline: session scratchpad
+video-review-2/ (frames); reviewer report in the session log 2026-07-13.
