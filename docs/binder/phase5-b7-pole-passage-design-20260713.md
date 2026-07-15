@@ -648,3 +648,9 @@ dial if the owner wants deeper stretching after feeling it. S7 interaction: imme
 biting where lat+3 reaches the frostbite curve (82 in water) — unchanged by this shift, coherent.
 Geometric dilation (nonlinear degrees, fresh-world world-shape option) stays PARKED as a designed
 future feature. BUILD: rides the S7 round (constants + rung/re-arm + javadocs + test updates).
+
+S7 FUTURE NOTE (Peetsa 2026-07-14): leather-as-drysuit is a v1 placeholder that reads wrong in
+water ("swimming in leather would protect you — makes no sense"). FUTURE ITEM: a dedicated
+DRYSUIT item (crafted gear; would join freeze_immune_wearables or get its own immersion-specific
+evaluator so leather protects on LAND, drysuit protects IN WATER). Parked with the expedition-
+tonic potion idea (S1) — both are the future "polar outfitting" item family. Not a v1 blocker.
