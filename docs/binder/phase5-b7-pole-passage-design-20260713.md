@@ -605,3 +605,14 @@ ACCEPT) + owner copy polish (rung 82 "Entering polar storm country. Proceed with
 vs pivot f5539e35; markers: polar-storm-country + cold-begins-to-bite + pack-ice + polePassageV2 +
 antimeridian). P3 = Peetsa maiden pole flight; EW TEST-96 regression rides along (EW proven
 byte-identical through both delta sweeps). Ship default = Peetsa's post-P3 call.
+
+## STATUS 2026-07-14 PM: P3 FIX ROUND COMMITTED (1b6ca726) — TEST 98 STAGED
+Maiden-flight (TEST 97, world "Test 97" MERCATOR z3750) findings all fixed: antipodal crossing
+(mirrorX was wrong for a pole — owner repro 13E->167W pinned), wall stops creative (vanilla parity,
+spectator-only), vanilla-forcefield stripe wall visual on the exact clamp line, deep blizzard ~10x
+87->89+ fall 1.75x, aim-gated gesture (open-air clicks only, both axes), far-meridian arrival
+subtitle. Delta sweep #3 ACCEPT, suite 528/528. TEST 98 SHA 57c147f0... staged (markers: far
+meridian, PoleWallRenderer, storm country, pack ice, polePassageV2). Geometry truth told to owner:
+a pole is a point — crossing = far side of the SAME pole on the antipodal meridian; repeating-band
+map extension REJECTED (endless-wrap worldgen rebuild, B-6 class). Owner may still flag the
+crossing off post-flight if it does not earn its place. B-8 Polar Barrens design swept in parallel.

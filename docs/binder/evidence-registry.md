@@ -190,3 +190,4 @@
 - Keep historical rows for auditability.
 
 | 2026-07-14 | B-7 Pole Passage TEST 97 staged (SHA e30223e6, superset f5539e35, suites 519/519, sweeps ACCEPT x3) | phase5-b7-pole-passage fc2279b5 | docs/binder/phase5-b7-pole-passage-design-20260713.md |
+| 2026-07-14 | B-7 P3 fix round: TEST 98 staged (SHA 57c147f0, commit 1b6ca726, 528/528, sweep #3 ACCEPT) | phase5-b7-pole-passage | docs/binder/phase5-b7-pole-passage-design-20260713.md |
