@@ -2,6 +2,23 @@
 
 `status: active`
 
+## 2026-07-14 addition (Phase 5 B-8 — Snow Barrens design [worktree branch])
+- `phase5-b8-snow-barrens-design-20260714.md` — Peetsa's "shift away from snowy_plains at the poles" →
+  a first-party registered biome `globe:snow_barrens` (powder snow + snow blocks + ice + snow carpet, no
+  dirt/trees/grass; cold-only spawns) replacing the `snowy_plains` monoculture in the polar core. Recon:
+  past `EXTREME_POLAR_CAP_MIN_DEG=74.5` the consumer *clamps* everything to `minecraft:snowy_plains`
+  (`LatitudeBiomes.clampExtremePolarCapOutput:6928`, `pickPolarWithFrontShoulder:5637`); the Latitude HUD
+  already title-cases the id (`BiomeSamplerTools.biomeDisplayName:654`) so a registered biome reads
+  "Snow Barrens" everywhere (the raw `minecraft:snowy_plains` in the screenshot is F3/JourneyMap). Two
+  paths weighed — **Path B (registered biome) recommended** over surface-only re-skin (which never changes
+  the name); surface built via a `SnowBarrensSurfaceMixin` cloning the proven `AlpineSurfaceMixin` block
+  rewrite. Band onset **86°** recommended (invisible seam with the veg-fade `FULL_DEG=86`; 85° alt).
+  Vanilla-first law: first-party ≠ external pack → satisfied, gated behind `latitude.snowBarrens.enabled`
+  (default OFF, byte-identity-off hard gate). Worldgen change = B-6 failure class → flag + atlas
+  before/after (`tools/atlas/atlas_runner.py … --sysprop`) + suite + fresh-world live; new chunks only,
+  honest seam, no retro-conversion. Rides B-7 cold (frostbite 85+, powder-snow traps, campfire ritual) —
+  no new mechanics in v1. Open owner dials: onset 85 vs 86, exact name, ice_spikes keep-vs-absorb, spawn list.
+
 ## 2026-07-10 addition (Phase 5 B-5 — Hemisphere Passage design [worktree branch])
 - `phase5-b5-hemisphere-passage-design-20260710.md` — explicit consensual E/W edge crossing: approach fog
   → two-button "pass through?" prompt → opaque blur masking a chunk-ring preload → teleport to mirrored X
