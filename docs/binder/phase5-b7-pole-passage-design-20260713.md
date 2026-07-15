@@ -616,3 +616,22 @@ meridian, PoleWallRenderer, storm country, pack ice, polePassageV2). Geometry tr
 a pole is a point — crossing = far side of the SAME pole on the antipodal meridian; repeating-band
 map extension REJECTED (endless-wrap worldgen rebuild, B-6 class). Owner may still flag the
 crossing off post-flight if it does not earn its place. B-8 Polar Barrens design swept in parallel.
+
+S7 POLAR IMMERSION (Peetsa 2026-07-14, extends the B-9 freezing-lakes idea to ALL polar water,
+surface included): while IN WATER in polar country, the cold bites REGARDLESS of shelter — the
+under-ice/underwater "sheltered" reading (low skylight) is deliberately overridden by immersion;
+water conducts cold, walls do not help you in the sea. RULE (one line): immersion evaluates the
+existing cold-damage curve at (|lat| + 3 deg), capped at 90 — "polar water is three degrees
+colder than the air." Consequences: swimming the open sea at 82 (below the freeze line) bites like
+85 land (frostbite onset — the 82-85 liquid sea is the main surface water in polar country, and it
+must have teeth for this order to mean anything); under-ice swimming at 87+ reads like the lethal
+core — the wall trek under ice is now genuinely gated on cold protection. ColdProtection scales it
+(full leather = drysuit = zero, same one-evaluator law); frost cue active while it bites; S5
+post-crossing grace still suppresses (ceremony window); S6 heal-lock unaffected (immersion is not
+sheltered). BOAT EXEMPTION FOR FREE: vanilla isInWater() is false in a boat — crossing polar seas
+by boat is safe, story-true, zero code. The +3 severity shift is the one tunable Peetsa may want
+to feel live (flag it in the flight brief). Server-side only, rides the existing PolarHazardWindow
+curves + the S4 shelter gate (immersion check precedes/overrides shelter); pure predicate + tests
+(immersion truth table incl. boat-not-immersed, +3 cap at 90, leather zero, grace precedence).
+BUILD TIMING: dispatch after the B-8 build sweep verdict (same-tree discipline); rides the next
+TEST jar with B-8.
