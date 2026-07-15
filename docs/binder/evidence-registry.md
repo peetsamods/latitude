@@ -191,3 +191,4 @@
 
 | 2026-07-14 | B-7 Pole Passage TEST 97 staged (SHA e30223e6, superset f5539e35, suites 519/519, sweeps ACCEPT x3) | phase5-b7-pole-passage fc2279b5 | docs/binder/phase5-b7-pole-passage-design-20260713.md |
 | 2026-07-14 | B-7 P3 fix round: TEST 98 staged (SHA 57c147f0, commit 1b6ca726, 528/528, sweep #3 ACCEPT) | phase5-b7-pole-passage | docs/binder/phase5-b7-pole-passage-design-20260713.md |
+| 2026-07-14 | B-8 atlas proof PASSED (gate1 byte-identical flag-off; gate2 11,161 barrens px 86.26-90, 1:1 >=88; runs 20260714-214154/220021/221445/223215) | phase5-b7-pole-passage | docs/binder/phase5-b8-snow-barrens-design-20260714.md |

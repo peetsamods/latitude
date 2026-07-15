@@ -437,3 +437,17 @@ A6 HONESTY: coasts stay snowy_beach, rivers frozen_river ("zero dirt" is inland-
 brief says so); 87.5 deg is ~75% barrens on the fray (dirt patches until 88 — owner chose the
 invisible seam); id contains no snow/ice token so path-based cold classifiers ignore it (verified
 harmless today, noted for future).
+
+
+## STATUS 2026-07-14 NIGHT: ATLAS PROOF PASSED — BOTH GATES
+GATE 1 (safety): flag-off run byte-identical to the pre-B8 baseline across EVERY map artifact
+(only run metadata/timing/legend-vocabulary lines differ — benign class documented). GATE 2
+(feature): flag-on places 11,161 polar_barrens pixels at 86.26-90.00 deg, replacing snowy_plains
+EXACTLY 1:1 at >=88 (6,870->6,870), fray split 86-88 conserved to the pixel, 0 pixels flag-off,
+bit-identical across two flag-on runs (seed 20260714, step 32, regular). FALSE-NEGATIVE POST-
+MORTEM: the first gate-2 read used step32_biomes.txt, which truncates to TOP 20 biomes — barrens
+at 1.43% ranks 21st; the real verdicts live in world_biome_inventory.json (present_in_world:true),
+the biome_ids.png pixels via palette, and now the -Dlatitude.debugBarrens counter log. Traversal
+is unit-pinned through the VERBATIM atlas entry point (PolarBarrensAtlasEntryPointTest, first
+MC-bootstrapped test in the suite). One chokepoint serves all three pipelines (live MIXIN, atlas
+map, atlas inventory) — receipts in the LatitudeBiomes override javadoc. Suite 564/564.
