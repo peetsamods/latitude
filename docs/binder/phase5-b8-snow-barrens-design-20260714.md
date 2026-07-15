@@ -401,3 +401,39 @@ byte-identity-off + atlas proof.
 Phase name stays B-8; flag `latitude.snowBarrens.enabled` may keep its name or become
 `latitude.polarBarrens.enabled` — build crew picks ONE and forwards it in build.gradle same pass
 (L17 law); the id and display name are law.
+
+
+## ADVERSARIAL DESIGN SWEEP — APPROVE-WITH-AMENDMENTS (2026-07-14, BINDING build recipe deltas)
+Amendments 1-3 BLOCKING (the doc's §4.4-4.5 recipe as written would be silently erased live,
+unpaintable by the atlas, and feature-dead):
+A1 PLACEMENT: do NOT retarget the clamp/fallback literals (census wrong anyway — every site has a
+Registry/Collection twin + polarSnowyBase :8034 is the dominant deep emitter). Instead: ONE
+flag-gated FINAL OVERRIDE per pick twin, inserted AFTER applyClimateCompatReroll (:3785 and
+:4495), rewriting ONLY minecraft:snowy_plains -> globe:polar_barrens on the 86->88 coherent fray.
+No static lat_* tag membership EVER (would leak barrens to 70 deg + change flag-off pools). This
+placement makes ice_spikes accent + mountain alpine survive by construction (owner decision #3
+mechanism, free).
+A2 QUARANTINE + POOLS: the vanilla-first quarantine (isCustomBiome :7492, quarantineUnknownCustom
+LandBiome :6236, runs :3719/:4437 AFTER the old insert points) must admit the id: add to
+allowedExtraBiomeIdsForBand(BAND_POLAR) (:6138) flag-gated. ATLAS: activate the two stubs
+expandSourceCandidatePool (:566) + rememberSourcePolicyBiomeRegistry (:570) (flag-on append) and
+route BiomePreviewHeadlessRunner sourcePool (:1038,:1214) through the expansion so atlas pool ==
+live registry reach (kills the structural false-green). FEATURES: admit the id to the features
+mixin's index (ChunkGeneratorGenerateFeaturesBiomeSetMixin) or freeze_top_layer never runs.
+A3 JSON: features = freeze_top_layer ONLY (ground look = PolarBarrensSurfaceMixin substitutions;
+carpet CANNOT come from a surface mixin); copy snowy_plains carvers; spawners monster=[stray],
+creature=[polar_bear,rabbit], rest empty + spawn_costs {}; add to minecraft:spawns_white_rabbits;
+REGISTER UNCONDITIONALLY (conditional registration would corrupt flag-on-then-off worlds; flag-off
+registry visibility in F3/locate is inherent and documented, not a bug).
+A4 NAMING/FLAGS: rename all snow_barrens refs -> polar_barrens (JSON filename, lang key
+biome.globe.polar_barrens, mixin, tests); flags latitude.polarBarrens.enabled (default OFF) +
+.onsetDeg default = PolarVegetationFade.FULL_DEG (KEEP-SHARED, live-tunable) + .fullDeg 88.0;
+build.gradle L17 lines same pass.
+A5 PROOF: 3 pinned-seed atlas runs (HEAD baseline / flag-off / flag-on; off vs baseline must be
+byte-identical bundles) + fixed-seed region-hash or feature-index-no-rebuild assertion for the
+RNG-shift risk; teach BiomeBandPolicy (:60), band_correctness, palette legend the new id SAME PASS
+(indexing law). ATLAS RUNS ARE ORCHESTRATOR-OWNED (top-level session), never subagent-owned.
+A6 HONESTY: coasts stay snowy_beach, rivers frozen_river ("zero dirt" is inland-only — flight
+brief says so); 87.5 deg is ~75% barrens on the fray (dirt patches until 88 — owner chose the
+invisible seam); id contains no snow/ice token so path-based cold classifiers ignore it (verified
+harmless today, noted for future).
