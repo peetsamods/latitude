@@ -506,7 +506,10 @@ dist 0 pressed against the clamp. Classic worlds already have the vanilla border
 
 S3 TWO-STAGE COLD PACING (Peetsa decision 2026-07-13, "Two-stage cold" picked over literal
 lethal-from-85 and keep-current): the polar approach starts earlier without touching the flight-
-tested endgame. Snow visual onset 85->82 deg (world whitens before any text); first warning rung
+tested endgame. Snow visual onset 85->82 deg (world whitens before any text) [owner-revised again
+2026-07-14, S8: 82 -> 80 — polar country now starts at 80; the APPROACH rung is pinned to the
+constant and moved with it, retreat re-arm 81 -> 79, same 1-deg hysteresis; everything else in this
+S3 section deliberately stays put]; first warning rung
 85->82 deg (approach wording) [owner-revised 2026-07-14 from the P2 draft's 83: placed AT the
 82-deg snow onset so the first words land with the first snowflakes; verbatim copy "Entering polar
 storm country. Proceed with caution." replaces the old WARN_1 snow line; the ladder's retreat
@@ -654,3 +657,14 @@ water ("swimming in leather would protect you — makes no sense"). FUTURE ITEM:
 DRYSUIT item (crafted gear; would join freeze_immune_wearables or get its own immersion-specific
 evaluator so leather protects on LAND, drysuit protects IN WATER). Parked with the expedition-
 tonic potion idea (S1) — both are the future "polar outfitting" item family. Not a v1 blocker.
+
+S7 AMENDMENT (sweep #4 ruling, 2026-07-14): immersion shifts the WHOLE cold-severity evaluation —
+damage, frost cue/visual, AND the effects staging (slowness/weakness/fatigue) — not damage alone.
+Receipts: the effects gate (eff 87.5) sits strictly poleward of frostbite onset (eff 85), so
+slowness can never fire without damage simultaneously biting (no pure-slowness leak exists); and
+splitting effects onto raw latitude would fork the one-evaluator chokepoint (drift class) and
+produce lethal-band damage with no slowness (new incoherence). Only PAUSE rules distinguish damage
+from effects (S3/S4 law intact). FLIGHT BRIEF: +3-in-water slowness is feelable — swimming at 85
+raw moves like 88 land. B-8 FIX-2 wording correction: palette_authority.json has THREE dev-tooling
+touchpoints (viewer_api_server.py, util/BiomeColorUtil.java:85 fallback, dev/BiomePreviewExporter)
+— all unshipped, ruling unchanged, justification corrected.
