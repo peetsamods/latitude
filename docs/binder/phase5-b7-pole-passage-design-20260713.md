@@ -635,3 +635,16 @@ curves + the S4 shelter gate (immersion check precedes/overrides shelter); pure 
 (immersion truth table incl. boat-not-immersed, +3 cap at 90, leather zero, grace precedence).
 BUILD TIMING: dispatch after the B-8 build sweep verdict (same-tree discipline); rides the next
 TEST jar with B-8.
+
+S8 POLAR COUNTRY STARTS AT 80 (Peetsa 2026-07-14, the "cheap 80%" of the dilation idea — chosen
+over geometric dilation for now): AMBIENT_ONSET_DEG 82 -> 80 and the APPROACH rung moves with it
+(the rung is PINNED to the ambient constant by test — designed for exactly this): snow begins and
+"Entering polar storm country. Proceed with caution." speak at 80, retreat re-arm 81 -> 79 (same
+1-deg hysteresis idiom). EVERYTHING ELSE DELIBERATELY STAYS: frostbite 85 (owner's S3 number),
+blizzard 87, lethal core 88-90, DANGER 89 / LETHAL 89.7, sea-freeze 85 (worldgen-pinned), veg fade
+78/86, Barrens onset 86, storm sky 85 — the flight-tested endgame does not move. Net: ~2 deg
+(~110 blocks on Regular-Wide) more storm-country approach; the challenge bands each have their own
+dial if the owner wants deeper stretching after feeling it. S7 interaction: immersion (+3) starts
+biting where lat+3 reaches the frostbite curve (82 in water) — unchanged by this shift, coherent.
+Geometric dilation (nonlinear degrees, fresh-world world-shape option) stays PARKED as a designed
+future feature. BUILD: rides the S7 round (constants + rung/re-arm + javadocs + test updates).
