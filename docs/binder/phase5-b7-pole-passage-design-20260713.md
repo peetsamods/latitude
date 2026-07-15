@@ -111,19 +111,28 @@ move**; B-7's lines interleave between them:
 
 ### 3.3 The crossing transform (over-the-pole continuity)
 
-Confirmed generalization: `HemispherePassage.mirrorX(x, centerX)` (`core/HemispherePassage.java:229-231`)
-is axis-pure X-reflection — REUSED UNCHANGED. The pole crossing, for a player at `(x, z)` near the
-±Z edge (center 0,0):
+**[P3 fix 2026-07-14: antipodal meridian, not mirrorX — owner-observed on the TEST 97 maiden
+flight.]** The original transform below claimed `mirrorX` "flips longitude 180°" — FALSE: `mirrorX`
+(`x → −x`) flips the longitude SIGN (`L → −L`, the EAST/WEST antimeridian formula), so Peetsa
+crossed at x≈+530 (13°E) and landed at x=−530 (13°W) instead of the antipodal 167°W (log 16:08:05).
+Walking over a POLE lands you on the ANTIPODAL meridian: `L → L+180`, in blocks
+`targetX = x − sign(x)·xRadius` (`PoleArrivalSearch.antipodalX`, sign(0)=+1 by convention → the
+prime meridian maps to the WEST edge; ±180° are the same meridian). A near-prime-meridian departure
+therefore targets the E/W BORDER CORNER — the A2 corner X-clamp already bounds the target and every
+search candidate, pulling it inward of the whole EW ceremony band (verified path, service L259-264).
+`mirrorX` stays EXACTLY as-is for the EW axis, where it is correct. Corrected transform, for a
+player at `(x, z)` near the ±Z edge (center 0,0):
 
-- `targetX = mirrorX(x, centerX)` — longitude flips 180° (far meridian).
+- `targetX = antipodalX(x, centerX, xRadius) = x − sign(x−centerX)·xRadius` — longitude flips 180°
+  (the true antipodal/far meridian); E/W hemisphere still flips (|dx| → xRadius−|dx|, opposite side).
 - `targetZ = sign(z − centerZ) × zForLatitudeDeg(ARRIVAL_DEG_POLE, zRadius)` — SAME pole side,
-  pulled equatorward to the arrival line (`LatitudeMath.zForLatitudeDeg`, L189-195).
+  pulled to the arrival line (`LatitudeMath.zForLatitudeDeg`, L189-195).
 - **`arrivalYaw = playerYaw + 180°`** — walk north over the pole, emerge walking SOUTH on the far
-  meridian. Sphere continuity: a straight line over the pole reverses both horizontal components,
-  and `x → −x` mirror + re-entry from the edge is exactly `(dx,dz) → (−dx,−dz)` = yaw+180. This is
-  a REAL DELTA vs B-5, whose teleport keeps yaw (`HemispherePassageService.java:162-163` passes
-  `player.getYRot()` through) — correct for the EW mirror (an eastbound crosser keeps walking east),
-  wrong for the pole. Pitch kept; momentum zeroed as today (L164-165).
+  meridian. Sphere continuity: a straight line over the pole reverses the heading; the antipodal
+  re-entry from the pole realises exactly yaw+180. This is a REAL DELTA vs B-5, whose teleport keeps
+  yaw (`HemispherePassageService.java:162-163` passes `player.getYRot()` through) — correct for the
+  EW mirror (an eastbound crosser keeps walking east), wrong for the pole. Pitch kept; momentum
+  zeroed as today (L164-165).
 - Hemisphere-title side effects: X flips → the E/W debounce sees a big step; `MAX_STEP_BLOCKS` 256
   re-seeds without firing (`core/HemisphereCrossing.java:51`) — already exercised live by every B-5
   crossing. Z barely changes → N/S title state untouched. No new title-machine work.
@@ -250,8 +259,10 @@ feeds it. B-7 instantiates it a second time with pole distances. Concretely in
 exactly four places; each needs a pole sibling (recommend an `Axis` enum parameter or a parallel
 `resolvePoleArrival`, dev's call — shared probe budget/loop machinery either way):
 
-1. **Target**: `targetX = round(mirrorX(playerX, centerX))`; `targetZ = sign(z) × zForLatitudeDeg(88.0)`
-   (§3.3) — vs B-5's arrival-abs-X + kept Z (L90-97).
+1. **Target** [P3 fix 2026-07-14: antipodal meridian, not mirrorX]:
+   `targetX = round(PoleArrivalSearch.antipodalX(playerX, centerX, xRadius))` (L → L+180; the original
+   `mirrorX` here was the EW L → −L formula, live-disproven on TEST 97);
+   `targetZ = sign(z) × zForLatitudeDeg(89.5)` (S5) — vs B-5's arrival-abs-X + kept Z (L90-97).
 2. **Search axes swap**: primary search runs **±X at the fixed arrival Z** ("keep longitude as close
    as possible" becomes "keep latitude exactly, walk the arrival parallel"), step 16, budget-shared;
    last-resort nudge runs **equatorward along Z** (toward center) — the mirror image of B-5's ±Z
@@ -518,7 +529,10 @@ blocks (vanilla-border-grid analogue). Classic worlds already show the vanilla b
 [P2 polish 2026-07-14, sweep INFO adopted: the frost presentation is flag-gated WITH the wall it
 presents (latitude.polePassageV2.enabled) — flag-off there is no clamp, so no frost may suggest
 one; the actionbar/chime are server-side behind the same flag already. The glacial keyline plane
-was deferred at P2 (P3+ candidate).]
+was deferred at P2 — then SUPERSEDED at P3 by an owner order off the TEST 97 maiden flight
+("There needs to be the diagonal lines like vanilla"): BUILT as PoleWallRenderer, a vanilla-
+forcefield-texture diagonal-stripe plane at z = ±zRadius (Wide worlds, same flag, ~40-block
+approach fade, glacial blue-green tint), submitted through the 26.2 custom-geometry path.]
 
 S1 ADDENDUM (hypothermia rung vs cold protection, Peetsa 2026-07-13, P2 scope): the 85-deg
 "Hypothermia sets in" rung fires ONLY when protection is below FULL (honesty law: full leather =
