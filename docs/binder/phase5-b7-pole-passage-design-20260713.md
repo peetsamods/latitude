@@ -668,3 +668,18 @@ from effects (S3/S4 law intact). FLIGHT BRIEF: +3-in-water slowness is feelable 
 raw moves like 88 land. B-8 FIX-2 wording correction: palette_authority.json has THREE dev-tooling
 touchpoints (viewer_api_server.py, util/BiomeColorUtil.java:85 fallback, dev/BiomePreviewExporter)
 — all unshipped, ruling unchanged, justification corrected.
+
+S9 ARRIVAL PRE-WARM (2026-07-16, from the TEST 99 live freeze): opening the JourneyMap fullscreen
+map right after a pole crossing hard-stalled the client on a fresh Regular-Wide world — recipe:
+VIRGIN antipodal terrain + integrated server already 60+ ticks behind generating it + JM fullmap
+piling on. Second visit (chunks existed) did not freeze. MITIGATION (server-side, no netcode):
+while a survival-or-creative player is inside the pole prompt band (dist <= promptAt + margin,
+moving state irrelevant), the server keeps a small chunk-load ticket (~3x3 to 5x5) alive at the
+player's CURRENT antipodal arrival target, refreshed as they drift (re-anchor when the target
+moves > ~64 blocks; drop the ticket when they leave the band or cross). By answer time the landing
+exists: the virgin-arrival generation cliff disappears and the crossing teleport itself gets
+faster (no density-compile + gen burst at answer time — TEST 99 log showed that burst). Budget:
+one ticket per player, only in the band; creative/spectator included (they cross too). FLIGHT
+BRIEF (residual honesty): on the biggest worlds a fullscreen-map open over any large virgin area
+can still stall the client — that is JourneyMap + worldgen load, not the crossing; give new
+regions a beat.
