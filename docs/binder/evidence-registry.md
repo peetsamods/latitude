@@ -194,3 +194,4 @@
 | 2026-07-14 | B-8 atlas proof PASSED (gate1 byte-identical flag-off; gate2 11,161 barrens px 86.26-90, 1:1 >=88; runs 20260714-214154/220021/221445/223215) | phase5-b7-pole-passage | docs/binder/phase5-b8-snow-barrens-design-20260714.md |
 | 2026-07-14 | TEST 99 staged (SHA 94ccfd1c, commit 5d8d6d95, 564/564, atlas both gates PASSED, barrens+immersion+onset-80 flight-flipped) | phase5-b7-pole-passage | docs/binder/phase5-b8-snow-barrens-design-20260714.md |
 | 2026-07-16 | S9 arrival pre-warm committed (PORTAL tickets at the antipodal target from the prompt band; TEST 99 freeze mitigation; sweep #5 ACCEPT, 570/570) | phase5-b7-pole-passage | docs/binder/phase5-b7-pole-passage-design-20260713.md |
+| 2026-07-16 | TEST 100 staged (fog law v2 + glacier + freeze fray + calm spawn; atlas byte-identity re-proof PASS run 20260716-220706; suite 591/591; sweep #6 ACCEPT) | phase5-b7-pole-passage ce4a8aaa+ | docs/binder/phase5-b7-pole-passage-design-20260713.md |
