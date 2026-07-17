@@ -688,7 +688,16 @@ S10 TEST-99 FLIGHT ROUND (Peetsa 2026-07-16, "not quite happy yet"): (a) SPAWN C
 spawn must never land in polar storm country ("you gotta earn that"): world-spawn search clamps
 |lat| to a calm band (<= ~50 deg), server-side, all shapes; 80-deg onset itself KEPT (owner asked
 for an honest opinion; ruling: the felt cheapness was the spawn, not the threshold — revisit only
-after a flight that starts equatorial). (b) FOG LAW v2 — one continuous latitude fog curve: light
+after a flight that starts equatorial). [OWNER REVISION 2026-07-17, zone-aware: "you completely
+neutered the spawn zone of 'polar' that I chose. Player should still be able to initially spawn in
+polar; however, they should only be spawned at the lowest latitude of polar." Law as built
+(SpawnCalmBand): the flat 50-deg cap applies only to DEFAULT spawns and non-polar zones; an
+explicit SUBPOLAR pick lands in the band's low edge [50,55]; an explicit POLAR pick (incl. a
+RANDOM roll resolving to POLAR) lands in polar's LOWEST latitudes [66.5,70] (band-onset-aligned,
+window-midpoint target — the legacy 0.89 fraction = 80.1 deg is retired as illegal); and a hard
+everyone-ceiling at 74 deg (6 deg of calm before the 80 storm onset, under the 78 veg-fade line)
+keeps storm country unspawnable for all zones. Search jitter is clamped into the zone window on
+BOTH bounds.] (b) FOG LAW v2 — one continuous latitude fog curve: light
 haze 80, thickening per degree, heavy by 88, NEAR-TOTAL WHITEOUT at the pole line (visibility a
 few blocks) which REPLACES the striped wall visual entirely (owner reversal of the vanilla-stripes
 ask after seeing it live: "get rid of the appearance of this diagonal wall... that's how 90
