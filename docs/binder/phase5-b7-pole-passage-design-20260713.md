@@ -743,3 +743,11 @@ leather/drysuit/expedition-tonic): a wearable that relaxes the fog-distance caps
 whiteout topcoat into a RING — clear center, frost/snow pressing at the perimeter, visible goggle-
 frame vignette; all screen-space (no shaders); sight joins land-cold and water-cold as the third
 conquered sense.
+
+S12 GOGGLES SPEC REFINEMENT (Peetsa 2026-07-16): with goggles ON, snow particles GREATLY reduced
+in the LINE OF SIGHT but very much visible at the goggle perimeter — the contrast IS the feedback
+("let the player realize how much they are helping"). Implementation shape: our blizzard particles
+are custom-budgeted spawns with controlled positions — per-spawn cone filter for goggle wearers
+(suppress spawns whose position falls in the central view cone via dot(spawnDir, lookDir) >= cos
+theta; keep/boost spawns toward the rim), plus the ring vignette from the base spec (fog-cap relax
+center, frost pressing at edges, frame border). No shaders needed anywhere in the goggle stack.
