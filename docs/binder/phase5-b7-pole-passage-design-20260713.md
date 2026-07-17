@@ -780,3 +780,22 @@ SURFACE ALLOWLIST >= 80: sky-exposed monster spawns = strays only (reduced); zom
 spiders/etc. cave-only in polar country; composes with the polar-night 24/7 rule (which now
 benefits only strays on the surface). (f) VILLAGES TO 80: the old 74.5 extreme-cap village veto
 moves to 80 — civilization ends where the storm begins (worldgen, new chunks).
+
+S14 TEST-104 FLIGHT ROUND (Peetsa 2026-07-17): (a) POLAR SKY LIGHT STORY — midnight-sun band at
+global night: the skybox holds a PINK-GOLD DUSK (no stars, no black sky; extend SolarSkyMood: a
+twilight hold curve replacing the vanilla night sky darkening in the render state, sun visibly
+circling), winter/polar-night band: full dark even at global noon (gloom to ~1.0, "no light on
+the opposite pole"); the functional ground-light stays the global clock (accepted seam,
+unchanged). (b) UNIVERSAL FREEZE — the solid-ice law generalizes from river-biome columns to ALL
+land-column water in the full-freeze zone (>= 85 frayed front, the same freezesWaterFrayed):
+surface lakes/ponds freeze SOLID to bed (owner found liquid 1 block under a frozen lake at 89),
+FLOWING water exposed above ground freezes to ice (WATERFALLS into polar = ice cascades), ocean
+family stays exempt (under-ice features sacred), water BELOW the glacier-sole depth stays liquid
+(B-9 glacial cave lakes + fish); Barrens spring features: keep underground, surface-emergent
+springs in-zone freeze with the flowing rule. (c) FOG COLOR TRACKS THE SKY — the white-wall/
+chunk-pop look = white fog against a dark sky; fog color now follows the sky color (day white-
+haze, night/polar-night near-black), and the SCREEN-SPACE WHITEOUT TOPCOAT gets the same darkness
+modulation (it was compositing pure white at night — the too-bright fog the owner saw); distant
+terrain dissolves into atmosphere. (d) SPARKLE v2 — floats 0.5-1.5 blocks ABOVE the snow (never
+clipped in — the raindrop look), gentle drift, amethyst-family glint (ELECTRIC_SPARK / WAX_OFF /
+END_ROD — pick what reads as frost glittering in air; owner asked for "amethyst sparkle").
