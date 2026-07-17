@@ -465,3 +465,17 @@ gets a COHERENT-NOISE FRAY (~85 +/- 1 deg, barrens-fray idiom, Art VI clean) —
 new-chunks-only, byte-identity flag-off; the 85 constant itself stays the anchor. Both are
 worldgen: fresh world or unexplored longitude to see them. Atlas re-proof: gate 1 byte-identity
 flag-off re-run + visual check of the frayed freeze edge in the flag-on map.
+
+
+## B-9 IDEA LOCKED: POLAR WRECKS (Peetsa 2026-07-16, "small chance of a shipwreck amidst the frozen ice")
+Two tiers. V1 FROZEN-IN SURFACE WRECKS (cheap, may ride an early round): a new data-driven
+structure reusing VANILLA's shipwreck type + ship templates (type minecraft:shipwreck,
+is_beached), biome-restricted to globe:polar_barrens via our own has_structure-style tag, RARE
+structure_set spacing (owner: "small chance"); vanilla placement half-buries hulls -> reads as a
+ship frozen into the glacier, masts through the snow crust; vanilla shipwreck loot gives the
+Barrens its missing exploration reward (ties to the parked LATITUDE ACHIEVEMENTS family). MUST
+CHECK: the existing edge/storm-zone structure suppression (TEST 89 era, "no structures on the
+world's edge boundary" + village buffer) — the wreck needs a deliberate exemption or placement
+inside its rules; build crew verifies scope with receipts. V2 ENTOMBED WRECKS (B-9 Glacial Caves
+proper): ships sealed in ice pockets discovered from cave voids — designed with the caves phase
+(icicle block, frozen lakes). Doomed-expedition register throughout.
