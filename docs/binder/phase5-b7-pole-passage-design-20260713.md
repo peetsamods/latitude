@@ -328,6 +328,7 @@ Ladder (verbatim, `GlobeWarningOverlay.java:45-52`): WARN_1 85° "Snow begins to
 conditions ahead -- consider turning back." · WARN_2 87° "The blizzard deepens -- hypothermia is
 setting in. Turn back while you can." · DANGER 89° "DANGER: Lethal blizzard conditions ahead. Turn
 back." (**verbatim-locked**) · LETHAL 89.7° "Severe hypothermia -- you are freezing to death."
+[S13c 2026-07-17, owner-approved: the DANGER rung is re-timed 89° → **88°** (the lethal-core onset — "ahead" was a lie two degrees deep in the blizzard) and reworded present-tense to **"DANGER: Lethal blizzard. Turn back."**; the earlier verbatim-lock is lifted for this one owner-directed change. The KEEP-SHARED `LatitudeMath.POLAR_STAGE_*` fog/vignette-severity constant stays 89°; only the `PolarColdCues.Rung.DANGER` TEXT rung moved. LETHAL 89.7° + its protection swap unchanged.]
 
 The tension: with a crossing available, "Turn back." at 89° is the same honesty problem B-5 solved at
 the EW edge (B-5's fix: retire the two-tier "Turn back." banner for one advisory + let the prompt be
