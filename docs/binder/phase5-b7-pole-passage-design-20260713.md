@@ -760,3 +760,22 @@ are custom-budgeted spawns with controlled positions — per-spawn cone filter f
 (suppress spawns whose position falls in the central view cone via dot(spawnDir, lookDir) >= cos
 theta; keep/boost spawns toward the rim), plus the ring vignette from the base spec (fog-cap relax
 center, frost pressing at edges, frame border). No shaders needed anywhere in the goggle stack.
+
+S13 TEST-103 FLIGHT ROUND (Peetsa 2026-07-17): (a) AURORA + SPARKLE BUILD NOW (S12 was queued;
+the flight proved the polar night is bare with just stars+moon) — aurora: translucent animated
+ribbon curtains in the sky pass (green-teal + purple fringe, slow noise drift), gated on dark
+polar sky via the effectiveSun evaluator (strongest in polar night), lat ~65+ poleward, overcast/
+storm suppresses (the whiteout owns 85+ anyway), flag-gated in the solar family; sparkle: calm-
+weather glint particles on snowfields 80-85 below the deep-blizzard tier, small budget, low-sun
+aware if cheap. (b) BARRENS AT 82 — the veg-fade FULL_DEG (86) moves to 82 (fade band 76->82) and
+the KEEP-SHARED coupling carries the Barrens onset with it automatically (owner window 81-83);
+verify SUGARCANE is inside the fade's feature coverage and ban it with the fade (it has been
+slipping through — owner saw it at ~84). Fray still +2 (82->84 full). Atlas gate-1 re-proof after.
+(c) DANGER RE-TIMED + REWORDED (touches the owner's verbatim line — flagged to him): 89 -> 88
+(= the lethal-core onset, honest again) and present tense "DANGER: Lethal blizzard. Turn back."
+("ahead" read as a lie two degrees deep in the blizzard). LETHAL 89.7 unchanged. (d) STRAYS CUT
+~2/3: barrens spawner weight 80 -> ~27, pack 4 -> 1-2; the traversal is the antagonist. (e) POLAR
+SURFACE ALLOWLIST >= 80: sky-exposed monster spawns = strays only (reduced); zombies/creepers/
+spiders/etc. cave-only in polar country; composes with the polar-night 24/7 rule (which now
+benefits only strays on the surface). (f) VILLAGES TO 80: the old 74.5 extreme-cap village veto
+moves to 80 — civilization ends where the storm begins (worldgen, new chunks).
