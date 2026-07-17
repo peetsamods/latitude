@@ -700,3 +700,31 @@ standing veto). (d) CROSSING LEGIBILITY — the pole prompt names the DESTINATIO
 computed far meridian ("...the far side of the world — 167 deg W."), selling the polar-route value
 (over-the-top shortcut vs 20000 blocks around); the deeper keep-or-summit decision is the owner's
 after this round flies. Client items (b)(c)(d) one crew; (a) server.
+
+S11 TEST-101 FLIGHT ROUND (Peetsa 2026-07-16, twelve items):
+WORLDGEN (barrens flag family, new-chunks-only): (a) lush_caves ILLEGAL in the polar core —
+underground cave-biome cells resolving to lush_caves within the Barrens band remap to the column
+surface biome (plain caves) until B-9 Glacial Caves takes the slot; (b) FROZEN RIVERS become
+COMPLETE ice (full water column -> ice) in the full-freeze zone — no fish for free (no water
+column); the SEA keeps surface-ice-over-liquid (the under-ice swim/wall/immersion features depend
+on it); glacial-cave semi-ice lakes with fish = B-9; (c) FIREFLY BUSH BAN extends to SUBPOLAR+
+(veg-fade machinery, dedicated lower onset ~50 deg for firefly specifically — owner has now
+flagged fireflies twice with exclamation marks).
+SKY/FOG (client): (d) DIAMOND SUN BUG — the tilt composition lets the sun/moon quad ROLL in-plane
+(45 deg roll = diamond); add counter-roll so billboards stay upright while the arc tilts; (e) BOTH
+sun+moon visible under midnight sun — should be impossible (antipodal moon below horizon);
+investigate with (d); (f) FOG COLOR follows the effective sun: night/polar-night fog darkens with
+the sky (the white-fog-at-dark-sky wrongness), UNDERGROUND (no sky) the polar depth fog does not
+apply at all (the bright whitish cave fog bug — the S10 depth fog needs the sky/underground gate
+the whiteout topcoat already has); (g) SOFTER FOG GRADIENT — pull the fog START closer (smaller
+start fraction) so distant terrain fades through haze instead of popping as sharp unrendered
+mountains at the cap.
+HUD/UI (HUD Studio round 10): (h) Accessibility section: rename the dropdown to "Color Schemes";
+(i) new accessibility toggle "Reduce polar snow particles" (comfort option scaling the blizzard
+particle budget down); (j) PRESET CUSTOM NAMES (rename slots; stop identical unnamed rows);
+(k) direct drag-RESIZE of HUD elements with a corner resize affordance — bigger item, design
+within the existing HUD Studio editor idioms; (l) CLOCK SOLAR READOUT — holding/having a vanilla
+clock adds a HUD line naming the solar state (Midnight Sun / Polar Night / sun rising-low-high,
+from the SolarTilt evaluator; compass-HUD family styling).
+WRECK NOTE: the flight's upside-down wreck was VANILLA's (frozen_ocean is in vanilla shipwreck
+tags); our B-9 v1 polar wrecks restrict the template pool to upright recognizable hulls.
