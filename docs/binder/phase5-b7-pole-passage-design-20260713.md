@@ -683,3 +683,20 @@ one ticket per player, only in the band; creative/spectator included (they cross
 BRIEF (residual honesty): on the biggest worlds a fullscreen-map open over any large virgin area
 can still stall the client — that is JourneyMap + worldgen load, not the crossing; give new
 regions a beat.
+
+S10 TEST-99 FLIGHT ROUND (Peetsa 2026-07-16, "not quite happy yet"): (a) SPAWN CLAMP — first
+spawn must never land in polar storm country ("you gotta earn that"): world-spawn search clamps
+|lat| to a calm band (<= ~50 deg), server-side, all shapes; 80-deg onset itself KEPT (owner asked
+for an honest opinion; ruling: the felt cheapness was the spawn, not the threshold — revisit only
+after a flight that starts equatorial). (b) FOG LAW v2 — one continuous latitude fog curve: light
+haze 80, thickening per degree, heavy by 88, NEAR-TOTAL WHITEOUT at the pole line (visibility a
+few blocks) which REPLACES the striped wall visual entirely (owner reversal of the vanilla-stripes
+ask after seeing it live: "get rid of the appearance of this diagonal wall... that's how 90
+should feel"). PoleWallRenderer retired/flag-dead; clamp + chime + pack-ice actionbar + frost
+particles stay (touch feedback, not sight). (c) ATMOSPHERE PLUS-UP — greyer skies earlier (ramp
+toward the 85 storm sky from ~80-82), snow density/fall deepening with latitude beyond the deep
+tier, WIND AS GUSTS (periodic surges in snowfall speed/count; never constant sideways drift —
+standing veto). (d) CROSSING LEGIBILITY — the pole prompt names the DESTINATION: body gains the
+computed far meridian ("...the far side of the world — 167 deg W."), selling the polar-route value
+(over-the-top shortcut vs 20000 blocks around); the deeper keep-or-summit decision is the owner's
+after this round flies. Client items (b)(c)(d) one crew; (a) server.

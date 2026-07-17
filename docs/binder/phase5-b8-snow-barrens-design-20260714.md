@@ -451,3 +451,17 @@ the biome_ids.png pixels via palette, and now the -Dlatitude.debugBarrens counte
 is unit-pinned through the VERBATIM atlas entry point (PolarBarrensAtlasEntryPointTest, first
 MC-bootstrapped test in the suite). One chokepoint serves all three pipelines (live MIXIN, atlas
 map, atlas inventory) — receipts in the LatitudeBiomes override javadoc. Suite 564/564.
+
+
+## B-9a GLACIER BODY PULLED FORWARD + SEA-FREEZE FRAY (Peetsa 2026-07-16, TEST 99 flight)
+Owner: Barrens ground read as ~3 blocks of dressing over granite — "should be a very very very
+thick layer of ice under like 10 blocks at least of snow." B-9a (glacier body, from the Glacial
+Caves design family) lands NOW inside the Barrens flag family: in the Barrens core, surface =
+>= ~10 blocks snow_block over a THICK packed-ice body (tens of blocks; exact depth vs Y0 = build
+crew proposal within the B-9 design's glacier concept), powder-snow pockets preserved, ores/caves
+below the ice body intact (the underground-stays-alive law bounds the glacier's floor). ALSO:
+the 85-deg polarWaterFreeze razor seam (owner screenshot: harsh line on JourneyMap + in-world)
+gets a COHERENT-NOISE FRAY (~85 +/- 1 deg, barrens-fray idiom, Art VI clean) — same flag family,
+new-chunks-only, byte-identity flag-off; the 85 constant itself stays the anchor. Both are
+worldgen: fresh world or unexplored longitude to see them. Atlas re-proof: gate 1 byte-identity
+flag-off re-run + visual check of the frayed freeze edge in the flag-on map.
