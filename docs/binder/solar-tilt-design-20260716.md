@@ -216,8 +216,9 @@ Everything below is one self-contained astronomy kernel.
 noonElevationDeg(φ, δ) = 90 − |φ − δ|
 ```
 - Equator, solstice (φ=0, δ=+30): 90 − 30 = **60°** (sun 30° off zenith even at the equator at solstice).
-- 60° latitude, solstice, summer side (φ=+60, δ=+30): 90 − 30 = **60°**… wait — that's noon *elevation*;
-  see the table §11 for the full grid. The point: the further |φ − δ|, the lower noon.
+- 60° latitude, solstice, summer side (φ=+60, δ=+30): 90 − |60 − 30| = **60°** noon elevation. The point:
+  the larger |φ − δ|, the lower the noon sun. See the §12 grid for the full table.
+  <!-- [P1 build 2026-07-16: A1 errata applied — §4b drafting artifact stripped] -->
 
 **Midnight-sun / polar-night onset latitude** (where the sun stops rising or setting):
 ```
@@ -506,10 +507,15 @@ pick **DELTA_MAX = 30.0°** (shipped default):
   | +75° | 45° | +15° | 15° | **midnight sun** (never sets) |
   | +90° (N pole) | 30° | +30° | 0° | **midnight sun**, circling at 30° |
   | −60° | 0° | −60° | 30° | polar-night onset (sun grazes horizon at noon) |
-  | −75° | −15° | −75° | 15° | **polar night** (never rises) |
-  | −90° (S pole) | −30° | −90° | 0° | **polar night** |
+  | −75° | −15° | **−45°** | 15° | **polar night** (never rises) |
+  | −90° (S pole) | −30° | **−30°** | 0° | **polar night** |
 
-  (Assert each cell to ±0.01°; these rows *are* the spec.)
+  <!-- [P1 build 2026-07-16: A1 errata applied — φ=−75 midnight −75°→−45° and φ=−90 midnight −90°→−30°,
+       both recomputed from §4c. Pole invariant: at |φ|=90 the cos φ term vanishes, so elevation = sign(φ)·δ
+       is CONSTANT for all H (a pole's sun cannot be at −90° when δ=+30). Pinned by SolarTiltTest. -->
+  (Assert each cell to ±0.01°; these rows *are* the spec. **A1-corrected 2026-07-16** — the two midnight cells
+  above were wrong in the original draft; they now match §4c. The invariant "at |φ|=90, elevation == ±δ for
+  ALL hour angles" is an added test.)
 - **Onset thresholds:** assert midnight-sun/polar-night boundary = `90 − |δ|` for δ ∈ {0, 15, 23.5, 30}.
 - **δ(day) table:** day 0 → +30 (N summer solstice); day 90 → 0 (equinox); day 180 → −30 (S summer
   solstice); day 270 → 0; day 360 → +30. Quarter points day 45 → +21.2, day 135 → −21.2.
@@ -532,6 +538,9 @@ pick **DELTA_MAX = 30.0°** (shipped default):
 5. **Equinox anywhere** — near-vanilla day/night everywhere (bands gone).
 6. **Functional:** at the winter pole at global noon, mobs spawn on exposed surface and undead don't burn; at
    the summer pole at global midnight, exposed surface stays mob-free but a nearby cave still spawns.
+   [P1 build 2026-07-16] Known, LOW, vanilla-consistent: phantoms use their own global-clock insomnia
+   spawner (they never touch `isDarkEnoughToSpawn`), so an insomniac player can still get phantoms over a
+   midnight-sun surface — not a failed check.
 
 **Perf:** one `cos` per tick for δ(day); one quaternion multiply per body per sky frame (×3); the evaluator
 is a few trig ops on already-rate-limited spawn attempts and per-undead sunburn ticks. No per-tick world
