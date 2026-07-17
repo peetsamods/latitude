@@ -2,6 +2,28 @@
 
 `status: active`
 
+## 2026-07-16 addition (Solar Tilt + Seasons design [worktree branch])
+- `solar-tilt-design-20260716.md` — Peetsa's "solar altitude follows latitude; one pole summer, one
+  winter" + two live follow-ups (mob/functional layer; seasons). The sun/moon/**stars** path tilts by
+  latitude (equator overhead → poleward ever-lower arc → summer-pole midnight sun / winter-pole polar
+  night), generalised to a time-varying axial tilt **δ(day) = deltaMax·cos(2π·day/yearLen)** (default
+  yearLen 360 = 180 game-days between solstices; **yearLen ≤ 0 = frozen** = the original permanent-summer
+  special case). Recon **de-risked the 26.2 sky pipeline**: `SkyRenderer.renderSunMoonAndStars(PoseStack…)`
+  is public and still hands a live PoseStack per body (vanilla = `YP(-90)` then per-body `XP(angleRad)`;
+  sun rests at local +Y `translate(0,100,0)`) — the tilt is **rotation 1** (world-EW axis, signed latitude,
+  shared) + **rotation 2** (fixed −δ per body — the make-or-break bit; declination can't fold into a single
+  global pre-tilt). Pure `SolarTilt` core (noon elev `90−|φ−δ|`, onset `|φ|>90−|δ|`), unit-testable. NEW
+  **functional layer**: one evaluator `effectiveSunUp(lat,day,tod)&&skyExposed` read by BOTH visuals and
+  server mob rules — polar-night surface spawns monsters at global noon + suppresses undead burn
+  (`Monster.isDarkEnoughToSpawn`, `Mob.isSunBurnTick`); midnight-sun surface vetoes exposed spawns +
+  burns undead (caves unaffected). **No netcode** (both sides read `Level.getOverworldClockTime()` — the
+  26.2 WorldClock rework, volatile name). Honest seams: light engine / crops / beds / global clock all
+  UNCHANGED (documented). Considered+rejected: time-changing mods (one global clock) and the per-client
+  time-offset trick (shifts phase, doesn't tilt the arc). **delta pick = 30°** (onset at a memorable 60°,
+  reads at MC scale; dial `latitude.solarTilt.deltaMaxDeg`). One flag `latitude.solarTiltV2.enabled`
+  default OFF; worldgen byte-identical. Non-goals: no seasonal terrain/ice/temperature, no crop coupling,
+  no per-region time. Read-only recon — src/ untouched.
+
 ## 2026-07-14 addition (Phase 5 B-8 — Snow Barrens design [worktree branch])
 - `phase5-b8-snow-barrens-design-20260714.md` — Peetsa's "shift away from snowy_plains at the poles" →
   a first-party registered biome `globe:snow_barrens` (powder snow + snow blocks + ice + snow carpet, no
