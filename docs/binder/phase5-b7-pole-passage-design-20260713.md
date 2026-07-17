@@ -728,3 +728,18 @@ clock adds a HUD line naming the solar state (Midnight Sun / Polar Night / sun r
 from the SolarTilt evaluator; compass-HUD family styling).
 WRECK NOTE: the flight's upside-down wreck was VANILLA's (frozen_ocean is in vanilla shipwreck
 tags); our B-9 v1 polar wrecks restrict the template pool to upright recognizable hulls.
+
+S12 IDEAS LOCKED (Peetsa 2026-07-16): (1) AURORA BOREALIS — vanilla has none; WE need no shaders:
+the solar-tilt work owns the sky pass, and an aurora is translucent animated ribbon geometry
+(green-teal curtains, purple fringe, slow noise drift) rendered there. Gate: dark polar skies
+(effective sun below horizon; strongest in polar night — pairs with the moon-sovereign dark pole
+from the S11 fix), latitude ~65-70+ poleward, storm/overcast suppresses (the whiteout owns 85+;
+the aurora's stage is the visible-sky approach + the polar-night band). The winter pole's beauty
+payoff — design as the next sky round after S11 ships. (2) SNOW SPARKLE — calm-weather glint
+particles on snowfields (80-85 band, below the deep-blizzard tier), tiny short-lived twinkles,
+low-sun-angle aware if cheap; small budget; rides the existing polar particle machinery; can ship
+with the aurora round or earlier. (3) SNOW GOGGLES (down the line, polar OUTFITTING family with
+leather/drysuit/expedition-tonic): a wearable that relaxes the fog-distance caps and reshapes the
+whiteout topcoat into a RING — clear center, frost/snow pressing at the perimeter, visible goggle-
+frame vignette; all screen-space (no shaders); sight joins land-cold and water-cold as the third
+conquered sense.
