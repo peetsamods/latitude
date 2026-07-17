@@ -575,3 +575,30 @@ All in `core/LatitudeV2Flags.java` (System-property pattern, §3d), default OFF:
   decision.
 
 Worldgen is **untouched** (byte-identical) throughout — this is presentation + two mob rules only.
+
+
+## ADVERSARIAL DESIGN SWEEP — APPROVE-WITH-AMENDMENTS (2026-07-16, BINDING)
+All 26.2 receipts verified signature-exact (javap vs the loom jars) — the cited hooks are real,
+including Level.getOverworldClockTime() surviving the WorldClock rework. AMENDMENTS:
+A1 (HIGH) The §12 spec table has TWO WRONG CELLS contradicting §4c's own formula: phi=-75 delta=+30
+midnight = -45 (not -75); phi=-90 midnight = -30 (not -90 — a pole's elevation is CONSTANT).
+Recompute the whole table from §4c before any test is written; add the invariant: at |phi|=90,
+elevation == +/-delta for ALL hour angles. (§4b also carries a drafting artifact to strip.)
+A2 (HIGH) FUNCTIONAL BAND NARROWER THAN VISUAL — RULED YES: new dial
+latitude.solarTilt.functionalMinDeg default 74.5 (the extreme-cap no-villages line) gates BOTH the
+spawn override and the burn rules; visuals keep the 60-deg onset. Receipts: SUBPOLAR 50-66.5 /
+POLAR 66.5-90; villages vetoed only >= 74.5; at 60-74.5 the winter dark weeks would siege livable
+country (a 63-deg village under 24/7 spawns for weeks). Owner may widen the dial after flying.
+A3 (MED) renderSunriseAndSunset glow band: v1 SUPPRESSES the vanilla horizon glow poleward of the
+visual onset (it would paint dawn-gold at the wrong compass point and fire at vanilla dusk during
+polar night). Rotating it with the tilt = future polish.
+A4 (MED) NO carve-out from the S10 early-overcast ramp — bands coexist: payoff zone 40-80 clear,
+81->85 progressively grey (owner-ordered), storm wins >= 85. Gold tint via fog/sky color only;
+never un-grey rainLevel.
+A5 (LOW-MED) Build crew verifies ClientLevel's synced day-time jitter (<= 1s -> delta drift
+negligible -> zero-netcode holds); seam notes: /time set backward rewinds the season;
+doDaylightCycle=false freezes it.
+A6 (LOW) Rotation option B (direction-vector pose rebuild via @WrapOperation on the per-body
+mulPose) is PRIMARY: per-body targets are clean in the bytecode and B is headless-testable
+(compose == vanilla at phi=0, delta=0 in plain JVM); the equator screenshot-diff stays the live P2
+gate (the atlas cannot render sky).
