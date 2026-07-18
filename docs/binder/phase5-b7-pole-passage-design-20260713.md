@@ -845,3 +845,65 @@ reduced damage; recipes + first-armor asset plan. LEATHER DEMOTES to partial-onl
 ship (never before — no protection gap), with the zone message "Your leather armor provides some
 protection against the bitter cold." SNOW GOGGLES worn = warning vignette removed. Family:
 suit (body) + goggles (sight) + drysuit (water) + expedition tonic (future).
+
+## STATUS 2026-07-18: S16(b) TICK-FREEZE v2 + S16(c) CROSSING-AT-90 BUILT (server/core; suite 712/712)
+[DEV note, marked — server/core crew for S16(b)(c); client (a)(d) + B-10 are other crews.]
+
+S16(b) TICK-FREEZE v2 (FLOWING water / waterfalls). The flowing seam was found + javap-verified:
+26.2 `Biome.shouldFreeze(LevelReader,BlockPos,boolean)` gates the fluid on `fluidState.is(Fluids.WATER)`
+(bytecode offset 64-70), and `WaterFluid.isSame` matches BOTH source and flowing — so the fluid TYPE was
+never the blocker. The reason waterfalls persist is purely that `ServerLevel.tickPrecipitation(BlockPos)`
+only tests `getHeightmapPos(MOTION_BLOCKING,pos).below()` (the top-1 of the column), so a cascade's flowing
+blocks on a cliff FACE (below the ledge heightmap) are never TESTED. Consumer: `ServerLevelRoofedWaterFreezeMixin`
+(the existing S15b sky-waiver tick seam) generalized — the same `tickPrecipitation` HEAD descent now, within the
+16-block roof reach, freezes a FLOWING block DIRECTLY to plain ice (the pure `PolarWaterFreezeRule.freezesFlowing`
+decision: barrens-family flag, ocean-EXEMPT first, same 85-deg frayed front, `aboveFreezeFloor=true` by
+construction inside the reach so sky/no-sky is irrelevant) and CONTINUES to claim the rest of the cascade; source
+water is still deferred to vanilla's `shouldFreeze` and ends the descent. Deep-cave exemption = the reach floor
+(>16 below the heightmap top is never scanned, the B-9 reservoir); ocean is never touched (the sacred pin). Ice
+persists via the S15b no-melt law. Barrens-off / out-of-zone / non-globe stay byte-identical. Pure-predicate
+coverage was already complete (S14); added one focused test pinning the exact tick-time parameterization.
+
+S16(c) CROSSING AT 90. `PoleGeometry`: `PROMPT_DEG_POLE` 89.2 -> 90 and `ARRIVAL_DEG_POLE` 89.5 -> 90.
+The prompt no longer floors to the 40-block approach floor (meaningless at dist 0) — it floors to a new
+`WALL_PROMPT_DIST_BLOCKS = 3.0` epsilon (picked from the design's ~2-4 band: clears per-tick jitter + 1-block
+standing granularity at the clamp, small enough to read as "at the wall"; the netcode `SERVER_CROSS_SLACK` 32
+gives a ~35-block accept window against distanceToPole ~0). The near-pole edge-re-prompt (was 89.9) COLLAPSED
+into the wall prompt: its distance is now the disabled sentinel `EDGE_REPROMPT_DISABLED_DIST = -1.0`, which
+`distanceToPole` (clamped >= 0) can never satisfy, so `SEEDED_DISARMED` simply HOLDS (behaves as ordinary
+disarmed) — no self-prompt at the dist-0 arrival, guaranteed by the SEEDED state AND the disabled sentinel; the
+strict walk-out re-arm at 88.5 + the aim-gated gesture are the only re-opens. Re-derived ordering chain
+(distance-from-pole): `edgeReprompt(-1) < arrival(0) < prompt(3) < rearm` — assertChain holds on every radius;
+per-size rearm = max(1.5deg, prompt+DEAD_ZONE 64): Itty 67, Small 125, Regular 166.67.
+
+CLAMP-STANDING INTERACTION (c-ii). Arrival now lands ON the pole line: `arrivalAbsZ() == zRadius`, teleport to
+block center `zRadius+0.5`. `applyPoleHardStop` already skips the exact crossing tick (`lastCross == worldTime`);
+for the ticks after, `PoleHardStop.CLAMP_EPSILON` was bumped 0.5 -> 1.0 so the arrival block-center clears the
+tolerance with a 0.5-block margin — a player standing ON the line is NEVER rubber-banded, and only genuine
+OUTWARD motion more than a block past the line is clamped (the outward-velocity kill still fires the instant
+they push poleward). On Classic the arrival at zRadius+0.5 is 0.5 past the vanilla border but inside its 5-block
+damage safe-zone, so no border damage; the S2 clamp is Mercator-only anyway.
+
+PREWARM (c-v). The pre-warm target auto-moves to the 90 landing (it derives from `ARRIVAL_DEG_POLE` via
+`poleArrivalTarget` -> `zForLatitudeDeg(90)`). BUT collapsing `promptAt` 89->3 would have shrunk the pre-warm
+band `promptAt+32` from ~121 blocks (Regular) to ~35 — too little lead to generate the virgin antipode before
+the crossing (the TEST 99 freeze). Added `PoleArrivalPrewarm.PREWARM_LEAD_FLOOR_BLOCKS = 128` (8 chunks) so the
+band is `max(promptAt+32, 128)` — a generous, prompt-independent lead on every size, MORE than the pre-S16
+degree band gave (Itty ~72 / Small ~99 / Regular ~121). Grace (45t) unchanged.
+
+SURVIVAL MATH (c-vi, worst-case flat-terrain LOWER BOUNDS, unprotected, no food). Arrival at 90 drops the
+crosser INTO the 6 HP/s lethal core (DPS ladder: 90=6.0 / 89.7=3.18 / 89.5=2.27 / 89.2=1.47 / 89.0=1.14 /
+88.5=0.63 / 88.0=0.33 HP/s), heading equatorward (yaw+180). The ~45-tick (2.25 s) post-crossing GRACE covers
+the arrival curtain (~13 HP of standing-at-90 damage suppressed), then the blizzard owns the 90 -> 88 escape
+trek under Slowness III. Integrating the curve over the trek distance (blocks/deg = zRadius/90) at ~2.4 m/s:
+~55 HP (Itty) / ~105 HP (Small) / ~140 HP (Regular) RAW. This is a DEATH SENTENCE unprotected on Small+ (deep
+snow/powder makes it worse), i.e. the S16(c) arrival is a HARD cold-protection gate: full freeze-immune gear
+(S1 ColdProtection full set = leather today, the B-10 Polar Suit tomorrow) NEGATES the freeze damage entirely
+(only Slowness remains), and heavy Protection + saturated-regen food is the unprotected-but-prepared path. The
+crossing carries you THROUGH the worst 0.6 deg (89.4->90 = the 3-6 HP/s spike) via the curtain grace, but the
+90->88 tail is the price — deliberately deepened from S5's gentler 89.5 arrival. FLIGHT-BRIEF flag for Peetsa:
+this may read as too punishing before B-10 outfitting ships; the arrival degree is one constant if he wants it
+pulled back toward 89.5 after feeling it.
+
+VERIFY: compileJava green; `cleanTest test` green — 712 tests / 0 failures / 0 errors (63 suite files),
+baseline 709 + the S16 pins. No worldgen files touched (tick-time freeze + pure geometry only).
