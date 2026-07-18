@@ -2,6 +2,28 @@
 
 `status: active`
 
+## 2026-07-18 addition (Phase 5 B-10 — Polar Outfitting design [worktree branch])
+- `b10-polar-outfitting-design-20260718.md` — Peetsa's polar-suit / leather-demotion / snow-goggles / Cold
+  Protection status-effect design. Reworks the current single "freeze-immune piece count" evaluator
+  (`core/ColdProtection.java`, where full LEATHER == full negation today) into a **unified weighted score**:
+  a Polar-Suit piece (0.25) outweighs a leather piece (0.125), so **only a full 4/4 suit reaches total
+  protection** — zero freeze damage + total warning/vignette **silence** + a registered beneficial `MobEffect`
+  `globe:cold_protection` as the sole inventory-visible feedback; leather demotes to a capped-partial softener
+  (max 0.5) that keeps the warnings honest and earns the owner's once-per-zone line "Your leather armour
+  provides some protection against the bitter cold." Full **warning matrix** by outfit (full-suit = all rungs
+  silenced, generalizing today's HYPOTHERMIA-only suppression in `PolarColdCues.evaluateLadder`; the
+  `POLE_LETHAL_PROTECTED_TEXT` swap RETIRES — no consumer left). **Snow goggles** (head slot) remove the
+  `PolarVignetteOverlayHud` edge frame while keeping text; head-slot clash resolved by giving the **suit hood a
+  built-in visor** (goggles = cheap early sight-only option). Material/recipe pick: **fur-lined leather (leather
+  + wool + string → Insulated Hide)**, temperate-gatherable before the march north. **First-ever Java content
+  registration** for this mod (it has ZERO custom items/effects today; only the data-driven `globe:polar_barrens`
+  biome JSON) — biggest risk = 26.2's churned `Item.Properties` / `ArmorMaterial` / `EQUIPPABLE`-component /
+  equipment-asset pipeline; de-risk with a one-item spike vs the decompiled 26.2 jar. One atomic phase under
+  `latitude.polarOutfitting.enabled` (default OFF, leather keeps today's behaviour = no protection gap); items
+  register UNCONDITIONALLY, only behaviour/obtainability flag-gated. S12 goggle sight kit + drysuit +
+  expedition-tonic deferred. Read-only recon; `src/` untouched (two build crews editing concurrently — cite
+  HEAD `836d8c39` line numbers as landmarks).
+
 ## 2026-07-16 addition (Solar Tilt + Seasons design [worktree branch])
 - `solar-tilt-design-20260716.md` — Peetsa's "solar altitude follows latitude; one pole summer, one
   winter" + two live follow-ups (mob/functional layer; seasons). The sun/moon/**stars** path tilts by
