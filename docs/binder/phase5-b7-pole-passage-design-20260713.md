@@ -907,3 +907,21 @@ pulled back toward 89.5 after feeling it.
 
 VERIFY: compileJava green; `cleanTest test` green — 712 tests / 0 failures / 0 errors (63 suite files),
 baseline 709 + the S16 pins. No worldgen files touched (tick-time freeze + pure geometry only).
+
+S17 TEST-107 FLIGHT ROUND (Peetsa 2026-07-18, video):
+(a) ENTITY FOG CULLING — entities render beyond the polar fog END and read as floating in the
+white void over fogged/unloaded terrain: entities farther than the fog END (plus a small margin)
+do not render at all in the polar fog band (a culling rule — also a perf win); nothing may be
+visible beyond the wall of white.
+(b) WATERFALL FREEZE v3 — root cause found: open-air cascades sit ABOVE the MOTION_BLOCKING
+heightmap (water is not motion-blocking) and the S16 descent walks DOWN from the heightmap top —
+under-roof water froze, free-falling water never did. New seam: the FLUID FLOW TICK — in the
+freeze zone above the floor, water that attempts to flow/spread becomes ice instead (falls die at
+the moment of motion; new springs freeze immediately); plus an upward scan at the tick position
+for standing fall columns. Deep-cave floor + ocean exemptions unchanged.
+(c) SPARKLE v3 — MORE sparkle overall (density up), amethyst glints CLOSE to the ground
+(0.05-0.3 above the surface — it must read as THE SNOW glinting, not motes in the air; the owner
+floated returning to firework sparkle — keep WAX_OFF near-ground as primary, note the one-line
+swap for the flight); active ONLY during very-light-to-light snowfall (gate off at medium+ snow,
+not just at blizzard).
+(d) DANGER COPY (owner verbatim): "DANGER! Extreme cold and reduced visibility."
