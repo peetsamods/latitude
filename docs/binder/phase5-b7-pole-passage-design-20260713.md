@@ -925,3 +925,11 @@ floated returning to firework sparkle — keep WAX_OFF near-ground as primary, n
 swap for the flight); active ONLY during very-light-to-light snowfall (gate off at medium+ snow,
 not just at blizzard).
 (d) DANGER COPY (owner verbatim): "DANGER! Extreme cold and reduced visibility."
+
+S17(b) ADDENDUM (Peetsa 2026-07-18, mid-round): DYNAMIC POURED WATERFALLS — confirmed the flow-
+tick seam delivers this by construction: a bucket poured from height creates live falling water,
+and each segment freezes at its next flow tick (~0.25s), the freeze rippling down the column;
+the source puddle follows on the still-water cadence. TUNING DIAL (post-TEST-108 flight, one
+constant): if the ripple reads too fast, add FLOW_FREEZE_CHANCE (probabilistic freeze per flow
+tick, e.g. 0.3 -> each segment lives ~1-2s; the fall visibly runs, then locks patchily/organically)
+— owner feels the current speed first.
