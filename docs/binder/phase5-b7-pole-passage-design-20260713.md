@@ -819,3 +819,29 @@ atmosphere not object ("glitchy and strange" -> ethereal). (f) STORM CARVE-OUT A
 suppressed, the aurora geometry still renders as a faint dark region over the clouds: hard skip
 (no submit) below an intensity floor AND verify blend/depth state so faint aurora never occludes
 clouds.
+
+S16 TEST-106 FLIGHT ROUND (Peetsa 2026-07-18; polar skies PASS, aurora PASS):
+(a) WINDOW COMPLETION — through a window the storm must read COMPLETE: (i) whiteout topcoat gains
+a SHELTERED FLOOR while in the fog band (partial, ~0.35-0.5 of the exposed value — interior
+livable, the view out violent; the graded-exposure law keeps scaling above the floor); (ii) snow
+particles get PER-POSITION cover gating (spawn only where the POSITION is sky-exposed — the
+owner's indoor sideways snow was budget-gated by player exposure but position-blind); (iii) WIND
+AUDIO attenuates with shelter (present but softened — a storm through walls). (b) TICK FREEZE v2
+— all water in the freeze zone freezes at tick time, FLOWING included, sky or no sky (the S14
+worldgen pass missed post-generation flows — the owner still sees liquid waterfalls); deep-cave
+exemption stays (>16 below surface heightmap, the B-9 reservation); ice visibly claims running
+falls over seconds. (c) PROMPT AND ARRIVAL AT 90 — the crossing prompt opens AT the wall (dist ~0,
+pressed against the clamp) and arrival lands AT 90 on the far meridian (escape trek 90->88); the
+staged ladder simplifies (edge-reprompt collapses into the wall prompt); geometry chain + survival
+math + netcode validation re-derived; clamp/arrival interaction (cross-tick skip) preserved.
+(d) COPY SWEEP — remove ALL "Turn back" phrasing (exploration is never scolded) and ALL double
+dashes ("--" reads amateur in the MC font). Proposed ladder (owner vetoes at flight): 82
+"Entering polar storm country. Proceed with caution." / 85 "The cold begins to bite." / 87 "The
+blizzard deepens. Hypothermia is setting in." / 88 "DANGER: Lethal blizzard." / 89.7 "Severe
+hypothermia. You are freezing to death."
+(e) B-10 POLAR OUTFITTING (design phase opens): POLAR SUIT armor set — full set = total cold
+negation + NO warning messages + an inventory status effect (Cold Protection); partial set =
+reduced damage; recipes + first-armor asset plan. LEATHER DEMOTES to partial-only WITH the suit
+ship (never before — no protection gap), with the zone message "Your leather armor provides some
+protection against the bitter cold." SNOW GOGGLES worn = warning vignette removed. Family:
+suit (body) + goggles (sight) + drysuit (water) + expedition tonic (future).
