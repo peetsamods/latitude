@@ -799,3 +799,23 @@ modulation (it was compositing pure white at night — the too-bright fog the ow
 terrain dissolves into atmosphere. (d) SPARKLE v2 — floats 0.5-1.5 blocks ABOVE the snow (never
 clipped in — the raindrop look), gentle drift, amethyst-family glint (ELECTRIC_SPARK / WAX_OFF /
 END_ROD — pick what reads as frost glittering in air; owner asked for "amethyst sparkle").
+
+S15 TEST-105 FLIGHT ROUND (Peetsa 2026-07-17, video-verified; lakes/midnight-sun/fog PASS):
+(a) SHELTER-WINDOW FOG BUG — looking OUT through a window, the depth fog vanishes (near-clear
+world). Law split: the WORLD's depth fog is weather — it applies unless the player is genuinely
+SEALED (the S4-style skylight predicate), never scaled by graded exposure; the screen-space
+whiteout TOPCOAT keeps its graded exposure scaling (frost-on-eyes fades with enclosure — that law
+was right where it was, wrong borrowed by the depth fog). (b) PERSISTENT ICE — sheltered water in
+the full-freeze zone turns/stays liquid because the tick freeze requires sky access and vanilla
+melts ice at light > 11: in-zone (>= 85 frayed) the tick freeze WAIVES the sky requirement (a roof
+does not save a pond at -30) and ICE NEVER MELTS (cancel melt in-zone — torches cannot thaw the
+pole; the persistence the owner asked for). (c) POLAR-NIGHT HORIZON — the horizon band stays
+light while the sky is dark; find the source (vanilla horizon/void blend or a band the glow
+suppression missed) and darken it to the gloom palette. (d) OVERCAST SKYBOX — during snow/storm
+tint the sky dome to the CLOUD GREY (match the cloud color; adding grey is allowed, un-greying
+rainLevel remains forbidden) so storms read fully overcast. (e) AURORA v2 — fainter, DIFFUSE
+GLOW not distinct bands: soft-edged broad sheets / gradient wash, lower alpha, slower waver;
+atmosphere not object ("glitchy and strange" -> ethereal). (f) STORM CARVE-OUT ARTIFACT — when
+suppressed, the aurora geometry still renders as a faint dark region over the clouds: hard skip
+(no submit) below an intensity floor AND verify blend/depth state so faint aurora never occludes
+clouds.
