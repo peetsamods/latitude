@@ -476,3 +476,28 @@ hard-churned `Item.Properties` / `ArmorMaterial` / `EQUIPPABLE`-component / equi
 with a one-item spike against the decompiled 26.2 jar before building the full asset bill.
 
 **Doc path:** `docs/binder/b10-polar-outfitting-design-20260718.md`
+
+
+## ADVERSARIAL DESIGN SWEEP — APPROVE-WITH-AMENDMENTS (2026-07-18, BINDING)
+Arithmetic verified (no silence hole; suit==4 is the sole full predicate); all §9 API shapes
+CONFIRMED against the real 26.2 jar (ArmorMaterial 8-arg record, setId, humanoidArmor, equippable,
+repairable, MobEffect BENEFICIAL) — the registration risk downgrades to routine care; one-item
+spike stays as cheap insurance; core-first build order endorsed. AMENDMENTS:
+A1 (HIGH, silence law): the FROZEN-WOUNDS heal-lock never consults protection — a full-suit player
+would still hear "Your wounds are frozen." RULE: full suit = warm body = the heal-lock LIFTS
+(wounds mend without warmth; the whisper cannot fire). Gameplay upgrade, not just a mute.
+A2 (MED, one-evaluator law): leatherPieces MUST be count(freeze_immune) - count(polar_suit) in
+BOTH shims — double-counting lets 3-suit+1-leather reach damage-0 while warnings still fire (the
+exact evaluator lie the design forbids).
+A3 (MED, no-gap law): flag-OFF routes the LEGACY path (leather weight 0.25, full negation at 4) —
+the branch location is explicit, contract-tested before the ladder is touched.
+A4 (MED): the hood's built-in visor removes the vignette in EVERY partial row that includes the
+hood — the matrix says so explicitly.
+A5 (LOW): recipes use the WOOL TAG (any color), never white-only — no dye hunts on a gathering item.
+A6 (LOW): the silence boundary is STATED: full-suit silence covers the 5-rung ladder + vignette +
+leather line + hypothermia family; purely NAVIGATIONAL lines (pack-ice wall actionbar, clamp
+feedback) stay informational for everyone.
+A7 (owner copy, surfaced): the LETHAL protected-swap "The bitter cold envelops you." RETIRES —
+the only state it made honest (full-negation-but-warned) no longer exists; partial/leather players
+take real damage so the raw LETHAL line is honest for them. OWNER MAY VETO (repurpose to the
+partial-suit deep-end instead).
