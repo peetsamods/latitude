@@ -933,3 +933,15 @@ the source puddle follows on the still-water cadence. TUNING DIAL (post-TEST-108
 constant): if the ripple reads too fast, add FLOW_FREEZE_CHANCE (probabilistic freeze per flow
 tick, e.g. 0.3 -> each segment lives ~1-2s; the fall visibly runs, then locks patchily/organically)
 — owner feels the current speed first.
+
+S18 GRADUAL BOTTOM-UP WATERFALL FREEZE (Peetsa 2026-07-18, TEST 108 live): the flow-tick freeze
+currently ices each segment at first tick — "a wall of ice forms around the water." NEW LAW:
+water may FALL freely; only LANDED water freezes. A flowing block with air/water below = still
+falling = passes to vanilla flow untouched. A flowing block SUPPORTED below (solid or ice) =
+landed = freezes with FLOW_FREEZE_CHANCE (~0.5 per tick, dial) — the base spread gets a few ticks
+to widen before locking. THE CLIMB BY CONSTRUCTION: base freezes -> the block above now rests on
+ice -> landed -> eligible -> the freeze walks UP the column (~0.25-0.5s per block), leaving the
+owner's multi-layered waterfall-ice pile. The upward scan converts lowest-unfrozen-supported
+first per pass (same bottom-up direction). All exemptions unchanged (ocean-family, deep-cave
+floor, flag-off byte-identical); gen-time falls still arrive frozen (S14 — unchanged; this law
+governs LIVE water).
