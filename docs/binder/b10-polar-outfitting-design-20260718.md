@@ -501,3 +501,12 @@ A7 (owner copy, surfaced): the LETHAL protected-swap "The bitter cold envelops y
 the only state it made honest (full-negation-but-warned) no longer exists; partial/leather players
 take real damage so the raw LETHAL line is honest for them. OWNER MAY VETO (repurpose to the
 partial-suit deep-end instead).
+
+
+## OWNER AMENDMENT A8 (Peetsa 2026-07-18, BINDING): FULL SUIT NEGATES THE EFFECTS TOO
+The full 4/4 suit negates the cold SLOWNESS/WEAKNESS/MINING-FATIGUE staging as well as damage —
+the fullyProtected predicate (suit==4, the sole full predicate) exempts the hazard-effects
+application entirely (including in-water immersion staging). This amends the standing "slowness
+always seeps" law: it remains TRUE for leather and partial suits (the cold drags at the
+underdressed); only the complete suit walks the pole freely. One evaluator, one truth: damage,
+effects, warnings, heal-lock — all keyed off the same fullyProtected.
