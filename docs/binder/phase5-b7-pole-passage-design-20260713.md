@@ -945,3 +945,16 @@ owner's multi-layered waterfall-ice pile. The upward scan converts lowest-unfroz
 first per pass (same bottom-up direction). All exemptions unchanged (ocean-family, deep-cave
 floor, flag-off byte-identical); gen-time falls still arrive frozen (S14 — unchanged; this law
 governs LIVE water).
+
+S19 TEST-109 FLIGHT ROUND (Peetsa 2026-07-18 late): HOOD SPIKE PASSED (the blue cube = the flat
+placeholder on the real helmet box — pipeline proven end-to-end; P2 brings real art).
+(a) TWO-SPEED FREEZE — the 50%-everywhere roll let water's pathfinding OUTRUN the freeze
+(reroutes over new ice sprawled speckle; the column never locked). New stateless law, two
+chances: FREEZE_CHANCE_ON_SOLID ~0.2/tick (landed on ordinary ground — the pour runs live
+~1-2.5s, pools wide) and FREEZE_CHANCE_ON_ICE = 1.0 (any flowing water touching ice — below OR
+adjacent reroute — locks next tick). Consequences by construction: the first base lock makes the
+climb INEVITABLE (~4 blocks/s deterministic zipper), reroutes lock one block out (the speckle
+heals into a sheet — the ice hunts the escaping water), the layered pile forms. Same exemptions.
+(b) SPARKLE IN CLEAR WEATHER — the snowfall window drops its lower bound: sparkle active from the
+80 band onset in CLEAR skies and light snow alike, off only at medium+ snowfall; density up a
+notch (peak dial). The glitter is the calm pole's resting state.
