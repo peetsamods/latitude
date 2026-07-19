@@ -958,3 +958,22 @@ heals into a sheet — the ice hunts the escaping water), the layered pile forms
 (b) SPARKLE IN CLEAR WEATHER — the snowfall window drops its lower bound: sparkle active from the
 80 band onset in CLEAR skies and light snow alike, off only at medium+ snowfall; density up a
 notch (peak dial). The glitter is the calm pole's resting state.
+
+S20 TEST-110 FLIGHT ROUND (Peetsa 2026-07-19; THIRD failed water round -> the LIVE-INSTRUMENT LAW
+governs): (a) SETTLED-WATER FREEZE — the root mechanism (finally understood): flowing blocks only
+TICK while actively spreading; at full spread the ticks STOP and tick-hosted freezing stops with
+them (the 0.2 chance made most blocks settle before a roll landed = "water is not freezing").
+The owner's spec IS the fix: water spreads fully; SETTLED water (a flowing block with NO pending
+fluid tick — the game's own at-rest definition, level.getFluidTicks().hasScheduledTick) converts
+to ice via the weather-tick sweep (gradual, a column per chunk-tick); the flow-tick mixin keeps
+only the falls-run-free pass and the ice-touch hunter (certain lock on reroutes). (b) INSTRUMENT
+EVERYTHING: -Dlatitude.debugFreeze recorder (per-second counts: flow ticks seen/passed/frozen,
+settled swept/frozen, sparkle spawns) — and the ORCHESTRATOR SELF-FLIES the repro via the control
+lane BEFORE any jar reaches the owner (the law after repeated live failures). (c) SPARKLE
+INVISIBLE LIVE — same round instruments spawn counts; if spawns happen and are invisible, the
+particle/height/brightness is the fix; if none happen, the budget chain live-diverges from tests.
+(d) WORLDGEN FLAGS FINDING: geoV2/climateV2/consumer/terrainV2/boundaryV2 are default-OFF and
+absent from the owner's recent worlds (the profile carries no args) — the arg string re-issued;
+first geo+Barrens live pairing = shakedown caveat; floorSightedVeto + oceanAuthority stay off
+(open findings). (e) B-9 VISION (owner): crevasses — narrow winding ice labyrinths, not void
+caverns; verbatim into the Glacial Caves bank.
