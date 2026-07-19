@@ -977,3 +977,22 @@ absent from the owner's recent worlds (the profile carries no args) — the arg 
 first geo+Barrens live pairing = shakedown caveat; floorSightedVeto + oceanAuthority stay off
 (open findings). (e) B-9 VISION (owner): crevasses — narrow winding ice labyrinths, not void
 caverns; verbatim into the Glacial Caves bank.
+
+S21 TEST-111 FLIGHT ROUND (Peetsa 2026-07-19 PM):
+(a) ZONE-TITLE WHISPERS — the zone/hemisphere boundary pop-ups (Polar/Subpolar straddling) move
+from mid-screen to the WHISPER position near the health bar (the polar-warning family area);
+whisper styling, repeat-straddle friendly.
+(b) GLINT v4 — the band moves to ~75->82, FADING OUT as ambient snowfall fades in at 80 (the two
+particle systems never coexist — the structural fix for "two competing effects"); SURFACE CHECK:
+glints only on snow/ice-family blocks (snow, snow layer, ice family, powder snow — the Stony
+Shore bare-stone leak dies); SPARKLIER: twin-particle cluster per glint point.
+(c) VEG TO 80 (Earth-calibrated, owner asked for a recommendation): fade window moves to
+~72->80 — full surface-veg strip completes at 80 (Earth: tree line 66-70, tundra shrubs to ~78,
+polar desert 80+); 80 becomes the one threshold where vegetation, villages, and calm air all end;
+the Barrens biome onset DECOUPLES and stays at the owner's chosen 82 (dedicated constant — the
+80-82 band reads as bare tundra before the Barrens claim the land).
+(d) WATER v5 — SOURCE FREEZES LAST (a source adjacent to live FLOWING water refuses the still-
+freeze until its body is fully ice — the owner watched a source freeze first and behead the fall);
+SWEEP 5x (claim up to ~8 settled blocks per column pass, still bottom-up); the SPREAD-STOPPER
+(a flow tick from a block touching ice freezes it — respread dies at one block). ORCHESTRATOR
+RE-FLIES with the recorder before staging (the standing law).
