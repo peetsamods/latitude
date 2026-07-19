@@ -52,3 +52,11 @@ Parking lot for ideas Julia wants future agents to notice without making them ac
 - Source: Julia chat
 - Repo state when captured: feat/custom-biome-expansion-26.1.2 / d7771838, with pre-existing unrelated dirty files in `run-headless/server.properties` and `src/main/java/com/example/globe/world/LatitudeBiomes.java`
 - Status: untriaged; saved for a future pass
+
+### 2026-07-19 - Latitude 2.0 reproducible human-testing toolkit
+- Idea: Give Latitude 2.0 its own dev-only toolkit for more scientific, efficient human testing: record the exact jar/config/world/seed/coordinates and GUI state for each session; provide repeatable latitude/biome/coast/structure positioning and probes; capture HUD/create-screen/boundary presentation traces and screenshots; and export compact evidence bundles. Keep it excluded from public jars. This is a future pass only: do not implement it now.
+- Context: Parked after the Latitude 1.5 testing-tooling review. Promote only through a separately scoped Latitude 2.0 tooling pass with an explicit public-jar-purity gate.
+- Tags: latitude-2.0, testing, latdev, dev-only, reproducibility
+- Source: Julia chat
+- Repo state when captured: port/canonical-26.2-pivot / f5539e35
+- Status: untriaged; saved for a future pass
