@@ -178,3 +178,26 @@ ONE `getCarvers()` call site inside `applyCarvers` (site count sweep-verified; M
 3. Should crevasses ever breach INTO the big voids (dramatic reveals), or should P2 void
    taming close voids entirely?
 4. Wreck-in-ice timing: with wrecks v1, or its own later beat?
+
+## P1 BUILT + SELF-FLOWN (2026-07-19, same day)
+
+Built by one dev crew (03c2c62d), swept ACCEPT-WITH-FIXES (one REQUIRED-FIX applied: the
+legacy strip now removes EVERYTHING non-globe — cancel-identity extends to third-party
+datapack carvers; 3 tests updated), suite 776/0/0. Gate-1 flag-off atlas re-proof PASS
+(19 data files byte-identical to baseline 20260717-193525, seed 20260714; only durationMs
+differs — also covers the S21 veg 72/80 move, which was awaiting its re-proof).
+
+ORCHESTRATOR SELF-FLIGHT (fresh world "New World" cheats-on, Regular Wide, spectator,
+84-85 N): crevasse slots VERIFIED cutting the glacier surface — winding open-top cracks
+with terraced ice walls (top-down + rim frames); a ponded crevasse floor VERIFIED with
+water channel + freeze-skin patches claiming its surface (the semi-ice look, exactly the
+ordering + 16-block-reach prediction); slot cutting through a snowy hill exposing dirt
+strata (canyon arc, not noise cave). HONEST BASELINE frame: the giant noise voids still
+gape under the glacier sole (ice-ceiling cavern with lava at ~Y50) — untouched by P1,
+the P2 void-taming target, as designed. Glacial tunnels ride the same proven append seam
+(both holders resolve or neither; crevasse firing proves the seam) — distinct tunnel
+portrait deferred to owner flight. Lane notes: the bespoke create screen defaults
+commands OFF (Rules tab toggle needed — LAN Allow-Commands did NOT grant host op this
+session); world names: "B9 Crevasse Proof" (dead, no commands) + "New World" (the proof
+world). TEST 113 staged: SHA 2fae35f8…, markers GlacialCarverLaw / glacialCavesV1 /
+both carver JSONs in jar.
