@@ -376,3 +376,35 @@ underground placement); (4) icicle density raised (not visible in the owner's fr
 CLOCK — glintWeight follows the sun's clock everywhere (noon peak, clock-night zero), band
 extended equatorward to the solar onset during polar night / midnight sun, above-82
 snowfall crossfade unchanged.
+
+## S25 (Peetsa 2026-07-20, TEST 117 flight): nine findings + the Snowfields opener
+
+OWNER VERBATIM (locked): (1) "I still can't find any crevasses. Can we add a lat dev locate
+command?" (2) "I don't see any polar bears or Arctic foxes in polar storm country" (the
+banked Life & Peril fauna — build now). (3) "freezing water is a bit inconsistent... should
+at least start from eighty degrees, if not a little sooner depending on what you think."
+(4) spawn zone Polar should be "random between the boundary of polar and subpolar and...
+maybe seventy nine. Because it's quite a long distance from beginning of polar to polar
+storm country, but what do you think?" (5) glacial caves "should extend down further into
+the sub y zero zone... it still seems like it ends pretty abruptly." (6) damage in water:
+"great. That's fine now." (7) "The warning message for your wounds are frozen inside the
+glacial caves is glitchy, it'll re-trigger." (8) slushy cave water — "very small ice blocks
+clustered together in the water to really show that it's cold... do you have any ideas?"
+(9) approach to polar storm country "just feels like dirt with snow on top. It's very
+uninspiring... let's plan on doing something with that... another custom biome called,
+like, the snowfields."
+
+S25 BUILD SLATE: A. /latdev locateCrevasse (deterministic carver-start prediction — the
+carver's per-chunk seeded roll is replayable without loading chunks). B. Polar bears (low
+weight, hungry-bear widened aggro ~16 w/ warning roar, coastal/fish-lake bias) + arctic
+foxes (vanilla white variant auto-selects in snowy biomes; they hunt the barrens rabbits)
+in polar_barrens + glacial_caves spawns. C. Tick freeze front 82 -> 80 (the polar-country
+rung: ambient snowfall onset, villages end, strays-only — one coherent line; fray width
+preserved; ocean + ALL worldgen paths keep 85). D. Zone-aware Polar spawn band widened
+66.5-74 -> uniform 66.5-79 (owner call; wood scarcity above ~76 accepted as expedition
+fantasy — create screen already warns). E. glacial_caves swap + ice blobs + dressing
+extended below Y0 to world bottom (deep_dark exemption stands). F. PolarWounds re-trigger
+hysteresis (the frozen-wounds warning must fire once per lock, not oscillate underground).
+G. SLUSH v1: worldgen ice-floe speckles dotting cave pool surfaces (MC-scale "small ice
+chunks") + client frost-mote particles drifting over glacial_caves water. H. SNOWFIELDS
+(the 74/75-82 approach band): DESIGN ROUND ONLY — concept pitch to the owner first.
