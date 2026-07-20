@@ -275,3 +275,61 @@ by edge-falls finding natural ice (which is also why real-world pours freeze fin
 adjacency is everywhere in the barrens). Player-visible impact of the open gap: none observed
 for falls/pours near any ice; isolated 1-deep sheets on virgin snow rely on vanilla source
 cadence then cascade.
+
+## SETTLED-SWEEP ZERO-CLAIMS: DIAGNOSED AND CLOSED (2026-07-20, instrumented headless session)
+
+The queued per-condition-counter chip ran, fully headless (no live flight needed). Verdict:
+**there is no second pre-probe rejector.** The TEST-114 zero WAS the freeze-floor fencepost
+(already fixed overnight, `f19bb9ba`); the TEST-115 zero was the hunter/converter RACE on
+ice-contaminated pads, i.e. the expected shape of a working pipeline, not a rejection. The
+sweep, as shipped, claims settled isolated sheets — recorder-proven on a COPY OF THE OWNER'S
+OWN TEST 113 WORLD.
+
+**Method** (all TEMP-DIAG, committed once for the record as `a7110706`, then removed):
+- Per-gate rejection counters in the sweep driver — one `[LAT][SWEEPPROBE]` line per recorder
+  window: `cols/front/surfSrc/roofSrc/dry/notLanded/barrensOff/ocean/floor/probed/pendF/pendW`
+  plus first-reject coordinate details — behind the existing `-Dlatitude.debugFreeze` gate.
+- A player-free headless rig (`gradle runFreezeProof`): boots the ordinary headless server,
+  builds the exact live scene at 86 deg N — a walled virgin-snow basin with ONE source, plus a
+  bare source poured on the NATURAL surface (free runoff) — then censuses
+  src/flow/ice/pending-per-key every 5 s for 2 min and writes
+  `run-headless/latdev/freeze-sweep-proof.txt`. Playerless block-ticking verified against 26.2
+  bytecode (`tickChunk` rides `forEachBlockTickingChunk` → entity-ticking range, so a
+  `setChunkForced` 3x3 ring ticks with no player; `pause-when-empty-seconds=0` disables the
+  empty-server pause). Also bytecode-verified en route: `FlowingFluid.tick` does NOT reschedule
+  at equilibrium (the S20 settled premise holds in 26.2 vanilla).
+
+**The three runs.**
+1. Scratch vanilla world, border resized to globe (10000): basin froze in the first active
+   window — `flowTicks=67 hunterFroze=36 sweptSettled=3 sweptFroze=3`; the settled probe
+   correctly HELD during active spread (`pendF=23`) and passed at rest. Sweep works.
+2. COPY of the owner's TEST 113 world (MERCATOR 2:1, zRadius=10000, rig at z=9556 = 86.004N,
+   ice_spikes country): first window `flowTicks=198 passedFalling=8 hunterFroze=91
+   sweptSettled=5 sweptFroze=5 spreadFroze=1`; SWEEPPROBE `floor=0 front=0 ocean=0
+   notLanded=0, probed=46, pendF=41`. Basin AND natural pour fully ice within seconds;
+   sources correctly last (S21d). **`sweptFroze > 0` on the owner's own world — the proof the
+   chip asked for.**
+3. Same world, the sweep's floor call TEMP-reverted to the pre-TEST-115 worldgen floor (the
+   `62bfc` snapshot behaviour): the recorder NAMES the rejector — `floor=~244/window,
+   probed=0, sweptFroze=0` for 22 consecutive windows, basin liquid the entire 2 minutes,
+   detail `floorAt=...,base147,ws148,of147`: **base == oceanFloor == the exclusive floor.**
+   The fencepost, reproduced and attributed. (The natural pour froze anyway via
+   converter+adjacent ice, `spreadFroze=4` — exactly the live "contaminated pads freeze fine"
+   pattern.)
+
+**Why TEST 115 still read zero (the race arithmetic).** Every freeze's neighbour updates
+schedule fresh fluid ticks, so the hunter re-checks contaminated cells at flow-tick latency
+(~5 ticks) while the sweep's round-robin visits a column every 32 ticks. Wherever ANY ice is
+adjacent — every TEST-115 pad, per the re-fly notes — the hunter/converter claim the sheet
+first (run 2: hunter 91 vs sweep 5 in one window). A live `sweptSettled=0` in an ice-adjacent
+session is expected, not pathological. The sweep's constituency is the truly isolated sheet,
+and that case is proven working above.
+
+**Cleanup.** All TEMP-DIAG pieces (PolarSweepProbe, mixin call sites, FreezeSweepProofHarness,
+runner hook, `freezeProof` run config, the world-t113 copy, server.properties edits) removed in
+the commit that carries this section; shipped code is byte-identical to `f19bb9ba` — the round
+changes ZERO shipped behaviour, so worldgen byte-identity holds trivially. Suite 819/0/0 at
+both commits. Raw run logs kept locally in `run-headless/latdev/freeze-sweep-run*.log`
+(untracked); resurrect the tooling any time from `a7110706`. The next live flight needs no
+sweep hunt — if instrumentation is ever wanted live anyway, cherry-pick `a7110706` onto the
+staging branch and fly with `-Dlatitude.debugFreeze=true`.
