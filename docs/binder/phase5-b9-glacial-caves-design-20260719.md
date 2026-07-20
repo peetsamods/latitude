@@ -426,3 +426,14 @@ roster (owner: "should be strays and... recommendations?"): ACCEPTED ROSTER = st
 skeleton 15, nothing warm-blooded; surface rules untouched. (4) Pour-pillar fix: hunter +
 spread-converter gain the fluid-LEVEL GRACE (claim only level <= 5) so pours spread before
 the freeze closes in — the owner's own TEST 110 lifecycle model, now literal.
+
+## S26 (Peetsa 2026-07-20): MUSIC FADES OUT AT THE DAMAGE LINE
+
+OWNER VERBATIM: "let's have music fade completely out by the first latitude where damage
+begins to happen. So only the sound of the wind is present. Music can resume inside caves,
+but you must have it fade in/out." Design: the music volume factor eases 1 -> 0 across an
+approach band ending at FROSTBITE_ONSET_DEG (85, the first damage rung); at/poleward of 85
+the exposed surface is music-silent (wind only). SHELTER/CAVES restore it: the factor
+returns to 1 when sheltered (the standing B-7 skylight-shelter rule / underground), with
+smooth eased fade both directions (~4 s), never a hard cut. Client-only (a MUSIC-source
+volume multiplier seam), user sound options untouched, flag family polePassage/barrens.
