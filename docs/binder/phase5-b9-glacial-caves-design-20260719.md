@@ -237,3 +237,24 @@ mid-sweep):
    spawn list — a real predator-prey loop), scavenged fish near the lakes and bear kills, and
    vanilla's fox dive-into-snow pounce reads exactly as the real lemming-hunt-under-the-snow
    behavior, for free.
+
+## TEST 114 ROUND SHIPPED + SELF-FLOWN (2026-07-20 overnight)
+
+Full round from the owner's TEST 113 video review (10-agent analysis fleet -> 3 dev crews ->
+combined sweep ACCEPT-WITH-FIXES, all applied; suite 818/0/0; gate-1 byte-identity PASS).
+SELF-FLIGHT (fresh world "T114 Proof", commands via Rules tab): world CREATION passed the
+datapack parse gate (12 new JSONs + programmatic NBT); /locate biome globe:polar_barrens
+resolves (344 blocks, real biome); WATER v6 LIVE at the 86N rig — hunter zipper (2-14/window)
++ spread-converter (spreadFroze 4-6/window) froze wide pours into complete ice sheets in
+~70s with NO respread (the ratchet is dead); storm whisper renders at the NEW bottom anchor;
+polar dusk-red horizon band during night (bandReach gloom working); blue-ice STRATA exposed
+in cliff faces; glow lichen punctuating dark caverns + inherited vanilla mineshaft
+(underground-stays-alive honored). OPEN FINDING (honest): the settled-sweep BACKSTOP never
+claimed live (sweptSettled/sweptFroze = 0 all flight; heartbeat prints, unit tests green) —
+isolated pours on virgin snow away from ANY ice fall back to vanilla source-skin cadence
+(~minutes) then cascade; crevasse-country pours (the owner's case) are fully covered by
+hunter+converter since ice adjacency is everywhere there. NEEDS its own instrumented session
+before any "sweep works" claim. Unverified visually (code+sweep-verified only): spawn-in big
+title, glint whiteness (night flight), night monster spawns, cache placement. TEST 114
+staged: SHA e7bfb8d2…, markers tickFrontFreezes / FlowingFluidSpreadConvertMixin /
+glacial_caves.json / frozen_cache.json.
