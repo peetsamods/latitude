@@ -355,3 +355,24 @@ conversation open (owner asked for thoughts) — proposal drafted in the reply, 
 his nod. COLLAPSE: V1 roof design already walk-triggered (powder roof, sink-through);
 refinement banked — open crevasse floors should NOT carry pre-fallen powder pockets (move
 pocket dressing to tunnels only) so the trap fiction stays clean.
+
+## S24 (Peetsa 2026-07-20, same morning): GLINT CLOCK YES + THE ICE GOES DOWN
+
+OWNER: "Yes to the glint clock. And please put the darkening landscape on the docket for
+later, not for this pass." + glacial caves: "they still don't look good, and the ice doesn't
+extend down very far. It just becomes regular cave." VIDEO CONFIRMED (frames f0073 vs
+f0121/f0125): the crevasse through the GLACIER BODY reads beautifully (blue-ice walls,
+snow flecks) — then the sole ends and the caves below are plain stone/dirt caverns under a
+HUD label proudly reading "Polar · Glacial Caves". The identity layer shipped; the rock
+matrix didn't. DOCKET (parked, owner-directed): polar-night LANDSCAPE darkening (the
+lightmap seam) — explicitly NOT this pass.
+
+S24 build slate: (1) PERMAFROST STRATUM — noise-graded packed-ice veining below the glacier
+sole (existing wobble noise, Art VI; partial density so ore homes survive); (2) glacial ice
+BLOBS (ore-type packed_ice/blue_ice features) through the whole glacial_caves band so deep
+caverns read glacial in every wall; (3) frost floor carpet (snow layers + ice patches,
+underground placement); (4) icicle density raised (not visible in the owner's frames);
+(5) powder drift pockets OUT of open crevasse floors (S23 bank — trap fiction); (6) GLINT
+CLOCK — glintWeight follows the sun's clock everywhere (noon peak, clock-night zero), band
+extended equatorward to the solar onset during polar night / midnight sun, above-82
+snowfall crossfade unchanged.
