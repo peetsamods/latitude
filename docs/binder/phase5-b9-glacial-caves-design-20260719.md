@@ -481,3 +481,29 @@ what dressing there is. DECISIONS THIS FORCES (proposed): (a) the underground id
 (b) VOID-TAMING un-parks — it is the experience-killer, needs its own pass with the owner
 at the keyboard per the design law; (c) feature live-verification moves to the owner's lane
 (his locator works) with a short verification script, until the dev-tree split is fixed.
+
+## S29 (Peetsa 2026-07-20 night, TEST 120 flight)
+
+OWNER VERBATIM: "None of this is working. Locate crevasse and teleport just puts me in the
+same spot that I was in and there is no falling through the snow down into a deep crevasse.
+To make it easier just for dev, can you turn on a simple color filter for the trap
+crevasses -- maybe typing a command causes them to glow green?" + "Can we ramp up the wind
+noise a little bit earlier? Maybe 83? And just a little more intense at 90 (a little)." +
+"Frost glint looks GREAT, lock that down."
+
+ORCHESTRATOR DIAGNOSIS (code-read, not yet live-verified): locateGlacialCarver predicts a
+carver's SEEDED START CHUNK and tpxz teleports to the SURFACE at that exact column. The
+crevasse carver's actual carved arc can run up to CARVER_ARC_REACH_CHUNKS (8) chunks from
+the start and, per the carver's own Y range design note, frequently does not breach the
+surface at the start column itself -- the tool prints "walk/dig the area if not at the
+marker" but a player has no way to act on that blind. This is a REAL UX/mechanism gap, not
+necessarily a math bug (findNearest's spiral search read correct on inspection). ACCEPTED
+LAW EXTENSION: this is now the Nth round shipped on locate/traps/icicles without a live
+verification landing successfully -- no more code-derived fixes ship without the
+orchestrator watching them work first via the owner's OWN jar-launch lane (dev client
+cannot even register these commands -- the dev/shippable /latdev split makes this the ONLY
+route). LOCATE/MARK COMMAND (the owner's ask, built): scans REAL GENERATED BLOCKS in a
+radius (not seed prediction) for (a) powder_snow trap-roof blocks and (b) open-air
+crevasse-shaped columns, marks each with a green particle beacon on demand -- ground truth,
+zero prediction uncertainty. WIND: onset 85 -> 83, intensity-at-90 nudged up (small, per
+"a little"). GLINT: LOCKED, no further changes without an explicit owner reopen.
