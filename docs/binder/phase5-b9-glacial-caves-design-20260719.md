@@ -437,3 +437,26 @@ the exposed surface is music-silent (wind only). SHELTER/CAVES restore it: the f
 returns to 1 when sheltered (the standing B-7 skylight-shelter rule / underground), with
 smooth eased fade both directions (~4 s), never a hard cut. Client-only (a MUSIC-source
 volume multiplier seam), user sound options untouched, flag family polePassage/barrens.
+
+## S27 (Peetsa 2026-07-20, TEST 118 flight): the live-proof reckoning + sparkle/midnight-sun
+
+OWNER VERBATIM: caves "still broken, populated by all your usual monster subjects"; glacial
+caves "still only go a certain depth before it just turns to stone"; "No icicles"; locate
+crevasse "teleports me somewhere, but there's no crevasse to be found"; "No falling through
+powder at all"; sparkle: NOT happy with the firework spark — "go back to the amethyst
+sparkle, but instead desaturate it so it's not purple"; midnight sun: "it still becomes a
+night sky at midnight with the sun out... should be a true midnight sun where the sun only
+sort of goes into a twilight dusky state."
+
+ORCHESTRATOR RECKONING (logged as law): icicles have failed to appear in TWO owner flights
+and were NEVER live-verified by the orchestrator; blobs/traps/locator likewise shipped on
+schema-verification only. The live-instrument law extends: NO worldgen feature ships again
+without an orchestrator self-fly on FRESH chunks. Standing hypothesis to TEST FIRST: the
+stale-chunk trap (his world's explored areas predate the features; the locator predicts
+current-jar generation which old chunks contradict) — but each feature must be proven to
+fire in fresh chunks before any stale-chunk explanation is offered. S27 slate: (1) self-fly
+diagnostic (fresh world: icicles/blobs/traps/locator/roster per-feature verdicts), (2) fix
+what the flight proves broken, (3) globe frost-glint particle — the amethyst-style glow
+sparkle shape with a DESATURATED custom color (custom client particle; WAX_OFF's tint is
+hardcoded), (4) MIDNIGHT SUN TWILIGHT FLOOR — during the midnight-sun band the sky never
+darkens past dusk (the clock-driven night dome is the bug; the sun is up).
