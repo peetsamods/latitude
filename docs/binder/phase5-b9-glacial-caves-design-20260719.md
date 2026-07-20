@@ -408,3 +408,21 @@ hysteresis (the frozen-wounds warning must fire once per lock, not oscillate und
 G. SLUSH v1: worldgen ice-floe speckles dotting cave pool surfaces (MC-scale "small ice
 chunks") + client frost-mote particles drifting over glacial_caves water. H. SNOWFIELDS
 (the 74/75-82 approach band): DESIGN ROUND ONLY — concept pitch to the owner first.
+
+## S25c (Peetsa 2026-07-20, same day): survey intent-vs-realized + trap/roster/pillar follow-ups
+
+OWNER: (1) "I used the survey latdev command and it recorded that I was in an ocean basin
+away from land when I was actually just in the middle of snowy plains" (78N screenshot) —
+ROOT CAUSE: the survey feeds the narrator GeoAuthority.isOceanIntent; on geoV2-armed worlds
+intent vs realized terrain diverge (THE standing open calibration finding — the C-2
+veto/over-flooding family). Fix in flight: "where you are" facts now derive from the
+REALIZED column (actual water/biome), geo intent keeps only the deep-story lines; the
+nearest-land line drops when intent=ocean but realized=land. NOTE: the owner's live session
+runs geoV2/climateV2/consumer/terrain/boundary ARMED — intent-vs-realized divergence will
+keep surfacing until the calibration pass; the survey now stops amplifying it. (2) Traps:
+owner hunted for the powder-roof crevasse traps — they were BANKED, never shipped
+(orchestrator communication miss, logged); Crew 4 builds them now. (3) Glacial-caves
+roster (owner: "should be strays and... recommendations?"): ACCEPTED ROSTER = stray 85 /
+skeleton 15, nothing warm-blooded; surface rules untouched. (4) Pour-pillar fix: hunter +
+spread-converter gain the fluid-LEVEL GRACE (claim only level <= 5) so pours spread before
+the freeze closes in — the owner's own TEST 110 lifecycle model, now literal.
