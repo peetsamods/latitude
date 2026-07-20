@@ -201,3 +201,39 @@ commands OFF (Rules tab toggle needed — LAN Allow-Commands did NOT grant host 
 session); world names: "B9 Crevasse Proof" (dead, no commands) + "New World" (the proof
 world). TEST 113 staged: SHA 2fae35f8…, markers GlacialCarverLaw / glacialCavesV1 /
 both carver JSONs in jar.
+
+## S-BANK (Peetsa 2026-07-19, mid-TEST-114-round): POLAR LIFE & PERIL — next round's slate
+
+Owner verbatim, on the caves round-1 plan: "I love this!" Then four new asks (locked verbatim):
+- "collapsing snow underfoot? like a trap, where you walk over the snow and it collapses into
+  a crevasse... a way to make it not ultra annoying and unfair" (over land AND inside caves)
+- "maybe we can add avalanches?"
+- "polar bears wandering the polar barrens, and they aggro?... can't be too annoying, just a
+  lurking risk"
+- "snow foxes to the polar barrens — foxes tinted white. what might they eat?"
+
+DESIGN ANSWERS (banked for the next round, NOT in the TEST 114 diff — round scope is frozen
+mid-sweep):
+1. COLLAPSING SNOW BRIDGES, V1 = powder-snow roofed crevasses (worldgen-only): where the
+   crevasse carver cuts the surface, occasionally roof the slot's top with powder_snow flush
+   with the snowfield. Vanilla physics IS the trap (entities sink through powder snow), the
+   subtle texture difference is the LEARNABLE TELL (fairness: crevasse fields are readable,
+   like real ones), LEATHER BOOTS already walk on powder snow in vanilla = the gear counter
+   is free and ties into B-10 cold gear, and roofed crevasses get a guaranteed snow-cushion
+   floor (the fall costs position/warmth, rarely the run). Cave interior version = the same
+   powder plugs over lower tunnel levels. V2 = custom cracking chain-collapse with audio
+   telegraph (drama pass, later).
+2. AVALANCHES: PARKED as its own pass. The cheap versions (falling-block spam / scripted
+   particle wall) would cheapen the fantasy; collapsing snow delivers "the snow itself is
+   dangerous" at a tenth the cost first. Revisit after V1 lands.
+3. POLAR BEARS: add to barrens/glacial spawn lists at LOW weight near fish-lake/coastal
+   conditions + a small latitude-conditioned "hungry bear" behavior law: in the food-scarce
+   Barrens a bear's neutral-to-hostile radius widens (~16 blocks) with the vanilla warning
+   roar first — lurking risk, avoidable, low density, drops fish. (A vanilla bear was already
+   sighted on a 79S floe in the TEST 113 video — the Barrens presence + real threat is the new
+   part.)
+4. SNOW FOXES: vanilla foxes ALREADY have the white arctic variant, auto-selected in snowy
+   biomes — pure spawn-list data. What they eat: the Barrens' own RABBITS (already in the B-8
+   spawn list — a real predator-prey loop), scavenged fish near the lakes and bear kills, and
+   vanilla's fox dive-into-snow pounce reads exactly as the real lemming-hunt-under-the-snow
+   behavior, for free.
