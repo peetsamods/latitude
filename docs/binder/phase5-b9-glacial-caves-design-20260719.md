@@ -507,3 +507,27 @@ radius (not seed prediction) for (a) powder_snow trap-roof blocks and (b) open-a
 crevasse-shaped columns, marks each with a green particle beacon on demand -- ground truth,
 zero prediction uncertainty. WIND: onset 85 -> 83, intensity-at-90 nudged up (small, per
 "a little"). GLINT: LOCKED, no further changes without an explicit owner reopen.
+
+## S30 (Peetsa 2026-07-20 eve, SKETCH): THE REAL COLLAPSE — "we're having a miscommunication"
+
+OWNER SKETCH (verbatim intent, drawing supplied): an UNSUSPECTING player walks normal-looking
+snow; the snow beneath GIVES WAY — labeled TRAP with the sub-surface region loosening
+(arrows down), then "SNOW FALLS": the roof tumbles as falling chunks WITH the player into
+the void. "And even sometimes you can drop down into a deep glacial cave (onto powder snow
+so you don't take fall damage)." V1's static powder lid (sink-through, visible texture) is
+NOT the vision — the trap is an EVENT: crack -> collapse -> tumble -> cushion.
+
+S30 BUILD (supersedes the V1 lid): (1) GEN: roof sandwich = snow_block TOP (indistinguishable
+from the snowfield) over 1-2 hidden powder_snow marker blocks over the void; powder cushion
+at the floor stays; a fraction of spans probe downward and punch a narrow connecting shaft
+when more carved void (tunnel) lies within ~16 blocks below the crevasse floor — the "deep
+drop into a glacial cave", cushion moved to the true bottom. (2) RUNTIME EVENT: trigger =
+player standing on snow_block whose direct-below is powder_snow with >=6 air below that (the
+exact sandwich signature — no false positives on solid ground); telegraph ~0.5 s of cracking
+sounds + snow particles; then the contiguous roof span (flood-fill, cap ~24 blocks) collapses
+STAGGERED outward from the trigger over ~10 ticks — top snow_blocks become FallingBlockEntity
+chunks (the sketch's tumbling squares) EXCEPT the 1-2 blocks directly above the triggering
+player's column (those break to particles so the falling snow cannot entomb/suffocate the
+player mid-fall), powder markers deleted with particles, whump + crack audio. Falling snow
+lands as real blocks = the debris pile. Deterministic trigger + distance-ordered stagger (no
+RNG). Flag family glacialCavesV1; gen half new-chunks-only; gate-1 flag-off untouched.
