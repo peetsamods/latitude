@@ -333,3 +333,25 @@ both commits. Raw run logs kept locally in `run-headless/latdev/freeze-sweep-run
 (untracked); resurrect the tooling any time from `a7110706`. The next live flight needs no
 sweep hunt — if instrumentation is ever wanted live anyway, cherry-pick `a7110706` onto the
 staging branch and fly with `-Dlatitude.debugFreeze=true`.
+
+## S23 (Peetsa 2026-07-20 morning, TEST 115 flight + video in ~/CascadeProjects/Proofs)
+
+OWNER VERBATIM: "Freezing water is awesome now! BUT the source water always stays liquid.
+Can we make the source freeze after all the other children of the source freeze? So that it
+happens last?" + collapsing-snow refinement: "the falling should trigger by player walking
+over" (the powder floor pockets read as PRE-fallen snow — the trap must be the intact ROOF)
++ horizon fix confirmed ("the horizon is fixed now, so that's great") + glints "a lot
+better" + NEW GLINT-AS-CLOCK idea: during polar night the day-bright landscape confuses;
+proposal — snow/ice GLINT during clock-DAY in polar night (and during clock-day in midnight
+sun) as the diegetic time-of-day tell.
+
+S23 BUILT SAME MORNING (bf9af829, TEST 116 staged): the driver now CLAIMS an eligible open
+source on its 32-tick cadence strictly AFTER the six-neighbour flowing scan clears (S21(d)
+LAST law) + settled probe + shared ocean/floor eligibility. Sea skin + B-9 reservoir
+untouched; barrens-off byte-identical. sourceFroze instrument channel added. LIVE-PROOF
+NOTE: the owner was at the keyboard (my control lane yields to his session) — his own pour
+is the verification round; recorder channel ready if needed. GLINT-AS-CLOCK: design
+conversation open (owner asked for thoughts) — proposal drafted in the reply, build after
+his nod. COLLAPSE: V1 roof design already walk-triggered (powder roof, sink-through);
+refinement banked — open crevasse floors should NOT carry pre-fallen powder pockets (move
+pocket dressing to tunnels only) so the trap fiction stays clean.
