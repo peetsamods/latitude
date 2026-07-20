@@ -460,3 +460,24 @@ what the flight proves broken, (3) globe frost-glint particle — the amethyst-s
 sparkle shape with a DESATURATED custom color (custom client particle; WAX_OFF's tint is
 hardcoded), (4) MIDNIGHT SUN TWILIGHT FLOOR — during the midnight-sun band the sky never
 darkens past dusk (the clock-driven night dome is the bug; the sun is up).
+
+## S27 DIAGNOSTIC FLIGHT (orchestrator, 2026-07-20 ~13:00, fresh world, INCOMPLETE — honest record)
+
+Lane obstacles burned most of the flight: a recurring Xbox-profile dialog ate every chat
+open (transient dev-auth; cleared by client restart) and /latdev locateCrevasse is NOT
+REGISTERED in the dev-env command tree (the dev/shippable /latdev split — Crew 2's handoff
+note; the owner's TEST jar has it, the dev lane cannot test it. FINDING: unify the trees).
+VERIFIED at 83-85S on fresh chunks: (1) NO crevasse slots visible across multiple wide
+surface views at 83S and along 85S; (2) at 85S/7E the frozen SEA + spike fields render
+correctly; (3) UNDERGROUND AT 83S Y35: a COLOSSAL sky-breached noise VOID (open sky + sea
+horizon visible from Y35, giant bare-stone arches, zero glacial identity) — the noise-void
+problem is WORSE than believed and is the dominant underground experience in fray country.
+NOT VERIFIED (ran out of lane): icicles, ice blobs, traps, roster, locator accuracy.
+STRUCTURAL DIAGNOSIS consolidating the owner's 3 rounds of cave complaints: everything
+glacial is fray-gated at 82-84 — exactly the accessible band where he (and I) always test —
+so the reliable glacial experience only exists 84+, patchy below, and the giant voids drown
+what dressing there is. DECISIONS THIS FORCES (proposed): (a) the underground identity
+(caves swap + carvers + dressing) goes SOLID from 82 (surface biome fray stays, for looks);
+(b) VOID-TAMING un-parks — it is the experience-killer, needs its own pass with the owner
+at the keyboard per the design law; (c) feature live-verification moves to the owner's lane
+(his locator works) with a short verification script, until the dev-tree split is fixed.
