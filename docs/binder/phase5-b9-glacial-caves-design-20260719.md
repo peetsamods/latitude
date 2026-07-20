@@ -258,3 +258,20 @@ before any "sweep works" claim. Unverified visually (code+sweep-verified only): 
 title, glint whiteness (night flight), night monster spawns, cache placement. TEST 114
 staged: SHA e7bfb8d2…, markers tickFrontFreezes / FlowingFluidSpreadConvertMixin /
 glacial_caves.json / frozen_cache.json.
+
+## OVERNIGHT FENCEPOST FIX + THE SWEEP HUNT CONTINUES (2026-07-20 ~01:00, autonomous)
+
+Inspection (airtight, 6 suspects examined) found the settled sweep's depth gate rejected every
+ONE-DEEP landed sheet: OCEAN_FLOOR heightmap sits one above the topmost solid, so bed-resting
+water sat exactly AT the exclusive worldgen floor. FIXED: tickLandWaterFreezeFloorY (bed term
+oceanFloorY-1) in the three tick consumers only; worldgen floor verbatim (glacier byte-identity);
+deep-cap term untouched (B-9 reservoir). Suite 819/0/0 (pad fencepost pinned), pushed f19bb9ba,
+TEST 115 staged (SHA see registry). RE-FLY HONESTY: hunter+converter cascades fired again
+(load-burst 62 claims; fresh pad edge-falls seeded by natural blue-ice strata) but sweptSettled
+STAYED 0 — the sweep pipeline still dies BEFORE the settled probe on some other pre-probe
+condition the inspection did not enumerate. The per-condition-counter instrumentation session
+(the pending chip) remains the right next step; my clean-pad live tests kept getting contaminated
+by edge-falls finding natural ice (which is also why real-world pours freeze fine — ice
+adjacency is everywhere in the barrens). Player-visible impact of the open gap: none observed
+for falls/pours near any ice; isolated 1-deep sheets on virgin snow rely on vanilla source
+cadence then cascade.
