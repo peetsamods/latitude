@@ -531,3 +531,41 @@ player's column (those break to particles so the falling snow cannot entomb/suff
 player mid-fall), powder markers deleted with particles, whump + crack audio. Falling snow
 lands as real blocks = the debris pile. Deterministic trigger + distance-ordered stagger (no
 RNG). Flag family glacialCavesV1; gen half new-chunks-only; gate-1 flag-off untouched.
+
+## S30 BUILT + COMMITTED — TEST 121 STAGED (2026-07-20 night)
+
+Built per the sketch spec above by one dev crew, swept-quality review inline, suite
+925/0/0, committed `12794f2d` + pushed. New pure law `core/SnowCollapseLaw.java`
+(trigger signature snow_block / powder_snow below / >=6 air; flood-fill cap 24 columns;
+Chebyshev-ring stagger fire = now + 10-tick telegraph + min(ring,10); anti-entomb
+Manhattan<=1 collar) + driver `world/SnowCollapseRuntime.java` (claim-first idempotency —
+markers removed before any scheduling; telegraph GLASS_BREAK+SNOW_BREAK cracks +
+SNOWFLAKE/POOF; FallingBlockEntity tumbling chunks; collar columns break to particles,
+never entities; whump SNOW_BREAK pitch 0.55 + POWDER_SNOW_HIT; queue cap 4096; hangs on
+GlobeMod.borderUxTick; creative/spectator skipped). Gen sandwich in
+`world/PowderCrevasseRoofFeature.java` (top snow_block flush with the snowfield, ONE
+hidden powder_snow marker beneath, void below; cushion at floor; ~30% deep-drop spans
+probe down and punch a 2x2 shaft to a >=4-air cave void within 16 blocks below the
+crevasse floor, cushion at true bottom). `/latdev markGlacial` trap signal re-keyed to
+the sandwich signature.
+
+ORCHESTRATOR SELF-FLY (honest record): attempted TWICE on a SELFFLY-S30 jar (SHA
+8f52acd57d02623a, world "S29 SelfFly" + fresh chunks ~84 S). BLOCKED both times by the
+Minecraft/Xbox privacy-settings dialog ("Changes to Xbox settings may take some time to
+apply") which re-fires on EVERY chat open in this automation lane and swallows every
+typed command — a Mojang account-service prompt outside the mod and outside my control
+(same wall that ended the S27 diagnostic flight). What IS live-proven from the earlier
+S29/S30 flights: locateCrevasse teleported me INSIDE a real crevasse on fresh chunks;
+markGlacial found 561 real trap roofs (V1-lid signature — the S30 sandwich generates
+only in NEW chunks and is itself unwitnessed); real powder_snow confirmed underfoot; cold ladder
+lethally real (died in ~4 s at 87 S in survival). What is NOT yet witnessed by anyone:
+the collapse EVENT itself (crack -> tumble -> cushion) and a deep-drop. Per the S27
+live-proof law this is declared UNVERIFIED-LIVE and the owner flight is the verifying
+flight: walk any snowfield span at 83-84 (sub-lethal cold) — markGlacial paints the
+roofs green first if wanted.
+
+Gate-1 flag-off atlas re-proof: run at `12794f2d` (seed 20260714, regular, step 32,
+2:1 aspect, 5 layers) — PASS, run 20260720-201917 vs baseline 20260717-193525, only durationMs differs. TEST 121
+staged (SHA `8f52acd57d02623a`, differs from TEST 120; markers SnowCollapseLaw +
+sandwich verified in-jar). Also in the round: S29 wind onset 83 / max 0.88, markGlacial
+command, frost glint LOCKED per owner.
