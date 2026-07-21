@@ -711,3 +711,72 @@ rendered at long range like vanilla's. Plus each GREEN chat line now carries a c
 
 928/0/0, TEST 125 (SHA 33749f98f411d0e3). No worldgen — no gate-1 (TEST 119 precedent).
 OWNER-VERIFY: markGlacial → click a GREEN [teleport] → survival-walk the pillar → collapse.
+
+## S35 (Peetsa 2026-07-21, video + TEST 125 flight): POWDER covers, DEEP drops, WIDER, MORE — "truly hazardous"
+
+OWNER VERBATIM: "The mistakes you are making: snow blocks are solid. You must cover traps
+with POWDER snow, and there must be a powder snow block directly vertically down at the base
+of the trap so that the player doesn't take fall damage. Look at how I made a trap over a
+deep crevasse into a cave. That is more of what I'm talking about when I mean I want traps,
+not just a drop of like three blocks. I'm not sure there are enough traps right now.
+Increase their incidence a bit. I want to make this polar country truly hazardous for the
+unprepared player... Bring out your level designer and your game strategist to build better
+traps according to my specifications. The traps should be wider as well, not like one
+narrow strip."
+
+VIDEO (Proofs/Screen Recording 2026-07-21 1.58 PM, 469 s, game exits ~230 s):
+- ~25 s: a current trap site = a ~3-deep open scoop (the complaint made flesh).
+- ~115-120 s: TEST 125 markGlacial WORKS — 22 then 66 GREEN roofs with working [teleport]
+  links (the S34 fixes verified live by the owner's own usage).
+- ~150-195 s: HIS REFERENCE TRAP — powder-snow cover over a DEEP natural crevasse throat at
+  87 N, powder cushion placed at the base, then SURVIVAL MODE fall through the cover all the
+  way down by the blue-ice cave country: full hearts at the bottom, frost vignette closing
+  in. Deep drop, zero fall damage, cold as the price. That is the product.
+
+ORCHESTRATOR DIAGNOSIS of the 3-block scoop: the S30 collapse event is SELF-DEFEATING — its
+FallingBlockEntity snow chunks land as REAL BLOCKS in the slot below, so triggering a trap
+BACKFILLS its own shaft into a shallow debris pit. Powder covers fix this inherently:
+nothing falls, the player just sinks through. The S30 crack-and-tumble spectacle is hereby
+superseded by the owner's corrected spec (vanilla powder physics — also vanilla-first law).
+
+## S35 BUILT (eec5c7a8): both specialist specs implemented — the trap is finally the owner's trap
+
+CREW (owner-requested roles, both ran 2026-07-21):
+
+LEVEL DESIGNER spec (implemented verbatim unless noted): 2D flood-fill patches (minor dim
+<= 7 = one under the 9x9 window's 8-wide certification; area <= 48; 1x1 pinholes legal);
+interior-box clip REPLACING the edge-drop rule (which had silently discarded every
+through-running crevasse — the #1 incidence killer; trimmed cells stay open, the cover
+ends flush at the trim line = the deliberate partial-bridge edge, INTENTIONAL); 2D rim-
+RING flushness (cover flat at the LOWEST rim top — floating impossible); depth floor 12;
+50%-deep patch vote; deep-drop 0.50 / probe 24 / shaft 2x2->3x3 under wide covers, sited
+at the deepest column; roof fraction 0.50 (THE calibration dial — pull to 0.40 if too
+hot, never shrink patches); cover = ONE powder layer, cushion at EVERY covered column's
+landing point, bare-floor whitelist deleted (gravel/dirt floors were silently lethal).
+CALIBRATION NOTE (rig, same day): initial ring-spread 3 / vote 0.60 suppressed incidence
+on real rough glacier (35 covers/256 chunks); relaxed to spread 4 / vote 0.50 -> 171
+covers in 13 chunks, patches 2-33 wide, 2 shafts. Both dials still 3x under the slope
+threshold; flushness untouched.
+
+GAME STRATEGIST spec (must-fixes implemented; philosophy banked): (1) SKINNED-POND fix —
+water-floored columns are never covered (tick freeze law can skin a roofed pond and break
+the cushion guarantee); (2) CLOSET-VOID fix — shafts only punch into horizontally
+TRAVERSABLE voids (standing room 2 blocks beyond the footprint), sealed pockets never
+(die-and-respawn = the one outlawed outcome). BANKED, NOT BUILT: the victim's arc
+(look-up moment = the fair-in-retrospect beat), traps-as-discovery framing (deep-drops =
+unmarked dungeon entrances toward the caches), reserve AUDIO tell (hollow-crunch footstep
+near rims — deploy only if flights prove the powder texture unreadable), clustered-field
+density philosophy (govern by second-fall rate; density scales with latitude), cushion
+freeze-linger facts (vanilla powder chip below 87.5 = urgency; sheltered cave cushions at
+88+ deal none — stated, not discovered), fallen-wildlife self-baiting (mobs freeze-die in
+cushions, free storytelling).
+
+S30 COLLAPSE RETIRED + DELETED (SnowCollapseRuntime/Law + tests + GlobeMod wiring): the
+scripted event's falling blocks BACKFILLED the shaft they revealed — the owner's 3-block
+scoop video WAS the debris pile. Vanilla powder physics is the entire trigger now.
+markGlacial re-keyed: trap = powder cap over 2+ air (cushions/drifts/pockets sit on
+solid — no false positives).
+
+Suite 918/0/0. Gate-1 + TEST 126 in the registry entry. OWNER-VERIFY: markGlacial ->
+click GREEN [teleport] -> survival-walk a powder cover: sink, fall the shaft, land soft,
+climb out cold. Deep-drop hunting: ~1 in 4-6 traps punches into the cave labyrinth.
