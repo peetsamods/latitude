@@ -654,3 +654,33 @@ live ONLY in true polar_barrens patches — finding one is part of the hunt.
 
 STILL OWNER-VERIFY: the collapse EVENT (needs a real walk), wind by ear (S31 retune rides
 along in TEST 123).
+
+## S33 (Peetsa 2026-07-21, TEST 123 flight): the markers were telling the truth — about the wrong thing
+
+OWNER: "The green sparkles show now correctly, as you see in the picture; however, there is
+no roof in the trap — it's just an empty space." Plus, on the S32 loading-screen N: "I'm not
+sure I necessarily want it above. Maybe the top point of the compass rose should just be
+shorter, pointing to a red N outlined in a shade-darker color. Apply the same rule to the
+in-game compass."
+
+MARKER ROOT CAUSE (legibility, not worldgen). markGlacial emits TWO signals and drew both in
+the SAME green: trap roofs and open crevasses. The census ratio is ~1000:1 slots-to-roofs
+(7240 vs 11), and the slot marker was a TALL column while the trap marker was a 3-block stub
+— so the rare prize was drowned by, and indistinguishable from, thousands of holes. Every
+sparkle the owner walked to was an open crevasse behaving exactly as designed. FIX: GREEN =
+trap roof ONLY, as a solid 8-block pillar; BLUE soul-flame = open crevasse, short, cap 40;
+chat + summary name each kind; a zero-trap scan now explains WHERE traps generate (new chunks,
+true barrens land, not glacier-over-frozen-ocean). Rescan on a real patch: 26 green / 54 blue.
+
+PERSISTENCE PROVEN (ruling out "the roof evaporates"): sandwich verified at 1298,61,9924
+(snow_block / powder_snow / air), then save-all flush + FULL server restart + re-read — all
+three blocks intact, rescan still finds them. Roofs survive save/load.
+
+NORTH GLYPH LAW (new, shared): core/ui/CompassNorth holds the rule both hand-drawn roses
+consume — north arm SHORTENED to stop 2 px below the glyph and point at it; N in a fixed red
+(cartographic convention, not theme-derived) with a 4-way outline in that red darkened 45%,
+outline suppressed below scale 0.7 where it blobs (the TEST 119 complaint). Applied to the
+in-game dial AND the loading card; S32's above-the-ring N reverted per the owner.
+
+933/0/0. Client + dev command only — no gate-1 this round (TEST 119 precedent). TEST 124.
+STILL OWNER-VERIFY: the collapse EVENT (walk a GREEN pillar in survival at 83-84).
