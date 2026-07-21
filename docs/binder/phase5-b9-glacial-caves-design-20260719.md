@@ -619,3 +619,38 @@ crevasses/slots abound, 13k+ deep columns per 289 fresh chunks).
 STILL OWNER-VERIFY: the collapse EVENT itself (crack -> tumble -> cushion) needs a real
 player standing on a roof — walk fresh snowfield at 83-84, `/latdev markGlacial 4` paints
 the roofs green. Wind verdict by ear at 83-84 and at 90.
+
+## S32 (Peetsa 2026-07-21, TEST 122 screenshots): the fragmentation WAS the trap feature — RIM-BRIDGE LAW
+
+OWNER REPORT + 5 screenshots at 84 N: "Trap roofs are now located, however, they are not
+showing on the world... I do see a lot of fragmentation generation though, and it looks like
+these were attempts at a snow roof that got corrupted. Do you see the fragmented hanging
+blocks of snow?" — plus "Loading screen compass: how do we make the N look like it's not in
+the way?"
+
+HIS DIAGNOSIS WAS EXACTLY RIGHT. The V2 sandwich placed each roofed COLUMN at its own
+windowed-max reference minus one: flush on flat snowfield, floating mid-air on the rough
+sloped glacier in his shots (the windowed max is an uphill surface); and the >=10-below-max
+candidacy trips on ordinary steep slopes, so floating blocks sprayed across hillsides.
+
+FIXES (05f87d17, TEST 123):
+1. **Rim-bridge law**: a span roofs ONLY when both bounding rim columns are known and within
+   2 blocks of each other (a genuine slot through continuous snowfield — a slope's fake slot
+   has rims ~10 apart and dies), and the whole span roofs FLAT at the lower rim's top-block Y
+   — flush with both rims by construction, floating impossible. Depth re-checked per column
+   against the REAL bridge Y. Census on a fresh barrens patch: slope chunks with 42-126
+   candidates now place ZERO; 11 chunks placed 2-10 flush bridges; sandwich + rim anchoring
+   block-verified at 1063,80,9588. Roofs are now INVISIBLE BY DESIGN (that is the trap) —
+   the green markers are how you see them.
+2. **Lingering markers** ("not showing on the world"): markGlacial beacons re-emit every 10
+   ticks for 60 s (fresh set per scan, cap 400) — time to close chat and walk to them.
+3. **Loading N** moved outside the dial, above the ring — face belongs to rose + needle.
+
+FIELD FINDING (documented, not a bug): large polar tracts are glacier-over-
+minecraft:deep_frozen_ocean (surface Y ~77 over sea columns; nearest true barrens was 249
+blocks from the first census point). Crevasses cut there (carve probe reads the raw source
+= land-ish) but the trap biome filter correctly excludes them (sacred-sea law). Traps
+live ONLY in true polar_barrens patches — finding one is part of the hunt.
+
+STILL OWNER-VERIFY: the collapse EVENT (needs a real walk), wind by ear (S31 retune rides
+along in TEST 123).
