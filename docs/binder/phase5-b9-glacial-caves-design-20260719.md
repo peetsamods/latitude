@@ -684,3 +684,30 @@ in-game dial AND the loading card; S32's above-the-ring N reverted per the owner
 
 933/0/0. Client + dev command only — no gate-1 this round (TEST 119 precedent). TEST 124.
 STILL OWNER-VERIFY: the collapse EVENT (walk a GREEN pillar in survival at 83-84).
+
+## S34 (Peetsa 2026-07-21, TEST 124 flight): "I'm not happy" — compass reverted, and the pillars were invisible by RANGE
+
+OWNER: "The compass rose is cut off, the roofs are absent, I'm not seeing any green
+sparkles. Put the compass back to how it was, with the N just above the compass."
+
+COMPASS: the S33 shortened-arm + red-outlined-N experiment READ AS DAMAGE at real scale (his
+closeup: the north arm looked amputated). Fully retired on both dials (782b29cb): HUD dial
+back to the TEST 119 settled look verbatim; loading card back to the full rose with the N
+floating just above the ring — the S32 placement, now owner-chosen ("with the N just above
+the compass"). CompassNorth law + tests deleted with the experiment. LESSON: he asked for
+"shorter", the implementation cut the arm to a stub; when a tuning ask lands wrong, revert
+fully rather than iterate on top.
+
+MARKERS — the second invisibility bug in a row, this one RANGE: his own screenshot PROVES the
+scan works (chat: "GREEN trap roofs=66 | BLUE open crevasses=3106" with trap coordinates
+listed) while the field shows nothing. The plain ServerLevel.sendParticles overload renders
+only to players within ~32 blocks; an r=8 scan reports traps up to ~136 blocks out — the
+green pillars were real, emitting, and outside render range at exactly the distances traps
+live at. (The blue/old-green crevasse sparkles were visible before purely because crevasses
+are EVERYWHERE, so some were always within 32 blocks — which is also why the markers "worked"
+in every earlier test.) Fix: the (overrideLimiter=true, alwaysVisible=true) overload — force-
+rendered at long range like vanilla's. Plus each GREEN chat line now carries a clickable
+[teleport] (locateCrevasse pattern): finding a trap is one click.
+
+928/0/0, TEST 125 (SHA 33749f98f411d0e3). No worldgen — no gate-1 (TEST 119 precedent).
+OWNER-VERIFY: markGlacial → click a GREEN [teleport] → survival-walk the pillar → collapse.
