@@ -569,3 +569,53 @@ Gate-1 flag-off atlas re-proof: run at `12794f2d` (seed 20260714, regular, step 
 staged (SHA `8f52acd57d02623a`, differs from TEST 120; markers SnowCollapseLaw +
 sandwich verified in-jar). Also in the round: S29 wind onset 83 / max 0.88, markGlacial
 command, frost glint LOCKED per owner.
+
+## S31 (Peetsa 2026-07-20 night, TEST 121 flight): "absolutely no change AT ALL" — DIAGNOSED, ALL THREE REAL
+
+OWNER REPORT (verbatim): "I flew TEST 121 and noticed absolutely no change AT ALL. Wind did
+not start sooner, did not increase in volume at 90. /latdev markGlacial did not work — it
+said there were 0 matches in an 8-chunk radius, even though I was in the snowy barrens. I
+never encountered a trap."
+
+He was right on all three counts. Diagnosed on a HEADLESS RIG (loom dev server, fresh
+globe_large world seed 987654, RCON console, forceloaded fresh 256-chunk areas at 83-85 S —
+the lane the Xbox dialog cannot touch), fixed in `066f171f`:
+
+1. **Traps never generated — for anyone, since caves r1.** The placed feature
+   `powder_crevasse_roof` had placement `[in_square, biome]` — the `minecraft:biome` filter
+   samples at the UN-LIFTED origin Y, deep underground, where the biome has been
+   `globe:glacial_caves` since the r1 depth swap. The filter failed everywhere the
+   underground is glacial, i.e. almost the whole barrens band: measured ONE feature run in
+   256 fresh polar chunks (heartbeat recorder). This also retroactively explains the owner's
+   TEST 118/120 "couldn't find the traps": they were never in his world. And the "561 trap
+   roofs" from my S29 flight is now suspect as powder-pocket false positives on the old
+   V1-lid signal — the honest current-signature count was the true zero he saw. FIX: add
+   `minecraft:heightmap` (WORLD_SURFACE_WG) before the biome check (the vanilla
+   surface-feature pattern). AFTER: 35/256 fresh chunks placed 8-27 sandwiches each, deep
+   drops rolled, one sandwich block-verified in-world (snow_block/powder/air at 827,104,9217).
+
+2. **markGlacial had an off-by-one hiding every sandwich.** `ChunkAccess.getHeight` returns
+   the TOP-BLOCK Y (one below `Level.getHeight`'s first-air convention the scan grid
+   documents). The roof probe therefore started ON the powder marker and walked DOWN — it
+   could never see the snow cap one block above. The single roof it did find had a snow
+   layer shifting everything up one. FIX: +1 on grid fill. Same 17x17-chunk area rescanned:
+   trap roofs 1 -> 499. (His live "0 matches" was thus BOTH bugs stacked: nothing generated,
+   and the scanner couldn't have seen it anyway.)
+
+3. **The wind change was real but humanly inaudible — a tuning miss, mine.** S29 moved
+   START 85->83 but kept the squared ease anchored at START: volume at 84 was
+   MAX*(1/7)^2 = 0.018 (nothing), and 0.8->0.88 at the pole is under 1 dB. FIX: two-piece
+   envelope — linear attack 0 -> 0.10 (a real whisper) across 83->84, then the same squared
+   ease riding that floor to a FULL 1.0 at 90 (+2 dB over the original 0.8, clearly
+   audible). Hysteresis/muffle/shelter behavior untouched; tests re-anchored symbolically.
+
+Also landed with the round: `/latdev markGlacial [radius [x z]]` coordinate form (works
+from a dedicated-server console + remote spot checks); the shippable /latdev tree registers
+as `/latdev2` in dev environments (CLOSES the S27 dev/shippable split finding); permanent
+flight recorders behind `-Dlatitude.debugCollapse` ([LAT][COLLAPSE] per-chunk census +
+heartbeat, [LAT][CARVEGATE] append-exit naming — the carve-append itself was proven healthy:
+crevasses/slots abound, 13k+ deep columns per 289 fresh chunks).
+
+STILL OWNER-VERIFY: the collapse EVENT itself (crack -> tumble -> cushion) needs a real
+player standing on a roof — walk fresh snowfield at 83-84, `/latdev markGlacial 4` paints
+the roofs green. Wind verdict by ear at 83-84 and at 90.
