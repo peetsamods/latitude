@@ -140,7 +140,7 @@ can't distinguish from a real load.
   "Reset Title" defaults (scale 1.6 / seconds 4.0).** The preset defaults match `LatitudeConfigData`'s own
   field initializers; the Reset Title button's numbers are the ones that differ. This is a PRE-EXISTING
   drift this session did not create. Flagged for Peetsa to decide which is canonical (Reset Title is the
-  likely-stale one); behavior deliberately left unchanged so nothing shifts under him mid-arc.
+  likely-stale one); behavior deliberately left unchanged so nothing shifts under her mid-arc.
 - **`CompassHudPreset.presetFormatVersion` is written but never read.** An intentional forward-compat stub;
   no version-check / migration code consumes it yet. Noted so a future reader doesn't assume migration
   logic exists.

@@ -14,7 +14,7 @@ file:line pointers are from that recon (pointer table at the bottom).
   ceremony at the N/S poles: advisory → fog → consensual prompt → curtain teleport → arrival title.
   NOT the silent evator.
 - **Peetsa's standing B-7 rule:** "teleport onto land if traveling by land, water if traveling by
-  water." (§6 resolves this against the polar water-freeze law he also shipped.)
+  water." (§6 resolves this against the polar water-freeze law she also shipped.)
 - The polar warning ladder is Peetsa's own copy; DANGER (89°) is verbatim, DO NOT TOUCH (comment at
   `GlobeWarningOverlay.java:29`). §7 flags the honesty tension and offers OPTIONS only.
 
@@ -299,7 +299,7 @@ layers are fine (motion-blocking, spawn lands on top).
 no boat reaches the 89.2° prompt, no swimmer departs there; the "sea" at both the prompt and the
 88.0° arrival line is walkable ice sheet, and `placeSafeY` already succeeds on ice (ice is not a
 fluid, heightmap tops it). Peetsa's rule was written for the EW edge, where B-5's shore can be real
-ocean; at the pole his own freeze law has already answered it.
+ocean; at the pole her own freeze law has already answered it.
 
 **Recommended design — match by SURFACE CLASS, not fluid state:**
 - Departure sensing (server, at answer time): classify the departure column's biome ocean-family vs
@@ -333,7 +333,7 @@ back." (**verbatim-locked**) · LETHAL 89.7° "Severe hypothermia -- you are fre
 The tension: with a crossing available, "Turn back." at 89° is the same honesty problem B-5 solved at
 the EW edge (B-5's fix: retire the two-tier "Turn back." banner for one advisory + let the prompt be
 the counter-offer). But these four rungs are Peetsa's own lines and the DANGER line is untouchable.
-Options, his call at P3:
+Options, her call at P3:
 
 - **O1 (recommended default): change NOTHING.** "Turn back" remains true — it IS the survivable
   choice; the prompt 0.2° later is the consensual counter-offer, exactly like real-world "do not
@@ -495,7 +495,7 @@ S1 COLD PROTECTION: a ColdProtection evaluator (vanilla freeze_immune_wearables 
 default, datapack-extensible per the vanilla-first law; piece-count scaling, full set = freeze damage
 negated, slowness KEPT so the pole still resists) feeds BOTH the damage curve scaling AND the warning
 text: protected players see "The bitter cold envelops you." instead of the LETHAL line (one evaluator,
-one truth — the honesty law; the DANGER line stays his verbatim). Potions: v1 = armor tag only
+one truth — the honesty law; the DANGER line stays her verbatim). Potions: v1 = armor tag only
 (no vanilla cold-resist exists; future "expedition tonic" idea noted).
 S2 THE WALL + UNDER-ICE: prompt suppressed for under-ice/underwater players (extend the surface gate:
 in-water OR no-sky suppresses at the pole), and Wide worlds get a MOD-BUILT HARD STOP at the pole line
@@ -772,7 +772,7 @@ aware if cheap. (b) BARRENS AT 82 — the veg-fade FULL_DEG (86) moves to 82 (fa
 the KEEP-SHARED coupling carries the Barrens onset with it automatically (owner window 81-83);
 verify SUGARCANE is inside the fade's feature coverage and ban it with the fade (it has been
 slipping through — owner saw it at ~84). Fray still +2 (82->84 full). Atlas gate-1 re-proof after.
-(c) DANGER RE-TIMED + REWORDED (touches the owner's verbatim line — flagged to him): 89 -> 88
+(c) DANGER RE-TIMED + REWORDED (touches the owner's verbatim line — flagged to her): 89 -> 88
 (= the lethal-core onset, honest again) and present tense "DANGER: Lethal blizzard. Turn back."
 ("ahead" read as a lie two degrees deep in the blizzard). LETHAL 89.7 unchanged. (d) STRAYS CUT
 ~2/3: barrens spawner weight 80 -> ~27, pack 4 -> 1-2; the traversal is the antagonist. (e) POLAR
@@ -902,7 +902,7 @@ snow/powder makes it worse), i.e. the S16(c) arrival is a HARD cold-protection g
 (only Slowness remains), and heavy Protection + saturated-regen food is the unprotected-but-prepared path. The
 crossing carries you THROUGH the worst 0.6 deg (89.4->90 = the 3-6 HP/s spike) via the curtain grace, but the
 90->88 tail is the price — deliberately deepened from S5's gentler 89.5 arrival. FLIGHT-BRIEF flag for Peetsa:
-this may read as too punishing before B-10 outfitting ships; the arrival degree is one constant if he wants it
+this may read as too punishing before B-10 outfitting ships; the arrival degree is one constant if she wants it
 pulled back toward 89.5 after feeling it.
 
 VERIFY: compileJava green; `cleanTest test` green — 712 tests / 0 failures / 0 errors (63 suite files),

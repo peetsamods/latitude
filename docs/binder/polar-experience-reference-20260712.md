@@ -104,7 +104,7 @@ glue is trivial.
 - **Files:** `core/PolarExposure.java` (pure `fraction`/`whiteoutScale`/`particleBudget`); sampled in `client/GlobeClientState.computeExposure01`/`sampleExposure01`.
 - **Geometry:** `SAMPLE_COUNT=13` — center column + a ring at radius 3 (8 points) + the 4 cardinals at radius 5; `exposure01 = seen / 13`. Cached, recomputed only on block-position change or every `EXPOSURE_RECOMPUTE_TICKS=5` ticks (13 heightmap lookups are cheap but not free). Deep underground (`y < sea-2`) short-circuits to 0.
 - **Consumers — graded vs deliberately binary:**
-  - **Graded** by `exposure01`: wind muffle, whiteout-overlay alpha, local ambient-particle budget. (Under Peetsa's open freestanding arch a single overhead lintel used to flip him "fully indoors"; now the ring still sees sky → ~0.9 → effectively outdoors.)
+  - **Graded** by `exposure01`: wind muffle, whiteout-overlay alpha, local ambient-particle budget. (Under Peetsa's open freestanding arch a single overhead lintel used to flip her "fully indoors"; now the ring still sees sky → ~0.9 → effectively outdoors.)
   - **Deliberately BINARY** (`surfaceOk`): the warning text + the DANGER/LETHAL vignette (they're episode punctuation, not atmosphere) and the world-space storm sky / depth fog (those are vanilla-occluded by real walls, so they need no gate at all).
   - **Untouched:** the server hazard mechanics (freeze/slowness) do not read exposure — the cold doesn't care whether you have a roof.
 
@@ -204,7 +204,7 @@ unless noted:
 
 - **Proven by tests (pure Core-Logic math, ~337-test suite as of TEST 78):** the seven polar pure classes each have a test — `PolarHazardWindowTest`, `PolarExposureTest`, `PolarWindSoundTest`, `PolarWarningEpisodeTest`, `PolarWaterFreezeRuleTest`, `PolarPrecipitationRuleTest`, `PolarVegetationFadeTest` — plus `core/ui/PolarWarningVignetteTest`. All the latitude curves, thresholds, hysteresis, episode transitions, and the exposure fraction are unit-covered. (Suite count not re-run here — no gradle in this pass; the pass log records 337/337 at TEST 78, later rounds 79–81 were revert/doc/loading-footer with no new polar tests.)
 - **Both new 26.2 mixins (`FogRendererPolarSetupMixin`, `LivingEntityFreezeDamageMixin`) were bytecode-bind-verified against the real mapped jar** — the exact discipline that would have caught the dead fog mixin.
-- **Live-eyeball only (Peetsa, not automated):** the whole *felt* experience — wind bed loudness ("epic"), blizzard sideways read, whiteout heaviness, storm-sky timing, warning legibility, the indoor/through-a-window storm parity. These are subjective and were tuned round-by-round against his flights (TEST 53→81).
+- **Live-eyeball only (Peetsa, not automated):** the whole *felt* experience — wind bed loudness ("epic"), blizzard sideways read, whiteout heaviness, storm-sky timing, warning legibility, the indoor/through-a-window storm parity. These are subjective and were tuned round-by-round against her flights (TEST 53→81).
 - **Known-open items:**
   - **Leather-armor freeze immunity is vanilla-unchanged** — vanilla lets leather armor negate freeze damage; the mod's curve uses the same `freeze()` damage type, so leather still protects at the pole. Flagged for Peetsa's awareness, not fixed.
   - **Low-end perf glance never done** — the ~2× pole particle ceiling (SNOW_MAX 30→60 + the dense second pass) was flagged for a low-end hardware check that hasn't happened. `ParticleDensity` mitigates it (honors the vanilla Particles setting) but the raw ceiling wasn't measured on weak hardware.

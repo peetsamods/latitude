@@ -47,7 +47,7 @@ knowledge of the coast or wind. The climate model itself believes exactly what P
 probe: wet windward coasts precip 0.65-1.00, drying over ridges to 0.35, shadow downwind) — and the
 measured consumer-on diff shows wet-fetch coastal deserts repainting to forest (87 cells) the moment the
 consumer is wired. That wiring is gated behind the "consumer law-compliance" slice (2 confirmed law bugs
-to fix first). So: the model agrees with him; the map can't hear the model yet.
+to fix first). So: the model agrees with her; the map can't hear the model yet.
 
 ## Finding 4 — "Absent continental shelf — massive drop-off and hollow" (F3: -3090 / 68 / -3405, 31°N) — TWO PARTS
 

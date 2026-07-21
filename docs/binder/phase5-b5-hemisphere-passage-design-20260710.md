@@ -192,6 +192,6 @@ re-arm bug fixed for real — recorder trace: disarm@6.13 / answer false / re-ar
 naturally @183.5 on the far side — arrival EXACTLY the designed 184-block past-the-fog landing, clear
 air, hemisphere flipped (179W -> 171E). Screenshots in session scratchpad. NOTE: integrated-server
 arrival ~100ms after curtain-raise, so the curtain is nearly instant locally (holds longer on slower
-gen; acceptable). READY FOR PEETSA: TEST 87 (SHA 72e58076) — his checklist: the felt geometry (176.5
+gen; acceptable). READY FOR PEETSA: TEST 87 (SHA 72e58076) — her checklist: the felt geometry (176.5
 ramp on real-size worlds), banner fades, retreat-fires-nothing, arrival-past-fog feel, and the border
-snap on HIS other worlds (any world whose level.dat carries a stale lerp self-heals in one tick now).
+snap on HER other worlds (any world whose level.dat carries a stale lerp self-heals in one tick now).

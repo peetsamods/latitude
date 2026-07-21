@@ -4,7 +4,7 @@ STATUS: SWEPT — adversarial design sweep 2026-07-19 returned ACCEPT-WITH-FIXES
 5 required fixes, all amended below; the blocker's architect decision = mechanism (b), see
 "The attachment seam"). CLEARED FOR P1 BUILD.
 OWNER DIRECTION (Peetsa 2026-07-19): "get started on glacial caves/crevasses" — B-10 polar
-gear is PARKED (he co-designs it when back). The S-section pattern from the B-7 doc applies
+gear is PARKED (she co-designs it when back). The S-section pattern from the B-7 doc applies
 (owner flight findings append here as they arrive).
 
 ## The owner's vision (verbatim bank, collected across flights)
@@ -349,10 +349,10 @@ S23 BUILT SAME MORNING (bf9af829, TEST 116 staged): the driver now CLAIMS an eli
 source on its 32-tick cadence strictly AFTER the six-neighbour flowing scan clears (S21(d)
 LAST law) + settled probe + shared ocean/floor eligibility. Sea skin + B-9 reservoir
 untouched; barrens-off byte-identical. sourceFroze instrument channel added. LIVE-PROOF
-NOTE: the owner was at the keyboard (my control lane yields to his session) — his own pour
+NOTE: the owner was at the keyboard (my control lane yields to her session) — her own pour
 is the verification round; recorder channel ready if needed. GLINT-AS-CLOCK: design
 conversation open (owner asked for thoughts) — proposal drafted in the reply, build after
-his nod. COLLAPSE: V1 roof design already walk-triggered (powder roof, sink-through);
+her nod. COLLAPSE: V1 roof design already walk-triggered (powder roof, sink-through);
 refinement banked — open crevasse floors should NOT carry pre-fallen powder pockets (move
 pocket dressing to tunnels only) so the trap fiction stays clean.
 
@@ -452,7 +452,7 @@ ORCHESTRATOR RECKONING (logged as law): icicles have failed to appear in TWO own
 and were NEVER live-verified by the orchestrator; blobs/traps/locator likewise shipped on
 schema-verification only. The live-instrument law extends: NO worldgen feature ships again
 without an orchestrator self-fly on FRESH chunks. Standing hypothesis to TEST FIRST: the
-stale-chunk trap (his world's explored areas predate the features; the locator predicts
+stale-chunk trap (her world's explored areas predate the features; the locator predicts
 current-jar generation which old chunks contradict) — but each feature must be proven to
 fire in fresh chunks before any stale-chunk explanation is offered. S27 slate: (1) self-fly
 diagnostic (fresh world: icicles/blobs/traps/locator/roster per-feature verdicts), (2) fix
@@ -474,13 +474,13 @@ horizon visible from Y35, giant bare-stone arches, zero glacial identity) — th
 problem is WORSE than believed and is the dominant underground experience in fray country.
 NOT VERIFIED (ran out of lane): icicles, ice blobs, traps, roster, locator accuracy.
 STRUCTURAL DIAGNOSIS consolidating the owner's 3 rounds of cave complaints: everything
-glacial is fray-gated at 82-84 — exactly the accessible band where he (and I) always test —
+glacial is fray-gated at 82-84 — exactly the accessible band where she (and I) always test —
 so the reliable glacial experience only exists 84+, patchy below, and the giant voids drown
 what dressing there is. DECISIONS THIS FORCES (proposed): (a) the underground identity
 (caves swap + carvers + dressing) goes SOLID from 82 (surface biome fray stays, for looks);
 (b) VOID-TAMING un-parks — it is the experience-killer, needs its own pass with the owner
 at the keyboard per the design law; (c) feature live-verification moves to the owner's lane
-(his locator works) with a short verification script, until the dev-tree split is fixed.
+(her locator works) with a short verification script, until the dev-tree split is fixed.
 
 ## S29 (Peetsa 2026-07-20 night, TEST 120 flight)
 
@@ -577,7 +577,7 @@ not start sooner, did not increase in volume at 90. /latdev markGlacial did not 
 said there were 0 matches in an 8-chunk radius, even though I was in the snowy barrens. I
 never encountered a trap."
 
-He was right on all three counts. Diagnosed on a HEADLESS RIG (loom dev server, fresh
+She was right on all three counts. Diagnosed on a HEADLESS RIG (loom dev server, fresh
 globe_large world seed 987654, RCON console, forceloaded fresh 256-chunk areas at 83-85 S —
 the lane the Xbox dialog cannot touch), fixed in `066f171f`:
 
@@ -587,9 +587,9 @@ the lane the Xbox dialog cannot touch), fixed in `066f171f`:
    `globe:glacial_caves` since the r1 depth swap. The filter failed everywhere the
    underground is glacial, i.e. almost the whole barrens band: measured ONE feature run in
    256 fresh polar chunks (heartbeat recorder). This also retroactively explains the owner's
-   TEST 118/120 "couldn't find the traps": they were never in his world. And the "561 trap
+   TEST 118/120 "couldn't find the traps": they were never in her world. And the "561 trap
    roofs" from my S29 flight is now suspect as powder-pocket false positives on the old
-   V1-lid signal — the honest current-signature count was the true zero he saw. FIX: add
+   V1-lid signal — the honest current-signature count was the true zero she saw. FIX: add
    `minecraft:heightmap` (WORLD_SURFACE_WG) before the biome check (the vanilla
    surface-feature pattern). AFTER: 35/256 fresh chunks placed 8-27 sandwiches each, deep
    drops rolled, one sandwich block-verified in-world (snow_block/powder/air at 827,104,9217).
@@ -599,7 +599,7 @@ the lane the Xbox dialog cannot touch), fixed in `066f171f`:
    documents). The roof probe therefore started ON the powder marker and walked DOWN — it
    could never see the snow cap one block above. The single roof it did find had a snow
    layer shifting everything up one. FIX: +1 on grid fill. Same 17x17-chunk area rescanned:
-   trap roofs 1 -> 499. (His live "0 matches" was thus BOTH bugs stacked: nothing generated,
+   trap roofs 1 -> 499. (Her live "0 matches" was thus BOTH bugs stacked: nothing generated,
    and the scanner couldn't have seen it anyway.)
 
 3. **The wind change was real but humanly inaudible — a tuning miss, mine.** S29 moved
@@ -628,9 +628,9 @@ these were attempts at a snow roof that got corrupted. Do you see the fragmented
 blocks of snow?" — plus "Loading screen compass: how do we make the N look like it's not in
 the way?"
 
-HIS DIAGNOSIS WAS EXACTLY RIGHT. The V2 sandwich placed each roofed COLUMN at its own
+HER DIAGNOSIS WAS EXACTLY RIGHT. The V2 sandwich placed each roofed COLUMN at its own
 windowed-max reference minus one: flush on flat snowfield, floating mid-air on the rough
-sloped glacier in his shots (the windowed max is an uphill surface); and the >=10-below-max
+sloped glacier in her shots (the windowed max is an uphill surface); and the >=10-below-max
 candidacy trips on ordinary steep slopes, so floating blocks sprayed across hillsides.
 
 FIXES (05f87d17, TEST 123):
@@ -690,15 +690,15 @@ STILL OWNER-VERIFY: the collapse EVENT (walk a GREEN pillar in survival at 83-84
 OWNER: "The compass rose is cut off, the roofs are absent, I'm not seeing any green
 sparkles. Put the compass back to how it was, with the N just above the compass."
 
-COMPASS: the S33 shortened-arm + red-outlined-N experiment READ AS DAMAGE at real scale (his
+COMPASS: the S33 shortened-arm + red-outlined-N experiment READ AS DAMAGE at real scale (her
 closeup: the north arm looked amputated). Fully retired on both dials (782b29cb): HUD dial
 back to the TEST 119 settled look verbatim; loading card back to the full rose with the N
 floating just above the ring — the S32 placement, now owner-chosen ("with the N just above
-the compass"). CompassNorth law + tests deleted with the experiment. LESSON: he asked for
+the compass"). CompassNorth law + tests deleted with the experiment. LESSON: she asked for
 "shorter", the implementation cut the arm to a stub; when a tuning ask lands wrong, revert
 fully rather than iterate on top.
 
-MARKERS — the second invisibility bug in a row, this one RANGE: his own screenshot PROVES the
+MARKERS — the second invisibility bug in a row, this one RANGE: her own screenshot PROVES the
 scan works (chat: "GREEN trap roofs=66 | BLUE open crevasses=3106" with trap coordinates
 listed) while the field shows nothing. The plain ServerLevel.sendParticles overload renders
 only to players within ~32 blocks; an r=8 scan reports traps up to ~136 blocks out — the
@@ -728,7 +728,7 @@ VIDEO (Proofs/Screen Recording 2026-07-21 1.58 PM, 469 s, game exits ~230 s):
 - ~25 s: a current trap site = a ~3-deep open scoop (the complaint made flesh).
 - ~115-120 s: TEST 125 markGlacial WORKS — 22 then 66 GREEN roofs with working [teleport]
   links (the S34 fixes verified live by the owner's own usage).
-- ~150-195 s: HIS REFERENCE TRAP — powder-snow cover over a DEEP natural crevasse throat at
+- ~150-195 s: HER REFERENCE TRAP — powder-snow cover over a DEEP natural crevasse throat at
   87 N, powder cushion placed at the base, then SURVIVAL MODE fall through the cover all the
   way down by the blue-ice cave country: full hearts at the bottom, frost vignette closing
   in. Deep drop, zero fall damage, cold as the price. That is the product.

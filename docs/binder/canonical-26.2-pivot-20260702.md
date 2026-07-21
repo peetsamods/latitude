@@ -400,7 +400,7 @@ Rebuilt jar (sha256 `982dd4238014161e7946812eb3087a6d0827320b1fd9b01213211a7ad40
 in the `LATITUDE 26.2` Modrinth profile, stale `TEST 1.jar` removed, staged sha256 verified identical to the
 build. Did **not** attempt to launch the client myself (`runClient` would open a real graphical window on
 Peetsa's screen from a background process — inappropriate to trigger unprompted, and is exactly the live-test
-step reserved for him).
+step reserved for her).
 
 ---
 
@@ -466,7 +466,7 @@ is the confirmation.
 
 ## Live test #3 feedback: atlas border, scroll clipping, tabbed heading (2026-07-02)
 
-`trigger: Peetsa screen recording (couldn't open it — macOS Desktop TCC blocks the sandboxed shell — worked from his written description + the actual texture).`
+`trigger: Peetsa screen recording (couldn't open it — macOS Desktop TCC blocks the sandboxed shell — worked from her written description + the actual texture).`
 
 1. **Atlas frame border wrong on right/bottom (top/left fine, changes per size).** Root cause found by
    extracting the texture: `map_background.png` is **64×64**, but `drawAtlasFrame` passed `128, 128` as the

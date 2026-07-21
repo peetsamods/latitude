@@ -28,9 +28,9 @@ from the create-world screen, before any world exists — Peetsa's exact usage) 
 from UPPERCASE applied to it — a real, reproducible duplicate in exactly the scenario being tested.
 
 **CORRECTED same session:** the first fix removed `NORMAL` from `TitleCaseMode` entirely, on the reading
-that Peetsa wanted the option gone. He clarified immediately after: he wants `NORMAL` kept — it's the
+that Peetsa wanted the option gone. She clarified immediately after: she wants `NORMAL` kept — it's the
 "Tropical" natural-case look, genuinely distinct from `UPPERCASE`'s "TROPICAL" on any real zone name, and
-he values it. The removal was reverted in full (enum restored to `{NORMAL, UPPERCASE, LOWERCASE,
+she values it. The removal was reverted in full (enum restored to `{NORMAL, UPPERCASE, LOWERCASE,
 MOCKING}`, default back to `NORMAL`, all five consumers reverted, the now-moot regression test deleted).
 
 **The actual fix:** the diagnosis was correct, the response to it wasn't — the real bug was narrower than
