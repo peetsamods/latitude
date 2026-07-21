@@ -139,7 +139,7 @@ of why the copy voice in Part 1 matters so much here).
   (but shipped OFF) for the zone-enter title (`core/ui/TitleStyle`) — the exact same "dark keyline
   makes light-vs-dark backgrounds both safe" trick, applied to this line. **This is the fix for F1.**
 - **R2 (M, needs one sound asset OR a vanilla-sound loop) — A ramping wind bed 85→90°.** *What Peetsa
-  would see/hear:* a low wind that rises as he nears the pole and howls at 90°, then fades as he
+  would see/hear:* a low wind that rises as she nears the pole and howls at 90°, then fades as she
   retreats. Cheapest no-asset path: loop an existing vanilla sound event at latitude-scaled volume
   from the same client tick that spawns snow (`GlobeModClient` ambient block); a bespoke blizzard
   loop asset is the richer version. **This is the fix for F2 and the highest-impact item overall.**

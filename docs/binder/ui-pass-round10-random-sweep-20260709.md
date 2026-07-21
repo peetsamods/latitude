@@ -2,7 +2,7 @@
 
 `status: FIXED IN SOURCE, awaiting live look (TEST 41)`
 Source: Peetsa — when the spawn zone is set to **Random**, the atlas currently just shows every band in the
-flat unselected wash (no single zone is highlighted, since Random picks one at generation time). He wanted
+flat unselected wash (no single zone is highlighted, since Random picks one at generation time). She wanted
 Random to feel special: start colored in the middle, then have the bands "strobe/cycle outward in opposing
 directions" — a colorful double-scrolling flourish.
 
@@ -44,9 +44,9 @@ multiplied into every band's glow). Peak (env == 1) holds across the middle of t
 start/end of the loop are eased — the traveling pulse itself is unchanged. `SWEEP_FADE_FRAC` is a fourth
 cosmetic knob (0 = old hard pop).
 
-Peetsa had also tried some experimental constant values in his copy (period 800 / sigma 200 / pole-fade
-250, which flattens the traveling pulse into a uniform all-band glow); on his call the shipped values were
-restored to the original **period 3200 / sigma 16 / pole-fade 108** (the distinct outward pulse he liked),
+Peetsa had also tried some experimental constant values in her copy (period 800 / sigma 200 / pole-fade
+250, which flattens the traveling pulse into a uniform all-band glow); on her call the shipped values were
+restored to the original **period 3200 / sigma 16 / pole-fade 108** (the distinct outward pulse she liked),
 with the new fade-in on top.
 
 ## Verification

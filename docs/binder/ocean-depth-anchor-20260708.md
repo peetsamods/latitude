@@ -2,7 +2,7 @@
 
 `status: ANSWERED with numbers — carve DEEPENS (never shallows) vs vanilla; two secondary findings recorded`
 Trigger: Peetsa on the TEST 30 r=1 world — "the ocean seems shallower than vanilla... am I imagining
-things? is this intentional?" Measured directly on his seed (`2591890304012655616`, globe_large /
+things? is this intentional?" Measured directly on her seed (`2591890304012655616`, globe_large /
 radius 10000, Mercator), r=0 (== vanilla ocean side, byte-identical by the C-2 gate) vs r=1 carve.
 
 ## Headline: the carve does NOT make oceans shallower than vanilla
@@ -21,7 +21,7 @@ by construction it can only make a given column **deeper or equal** to vanilla, 
 
 1. **The continental-shelf apron is deliberately shallow near shore.** `shelfApron(shelf01)` keeps
    the carve to as little as 20% of full depth right at the coastline, widening to full depth offshore
-   — that IS the terraced shallows he liked the look of. Flying coastlines, most of the water in frame
+   — that IS the terraced shallows she liked the look of. Flying coastlines, most of the water in frame
    is this intentional shelf zone.
 2. **Carved basins settle to a uniform moderate depth, not vanilla's abyssal trenches.** Max carve
    depth at the current calibration is `|S·r| · K_DEPTH_BLOCKS = 0.4 × 60 = 24 blocks` (floor ~Y39).

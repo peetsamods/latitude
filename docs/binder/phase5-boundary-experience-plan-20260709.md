@@ -189,7 +189,7 @@ missing new classes). Correct build = `./gradlew build -x test`; ALWAYS verify a
 
 ### UI round 13 (2026-07-10) — Peetsa's 7-item UI/UX list, audit-driven, committed 2da8c065/56628039/885b3da4/748605cb
 
-While Peetsa flew TEST 53 he filed 7 UI/UX asks. Audit first: `docs/binder/latitude-ui-ux-audit-20260710.md`
+While Peetsa flew TEST 53 she filed 7 UI/UX asks. Audit first: `docs/binder/latitude-ui-ux-audit-20260710.md`
 (24 findings, 3 CRITICAL — 13-state blind color cycle, buried snap-to-grid, no HUD Studio front door;
 committed da495ce0). Then four swept passes:
 **Pass 1 (2da8c065)**: selected-zone letter-wave bounce + tab shimmer (quieter than the atlas crest);
@@ -261,7 +261,7 @@ fix: NEW pure core/ui/AccessibilityPalette (ONE rulebook, 15 tests — HC floors
 dim greys toward white; CB remaps only red/green-RELIANT signals via isRedReliant, gold provably passes)
 applied across CompassHud (backing disc + rim, opaque digital plate, cyan needle under CB), create
 screen (all leaf text helpers, icon plates), RulesIcons, AND the Studio itself (card/tabs/dropdown
-rows/open list/glyphs — the screen he flips the dropdown on responds instantly). Titles: NEW pure
+rows/open list/glyphs — the screen she flips the dropdown on responds instantly). Titles: NEW pure
 TitleStyle — 8-dir outline at constant 1 screen-px (1/scale in the scaled pose), explicit drop-shadow
 toggle, 3-ring diffuse glow, one-sweep fade-in Gaussian shimmer for RAINBOW/AURORA (reduceMotion-gated);
 NEW default = black outline + OFF_WHITE 0xF3ECDD fill, shadow off (pre-release migration disclosed
@@ -269,7 +269,7 @@ in-code; existing saves keep their fill color, adopt outline). Studio Title tab:
 conditional RGB picker + shadow/glow toggles, preview live; hemisphere titles inherit w/ threaded fade.
 Sweeper: ACCEPT-WITH-NOTES — STANDARD identity verified at 40+ sites, ONE deviation caught (reduce-motion
 icon glow 0.85→0.9) and restored in-pass. Suite 228/228. TEST 60 staged next. NOTE FOR PEETSA'S FLIGHT:
-his existing config keeps WHITE fill but gains the outline and loses the hard shadow (new keys) — the
+her existing config keeps WHITE fill but gains the outline and loses the hard shadow (new keys) — the
 Title tab toggles restore any prior look.
 
 ### TEST 61 staged + FIRST DIRECTOR-DRIVEN LIVE VERIFICATION via Modrinth (2026-07-11)
@@ -398,9 +398,9 @@ ticks x 50); plus a third real pop found en route (baseline dim snapping 0.75->1
 with a sin(pi x progress) arch — sweeper proved first/last letters get identical shine. LESSON: never
 drive per-frame visuals from the tick clock; wall-clock is the family idiom (LoadingWave was already
 right). PARKED FOR PEETSA: art-direction review (title-art-direction-review-20260711.md, committed
-8888abd8) — headline finding CONFLICTS with his outline removal (off-white on snow = 1.11:1, invisible;
+8888abd8) — headline finding CONFLICTS with her outline removal (off-white on snow = 1.11:1, invisible;
 review wants the 1px outline back ON by default); + gold hairline rule, two-line lockup, eased motion,
-per-zone accent recs. His call pending. Suite 263/263. TEST 69 staged.
+per-zone accent recs. Her call pending. Suite 263/263. TEST 69 staged.
 
 ### APPROVED title moment shipped: C v2 glimmer + lockup (2026-07-11, 6c305cb7)
 
@@ -460,7 +460,7 @@ actually looks WORSE and LESS foggy/blizzardy." Root lesson: at the pole everyth
 darker deck gains DEFINITION against the pale whiteout, the opposite of overcast mush. DEAD END: do
 not retry cloud-COLOR-DARKENING; any future cloud pass should think lighter/washed-out tones or
 gap-filling instead. Withdrawn cleanly (mixin+core+6 tests deleted, registration removed; sky = TEST 79
-state). Loading footer kept ("text is better") + F9 hint now 0.75x actual smaller font per his ask.
+state). Loading footer kept ("text is better") + F9 hint now 0.75x actual smaller font per her ask.
 Suite 337/337. TEST 81 staged.
 
 ### TEST 79 feedback round: storm-ceiling clouds + loading footer breathing room (2026-07-12, 9088ab0d)
@@ -538,7 +538,7 @@ awareness only). Suite 312/312. TEST 77 staged.
 
 ### TEST 75 feedback round: smear fix, honest cold timing, the cap goes bare (2026-07-12, 5ec0d475/6678d367/35ba69e8)
 
-Wind bed LOCKED IN (Peetsa: "epic"). Three fixes off his polar flight: (1) warning SMEAR root-caused --
+Wind bed LOCKED IN (Peetsa: "epic"). Three fixes off her polar flight: (1) warning SMEAR root-caused --
 the fill's vanilla drop shadow stacked on the keyline (9th dark stamp, 1px off); fill is shadow-free
 under a keyline now, and ALL FOUR tiers are keylined (white 85/87 lines were illegible on snow). Copy:
 89.7 -> "Hypothermia sets in." (qualifier dropped), 87 -> "Blizzard conditions worsening. Turn back
@@ -554,10 +554,10 @@ fray-noise seam at the cap -- intended). Suite 295/295. TEST 76 staged.
 
 ### The pole gets its voice + the loading screen its nameplate (2026-07-11, d5b40d29/d7444a02)
 
-Peetsa approved the full CD slate ("Sound yes... yes on all of your other recs") + his warning register.
+Peetsa approved the full CD slate ("Sound yes... yes on all of your other recs") + her warning register.
 WIND BED shipped (highest-impact CD rec): vanilla wind-rush loop, Weather slider, 0.8*((|lat|-85)/5)^2
 envelope (whisper 87 -> howl 90), 0.5-deg hysteresis, single-instance lifecycle sweeper-walked, re-arm
-cooldown for the muted-channel churn nit. WARNINGS in Peetsa's blizzard-conditions voice (DANGER = his
+cooldown for the muted-channel churn nit. WARNINGS in Peetsa's blizzard-conditions voice (DANGER = her
 line verbatim); near-black keyline on the two red lines (whiteout washout fixed); LETHAL differentiated
 (1.15x + ember warmth pulse in the vignette, DANGER stays cold). LOADING SCREEN v2: shared
 LatitudeWordmark helper (create screen verbatim-extracted, unified brand gold 0xE8B64A wordmark-only),
@@ -568,7 +568,7 @@ convergence; gild the size word? Suite 291/291. TEST 75 staged.
 ## B-4 polish round 2 (2026-07-10; dev+sweeper green; committed, HELD unpushed; TEST 52)
 
 Peetsa's second live round, five fixes: (1) per-SIDE hemisphere titles — each hemisphere gets its FULL
-title once per visit-episode, repeats SMALL, leave-band resets (his design, adopted). (2) E/W title
+title once per visit-episode, repeats SMALL, leave-band resets (her design, adopted). (2) E/W title
 never fired — ROOT CAUSE: the teleport guard measured steps against the HELD dead-zone reference, so
 walked meridian crossings on Wide 2:1 (1 deg ~111 blocks) read as >256-block teleports and were
 suppressed; fixed with a separate RAW per-sample guard reference + regression test documenting the old

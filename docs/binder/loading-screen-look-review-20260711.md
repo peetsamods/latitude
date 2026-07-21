@@ -8,7 +8,7 @@
 **Status:** PROPOSED — read-only. No `src/` changes. This is the LOOK follow-up to the copy pass
 (`loading-text-and-whisper-review-20260711.md`, same day).
 
-Peetsa's ask: he likes the scrolling phrases, but wants the *other* text looked at — the specs line
+Peetsa's ask: she likes the scrolling phrases, but wants the *other* text looked at — the specs line
 ("Wide 2:1 · Regular · 40,000 × 20,000 …") and whether the **LATITUDE** title should be emphasized.
 
 ---
@@ -69,7 +69,7 @@ on `0xE8B64A` — that's the value to converge on.)
 The specs line is the one piece of *true, personal* information on the screen — this is YOUR world, these
 are its real dimensions. Today "Regular", "Wide 2:1", "40,000 × 20,000" and "Tropical" all read identical
 warm-white. The **shape token especially ("Wide 2:1") is the headline of the whole 2:1 pivot** — and Peetsa
-himself flagged (comment at `LatitudeWorldLauncher.java:96`) that the dims alone don't say which shape they
+herself flagged (comment at `LatitudeWorldLauncher.java:96`) that the dims alone don't say which shape they
 belong to. Gilding the *qualitative* tokens (shape + zone) while keeping the *numerals* warm-white would
 colour-code "what kind of world" vs "how big," and tie the passport to the gold identity. The reading-light
 wave still works — `LoadingWave.shade` operates on any base RGB, so gold segments simply wave in gold-space.
@@ -97,7 +97,7 @@ shared atlas frame (already the right coherence move).
 
 **R1 (F1+F2) — Elevate the LATITUDE title to the create-screen wordmark, as a shared helper. Effort: M.**
 *What Peetsa would see:* the same glowing, letterspaced, rule-flanked LATITUDE from the create screen now
-greets him on every loading screen. Implementation direction: `drawLatitudeWordmark` is currently a private
+greets her on every loading screen. Implementation direction: `drawLatitudeWordmark` is currently a private
 method on `LatitudeCreateWorldScreen`; lift it into a shared static helper (the precedent is right there —
 `LatitudePlanisphereRenderer.drawAtlasFrame` is already shared between exactly these two screens). Both
 screens then call it 1:1 with one unified `GOLD`. **Quieter variant recommended for loading:** keep the

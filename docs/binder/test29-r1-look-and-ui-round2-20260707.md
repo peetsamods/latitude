@@ -12,7 +12,7 @@ hundreds of blocks; aquifer waterfalls + lava falls bleeding from the cut face; 
 flowered, terraced green apron planed to just above sea level (still biome "Forest"), then shallow
 shelf, then real deep water. Peetsa: "I think it's cursed."
 
-**Mechanism (headless transect at his exact coordinates, same seed/preset/args — `test29wall-r1.json`):**
+**Mechanism (headless transect at her exact coordinates, same seed/preset/args — `test29wall-r1.json`):**
 
 | x (z=4426) | land01 | solid surface Y |
 |---|---|---|
@@ -58,7 +58,7 @@ tripwires, r=0 byte-identity, fresh-world live look.
 | "Snap-to-grid should be in the labels tab" | Lived in General | Dragging + Grid Size rows moved to Labels (above Reset Labels) |
 | "Default look shows 89°S… doesn't reflect the title or in-game location" | Compass preview text defaulted to LONGEST (worst-case) while the title preview used the real latitude | Preview text default = LIVE in-world (samples out of world); LONGEST still cycleable |
 | "Even if attached, you should be able to move it, which would unselect attach" | Docked compass wasn't draggable | Grabbing a docked compass undocks it: pin seeded at the docked spot (no jump), drag continues normally, Attach button refreshes to OFF. (The optional "lock" idea noted, not built) |
-| ~~Random zone created a Temperate world with no roll log~~ **NOT A BUG — Peetsa's correction (same night): he deliberately created with Temperate; the Random screenshot was a feature demo for the rainbow request** | Wiring verified correct end-to-end anyway | The always-on `random=… selectedZone=…` create-click log line stays (pure diagnostics; costs nothing) |
+| ~~Random zone created a Temperate world with no roll log~~ **NOT A BUG — Peetsa's correction (same night): she deliberately created with Temperate; the Random screenshot was a feature demo for the rainbow request** | Wiring verified correct end-to-end anyway | The always-on `random=… selectedZone=…` create-click log line stays (pure diagnostics; costs nothing) |
 | (housekeeping) | "Reset Labels"/"Reset Title" were untracked (same class as Reset Compass in round 1: no scroll, no L-toggle) | Both tracked + tooltipped |
 
 Verification: `compileJava` + pure-JVM suite (cleanTest) green; jar `a97ea5c846a956…` built + HELD

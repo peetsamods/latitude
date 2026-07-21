@@ -475,7 +475,7 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
 
 ## 2026-07-07 addition (TEST 27 live findings — Slice E attempt #1 aborted, diagnosed, one-arg retry ready)
 - `test27-live-findings-20260707.md` — Peetsa's aborted first Slice-E run, fully diagnosed with headless
-  reproduction at his exact F3 coordinates. Headline: **negative bias HOLLOWS terrain** (uniform −0.1
+  reproduction at her exact F3 coordinates. Headline: **negative bias HOLLOWS terrain** (uniform −0.1
   density shatters marginal underground: spawn column [-64..98] solid → 4 fragments + 63 void blocks —
   the "massive broken cavern"; the spawn even sits in the projection edge band at land01=0.000 via the
   biome-driven spawn decoupling Lane 1 predicted). Rain-shadow question answered: NOT WIRED in this
@@ -786,7 +786,7 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   both. (2) Title Case "duplicate" — **CORRECTED same session**: NORMAL's no-op transform was
   indistinguishable from UPPERCASE because the Studio's no-world SAMPLE title was hardcoded all-caps —
   exactly the scenario Peetsa tests from. The diagnosis was right; removing `NORMAL` entirely was NOT
-  what Peetsa wanted (he values "Tropical" natural-case and asked for it back immediately). Reverted the
+  what Peetsa wanted (she values "Tropical" natural-case and asked for it back immediately). Reverted the
   removal in full and fixed the actual bug instead: `studioPreviewTitle()`'s no-world fallback is now
   natural-case ("Tropics 12°S", not "TROPICS 12°S"), matching the live in-world title — Normal and
   Uppercase now genuinely differ everywhere, no option removed. See registry row
@@ -854,7 +854,7 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
 
 ## 2026-07-08 addition (Ocean depth anchor — "shallower than vanilla?" measured; answer: no, it deepens)
 - `ocean-depth-anchor-20260708.md` — Peetsa asked whether the ocean is shallower than vanilla. Measured
-  on his seed (r=0==vanilla vs r=1): where geography wants ocean, VANILLA mostly put land (median floor
+  on her seed (r=0==vanilla vs r=1): where geography wants ocean, VANILLA mostly put land (median floor
   at sea level, up to Y139); the carve pulls it to open water, and `min()` semantics mean it can only
   deepen or equal a column, never shallow it. What reads as "shallow" is two intended things: the
   deliberately-shallow continental-shelf apron near shore, and carved basins settling to a uniform ~24
@@ -870,7 +870,7 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
   `fable5-slice-c3-grip-20260707.md`). Peetsa flew the TEST 30 r=1 world across the same 38-46°S /
   131-137°E coast as the TEST 29 wall: it's GONE — every coastline now grades into water as a
   continental shelf (terraced shallows, the old massif is an island sloping into the sea, carved
-  deep-ocean floor + kelp). C-3 live-closed. His three biome complaints (Forest-over-water,
+  deep-ocean floor + kelp). C-3 live-closed. Her three biome complaints (Forest-over-water,
   shipwreck-in-forest, Meadow-at-waterline) are all correctly seen and all the SAME known issue — the
   TEST 28 three-map decoupling (biome layer on the pre-carve map; consumer not wired) — NOT a C-3
   regression; fix path is the already-queued consumer law-compliance slice + interim label-side
@@ -925,11 +925,11 @@ Executes the audit report's core slice. See `evidence-registry.md` row `20260707
 ## 2026-07-07 addition (TEST 28 "geography looks off" — three-map ocean decoupling, measured)
 - `test28-deep-ocean-decoupling-20260707.md` — Peetsa's "Deep Ocean over knee-deep water / tree in
   water / unsunken wreck / water level off?" report, diagnosed with log ground truth + headless probes
-  at his exact columns. NOT a water-level bug and NOT C-2: the world runs r=0 (log-verified) and the
+  at her exact columns. NOT a water-level bug and NOT C-2: the world runs r=0 (log-verified) and the
   area is the pre-existing THREE-MAP decoupling — vanilla terrain (seabed) vs legacy ODF labels
   ("Deep Ocean", gravel dressing, seam features/structures) vs GeoAuthority (says land01=1.0 = solid
   CONTINENT at all four probed columns). Grid quantification: 40/81 aligned; 24/81 double-land over
-  geo-ocean (r=1 carves these — verified 33 carve + 21 labels realign); **8/81 = his phantom-ocean
+  geo-ocean (r=1 carves these — verified 33 carve + 21 labels realign); **8/81 = her phantom-ocean
   class, bit-identical at r=1** (both C-2 vetoes require isOceanIntent) + 3/81 phantom-ocean-on-dry
   → post-r=1 THE dominant remaining artifact class (~14%). Fix candidates enumerated for
   authorization (narrow land01 label veto; depth-honest deep-vs-regular family); full fix = consumer
