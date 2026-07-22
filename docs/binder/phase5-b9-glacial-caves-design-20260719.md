@@ -780,3 +780,129 @@ solid — no false positives).
 Suite 918/0/0. Gate-1 + TEST 126 in the registry entry. OWNER-VERIFY: markGlacial ->
 click GREEN [teleport] -> survival-walk a powder cover: sink, fall the shaft, land soft,
 climb out cold. Deep-drop hunting: ~1 in 4-6 traps punches into the cave labyrinth.
+
+## S36 (Peetsa 2026-07-21, 3:15 PM video correction): HIDDEN SNOWFIELD BRIDGES, not recessed patches
+
+OWNER CORRECTION: traps should cover the crevasse and read as ordinary, flat-ish ground. The
+player should walk onto apparently level snow and then sink through; they should not first
+jump down into an already-visible hole. The S35 covers were still only a few blocks at many
+sites, and their incidence still felt luck-based. The supplied 53.4 s recording shows the
+target silhouette — a broad, low-relief snowfield — but no trap/fall, so it is visual-design
+evidence and qualitative rarity evidence, not statistical incidence proof.
+
+PREFLIGHT/PROVENANCE: the app worktree was clean but detached at an old main-era commit. The
+actual canonical pivot root was clean at `port/canonical-26.2-pivot` / `23d15c30`; the exact
+tested TEST 126 source was clean at `phase5-b7-pole-passage` / `2d9ec8b3`. This worktree was
+therefore placed on new branch `codex/glacial-trap-level-ground` at `2d9ec8b3`; no unrelated
+dirt existed to commit or stash, and neither source worktree was modified.
+
+INDEPENDENT LEVEL-DESIGN REVIEW: the hazard needs a multi-stride contiguous cap aligned to the
+snowfield, no holes, every fall column deep and cushioned, open fissures retained as the visual
+warning language, and encounter frequency measured separately from block coverage. A credible
+cap is roughly 24-36 covered blocks (usually 4-6 across). Coverage is not encounter density:
+the fixed census can prove that caps are substantially larger and somewhat more widespread,
+but only an unmarked owner walk can decide whether they still feel luck-based.
+
+SHARED CAUSE (why another size-dial tweak was rejected):
+
+1. S35 explicitly allowed 1x1/two-cell lids, then its 50% depth vote and per-column skip could
+   erode a planned patch again.
+2. Its cover plane used the lowest full-rim point, so rough long ends could pull powder down
+   onto a shelf inside the opening — exactly the jump-down-first failure.
+3. Its census counted powder columns as if each were a separate trap; broad caps inflated the
+   public number while four of 13 roofed chunks in the reference census had only two blocks.
+4. Water could enter a locally dry fall volume after chunk promotion and later freeze into an
+   ice shelf. A fluid-free generation snapshot was not a sufficient landing guarantee.
+5. Slicing a wide, near-square basin along its other axis could manufacture a legal-looking
+   narrow cap. Both 7x8 rotations must remain open; curving genuinely elongated fissures must
+   still be sliceable.
+
+S36 IMPLEMENTATION:
+
+- A trap is one contiguous, four-connected, hole-free 2D footprint: area 12..48, target 32,
+  minor dimension 3..7. The planner tries both axes through curved components, keeps every
+  write one block inside the owning chunk, rejects whole near-square components unless the
+  long axis has a real two-block margin, and never accepts the old pinhole/line forms.
+- The flat cover plane must be one of the footprint's local snowfield-reference heights and
+  must have a real opposing approach (cardinal or diagonal), with at least two natural bank
+  contacts per side within one ordinary terrain step. A low shelf is not in the candidate
+  plane set and cannot win.
+- Natural candidacy stays at a ten-block crevasse drop, but every final covered column must
+  have an 18..128-block cushioned fall. Existing deep floors stay untouched; an existing
+  terraced crevasse shoulder may deepen by at most eight blocks, and only through
+  `#minecraft:overworld_carver_replaceables`.
+- The plan is atomic. Missing support, lava, mixed biome, occupied cover space,
+  non-replaceable material, an incomplete 3x3 optional throat, or a fluid path into the fall
+  volume rejects the footprint before its first write. The fluid check follows actual
+  horizontally/upward passable space rather than treating a nearby sealed water block as a
+  threat. If only the optional cave extension is wet, that extension is dropped while the
+  independently safe ordinary bridge remains.
+- Authored cushions are protected after generation by an exact identity check (Polar Barrens
+  powder roof, 18..128-block passable path, powder cushion on dry support). Only the cushion
+  and its one-cell collar resist water planning; ordinary powder, water, lava, freezing, and
+  the rest of the shaft remain vanilla. A separate exact-target precipitation check prevents
+  an authored cushion from becoming a shallow ice shelf without changing general polar ice.
+- Every structurally qualified bridge places — there is no second rarity coin toss. Optional
+  cave connections may probe 48 blocks, but still require a contained 3x3 throat, a traversable
+  room, a 96-block maximum, and a fully supported/non-fluid landing before punching.
+- `/latdev markGlacial` now flood-fills same-Y connected roof blocks and validates footprint,
+  one plane, 18..128 depth, every cushion/support, Polar Barrens membership, and a level
+  approach. One 33-block cap is one GREEN encounter, not 33 traps.
+- The `globe:crevasse` probability, carver geography, B7 passage, and all other polar systems
+  are unchanged.
+
+CORRECTION LOOP: an earlier apparently stronger candidate was rejected after the strict
+scanner disagreed with its generation count. Reconstruction found a 29-block cap at chunk
+`(-175,582)` with natural ice/water intrusion around `(-2794,96,9316)` and
+`(-2793,95,9317)`, leaving only a 12/16-block shelf. That exposed both the post-promotion
+fluid path and an over-broad first runtime guard. The final path-aware generation rejection,
+exact cushion/collar runtime identity, ordinary-powder control, and honest physical scanner
+replace those superseded counts. The optional cave spectacle was allowed to fall to zero in
+the fixed sample rather than weaken the safety contract.
+
+HEADLESS PROOF (seed 987654, `globe:globe_large`, exact force-loaded chunks
+`[-185..-170] x [578..593]`, fresh final world):
+
+- S35 reference: 13 positive chunks / 16 encounters / 171 covers / 2 cave shafts; four lids
+  had only two blocks. Average cap area was 10.7 blocks.
+- S36 final feature census: 17 positive chunks / 18 encounters / 391 covers / 0 cave shafts.
+  That is +30.8% positive chunks, +12.5% encounters, +128.7% coverage (2.29x), and a 21.7-block
+  average cap. It is still only one encounter per 14.2 sampled chunks, so owner incidence
+  acceptance remains genuinely open.
+- Strict physical r=8 scanner over the loaded 17x17 field: 19 valid encounters / 419 covers —
+  exactly the fixed 391 plus one 28-cover edge encounter outside the fixed denominator. The
+  other 29 physical powder components were honest skips: 28 shape and one unrelated shallow
+  legacy powder patch; zero mixed-plane, no-landing, no-cushion, unsafe-support, wrong-biome,
+  or no-approach failures.
+- The same physical result (19/419, zero authored safety failures) survived rain,
+  `random_tick_speed=1000`, 400 sprinted ticks, reset to 3, save, and a full server restart.
+- Ordinary-control proof at `(-3000,151,9400)`: powder on stone beside water became ordinary
+  ice after floor completion/ticks, proving the guard did not globally preserve polar powder.
+- Current-source pure/JVM suite: 927 tests, 0 failures/errors/skips; Gradle `build`: PASS.
+  Full regular atlas `20260721-203136` (seed 20260714, R10000, step32, 783126 samples):
+  all 25 artifacts present versus TEST 126 baseline `20260721-150152`; 23 are byte-identical,
+  `step32_biomes.txt` differs only in `durationMs` (990072 -> 1086233), and
+  `run_manifest.json` differs only in timestamp/branch/commit/legacy-run provenance.
+
+EVIDENCE: `/tmp/latitude-s36-final4-proof.VnOOgY/` (fresh generation log, saved world, weather
+stress, restart, strict physical scanner, ordinary-powder control), the final atlas directory
+recorded in the closeout line above, and the source/test diff on
+`codex/glacial-trap-level-ground`.
+
+STATUS: TEST 127 STAGED, OWNER-VERIFY STILL REQUIRED. The final Java-25 build produced
+`latitude-2.0-beta.1+26.2.jar` SHA-256
+`1481ea6d0938399836dcddf507e362ec0326462be08b00f8846e34fad2563d33`; the exact bytes are
+staged as `LATITUDE 26.2/mods/TEST 127.jar` with embedded id `globe`, version
+`2.0-beta.1+26.2`, Fabric loader, and Minecraft dependency `>=26.2`. TEST 126 was moved to
+recoverable temporary backup `/tmp/latitude-test127-stage-backup.VrlIWs/TEST 126.jar`
+(original SHA `21181b5a1d106fe346118d4f0fbc6f6f52a7908768fb871de6041d1f4aae75c8`). The initial clean
+build is also retained there as `TEST 127-first-build.jar`; entry-by-entry comparison found
+only the manifest `Build-Time` differs from the final build, with all code/resources identical.
+No commit, tag, push, release, or live-client input was performed. Marked live gate after markers disappear:
+walk normally (no jump-down) across a smallest, typical 20-24-block, and upper-range cap;
+require continuous low-relief ground, multiple strides, one uninterrupted 18+ fall, no ledge
+or ice shelf, zero impact damage, intact cushion, credible command-free escape, and leather
+boots as counterplay. Unmarked incidence gate: three independent 512-block routes in fresh
+trap-bearing Polar Barrens, without markers/teleports/fissure-following; target at least one
+natural fall on two of three. If Julia still has to hunt, density remains red and needs a
+separately authorized worldgen-density pass, not weaker safety or forced cave shafts.

@@ -2,6 +2,21 @@
 
 `status: active`
 
+## 2026-07-21 addition (Phase 5 B-9 S36 — hidden snowfield trap correction [worktree branch])
+- `phase5-b9-glacial-caves-design-20260719.md` — S36 appends Peetsa's 3:15 PM video
+  correction to the glacial-trap chronology: broad connected powder caps now sit on a supported
+  snowfield plane rather than low crevasse shelves; every covered column has an atomic 18..128-block
+  cushioned fall; shallow existing shoulders may deepen by at most eight replaceable-only blocks;
+  path-aware fluid isolation plus exact cushion/collar runtime protection prevents water-to-ice
+  landing shelves without changing ordinary powder/water/lava/freezing; and strict `markGlacial`
+  distinguishes valid connected encounters from covered-block area. Final fixed census is
+  17 positive chunks / 18 encounters / 391 covers / 0 cave shafts (2.29x S35 coverage), stable
+  through weather/tick stress and restart; strict physical scan is 19 encounters / 419 covers,
+  including one 28-cover edge cap. Suite 927/0/0 and build pass; full atlas `20260721-203136`
+  differs from TEST126 only in duration/provenance metadata. TEST 127 is staged byte-identical
+  in `LATITUDE 26.2` at SHA `1481ea6d0938399836dcddf507e362ec0326462be08b00f8846e34fad2563d33`;
+  owner marked survival walks and unmarked 512-block incidence routes remain open.
+
 ## 2026-07-18 addition (Phase 5 B-10 — Polar Outfitting design [worktree branch])
 - `b10-polar-outfitting-design-20260718.md` — Peetsa's polar-suit / leather-demotion / snow-goggles / Cold
   Protection status-effect design. Reworks the current single "freeze-immune piece count" evaluator
