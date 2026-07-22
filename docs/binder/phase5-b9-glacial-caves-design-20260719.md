@@ -805,3 +805,43 @@ mouth count/components/largest + nearAir(48..surf) [the number taming must shrin
 subAir(<48) [the number taming must NOT touch]); adversarial design sweep (Opus) before
 any core code. Build lands behind the flag; proof = suite + rig before/after census +
 gate-1 byte-identity; then TEST 127 staged flag-off with the tuning runbook, and STOP.
+
+## S36 BUILT + PROVEN TO THE STOP LINE (41286251, TEST 127) — awaiting the owner tuning session
+
+Design (architect, Opus) survived the adversarial sweep (Opus) as ACCEPT-WITH-FIXES; all
+four REQUIRED-FIXes are in the build (own-flag layer gating, void-arms-without-geoV2,
+strength-0 = never-installed identity by construction, protect-floor feather). The
+architect's decisive find: initialDensityWithoutJaggedness DOES NOT EXIST in the 26.2
+router (15 fields; our JSON key is legacy-ignored) — the discriminator is router #9
+`depth` (cave-noise-free, sign-splits underground/sky, -1/128 per block in vanilla).
+
+MECHANICS: terrain.VoidTamingFunction wraps finalDensity OUTERMOST on the Phase-4 rails;
+fill = base*(1-K*g) on air only, g = latGate(82->85 smoothstep) * dv-band(feather 3 /
+hold 24 / fade 40 blocks below the nominal surface) * floorFeather(10 above Y48). Open
+sky (dv<0) and the labyrinth (Y<=48) are untouchable by construction. Bite point: K*g>1
+(usable K ~1..3).
+
+RIG PROOF (seed 987654, identical coords flag-off vs armed):
+- Floor: subAir(<48) bit-equal at K=1.25; +-0.3% at K=3 = aquifer FLUID coupling only
+  (density below 48 unreachable). Labyrinth safe.
+- Teeth: ramp band largest mega-void -24% (K=3); FULL band (85-87.2) nearAir -27% (K=3);
+  K=1.25 in the ramp band is sub-bite (-3-4%) — the smoothstep discounts K below the
+  threshold until ~L>1/K.
+- GEOMETRY FINDING (the tuning session's central fact): breach-mouth FOOTPRINT largely
+  persists — inside a giant breach the smooth nominal surface itself dips, so the upper
+  bowl reads as sky and is never filled. Bellies close; the open pit shape remains.
+  If the owner wants harder capping the identified follow-up is re-anchoring the band to
+  a WINDOWED REAL surface (a design change, his call, eyes-on).
+
+TUNING RUNBOOK (Modrinth profile -> Java args; no rebuild needed):
+  -Dlatitude.voidTaming.enabled=true -Dlatitude.voidTaming.strength=K
+  optional: -Dlatitude.voidTaming.fullDeg=82.5   (near-hard onset at 82 instead of the
+            82->85 feather — makes K bite everywhere poleward of ~82.3)
+  optional: -Dlatitude.voidTaming.onsetDeg / .protectFloorY / .floorFeatherBlocks
+  Suggested ladder: K=1.5 -> 2.0 -> 3.0, fresh chunks each look; /latdev voidCensus 8
+  before/after for numbers; /latdev markGlacial to confirm traps coexist.
+
+Gate-1 PASS (run 20260722-123150 vs 20260717-193525, only durationMs). Suite 928/0/0.
+TEST 127 staged SHA 713a5f1e2db1b40b — flag OFF by default: identical to TEST 126 for
+normal play until the args above are added. STOPPED HERE per S36 (owner unavailable for
+live tuning).
