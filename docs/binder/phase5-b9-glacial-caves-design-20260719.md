@@ -780,3 +780,28 @@ solid — no false positives).
 Suite 918/0/0. Gate-1 + TEST 126 in the registry entry. OWNER-VERIFY: markGlacial ->
 click GREEN [teleport] -> survival-walk a powder cover: sink, fall the shaft, land soft,
 climb out cold. Deep-drop hunting: ~1 in 4-6 traps punches into the cave labyrinth.
+
+## S36 (Peetsa 2026-07-21): VOID TAMING GREENLIT — mechanism C, onset 82, tame not eliminate
+
+OWNER DECISIONS (verbatim round): "Go with C, start at 82, tame not eliminate. I am not
+available for step 5 until later, so stop at that point. Make sure you assign appropriate
+model & reasoning strengths for subagents. Recruit as many as you need. Stash the current
+trap WIP (it is concurrently being handled in a separate isolated worktree by codex)."
+
+Scope locked: fill ONLY sky-breaching noise voids (the S27 mega-void class — open sky
+visible from Y35 underground); onset 82° absolute latitude; TAME = partial choking via a
+strength knob, big caverns legal if they don't breach the sky; the glacial-cave labyrinth
+below the protect floor is untouchable (the S35 deep-drops depend on it). Every knob is a
+JVM sysprop so the owner's later tuning session needs no rebuild; flag default OFF,
+strength 0.0 = exact no-op; the pass STOPS at the tuning-session boundary (no live-GO).
+
+Trap WIP stashed (`s35-trap-wip-hold`); trap files are hands-off this pass — codex owns
+trap iteration in the `codex/glacial-trap-level-ground` worktree.
+
+CREW (model/effort assigned per owner's directive): ARCHITECT on Opus (the DF math — the
+idwj-gated fill form, NoiseRouter rebuild composition with the live terrainV2 wrapper,
+min/max bounds, fluid safety); CENSUS BUILDER on Sonnet (/latdev voidCensus — sky-breach
+mouth count/components/largest + nearAir(48..surf) [the number taming must shrink] +
+subAir(<48) [the number taming must NOT touch]); adversarial design sweep (Opus) before
+any core code. Build lands behind the flag; proof = suite + rig before/after census +
+gate-1 byte-identity; then TEST 127 staged flag-off with the tuning runbook, and STOP.
