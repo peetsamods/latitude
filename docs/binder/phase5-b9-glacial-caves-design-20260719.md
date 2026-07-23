@@ -906,3 +906,144 @@ boots as counterplay. Unmarked incidence gate: three independent 512-block route
 trap-bearing Polar Barrens, without markers/teleports/fissure-following; target at least one
 natural fall on two of three. If Julia still has to hunt, density remains red and needs a
 separately authorized worldgen-density pass, not weaker safety or forced cave shafts.
+
+## S37 (Peetsa 2026-07-22; headless closeout 2026-07-23): SUBTERRANEAN SNOWFIELD TRAPS, not compact caps
+
+OWNER CORRECTION AFTER TEST 127: the traps were much better, but the cover still read as a
+distinct little platform over a crevasse. The target is a continuous, fairly level ordinary
+snowfield whose deep crevasse/cave is invisible until the player sinks through it, with enough
+natural encounters that finding one does not depend on luck. TEST 127 remains immutable
+history; S37 is the next candidate, not a claim that its owner-visible RED was already closed.
+
+LEVEL-DESIGN RESPONSE: stop deriving the hazard silhouette from the visible mouth of an
+existing crevasse. Each owner chunk now searches deterministic 12x7 or 14x7 snowfield
+templates with three solid-snow stations at both approaches. Inside that ordinary field is
+an irregular six- or eight-station powder ribbon: 27 or 36 fall cells, alternating between
+three- and six-block widths, with ordinary solid snow occupying every other template cell.
+The whole patch and its one-cell collar must follow natural snow relief within one block.
+This makes the hit area 35.8% larger on average than TEST 127 while breaking up the compact
+cap outline. Structural eligibility is the only occurrence gate; there is no second rarity
+coin.
+
+The hazard below that surface is one atomic plan. Every powder column clears to one dry,
+supported landing 28..36 blocks below the local roof target, receives its own powder cushion
+and stable base, and shares one concealed command-free escape: an open rising perimeter
+route ending in a short two- or three-block mineable snow tail below an intact surface cap.
+Any unsafe target, support, fluid path, gravity block, block entity, escape shell, or
+non-replaceable clear rejects the entire alternative before writes begin. The selected
+sample depths were 28, 29, and 32 blocks. PASS J's adversarial follow-up made the gravity
+contract explicit at its two remaining truth boundaries: thin-snow support certification now
+receives and vetoes falling-block material even when it is carver-replaceable, and the
+physical scanner classifies `GRAVITY_SOLID` in a fall as named `GRAVITY_IN_FALL` unsafe
+evidence rather than an ordinary partial obstruction.
+
+SHARED-CAUSE RED AND FIX: a truly empty fresh world initially produced zero placements from
+111 gated feature calls, even though placing the same configured feature after save/restart
+recovered the expected candidates. This was not interference from a Latitude 1.5 harness,
+another worktree, or the non-worktree 2.0 branch. The feature runs after `freeze_top_layer`
+in `TOP_LAYER_MODIFICATION`; Minecraft 26.2 maintains `WORLD_SURFACE` at that stage, while
+`WORLD_SURFACE_WG` is no longer maintained after its earlier chunk-status lifecycle. The
+adapter therefore read pre-snow-layer first-air heights and rejected safe escape shells.
+The narrow correction makes feature-stage surface snapshots use `WORLD_SURFACE`; the
+placed-feature JSON heightmap modifier remains unchanged because its origin Y is not used.
+In a new one-chunk world, target owner `(-184,580)` then accepted its first safety alternative
+with 27 covers, 27 cushions, and a 32-block drop.
+
+FRESH NATURAL PROOF (seed 987654, `globe:globe_large`, exact target
+`[-185..-170] x [578..593]`):
+
+- 111 gated feature calls yielded 18 natural traps / 18 encounters / 531 powder covers /
+  531 cushions, beating TEST 127's 17 positive chunks / 18 encounters / 391 covers.
+- Shapes were 13 x 27-cover and 5 x 36-cover; drops were 3 x 28, 1 x 29, and 14 x 32.
+  Generation reported zero partial placements and zero write failures.
+- A strict 17x17 physical scan found 20 encounters / 585 covers / 20 escape routes /
+  zero unsafe traps. The two additional encounters were border-owner plans outside the
+  fixed 256-chunk denominator.
+- A fresh Java-25 saved-NBT reconstruction of all 18 target owners matched 19,512 of 19,512
+  planned coordinates with zero mismatches: 531/531 covers and cushions, 16,227 exact clears,
+  526 blue-ice plus five stone supports, zero gravity-selected supports, zero gravity escape
+  floors, zero shell/route/block-entity hazards, 108 exact mine-tail snow blocks, and 177
+  ordinary-snow gaps with zero mismatch. Relief maxima remained one block powder-to-powder,
+  three across the collar, and one cardinal step. The two border owners accounted for the
+  scanner's exact extra 54 covers.
+- PASS J regressions were 2/2 focused and 51/51 across the affected safety/scanner classes;
+  Java 25 full test rerun was 1,028 tests, zero failures, errors, or skips. Its independent
+  read-only re-review approved all three corrections and found no geometry, occurrence-rate,
+  depth-order, or route-order change.
+
+EVIDENCE: natural log
+`/tmp/latitude-test128-passj-full.OChF8K/evidence/test128-passj-natural-generation.log`
+SHA-256 `c1f14d68a514d201488262b691a7d89bf0c311c5e7f22cafeb402a2438ada04a`;
+physical scanner log
+`/tmp/latitude-test128-passj-full.OChF8K/evidence/test128-passj-physical-scanner.log`
+SHA-256 `b23e29071e7591b2a606a5032b3ce4808e59ebcf87f2f738a834d3c79d400fad`;
+target region `r.-6.18.mca` SHA-256
+`b4592ea2e6fc0f7a9afca5fc64d145e650cfc8d9a0ccc0b74c8533640f99eac9`;
+one-chunk lifecycle log SHA-256
+`3d7c9c4fa4b3079d8a3d6b5836c428cacb7489c1643fc180900bd6e1a46210ba`.
+
+INDEPENDENT LEVEL-DESIGN VERDICT: APPROVE WITH LIVE GATE. Best visual probes are the broad
+36-cover / 28-drop site near `(-2958,95,9253)` and the 27-cover / 32-drop site near
+`(-2828,95,9414)`, each approached from two directions without markers after particles
+expire. Remaining risk is visible rather than structural: powder lacks the one-layer snow
+carpet on surrounding full snow and may still read as a one-eighth-block sawtooth depression.
+The eastern cluster may make an exciting hazard belt, while western gaps may still feel
+luck-based during unmarked travel.
+
+ARTIFACT GATE: a clean Java-25 build passed 1,028/0/0 and produced
+`build/libs/latitude-2.0-beta.1+26.2.jar`, 2,109,765 bytes, SHA-256
+`92791aa8fc8cd9852ba297c66b828db250b4f7cd53b7c668b359e533a72733e7`.
+Identity inspection passed embedded id `globe`, version `2.0-beta.1+26.2`, Fabric, and
+Minecraft `>=26.2`; the manifest records HEAD `820c9161d0af861e118daa8bb79a70db4396cd6f`
+on `codex/glacial-trap-level-ground` with `Build-Dirty: true`. The pre/post-build source
+fingerprint was unchanged at
+`9e1c006efc5bf7eecfaa14f33a29dd5bb729d9bc9fc9a61c76903750f9ca84e6`.
+
+STAGING GATE: those exact bytes are staged at
+`/Users/joolmac/Library/Application Support/ModrinthApp/profiles/LATITUDE 26.2/mods/TEST 128.jar`,
+byte-identical at SHA-256
+`92791aa8fc8cd9852ba297c66b828db250b4f7cd53b7c668b359e533a72733e7`, with identity
+re-certified as `globe`, `2.0-beta.1+26.2`, Fabric, and Minecraft `>=26.2`. The profile
+contains TEST 128 as its only Latitude JAR. TEST 127 moved recoverably to
+`/tmp/latitude-test128-stage-backup.Qxbpcp/TEST 127.jar`, SHA-256
+`713a5f1e2db1b40b335fe850f030b038cadbabc3a18102c7d60137bc1d208ef1`.
+
+STATUS: TEST 128 STAGED; RUNTIME BINDING IS UNKNOWN BECAUSE THE PROFILE HAS NOT BEEN LAUNCHED,
+AND OWNER LIVE ACCEPTANCE IS OPEN. Next, launch the exact `LATITUDE 26.2` profile, confirm
+TEST 128 is the running JAR, then have Peetsa walk both named sites from two normal approaches
+and run independent unmarked incidence routes. Do not call the silhouette or incidence
+accepted until those marker-free owner checks pass.
+
+## S38 (Peetsa 2026-07-23): TEST 128 OWNER-LIVE ACCEPTED
+
+OWNER VERDICT: “Yes that worked amazingly well! I wasn't even expecting it and walked
+straight into the trap! I tested a few locations and fell right into it.” This is the direct
+player-visible result S37 reserved for Peetsa: the snowfield did not advertise a compact
+platform before entry, and multiple tested locations produced natural falls without hunting.
+The concealment silhouette and practical-incidence gates are accepted.
+
+SESSION BINDING: the exact `LATITUDE 26.2` profile contained TEST 128 as its only Latitude
+JAR, SHA-256
+`92791aa8fc8cd9852ba297c66b828db250b4f7cd53b7c668b359e533a72733e7`. Its same-session
+`latest.log` recorded `[LAT][BUILD]` version `2.0-beta.1+26.2`, commit
+`820c9161d0af861e118daa8bb79a70db4396cd6f`, branch
+`codex/glacial-trap-level-ground`, `dirty=true`, and build time
+`2026-07-23T06:25:16Z`; it then recorded Minecraft `26.2`, Latitude Regular /
+`globe:globe_large`, radius 10,000, seed `987654`, and normal playable entry. The newly
+created save folder was `TEST 127 (1)` with level name `TEST 127`; that reused display label
+does not identify the artifact, while the current-run build marker does. Enabled datapacks
+were `vanilla`, `collective`, `fabric-convention-tags-v2`, and `globe`, with no external
+terrain provider.
+
+LIVE EVIDENCE: profile `latest.log` SHA-256
+`6fa3e5ee920c884e33f22af0744c0ca892b2c5e814bdf27933789d39605796ce`; current save
+`level.dat` SHA-256
+`384ef3fa6512ba9cff287280244a1508e1b8e6c991b2f74583758b40b6bf4725`; relevant
+`globe_latitude.json` SHA-256
+`1eb856b2becfdd97bcf1353707e969f7a15227efb47d77f494e63036bd82178f`.
+
+STATUS: TEST 128 OWNER-LIVE ACCEPTED. Preserve S37's source, structural proof, clean-build
+result, independent reviews, and exact staged artifact together with this owner verdict as
+the baseline. No further trap change is warranted unless a new player-visible RED appears.
+This acceptance authorizes a scoped local savepoint only; it does not authorize a push, tag,
+release, or publication.
