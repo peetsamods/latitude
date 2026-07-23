@@ -2,6 +2,16 @@
 
 `status: active`
 
+## 2026-07-23 addition (Phase 5 B-9 S39 — TEST 128 frozen live evidence [worktree branch])
+- `phase5-b9-glacial-caves-design-20260719.md` — the post-savepoint verifier found that
+  Minecraft was still shutting down after S38 first hashed the mutable profile log and
+  `level.dat`. The client then stopped cleanly at 10:15:54 with every dimension saved and
+  Latitude's worldgen statics reset. S39 preserves the final closed-session log, save
+  metadata, relevant config, and exact TEST 128 JAR as read-only copies under
+  `/tmp/latitude-test128-owner-live.hwwKGR`; their final hashes supersede S38's transient
+  path hashes without changing its owner verdict. The source savepoint remains
+  `bf9c9c23771d850c06e152594f4ff4e0b71cdcad`; this follow-up is evidence-only.
+
 ## 2026-07-23 addition (Phase 5 B-9 S38 — TEST 128 owner-live acceptance [worktree branch])
 - `phase5-b9-glacial-caves-design-20260719.md` — S38 closes S37's owner-only visual and
   incidence gates. The exact `LATITUDE 26.2` session log binds the running build to TEST 128's

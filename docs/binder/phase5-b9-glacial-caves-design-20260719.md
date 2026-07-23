@@ -1047,3 +1047,32 @@ result, independent reviews, and exact staged artifact together with this owner 
 the baseline. No further trap change is warranted unless a new player-visible RED appears.
 This acceptance authorizes a scoped local savepoint only; it does not authorize a push, tag,
 release, or publication.
+
+## S39 (Codex 2026-07-23): FINAL CLOSED-SESSION EVIDENCE SNAPSHOT
+
+POST-SAVEPOINT CORRECTION: S38 hashed the live profile `latest.log` and `level.dat` while the
+Minecraft client was still alive off-screen. Those mutable files grew during the normal
+shutdown, so their first hashes no longer identified the final files at the paths S38 named.
+This does not change the runtime build marker, world identity, TEST 128 bytes, or Peetsa's
+owner verdict. It does require a durable evidence correction rather than pretending the
+earlier mutable-path hashes remained current.
+
+The client stopped cleanly at 10:15:54. The final log records player disconnect, singleplayer
+server stop, world saves, all chunks saved in all three dimensions, and Latitude worldgen
+statics reset. No Minecraft client process or Accessibility window remained. The final
+closed-session files and exact TEST 128 JAR were copied to read-only evidence directory
+`/tmp/latitude-test128-owner-live.hwwKGR`:
+
+- `latest.log` — 1,055,683 bytes, SHA-256
+  `3a72845323429de06a716142b842d98a7ca97c85b6936543df1d22e1bd5466d8`;
+- `level.dat` — 472 bytes, SHA-256
+  `ee0420a47e00e2c224cd7998bf67d9068228736e32a81289f1d10357f3925351`;
+- `globe_latitude.json` — 1,079 bytes, SHA-256
+  `1eb856b2becfdd97bcf1353707e969f7a15227efb47d77f494e63036bd82178f`;
+- `TEST 128.jar` — 2,109,765 bytes, SHA-256
+  `92791aa8fc8cd9852ba297c66b828db250b4f7cd53b7c668b359e533a72733e7`.
+
+STATUS: S38'S OWNER-LIVE ACCEPTANCE STANDS; S39 SUPERSEDES ONLY ITS TRANSIENT EVIDENCE
+HASHES. Source savepoint `bf9c9c23771d850c06e152594f4ff4e0b71cdcad` contains the exact
+accepted trap slice. No source, test, artifact, profile, world, tag, push, release, or
+publication action was performed by this correction.
