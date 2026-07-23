@@ -845,3 +845,38 @@ Gate-1 PASS (run 20260722-123150 vs 20260717-193525, only durationMs). Suite 928
 TEST 127 staged SHA 713a5f1e2db1b40b — flag OFF by default: identical to TEST 126 for
 normal play until the args above are added. STOPPED HERE per S36 (owner unavailable for
 live tuning).
+
+## S37 (Peetsa 2026-07-23, TEST 127 flight): RED — "not nearly enough ice"
+
+OWNER VERBATIM: "RED. Hire subagents and assign appropriate intelligence and models for
+each task. I think there are still large voids, are there not? There is not nearly enough
+ice. I'm expecting the caverns to almost all ice until sub-Y0, where there should be about
+a 10 block diffusion of the ice into stone/deepslate, etc. The water that has ponded is
+not causing freezing damage — hearts are red. Ice should have the sparkles when bathed in
+the light of a torch, etc. I need more icicles — reshade dripstone, and make sure to
+generate copious numbers of dripstone shaded to be icicles. They can still drip water.
+You can also include more atmosphere like hanging moss, moss carpeting in some areas."
+
+(Attached video = the Slabbed slab-debug session, not the caves — noted honestly, spec
+taken from the text. Voids: confirmed still present per the S36 geometry finding; the
+owner's ice spec REFRAMES the fix — the S27 complaint was "bare-stone arches, zero
+glacial identity," and caverns carved through SOLID ICE country are glacial cathedrals.)
+
+S37 SLATE:
+1. ICE TO SUB-Y0 (the headline): glacial-band underground becomes near-all ice from the
+   glacier surface down to Y0; below Y0 a ~10-block DIFFUSION band of ice fingering into
+   stone/deepslate. (Extends the S24 "ice goes down" law by ~70 blocks.)
+2. PONDED WATER = FREEZING DAMAGE: water contact in the glacial band builds vanilla
+   freezing (frost hearts, then damage) — "hearts are red" today, they should frost.
+3. ICE SPARKLE IN TORCHLIGHT: the locked frost glint appears on/near ice bathed in block
+   light (torches etc.).
+4. ICICLES = RESHADED DRIPSTONE, COPIOUS: a globe icicle block family cloning pointed
+   dripstone (ice-shaded texture, still drips water), generated in large numbers in the
+   glacial underground.
+5. ATMOSPHERE: hanging moss + moss carpeting in some areas (26.2 pale-moss family is the
+   natural glacial palette).
+
+CREWS (owner directive — models by task): ICE crew on Opus (worldgen column law, highest
+risk), FROST crew on Sonnet (freezing water + torchlight sparkle — strong repo
+precedents), DRESSING crew on Sonnet (icicle block + moss features), adversarial sweep on
+Opus before staging. Orchestrator: wiring, suite, rig census, gate-1, TEST 128.
