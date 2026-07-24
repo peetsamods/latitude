@@ -880,3 +880,32 @@ CREWS (owner directive — models by task): ICE crew on Opus (worldgen column la
 risk), FROST crew on Sonnet (freezing water + torchlight sparkle — strong repo
 precedents), DRESSING crew on Sonnet (icicle block + moss features), adversarial sweep on
 Opus before staging. Orchestrator: wiring, suite, rig census, gate-1, TEST 128.
+
+## S37 BUILT + RIG-PROVEN (5727463f, TEST 128)
+
+Three crews (models per owner directive) + Opus adversarial sweep (ACCEPT-WITH-FIXES;
+REQUIRED-FIX applied: the water chill honors the coldDamagePaused law — no freeze buildup
+through the sacred grace curtain). Suite 938/0/0, gate-1 PASS (20260723-205352, only
+durationMs), TEST 128 staged SHA 84d70e732e5d6981.
+
+RIG PROOF (fresh world, 84N): ice column blue_ice Y60 / packed_ice Y40 through Y-2 /
+deepslate below (second column iced to Y-6 — diffusion variance real); zero gen errors;
+traps coexist (190 GREEN roofs in the same fresh area); icicle id registered.
+
+WHAT LANDED: (1) ICE BODY surface->Y0 replace-solid-only + bounded 12-block blue heart
+seam (carvability preserved) + the 10-block sub-Y0 diffusion on the existing wobble field;
+(2) PolarWaterChill (82+, +3..+6/t vs -2/t decay, leather exempts, boats exempt, grace/
+pause honored) + torch-lit frost-glint on ice (BLOCK light >= 8); (3) globe:icicle =
+vanilla 26.2 speleothem rooted on packed_ice (SpeleothemBlock ctor takes the root — real
+drip/fall/merge/grow), 10 PIL ice-reshaded textures, icicle_cluster count 800 + pale
+hanging moss + pale moss carpets in glacial_caves.
+
+OWNER FLIGHT VERDICTS WANTED: (a) ores above Y0 are GONE in the glacial band (ice is not
+ore-replaceable — "almost all ice" taken verbatim; say if you want ore pockets back);
+(b) 82-85 water = chill + S7 frostbite STACKED (polar water is mean by design — verdict);
+(c) icicle density 800/chunk ("copious" verbatim — dial down if gen feels slow);
+(d) torch-sparkle is deliberately sparse — say if you want it denser;
+(e) NOT live-verified by orchestrator (headless rig has no eyes): icicle/moss look,
+sparkle look, frost-heart feel — the flight is the visual verdict. Void geometry: the
+S36 knobs remain for your tuning session; the ice body is expected to carry most of the
+"cavernous" complaint (ice cathedral vs granite quarry).
