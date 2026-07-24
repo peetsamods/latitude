@@ -2,6 +2,27 @@
 
 `status: active`
 
+## 2026-07-23 addition (S37 — Icicle + Atmosphere dressing [Dressing Crew, worktree branch])
+- `s37-icicle-atmosphere-wiring-todo-20260723.md` — Owner ask: "more icicles — reshade dripstone... generate
+  copious numbers of dripstone shaded to be icicles. They can still drip water... hanging moss, moss
+  carpeting in some areas." Built `globe:icicle`, a reshaded `PointedDripstoneBlock` clone (26.2 generalized
+  dripstone into an abstract `SpeleothemBlock` whose "block it grows on" is a CONSTRUCTOR PARAMETER, not a
+  hardcoded vanilla-block identity check, confirmed via `javap` — direct instantiation, no subclass needed,
+  full vanilla drip/fall/grow/merge behaviour retained). Textures: vanilla `pointed_dripstone_*` extracted
+  from the loom merged jar and reshaded brown→ice via a luminance→3-stop ice-ramp PIL remap (`#7fa8c9` /
+  `#b8d8ee` / `#eaf6ff`), alpha preserved, all 10 thickness/direction variants + item icon. Generation: a new
+  `globe:icicle_cluster` configured+placed feature pair extends the SAME proven mechanism as the existing
+  `globe:hanging_icicles` (block_column + ceiling environment-scan) but with four tapered layers (base/
+  frustum/middle/tip) instead of one plain-ice layer, count cranked ~3.6x (220→800) — appended into
+  `glacial_caves.json` step 7 right after `hanging_icicles`. Atmosphere: `globe:pale_cave_hanging_moss`
+  (block_column + ceiling scan, vanilla `pale_hanging_moss`'s real `tip` property) and
+  `globe:pale_cave_moss_patch` (simple_block + floor scan, vanilla `pale_moss_carpet`) appended into step 9
+  (vegetal decoration), sparse-to-moderate, both vanilla blocks with no new Java registration. `GlobeMod.java`
+  untouched per crew boundary — one wiring line (`IcicleBlocks.register()`) is TODO'd in this doc for the
+  orchestrator. JSON-schema tripwire tests extended (`GlacialDressingJsonSchemaTest`,
+  `GlacialCavesBiomeJsonSchemaTest`) for all three new feature pairs; no gradle run (crew constraint) —
+  compilation/live-load verification is the orchestrator's next step.
+
 ## 2026-07-18 addition (Phase 5 B-10 — Polar Outfitting design [worktree branch])
 - `b10-polar-outfitting-design-20260718.md` — Peetsa's polar-suit / leather-demotion / snow-goggles / Cold
   Protection status-effect design. Reworks the current single "freeze-immune piece count" evaluator
