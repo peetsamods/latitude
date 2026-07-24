@@ -909,3 +909,25 @@ ore-replaceable — "almost all ice" taken verbatim; say if you want ore pockets
 sparkle look, frost-heart feel — the flight is the visual verdict. Void geometry: the
 S36 knobs remain for your tuning session; the ice body is expected to carry most of the
 "cavernous" complaint (ice cathedral vs granite quarry).
+
+## S38 (Peetsa 2026-07-23, TEST 128 flight + video): "no icicles or any variety at all" — DIAGNOSED + FIXED
+
+VIDEO GROUND TRUTH: his underground tour at 85N shows the HUD reading POLAR BARRENS — the
+Y48+ cavern country. EVERY dressing feature (both icicle features, pale moss, frost
+carpet, drifts, powder pockets, slush floes, glow lichen) was listed only in the
+glacial_caves biome (<Y48) AND height-capped at absolute 47 — so the caverns players
+actually tour (Y48-to-surface) had ZERO dressing by construction, and the S37 body made
+their walls a monolithic packed_ice slab. His "uniform" verdict was exactly right.
+
+FIXES (083f543a, TEST 129): (1) nine dressing features widen 47->120 + mirror into
+polar_barrens at the same steps — the FULL cavern column now dresses; ice BLOBS stay
+deep-only (invisible no-ops inside the ice body; step-6 prefix law pins them). (2) BODY
+SPECKLE: ~7% snow_block pockets + ~5% blue_ice glints via a per-block seed hash
+(LatitudeMath.hash01 + salt, Art VI) — the monolith is broken, carve story honest.
+Schema tests re-anchored (cap assertion flipped to "must reach the upper cavern country";
+deep-band variant for the blobs).
+
+RIG PROOF (fresh world, same probe area): speckle live (5/24 solid samples flecked across
+4 columns); globe:icicle FOUND AT Y68 in barrens cavern country — 20 blocks above the old
+cap, via blind probes around a voidCensus breach centroid. Suite 938/0/0, gate-1 PASS
+(20260723-214810, only durationMs). TEST 129 staged.
