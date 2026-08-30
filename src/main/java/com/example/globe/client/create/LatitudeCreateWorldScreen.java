@@ -1535,6 +1535,10 @@ public class LatitudeCreateWorldScreen extends Screen {
                 this.allowCommands = vanillaState.isAllowCommands();
                 this.worldNameInput = vanillaState.getName();
                 this.seedInput = vanillaState.getSeed();
+                // Carried OVER by the payload, so it must also carry BACK: without this line a
+                // player who toggled structures on the vanilla side would return to a Latitude
+                // screen quietly showing the stale value it sent (maintainer report, 2026-08-30).
+                this.generateStructures = vanillaState.isGenerateStructures();
             }
             this.minecraft.setScreenAndShow(this);
         };
@@ -1545,7 +1549,8 @@ public class LatitudeCreateWorldScreen extends Screen {
         Runnable exitCreateFlow = () ->
                 leaveCreateFlowFrom(this.minecraft == null ? null : this.minecraft.gui.screen());
         VanillaCreateWorldHandoff.armNext(
-                returnToLatitude, this.worldNameInput, this.seedInput, exitCreateFlow);
+                returnToLatitude, this.worldNameInput, this.seedInput,
+                this.generateStructures, exitCreateFlow);
         try {
             // Reuse the context we already hold instead of making vanilla load one again. Measured
             // on this line: vanilla's fresh-open path blocks the render thread for ~2.4s building a

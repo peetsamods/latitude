@@ -260,6 +260,10 @@ public abstract class CreateWorldScreenInitRedirectMixin {
             if (payload != null) {
                 self.getUiState().setName(payload.worldName());
                 self.getUiState().setSeed(payload.seed());
+                // The same setter LatitudeWorldLauncher uses at creation time; the hatch is a
+                // detour inside one act of world creation, so the toggle survives the trip in
+                // both directions (maintainer report, 2026-08-30).
+                self.getUiState().setGenerateStructures(payload.generateStructures());
             }
             ((VanillaOnlyWorldCreationState) (Object) self.getUiState()).globe$setVanillaOnly(true);
             this.globe$vanillaSession = true;

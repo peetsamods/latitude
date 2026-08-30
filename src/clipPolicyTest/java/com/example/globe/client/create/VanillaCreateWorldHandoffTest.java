@@ -13,7 +13,7 @@ final class VanillaCreateWorldHandoffTest {
 
     static int run() {
         assertions = 0;
-        claimConsumesExactlyOnceAndCarriesWorldNameAndSeed();
+        claimConsumesExactlyOnceAndCarriesTheTypedAndToggledInputs();
         unrelatedScreenCannotClaimThePendingHandoff();
         expiredHandoffCannotBeClaimedLater();
         cancellingPreventsAnUnrelatedScreenFromClaimingTheHandoff();
@@ -24,14 +24,16 @@ final class VanillaCreateWorldHandoffTest {
         return assertions;
     }
 
-    private static void claimConsumesExactlyOnceAndCarriesWorldNameAndSeed() {
+    private static void claimConsumesExactlyOnceAndCarriesTheTypedAndToggledInputs() {
         AtomicLong now = new AtomicLong(1_000L);
         VanillaCreateWorldHandoff handoff = new VanillaCreateWorldHandoff(now::get, 100L);
         Object claimKey = new Object();
 
-        handoff.arm(claimKey, "Modded World", "seed with spaces", NO_EXIT);
+        // Structures OFF deliberately: it is the NON-default, so this claim only passes if the
+        // toggle genuinely rode the payload rather than falling back to vanilla's own ON.
+        handoff.arm(claimKey, "Modded World", "seed with spaces", false, NO_EXIT);
 
-        expect(new VanillaCreateWorldHandoff.Payload("Modded World", "seed with spaces"),
+        expect(new VanillaCreateWorldHandoff.Payload("Modded World", "seed with spaces", false),
                 handoff.claim(claimKey).orElseThrow().payload(), "first claim carries the armed payload");
         expectTrue(handoff.claim(claimKey).isEmpty(), "a second screen must not inherit the bypass");
     }
@@ -39,10 +41,10 @@ final class VanillaCreateWorldHandoffTest {
     private static void unrelatedScreenCannotClaimThePendingHandoff() {
         VanillaCreateWorldHandoff handoff = new VanillaCreateWorldHandoff(() -> 0L, 50L);
         Object intendedScreen = new Object();
-        handoff.arm(intendedScreen, "World", "seed", NO_EXIT);
+        handoff.arm(intendedScreen, "World", "seed", true, NO_EXIT);
 
         expectTrue(handoff.claim(new Object()).isEmpty(), "an unrelated claim key must not claim");
-        expect(new VanillaCreateWorldHandoff.Payload("World", "seed"),
+        expect(new VanillaCreateWorldHandoff.Payload("World", "seed", true),
                 handoff.claim(intendedScreen).orElseThrow().payload(), "the intended screen still can");
     }
 
@@ -50,7 +52,7 @@ final class VanillaCreateWorldHandoffTest {
         AtomicLong now = new AtomicLong(10L);
         VanillaCreateWorldHandoff handoff = new VanillaCreateWorldHandoff(now::get, 50L);
         Object claimKey = new Object();
-        handoff.arm(claimKey, "Old World", "old-seed", NO_EXIT);
+        handoff.arm(claimKey, "Old World", "old-seed", true, NO_EXIT);
 
         now.set(60L);
 
@@ -61,7 +63,7 @@ final class VanillaCreateWorldHandoffTest {
     private static void cancellingPreventsAnUnrelatedScreenFromClaimingTheHandoff() {
         VanillaCreateWorldHandoff handoff = new VanillaCreateWorldHandoff(() -> 0L, 50L);
         Object claimKey = new Object();
-        handoff.arm(claimKey, "World", "seed", NO_EXIT);
+        handoff.arm(claimKey, "World", "seed", true, NO_EXIT);
 
         handoff.cancel();
 
@@ -77,7 +79,7 @@ final class VanillaCreateWorldHandoffTest {
         VanillaCreateWorldHandoff handoff = new VanillaCreateWorldHandoff(() -> 0L, 50L);
         Object claimKey = new Object();
         AtomicLong exited = new AtomicLong();
-        handoff.arm(claimKey, "World", "seed", exited::incrementAndGet);
+        handoff.arm(claimKey, "World", "seed", true, exited::incrementAndGet);
 
         VanillaCreateWorldHandoff.Claim claim = handoff.claim(claimKey).orElseThrow();
         expectTrue(claim.exitCreateFlow() != null, "the claim must carry an exit callback");
@@ -89,7 +91,7 @@ final class VanillaCreateWorldHandoffTest {
     private static void armRejectsAMissingExitCallback() {
         VanillaCreateWorldHandoff handoff = new VanillaCreateWorldHandoff(() -> 0L, 50L);
         try {
-            handoff.arm(new Object(), "World", "seed", null);
+            handoff.arm(new Object(), "World", "seed", true, null);
             expectTrue(false, "arming without an exit callback must be rejected");
         } catch (NullPointerException expected) {
             expectTrue(true, "arming without an exit callback is rejected");

@@ -76,6 +76,14 @@ public abstract class SelectWorldScreenVanillaDoorMixin {
     private static final float GLOBE_DOOR_ALPHA = 0.7F;
 
     /**
+     * Air around the door's label, both sides together. Vanilla ellipsizes a button label once the
+     * text outgrows {@code width - 8}, so anything at 8 or above guarantees "Vanilla..." renders in
+     * full; the extra keeps it from looking crammed against its own edges.
+     */
+    @Unique
+    private static final int GLOBE_DOOR_TEXT_PAD = 12;
+
+    /**
      * Cached across resizes, and that is load-bearing rather than an optimisation.
      *
      * <p>{@code Screen.init(int,int)} runs the overridable {@code init()} only on its FIRST call per
@@ -210,8 +218,17 @@ public abstract class SelectWorldScreenVanillaDoorMixin {
                 self.width, VanillaFooterLayoutPolicy.EDGE_MARGIN);
         int rowLeft = VanillaFooterLayoutPolicy.clampedRowLeft(
                 self.width, envelope, VanillaFooterLayoutPolicy.EDGE_MARGIN);
-        int width = VanillaFooterLayoutPolicy.sharedWidthForThree(envelope, GLOBE_INNER_GAP, GLOBE_GAP);
-        int[] xs = VanillaFooterLayoutPolicy.threeButtonXs(rowLeft, width, GLOBE_INNER_GAP, GLOBE_GAP);
+        // Weighted, not equal thirds. An equal split gave "Vanilla..." the same width as "Play
+        // Selected World", so the long label ellipsized while the short one swam in space
+        // (maintainer report, 2026-08-30). The door takes only what its label measures -- capped at
+        // the old equal share, so the main buttons can only ever gain -- and everything it gives up
+        // returns to Play and Create, which is what lets their labels fit again. Measured from the
+        // FONT, not hard-coded: a translated label keeps working without anyone revisiting this.
+        int doorWidth = VanillaFooterLayoutPolicy.doorWidthForThree(envelope, GLOBE_INNER_GAP, GLOBE_GAP,
+                client.font.width(GLOBE_VANILLA_LABEL) + GLOBE_DOOR_TEXT_PAD);
+        int width = VanillaFooterLayoutPolicy.mainWidthForThree(envelope, GLOBE_INNER_GAP, GLOBE_GAP, doorWidth);
+        int[] xs = VanillaFooterLayoutPolicy.threeButtonXsWeighted(
+                rowLeft, width, doorWidth, GLOBE_INNER_GAP, GLOBE_GAP);
 
         for (int i = 0; i < row.size(); i++) {
             Button button = row.get(i);
@@ -222,7 +239,7 @@ public abstract class SelectWorldScreenVanillaDoorMixin {
         int doorX = xs[2];
         if (this.globe$door == null) {
             Button door = Button.builder(GLOBE_VANILLA_LABEL, button -> globe$openVanillaDirectly(client, self))
-                    .bounds(doorX, create.getY(), width, create.getHeight())
+                    .bounds(doorX, create.getY(), doorWidth, create.getHeight())
                     .tooltip(Tooltip.create(GLOBE_VANILLA_TOOLTIP))
                     .build();
             door.setAlpha(GLOBE_DOOR_ALPHA);
@@ -235,7 +252,7 @@ public abstract class SelectWorldScreenVanillaDoorMixin {
             // resize, and re-registering it would leak a widget per resize.
             this.globe$door.setX(doorX);
             this.globe$door.setY(create.getY());
-            this.globe$door.setWidth(width);
+            this.globe$door.setWidth(doorWidth);
             this.globe$door.visible = true;
             this.globe$door.active = true;
         }

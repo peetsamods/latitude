@@ -32,8 +32,9 @@ public final class VanillaCreateWorldHandoff {
         this.ttlNanos = ttlNanos;
     }
 
-    public static void armNext(Object claimKey, String worldName, String seed, Runnable exitCreateFlow) {
-        NEXT_SCREEN.arm(claimKey, worldName, seed, exitCreateFlow);
+    public static void armNext(Object claimKey, String worldName, String seed,
+            boolean generateStructures, Runnable exitCreateFlow) {
+        NEXT_SCREEN.arm(claimKey, worldName, seed, generateStructures, exitCreateFlow);
     }
 
     /**
@@ -72,10 +73,12 @@ public final class VanillaCreateWorldHandoff {
                 Objects.requireNonNull(claimKey, "claimKey"), null, null, this.ticker.getAsLong());
     }
 
-    synchronized void arm(Object claimKey, String worldName, String seed, Runnable exitCreateFlow) {
+    synchronized void arm(Object claimKey, String worldName, String seed,
+            boolean generateStructures, Runnable exitCreateFlow) {
         this.pending = new Pending(
                 Objects.requireNonNull(claimKey, "claimKey"),
-                new Payload(Objects.requireNonNull(worldName, "worldName"), Objects.requireNonNull(seed, "seed")),
+                new Payload(Objects.requireNonNull(worldName, "worldName"),
+                        Objects.requireNonNull(seed, "seed"), generateStructures),
                 Objects.requireNonNull(exitCreateFlow, "exitCreateFlow"),
                 this.ticker.getAsLong());
     }
@@ -102,12 +105,19 @@ public final class VanillaCreateWorldHandoff {
     }
 
     /**
-     * The text inputs carried across. Kept a pure value record -- its equality is meaningful and is
-     * asserted directly by the regression, which a {@code Runnable} field would silently reduce to
-     * identity comparison. The exit callback therefore rides alongside it in {@link Claim} rather
-     * than inside it.
+     * The typed and toggled inputs carried across. Kept a pure value record -- its equality is
+     * meaningful and is asserted directly by the regression, which a {@code Runnable} field would
+     * silently reduce to identity comparison. The exit callback therefore rides alongside it in
+     * {@link Claim} rather than inside it.
+     *
+     * <p>{@code generateStructures} rides with the text fields because the hatch is a detour inside
+     * one act of world creation, not a fresh start: a player who switched structures OFF in
+     * Latitude's screen and then stepped out for a datapack should not find the toggle silently
+     * back ON (maintainer report, 2026-08-30). It is a primitive, not a nullable Boolean, because
+     * the payload as a whole is already the "leave vanilla alone" switch -- a bare session carries
+     * no payload at all, so there is no third state for a field inside it to express.</p>
      */
-    public record Payload(String worldName, String seed) {}
+    public record Payload(String worldName, String seed, boolean generateStructures) {}
 
     /**
      * Everything one screen claims: the text inputs, plus the way back out of the whole flow.

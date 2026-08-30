@@ -19,6 +19,7 @@ final class VanillaFooterLayoutPolicyTest {
         theDoorFitsAtEveryWidthBecauseItSharesTheRow();
         subThreeTwentyWidthsAreGenuinelyReachable();
         nothingIsEverPlacedOffTheLeftEdge();
+        theDoorTakesOnlyWhatItsLabelNeedsAndTheMainsRecoverTheRest();
         return assertions;
     }
 
@@ -187,6 +188,59 @@ final class VanillaFooterLayoutPolicyTest {
         // The second genuine route, kept because it is real even though it is not her case.
         expectTrue(modelScaledWidth(1000, 1000, 0, true) < 320,
                 "forceUnicodeFont bumps the scale outside the guard and can also go sub-320");
+    }
+
+    /**
+     * The weighted split that lets "Play Selected World" fit again (maintainer report, 2026-08-30).
+     *
+     * <p>An equal three-way split gave the short "Vanilla..." label the same 96px as the long
+     * "Play Selected World", which ellipsized. The law here is two-sided: the door takes only what
+     * its label needs, and it can never take MORE than the equal share -- so the main buttons sit at
+     * or above the old equal width at every envelope, and a squeezed row degrades to exactly the
+     * old behaviour rather than past it. Font shrinking was rejected outright: Minecraft has no
+     * smaller UI font, and pose-scaled text reads as non-vanilla, which the door must not.</p>
+     */
+    private static void theDoorTakesOnlyWhatItsLabelNeedsAndTheMainsRecoverTheRest() {
+        int inner = 8, doorGap = 10;
+
+        // The intended full-width case: a modest door returns real width to the mains.
+        int equal = VanillaFooterLayoutPolicy.sharedWidthForThree(308, inner, doorGap);
+        int door = VanillaFooterLayoutPolicy.doorWidthForThree(308, inner, doorGap, 56);
+        int main = VanillaFooterLayoutPolicy.mainWidthForThree(308, inner, doorGap, door);
+        expectEquals(56, door, "a label narrower than the equal share gets exactly what it asked for");
+        expectTrue(main > equal, "everything the door gives up must land on the main buttons; "
+                + "main " + main + " vs equal " + equal);
+
+        // A greedy door is capped at the equal share, so weighting can never make the mains WORSE.
+        int capped = VanillaFooterLayoutPolicy.doorWidthForThree(308, inner, doorGap, 10_000);
+        expectEquals(equal, capped, "the door can never take more than an equal split would have");
+        // Not expectEquals: the equal split's /3 discards up to 2px of remainder, and the
+        // weighted /2 hands part of it back -- at 308 the mains land on 97, one better than the
+        // old 96. At-least is the actual law; exactly-equal was wrong about vanilla's arithmetic.
+        expectTrue(VanillaFooterLayoutPolicy.mainWidthForThree(308, inner, doorGap, capped) >= equal,
+                "and at the cap the mains still never fall below the old equal width");
+
+        // The whole reachable range: in order, gaps preserved, and never past the row's footprint.
+        for (int envelope : new int[] {308, 300, 280, 240, 200, 160, 120, 80, 40}) {
+            int share = VanillaFooterLayoutPolicy.sharedWidthForThree(envelope, inner, doorGap);
+            int d = VanillaFooterLayoutPolicy.doorWidthForThree(envelope, inner, doorGap, 56);
+            int m = VanillaFooterLayoutPolicy.mainWidthForThree(envelope, inner, doorGap, d);
+            expectTrue(d >= 1 && m >= 1, "widths must stay positive at envelope " + envelope);
+            expectTrue(m >= share, "the mains must never fall below the equal share at envelope "
+                    + envelope + "; main " + m + " vs share " + share);
+            int[] xs = VanillaFooterLayoutPolicy.threeButtonXsWeighted(100, m, d, inner, doorGap);
+            expectTrue(xs[0] < xs[1] && xs[1] < xs[2], "buttons must stay in order at " + envelope);
+            expectEquals(inner, xs[1] - (xs[0] + m), "neighbours keep vanilla's spacing at " + envelope);
+            expectEquals(doorGap, xs[2] - (xs[1] + m), "the door keeps its wider separation at " + envelope);
+            expectTrue(xs[2] + d <= 100 + envelope,
+                    "the weighted row must stay inside the row's own footprint at envelope " + envelope
+                            + "; right edge " + (xs[2] + d) + " vs " + (100 + envelope));
+        }
+
+        expectThrows(() -> VanillaFooterLayoutPolicy.doorWidthForThree(308, -1, 10, 56), "a negative gap");
+        expectThrows(() -> VanillaFooterLayoutPolicy.mainWidthForThree(308, 8, 10, 0), "a zero door width");
+        expectThrows(() -> VanillaFooterLayoutPolicy.threeButtonXsWeighted(0, 0, 56, 8, 10), "a zero main width");
+        expectThrows(() -> VanillaFooterLayoutPolicy.threeButtonXsWeighted(0, 100, 0, 8, 10), "a zero door width placed");
     }
 
     /** Model of vanilla's scale rule; see the caveat on the caller. */

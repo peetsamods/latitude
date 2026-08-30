@@ -29,6 +29,7 @@ final class EscapeHatchSourcePolicyTest {
         theRecreatedFlagIsCleared();
         theModeMappingIsNotDuplicated();
         theReturnLegReadsBackVanillaState();
+        theStructuresToggleSurvivesTheDetourBothWays();
         theReadBackNeverCastsToTheMixinClassDirectly();
         theWorldListDoorArmsWithoutAWayBack();
         theWorldListDoorKeepsItsSeparation();
@@ -57,6 +58,25 @@ final class EscapeHatchSourcePolicyTest {
                 "difficulty must be read back");
         expectTrue(code.contains("this.allowCommands = vanillaState.isAllowCommands()"),
                 "allowCommands must be read back");
+        expectTrue(code.contains("this.generateStructures = vanillaState.isGenerateStructures()"),
+                "generateStructures must be read back -- it is carried OVER by the payload, so "
+                        + "leaving it stale on return is the same one-way bug the Hardcore report "
+                        + "described, arriving through the newer field");
+    }
+
+    /**
+     * The structures toggle rides the payload in BOTH directions (maintainer report, 2026-08-30).
+     * One-sided carriage is the trap: applying it outbound but not reading it back -- or the
+     * reverse -- compiles, runs, and looks right until a player flips the toggle on whichever side
+     * was left out. Both legs are pinned together so neither can be removed alone.
+     */
+    private static void theStructuresToggleSurvivesTheDetourBothWays() throws Exception {
+        String screen = strip(read(SCREEN));
+        expectTrue(matches(screen, "armNext\\([^;]*generateStructures"),
+                "the hatch must SEND the live toggle with the payload, not vanilla's default");
+        String redirect = strip(read(REDIRECT));
+        expectTrue(redirect.contains("setGenerateStructures(payload.generateStructures())"),
+                "the claimed payload must APPLY the toggle to the vanilla screen's ui state");
     }
 
     /**
@@ -155,10 +175,16 @@ final class EscapeHatchSourcePolicyTest {
         String code = strip(read(DOOR));
         expectTrue(code.contains("GLOBE_GAP = 10") && code.contains("GLOBE_INNER_GAP = 8"),
                 "the door must keep a wider separation than the neighbours' own spacing");
-        expectTrue(matches(code, "sharedWidthForThree\\(\\w+, GLOBE_INNER_GAP, GLOBE_GAP\\)"),
+        expectTrue(matches(code, "doorWidthForThree\\(\\w+, GLOBE_INNER_GAP, GLOBE_GAP"),
                 "the gap must actually be applied to the layout, not merely declared. Matched by "
                         + "SHAPE, not verbatim: the claim is that both gap constants reach the "
                         + "width split, and it must not go red merely because a local was renamed");
+        expectTrue(matches(code, "font\\.width\\(GLOBE_VANILLA_LABEL\\)"),
+                "the door's width must be measured from its rendered label, not hard-coded -- a "
+                        + "constant would quietly re-ellipsize under any relabel or translation");
+        expectTrue(matches(code, "mainWidthForThree\\("),
+                "what the door gives up must return to Play and Create through the policy, which "
+                        + "is the half of the 2026-08-30 report that made the long label fit again");
         expectFalse(code.contains("fitsWithAppendedButton"),
                 "the door must not append-and-refuse -- that is what made it absent at higher GUI "
                         + "scales, where Minecraft's internal width shrinks below the window's look");

@@ -78,6 +78,65 @@ public final class VanillaFooterLayoutPolicy {
     }
 
     /**
+     * The door's width: what its label needs, capped at the equal three-way share.
+     *
+     * <p>An equal split gave "Vanilla..." the same 96px as "Play Selected World", and the long
+     * label ellipsized while the short one swam in space (maintainer report, 2026-08-30). Weighting
+     * was chosen over shrinking the label's font: Minecraft has no smaller UI font, and pose-scaled
+     * text renders blurry and reads as non-vanilla -- the exact opposite of the door's own design
+     * law. The cap means the weighting can only ever RETURN width to the main buttons, never take
+     * more than an equal split would have; on a squeezed envelope this degrades to exactly the old
+     * equal behaviour rather than past it.</p>
+     *
+     * @param desiredDoorWidth what the door's rendered label actually needs, padding included
+     * @throws IllegalArgumentException if any gap is negative
+     */
+    public static int doorWidthForThree(int envelopeWidth, int innerGap, int doorGap, int desiredDoorWidth) {
+        if (innerGap < 0 || doorGap < 0) {
+            throw new IllegalArgumentException("gaps must not be negative");
+        }
+        int equalShare = sharedWidthForThree(envelopeWidth, innerGap, doorGap);
+        return Math.max(1, Math.min(desiredDoorWidth, equalShare));
+    }
+
+    /**
+     * Equal width for the two main buttons once the door has taken its (never larger) share.
+     *
+     * <p>Everything the door gives up lands here, so the main buttons sit at or above the equal
+     * split at every envelope -- at vanilla's full 308px row they recover most of the way back to
+     * vanilla's own 150px, which is what lets "Play Selected World" fit again.</p>
+     *
+     * @throws IllegalArgumentException if any gap is negative or {@code doorWidth} is not positive
+     */
+    public static int mainWidthForThree(int envelopeWidth, int innerGap, int doorGap, int doorWidth) {
+        if (innerGap < 0 || doorGap < 0) {
+            throw new IllegalArgumentException("gaps must not be negative");
+        }
+        if (doorWidth <= 0) {
+            throw new IllegalArgumentException("doorWidth must be positive");
+        }
+        return Math.max(1, (envelopeWidth - innerGap - doorGap - doorWidth) / 2);
+    }
+
+    /**
+     * Left edges when the two main buttons share one width and the door has its own.
+     *
+     * <p>Returns exactly three values: left, middle, and the door.</p>
+     */
+    public static int[] threeButtonXsWeighted(int rowLeft, int mainWidth, int doorWidth, int innerGap, int doorGap) {
+        if (mainWidth <= 0 || doorWidth <= 0) {
+            throw new IllegalArgumentException("widths must be positive");
+        }
+        if (innerGap < 0 || doorGap < 0) {
+            throw new IllegalArgumentException("gaps must not be negative");
+        }
+        int first = rowLeft;
+        int second = first + mainWidth + innerGap;
+        int third = second + mainWidth + doorGap;
+        return new int[] {first, second, third};
+    }
+
+    /**
      * Left edges of the three buttons, laid out from {@code rowLeft} within the same footprint.
      *
      * <p>Returns exactly three values: left, middle, and the door.</p>
