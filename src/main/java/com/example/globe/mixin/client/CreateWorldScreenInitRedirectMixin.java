@@ -77,6 +77,13 @@ public abstract class CreateWorldScreenInitRedirectMixin {
             if (payload.seed() != null) {
                 self.getUiState().setSeed(payload.seed());
             }
+            // The other half of a carry the return leg already performs: absorbVanillaCreateState
+            // reads this toggle back on cancel, so leaving it un-sent let vanilla's default ON
+            // overwrite a player's OFF on the round trip (maintainer report, 2026-08-30). Null
+            // means the world-list door armed bare -- vanilla's own default is left alone.
+            if (payload.generateStructures() != null) {
+                self.getUiState().setGenerateStructures(payload.generateStructures());
+            }
             ((VanillaOnlyWorldCreationState) (Object) self.getUiState()).globe$setVanillaOnly(true);
             // The hatch reaches this screen via createFromExisting, which unconditionally marks the
             // session `recreated` -- that call exists for Re-Create. A world made through the hatch

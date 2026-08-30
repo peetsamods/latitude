@@ -221,9 +221,12 @@ public final class VanillaHandoffCostPolicyTest {
         int armed = hatch.indexOf("VanillaCreateWorldHandoff.armNext(");
         assertTrue(exitBuilt >= 0 && armed > exitBuilt,
                 "the exit callback is built before it is armed into the handoff");
-        assertTrue(hatch.substring(armed).startsWith("VanillaCreateWorldHandoff.armNext(returnToLatitude, "
-                        + "this.worldNameInput, this.seedInput, exitCreateFlow);"),
-                "armNext receives the exit callback as its fourth argument");
+        String armedCall = hatch.substring(armed, hatch.indexOf(';', armed) + 1);
+        assertTrue(normalize(armedCall).contains("armNext(returnToLatitude, this.worldNameInput, "
+                        + "this.seedInput, this.generateStructures, exitCreateFlow);"),
+                "armNext carries the typed inputs, the structures toggle, and -- last -- the exit "
+                        + "callback (the toggle joined the payload 2026-08-30: the return leg "
+                        + "already absorbed it, so one-way carriage silently reverted OFF to ON)");
 
         String mixin = read(REDIRECT_MIXIN);
         String claim = mixin.substring(mixin.indexOf("if (handoff.isPresent())"));
@@ -420,10 +423,15 @@ public final class VanillaHandoffCostPolicyTest {
                 "the name write is skipped, not defaulted, when the payload carries no name");
         assertTrue(normalized.contains("if (payload.seed() != null) { self.getUiState().setSeed(payload.seed()); }"),
                 "the seed write is skipped, not defaulted, when the payload carries no seed");
+        assertTrue(normalized.contains(
+                        "if (payload.generateStructures() != null) { self.getUiState().setGenerateStructures(payload.generateStructures()); }"),
+                "the structures write is skipped, not defaulted, when the payload carries no toggle "
+                        + "-- the world-list door arms bare, and forcing either value there would "
+                        + "override vanilla's own default for no reason");
 
         String handoff = read(HANDOFF);
         String armWithoutReturn = methodSection(handoff, "public static void armNextWithoutReturn(");
-        assertTrue(normalize(armWithoutReturn).contains("arm(claimKey, null, null, null)"),
+        assertTrue(normalize(armWithoutReturn).contains("arm(claimKey, null, null, null, null)"),
                 "arming without a return genuinely passes null, not empty strings, for every field");
     }
 
@@ -465,8 +473,12 @@ public final class VanillaHandoffCostPolicyTest {
         String door = methodSection(read(DOOR_MIXIN), "private void globe$layOutVanillaDoor(");
         assertTrue(!door.contains("createXForFit"),
                 "the old refuse-based fit-check is gone, not merely unreachable");
-        assertTrue(door.contains("VanillaFooterLayoutPolicy.buttonWidth(3, envelope)"),
-                "narrows to a 3-way split of the row's own envelope, the same policy the "
+        assertTrue(door.contains("VanillaFooterLayoutPolicy.doorWidthForThree(")
+                        && door.contains("VanillaFooterLayoutPolicy.mainWidthForThree(envelope, doorWidth)"),
+                "narrows to a WEIGHTED 3-way split of the row's own envelope (2026-08-30: an equal "
+                        + "split ellipsized 'Play Selected World' while 'Vanilla...' swam in "
+                        + "space; the door now takes only what its label measures, capped at the "
+                        + "equal share, and the mains recover the rest), still the "
                         + "escape-hatch footer already uses for its own 2-to-3 narrowing");
         assertTrue(door.contains("play.setWidth(width)") && door.contains("create.setWidth(width)"),
                 "BOTH Play and Create are narrowed, not just Create -- a real behaviour change from "
@@ -515,9 +527,12 @@ public final class VanillaHandoffCostPolicyTest {
         assertTrue(!door.contains("centreX"),
                 "and no computed screen centre either -- that was the version whose left edge could "
                         + "go negative");
-        assertTrue(door.contains("VanillaFooterLayoutPolicy.buttonWidth(3, envelope)"),
-                "still narrows to a 3-way split, so the door stays always-present rather than "
-                        + "reverting to appending a fourth button past Create's edge");
+        assertTrue(door.contains("VanillaFooterLayoutPolicy.doorWidthForThree(")
+                        && door.contains("VanillaFooterLayoutPolicy.mainWidthForThree(envelope, doorWidth)"),
+                "still narrows to a 3-way split of the row's own envelope -- weighted since "
+                        + "2026-08-30, with the door capped at the equal share -- so the door stays "
+                        + "always-present rather than reverting to appending a fourth button past "
+                        + "Create's edge");
     }
 
     /**

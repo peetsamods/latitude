@@ -21,6 +21,7 @@ public final class ViewportClipPolicyTest {
         VanillaCreateWorldHandoffTest.run();
         VanillaOnlyWorldCreationStateTest.run();
         VanillaHandoffCostPolicyTest.run();
+        VanillaFooterLayoutPolicyTest.run();
     }
 
     private static void acceptsFullyVisibleWidgetClick() {

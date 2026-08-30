@@ -1471,7 +1471,8 @@ public class LatitudeCreateWorldScreen extends Screen {
         Runnable exitCreateFlow = () -> leaveCreateFlowFrom(this.minecraft == null ? null : this.minecraft.screen);
         // The Runnable is the claim key: the next screen is constructed with this exact instance,
         // so only that screen can take the payload.
-        VanillaCreateWorldHandoff.armNext(returnToLatitude, this.worldNameInput, this.seedInput, exitCreateFlow);
+        VanillaCreateWorldHandoff.armNext(returnToLatitude, this.worldNameInput, this.seedInput,
+                this.generateStructures, exitCreateFlow);
         try {
             // createFromExisting rather than openFresh, deliberately. openFresh runs a full
             // WorldLoader pass -- vanilla's "Preparing world data" screen, a fresh PackRepository,

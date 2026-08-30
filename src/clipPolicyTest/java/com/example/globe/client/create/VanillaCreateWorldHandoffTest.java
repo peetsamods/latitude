@@ -31,18 +31,22 @@ public final class VanillaCreateWorldHandoffTest {
         long[] clock = {0L};
         VanillaCreateWorldHandoff subject = handoff(clock, 1_000L);
         Object key = new Object();
-        subject.arm(key, "Basecamp", "12345", () -> { });
+        subject.arm(key, "Basecamp", "12345", false, () -> { });
         Optional<VanillaCreateWorldHandoff.Payload> claimed = subject.claim(key);
         expect(true, claimed.isPresent(), "matching key claims");
         expect(true, "Basecamp".equals(claimed.orElseThrow().worldName()), "world name survives");
         expect(true, "12345".equals(claimed.orElseThrow().seed()), "seed survives");
+        // false is the NON-default: this only passes if the toggle genuinely rode the payload
+        // rather than falling back to vanilla's own ON (maintainer report, 2026-08-30).
+        expect(true, Boolean.FALSE.equals(claimed.orElseThrow().generateStructures()),
+                "structures toggle survives");
     }
 
     private static void refusesAForeignKeyAndKeepsThePayload() {
         long[] clock = {0L};
         VanillaCreateWorldHandoff subject = handoff(clock, 1_000L);
         Object armed = new Object();
-        subject.arm(armed, "Basecamp", "12345", () -> { });
+        subject.arm(armed, "Basecamp", "12345", false, () -> { });
         expect(false, subject.claim(new Object()).isPresent(), "foreign key is refused");
         // The rightful screen may not have opened yet; a wrong claimant must not consume it.
         expect(true, subject.claim(armed).isPresent(), "payload survives a foreign claim");
@@ -52,7 +56,7 @@ public final class VanillaCreateWorldHandoffTest {
         long[] clock = {0L};
         VanillaCreateWorldHandoff subject = handoff(clock, 1_000L);
         Object key = new Object();
-        subject.arm(key, "Basecamp", "12345", () -> { });
+        subject.arm(key, "Basecamp", "12345", false, () -> { });
         expect(true, subject.claim(key).isPresent(), "first claim");
         // init() runs again on every window resize; a second delivery would re-stamp the name and
         // seed over whatever the player has typed since.
@@ -63,11 +67,11 @@ public final class VanillaCreateWorldHandoffTest {
         long[] clock = {0L};
         VanillaCreateWorldHandoff subject = handoff(clock, 1_000L);
         Object key = new Object();
-        subject.arm(key, "Basecamp", "12345", () -> { });
+        subject.arm(key, "Basecamp", "12345", false, () -> { });
         clock[0] = 1_000L;
         expect(false, subject.claim(key).isPresent(), "expired at exactly the ttl");
         clock[0] = 0L;
-        subject.arm(key, "Basecamp", "12345", () -> { });
+        subject.arm(key, "Basecamp", "12345", false, () -> { });
         clock[0] = 999L;
         expect(true, subject.claim(key).isPresent(), "still live one nanosecond inside the ttl");
     }
@@ -76,7 +80,7 @@ public final class VanillaCreateWorldHandoffTest {
         long[] clock = {0L};
         VanillaCreateWorldHandoff subject = handoff(clock, 1_000L);
         Object key = new Object();
-        subject.arm(key, "Basecamp", "12345", () -> { });
+        subject.arm(key, "Basecamp", "12345", false, () -> { });
         subject.cancel();
         expect(false, subject.claim(key).isPresent(), "cancelled payload is gone");
     }

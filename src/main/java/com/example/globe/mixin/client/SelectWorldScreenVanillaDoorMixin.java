@@ -64,6 +64,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 @Mixin(SelectWorldScreen.class)
 public abstract class SelectWorldScreenVanillaDoorMixin {
+    @Unique
+    private static final Component GLOBE_VANILLA_LABEL = Component.literal("Vanilla...");
+
+    /**
+     * Air around the door's label, both sides together. Vanilla ellipsizes a button label once the
+     * text outgrows {@code width - 8}, so anything at 8 or above guarantees "Vanilla..." renders in
+     * full; the extra keeps it from looking crammed against its own edges.
+     */
+    @Unique
+    private static final int GLOBE_DOOR_TEXT_PAD = 12;
+
     /** Vanilla's own Play button. A field, so it cannot be lost to a label rewrite. */
     @Shadow
     private Button selectButton;
@@ -196,21 +207,30 @@ public abstract class SelectWorldScreenVanillaDoorMixin {
         // a narrowed button whose label no longer fits enables a scissor at that negative x, which
         // the renderer rejects outright rather than clipping.
         int envelope = VanillaFooterLayoutPolicy.fittedEnvelope(otherRowRight - otherRowLeft, self.width);
-        int width = VanillaFooterLayoutPolicy.buttonWidth(3, envelope);
+        // Weighted, not equal thirds. An equal split gave "Vanilla..." the same width as "Play
+        // Selected World", so the long label ellipsized while the short one swam in space
+        // (maintainer report, 2026-08-30). The door takes only what its label measures -- capped at
+        // the old equal share, so Play and Create can only ever gain -- and everything it gives up
+        // returns to them, which is what lets their labels fit again. Measured from the FONT, not
+        // hard-coded: a relabel or translation keeps working without anyone revisiting this.
+        int doorWidth = VanillaFooterLayoutPolicy.doorWidthForThree(
+                envelope, client.font.width(GLOBE_VANILLA_LABEL) + GLOBE_DOOR_TEXT_PAD);
+        int width = VanillaFooterLayoutPolicy.mainWidthForThree(envelope, doorWidth);
         int left = Math.max(VanillaFooterLayoutPolicy.SCREEN_MARGIN, otherRowLeft);
+        int[] xs = VanillaFooterLayoutPolicy.threeButtonXsWeighted(left, width, doorWidth);
 
         play.setWidth(width);
-        play.setX(left);
+        play.setX(xs[0]);
         play.setY(rowY);
         create.setWidth(width);
-        create.setX(VanillaFooterLayoutPolicy.buttonXFrom(left, width, 1));
+        create.setX(xs[1]);
         create.setY(rowY);
 
-        int doorX = VanillaFooterLayoutPolicy.buttonXFrom(left, width, 2);
+        int doorX = xs[2];
         if (this.globe$doorButton == null) {
             this.globe$doorButton = Button.builder(
-                            Component.literal("Vanilla..."), button -> globe$openVanillaDoor(client, self))
-                    .bounds(doorX, rowY, width, rowHeight)
+                            GLOBE_VANILLA_LABEL, button -> globe$openVanillaDoor(client, self))
+                    .bounds(doorX, rowY, doorWidth, rowHeight)
                     .tooltip(Tooltip.create(Component.literal(
                             "Open Minecraft's own world creation screen, skipping Latitude's")))
                     .build();
@@ -219,7 +239,7 @@ public abstract class SelectWorldScreenVanillaDoorMixin {
         } else {
             this.globe$doorButton.setX(doorX);
             this.globe$doorButton.setY(rowY);
-            this.globe$doorButton.setWidth(width);
+            this.globe$doorButton.setWidth(doorWidth);
             this.globe$doorButton.setHeight(rowHeight);
             this.globe$doorButton.visible = true;
             this.globe$doorButton.active = true;

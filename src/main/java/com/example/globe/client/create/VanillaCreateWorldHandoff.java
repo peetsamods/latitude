@@ -32,10 +32,12 @@ public final class VanillaCreateWorldHandoff {
         this.ttlNanos = ttlNanos;
     }
 
-    public static void armNext(Object claimKey, String worldName, String seed, Runnable exitCreateFlow) {
+    public static void armNext(Object claimKey, String worldName, String seed,
+            boolean generateStructures, Runnable exitCreateFlow) {
         NEXT_SCREEN.arm(claimKey,
                 Objects.requireNonNull(worldName, "worldName"),
                 Objects.requireNonNull(seed, "seed"),
+                generateStructures,
                 Objects.requireNonNull(exitCreateFlow, "exitCreateFlow"));
     }
 
@@ -52,7 +54,7 @@ public final class VanillaCreateWorldHandoff {
      * leave that default alone -- it BLANKS it, and the door would open on an unnamed world.</p>
      */
     public static void armNextWithoutReturn(Object claimKey) {
-        NEXT_SCREEN.arm(claimKey, null, null, null);
+        NEXT_SCREEN.arm(claimKey, null, null, null, null);
     }
 
     public static Optional<Payload> claimNext(Object claimKey) {
@@ -64,10 +66,10 @@ public final class VanillaCreateWorldHandoff {
     }
 
     synchronized void arm(Object claimKey, @Nullable String worldName, @Nullable String seed,
-                          @Nullable Runnable exitCreateFlow) {
+                          @Nullable Boolean generateStructures, @Nullable Runnable exitCreateFlow) {
         this.pending = new Pending(
                 Objects.requireNonNull(claimKey, "claimKey"),
-                new Payload(worldName, seed, exitCreateFlow),
+                new Payload(worldName, seed, generateStructures, exitCreateFlow),
                 this.ticker.getAsLong());
     }
 
@@ -93,11 +95,20 @@ public final class VanillaCreateWorldHandoff {
     }
 
     /**
-     * All three fields are individually nullable -- {@link #armNextWithoutReturn} arms with none of
+     * All four fields are individually nullable -- {@link #armNextWithoutReturn} arms with none of
      * them, for a claim that exists only to mark the session vanilla-only. Every reader must check
      * before using any one of them.
+     *
+     * <p>{@code generateStructures} rides the payload because the return leg ALREADY absorbs it:
+     * {@code absorbVanillaCreateState} reads the toggle back on cancel, so without the outbound
+     * carry a player who switched structures OFF in Latitude's screen stepped out through the
+     * hatch, saw vanilla's default ON, and had OFF silently overwritten on the way back in
+     * (maintainer report, 2026-08-30). Nullable like its neighbours: {@code Boolean}, not
+     * {@code boolean}, because the world-list door arms with nothing and the redirect must leave
+     * vanilla's own default alone in that case rather than force either value.</p>
      */
     public record Payload(@Nullable String worldName, @Nullable String seed,
+                          @Nullable Boolean generateStructures,
                           @Nullable Runnable exitCreateFlow) {}
 
     private record Pending(Object claimKey, Payload payload, long armedAtNanos) {}

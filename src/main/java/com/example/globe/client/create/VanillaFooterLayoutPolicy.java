@@ -84,4 +84,44 @@ public final class VanillaFooterLayoutPolicy {
     public static int buttonXFrom(int left, int width, int index) {
         return left + index * (width + SPACING);
     }
+
+    /**
+     * The door's width: what its label needs, capped at the equal three-way share.
+     *
+     * <p>An equal split gave "Vanilla..." the same width as "Play Selected World", and the long
+     * label ellipsized while the short one swam in space (maintainer report, 2026-08-30). Weighting
+     * was chosen over shrinking the label's font: Minecraft has no smaller UI font, and pose-scaled
+     * text renders blurry and reads as non-vanilla -- the opposite of what the door must do. The
+     * cap means weighting can only ever RETURN width to Play and Create, never take more than an
+     * equal split would have; a squeezed envelope degrades to exactly the old equal behaviour.</p>
+     *
+     * @param desiredDoorWidth what the door's rendered label actually needs, padding included
+     */
+    public static int doorWidthForThree(int envelope, int desiredDoorWidth) {
+        return Math.max(1, Math.min(desiredDoorWidth, buttonWidth(3, envelope)));
+    }
+
+    /**
+     * Equal width for Play and Create once the door has taken its (never larger) share. Everything
+     * the door gives up lands here, which is what lets "Play Selected World" fit again.
+     */
+    public static int mainWidthForThree(int envelope, int doorWidth) {
+        if (doorWidth <= 0) {
+            throw new IllegalArgumentException("doorWidth must be positive");
+        }
+        return Math.max(1, (envelope - 2 * SPACING - doorWidth) / 2);
+    }
+
+    /**
+     * Left edges when Play and Create share one width and the door has its own. Returns exactly
+     * three values: Play, Create, and the door, separated by vanilla's own {@link #SPACING}.
+     */
+    public static int[] threeButtonXsWeighted(int left, int mainWidth, int doorWidth) {
+        if (mainWidth <= 0 || doorWidth <= 0) {
+            throw new IllegalArgumentException("widths must be positive");
+        }
+        int second = left + mainWidth + SPACING;
+        int third = second + mainWidth + SPACING;
+        return new int[] {left, second, third};
+    }
 }
