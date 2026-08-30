@@ -115,6 +115,6 @@ If you've ever thought vanilla biome placement felt random and disconnected — 
 
 > 🧭 **A solo passion project — and my first mod.** Thank you for playing with Latitude; I hope you enjoy it as much as I do! :D
 >
-> 🐛 **Found a bug, or want to follow development?** → **[GitHub](https://github.com/joolbits/latitude)**
+> 🐛 **Found a bug, or want to follow development?** → **[GitHub](https://github.com/peetsamods/latitude)**
 >
 > ⭐ **Enjoying Latitude?** Leave a ❤️ on **[Modrinth](https://modrinth.com/mod/latitude)** — it genuinely helps a solo dev!

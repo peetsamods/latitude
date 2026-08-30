@@ -10,7 +10,7 @@ That document supersedes older "Mercator", E/W wrap, and ocean-seam design recor
 
 ## Current 1.4 candidate status
 
-This checkout is the canonical Minecraft `26.1.2` Latitude 1.4 candidate root. Current release-readiness truth lives in `docs/release/checklist.md`; do not treat older published `1.4.0+26.1.2` or `1.21.11` records as the active candidate gate. The permanent live rerun checklist lives in `docs/release/scenic-drive-green-checklist.md`.
+This checkout is the canonical Minecraft `26.1.2` Latitude 1.4 candidate root. Current release-readiness truth lives in `docs/release/history/1.4/checklist.md`; do not treat older published `1.4.0+26.1.2` or `1.21.11` records as the active candidate gate. The permanent live rerun checklist lives in `docs/release/history/1.4/scenic-drive-green-checklist.md`.
 
 _(origin/main also tracked a parallel 1.4 candidate worktree at `<home>/CascadeProjects/Latitude-custom-biome-expansion-26.1.2`, with this checkout serving as the main docs/history root; preserved here for reference.)_
 
@@ -30,7 +30,7 @@ See:
 
 - `docs/LATITUDE_2_0_OVERHAUL.md` for the Latitude 2.0 overhaul plan.
 - `docs/design-spec.md` for the existing design spec.
-- `docs/release/checklist.md` for release gates.
+- `docs/release/history/1.4/checklist.md` for release gates.
 
 ## Dependencies
 

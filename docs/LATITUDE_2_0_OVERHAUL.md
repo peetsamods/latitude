@@ -344,7 +344,7 @@ Documentation:
 
 - external record.
 - `docs/porting/VERSION_MATRIX.md`.
-- `docs/release/current-gates.json` when implementation truth changes.
+- `docs/release/history/1.4/current-gates.json` when implementation truth changes.
 
 ### Phase 0: Portability Foundation
 

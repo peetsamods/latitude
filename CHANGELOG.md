@@ -56,7 +56,7 @@ Latitude 2.0 "Longitude" is a worldgen-quality and compatibility release. It mak
 
 ## Latitude 1.4 status (MC 26.1.2 canonical)
 - Current 1.4 candidate truth lives in `<home>/CascadeProjects/Latitude-custom-biome-expansion-26.1.2/docs/release/checklist.md`.
-- The permanent live rerun checklist lives in `docs/release/scenic-drive-green-checklist.md`.
+- The permanent live rerun checklist lives in `docs/release/history/1.4/scenic-drive-green-checklist.md`.
 - Public version naming, savepoint, and publication remain undecided until Maintainer approves the final candidate.
 - (Superseded by the Latitude 2.0 overhaul above; retained from `origin/main` for reference.)
 
