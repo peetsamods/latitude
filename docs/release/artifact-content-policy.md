@@ -121,7 +121,7 @@ Run against the built candidate jar, before staging and again before publication
 unzip -l <candidate>.jar | grep -c "com/example/globe/dev/"    # must be 0
 unzip -l <candidate>.jar | grep -c "com/example/globe/tools/"  # must be > 0
 unzip -p <candidate>.jar META-INF/MANIFEST.MF                  # Build-Dirty: false, no Latitude-Artifact-Role
-python3 tools/verify_phase6_dev_tooling.py --jar <candidate>.jar
+python3 tools/verify_phase6_dev_tooling.py --public-jar <candidate>.jar
 ```
 
 Then, in a live session on the staged artifact: confirm the permitted commands exist and require operator
@@ -130,9 +130,6 @@ shipped command, and confirm no Latitude capture keybind appears in the vanilla 
 
 ## Amendment protocol
 
-This policy changes only by owner directive. Any amendment records a new evidence entry, scope
-`release`, in the maintainer's notes directory for this line (outside the repository; its
-location is recorded in the maintainer's private agent configuration) — never in this tree —
-sets `supersedes` to the prior entry, and updates this document in the same
-pass. Prior text is superseded, never rewritten — the history of what shipped under which rule
-stays readable.
+This policy changes only by owner directive. Release evidence and amendment chronology live in the
+private Latitude notes for the applicable source line; this public document records only the current,
+stable artifact contract. Git history preserves prior public versions of that contract.
