@@ -1,5 +1,13 @@
 # Changelog
 
+## Latitude 1.5.1-beta.4 (Minecraft 26.3)
+
+- **Smoother transitions into the polar region.** Taiga now thins out in patches
+  across the subpolar edge instead of disappearing along a straight latitude line.
+  The polar tree line is preserved.
+- This changes newly generated terrain. Existing chunks keep their current biomes.
+- Edge storm warnings now say whether the storm is to the east or west.
+
 ## Latitude 1.5.1-beta.3 (Minecraft 26.2)
 
 Bug fixes to biome placement and `/locate`, plus a way out of Latitude's world-creation screen for
