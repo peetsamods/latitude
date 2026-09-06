@@ -610,6 +610,17 @@ public final class LatitudeBiomes {
     private static final ThreadLocal<String> LAST_SELECTION_PATH = new ThreadLocal<>();
     private static final ThreadLocal<BiomeAdmission> LAST_BIOME_ADMISSION = new ThreadLocal<>();
     private static final ThreadLocal<WarmPoolMembershipSnapshot> LAST_WARM_POOL_MEMBERSHIP_SNAPSHOT = new ThreadLocal<>();
+    /**
+     * Column-scoped Dappled gate (maintainer ruling, 2026-09-06). Bound to the exact column so a stale
+     * value from another column can never apply. When the column is not Dappled-eligible, tag rolls
+     * exclude Dappled before selecting: every pool member scores an independent noise field, so removing
+     * one member cannot move the others, and ineligible country picks exactly what it picked before
+     * Dappled existed instead of collapsing to plain forest. The late enforceDappledForestPlacement
+     * check stays as the final-truth safety net.
+     */
+    private static final ThreadLocal<DappledColumnGate> COLUMN_DAPPLED_GATE = new ThreadLocal<>();
+    private static final Map<List<Holder<Biome>>, List<Holder<Biome>>> DAPPLED_EXCLUDED_TAG_ENTRY_CACHE =
+            Collections.synchronizedMap(new IdentityHashMap<>());
     // BiomeSource.findBiomeHorizontal() can call the collection picker hundreds of thousands of
     // times for one vanilla /locate. The source collection and its tag membership are immutable
     // for a live world, so cache the already-sorted membership by source identity instead of
@@ -3762,6 +3773,7 @@ public final class LatitudeBiomes {
                 mountainNoiseLike,
                 hasPreviewTerrainInputs,
                 callerContext);
+        gateDappledForColumn(blockX, blockZ, effectiveRadius, landBandIndex, mountainLike, sampler);
         // Renamed from polarMountainNoiseLike (2026-08-18): this is the raw, ungated mountain-noise
         // read, and it is no longer polar-only. It still feeds the polar authority chain below, and
         // it is now ALSO what tells the windswept gate whether a subpolar column is a real mountain
@@ -4585,6 +4597,7 @@ public final class LatitudeBiomes {
                 mountainNoiseLike,
                 hasPreviewTerrainInputs,
                 callerContext);
+        gateDappledForColumn(blockX, blockZ, effectiveRadius, landBandIndex, mountainLike, sampler);
         // Renamed from polarMountainNoiseLike (2026-08-18): this is the raw, ungated mountain-noise
         // read, and it is no longer polar-only. It still feeds the polar authority chain below, and
         // it is now ALSO what tells the windswept gate whether a subpolar column is a real mountain
@@ -7156,6 +7169,9 @@ public final class LatitudeBiomes {
             int blockZ,
             int bandIndex,
             long extraSalt) {
+        if (dappledExcludedForColumn(blockX, blockZ)) {
+            entries = withoutDappled(entries);
+        }
         BiomeRoute providerRoute = providerTicketRoute(tag);
         return selectProviderDiverseEntry(
                 entries,
@@ -9987,6 +10003,49 @@ public final class LatitudeBiomes {
         return Math.abs(blockZ) - effectiveBoundary;
     }
 
+    private record DappledColumnGate(int blockX, int blockZ, boolean eligible) {
+    }
+
+    /** Bind this column's Dappled eligibility before any tag roll can see the secondary pool. */
+    private static void gateDappledForColumn(
+            int blockX,
+            int blockZ,
+            int effectiveRadius,
+            int landBandIndex,
+            boolean mountainLike,
+            Climate.Sampler sampler) {
+        // Cheap geometric window first; only in-window temperate lowland pays for the sampler checks.
+        boolean eligible = landBandIndex == BAND_TEMPERATE
+                && !mountainLike
+                && DappledForestPlacementPolicy.isEligible(
+                        true,
+                        temperateSubpolarBoundaryDeltaBlocks(blockX, blockZ, effectiveRadius),
+                        BLEND_TRANSITION_WIDTH_BLOCKS * 0.5)
+                && dappledForestEligible(blockX, blockZ, effectiveRadius, landBandIndex, mountainLike, sampler);
+        COLUMN_DAPPLED_GATE.set(new DappledColumnGate(blockX, blockZ, eligible));
+    }
+
+    private static boolean dappledExcludedForColumn(int blockX, int blockZ) {
+        DappledColumnGate gate = COLUMN_DAPPLED_GATE.get();
+        return gate != null && !gate.eligible() && gate.blockX() == blockX && gate.blockZ() == blockZ;
+    }
+
+    private static List<Holder<Biome>> withoutDappled(List<Holder<Biome>> entries) {
+        List<Holder<Biome>> cached = DAPPLED_EXCLUDED_TAG_ENTRY_CACHE.get(entries);
+        if (cached != null) {
+            return cached;
+        }
+        List<Holder<Biome>> filtered = new ArrayList<>(entries.size());
+        for (Holder<Biome> entry : entries) {
+            if (!isBiomeId(entry, DappledForestPlacementPolicy.BIOME_ID)) {
+                filtered.add(entry);
+            }
+        }
+        List<Holder<Biome>> result = filtered.size() == entries.size() ? entries : List.copyOf(filtered);
+        DAPPLED_EXCLUDED_TAG_ENTRY_CACHE.put(entries, result);
+        return result;
+    }
+
     private static boolean dappledForestEligible(
             int blockX,
             int blockZ,
@@ -11517,6 +11576,7 @@ public final class LatitudeBiomes {
     private static void clearSelectionState() {
         LAST_SELECTION_PATH.remove();
         LAST_BIOME_ADMISSION.remove();
+        COLUMN_DAPPLED_GATE.remove();
     }
 
     private static void setAdmission(BiomeAdmissionKind kind, String source, Holder<Biome> entry) {

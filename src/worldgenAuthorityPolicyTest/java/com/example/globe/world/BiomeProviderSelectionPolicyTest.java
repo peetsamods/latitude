@@ -46,6 +46,7 @@ final class BiomeProviderSelectionPolicyTest {
     static void run() throws Exception {
         descriptorAdmissionIsClosedAndCanonical();
         dappledForestHasOneCoolBorderHome();
+        ineligibleColumnsRollWithoutDappled();
         existingWorldDappledUpgradeIsOneTimeAndAdditive();
         wetlandRoutesMatchRealBiomeClimate();
         climateLowlandDescriptorsRemainRouteBounded();
@@ -257,6 +258,11 @@ final class BiomeProviderSelectionPolicyTest {
                     assertEquals(oldWinner, newWinner,
                             "a non-Minecraft winner stays byte-for-byte the same");
                 }
+                if (!dappled.equals(newWinner)) {
+                    assertEquals(oldWinner, newWinner,
+                            "wherever Dappled does not win, the exact pre-Dappled winner survives, so "
+                                    + "excluding Dappled from an ineligible column restores its old biome");
+                }
                 providerSamples++;
             }
         }
@@ -391,6 +397,28 @@ final class BiomeProviderSelectionPolicyTest {
                 "the guarantee search calls the shared Dappled rule");
         assertEquals(2, occurrences(source, "out = enforceDappledForestPlacement("),
                 "both final picker overloads enforce the shared Dappled rule");
+    }
+
+    private static void ineligibleColumnsRollWithoutDappled() throws Exception {
+        String biomes = read("src/main/java/com/example/globe/world/LatitudeBiomes.java");
+        assertEquals(2, occurrences(biomes,
+                "gateDappledForColumn(blockX, blockZ, effectiveRadius, landBandIndex, mountainLike, sampler);"),
+                "both column pipelines bind Dappled eligibility before any tag roll");
+        String gate = method(biomes, "private static void gateDappledForColumn(");
+        assertTrue(gate.contains(
+                "dappledForestEligible(blockX, blockZ, effectiveRadius, landBandIndex, mountainLike, sampler)"),
+                "the pre-roll gate uses the same eligibility rule as the guarantee planner and the late check");
+        String selector = method(biomes, "private static Holder<Biome> selectProviderDiverseTagEntry(");
+        assertTrue(selector.contains("if (dappledExcludedForColumn(blockX, blockZ))")
+                        && selector.indexOf("withoutDappled(entries)") < selector.indexOf("selectProviderDiverseEntry("),
+                "an ineligible column drops Dappled from the pool before the roll, never after");
+        String excluded = method(biomes, "private static boolean dappledExcludedForColumn(");
+        assertTrue(excluded.contains("gate.blockX() == blockX && gate.blockZ() == blockZ"),
+                "the gate is bound to the exact column so a stale value cannot leak into another roll");
+        assertTrue(method(biomes, "private static void clearSelectionState()").contains("COLUMN_DAPPLED_GATE.remove();"),
+                "column selection state clears the Dappled gate");
+        assertEquals(2, occurrences(biomes, "out = enforceDappledForestPlacement("),
+                "the late final-truth enforcement remains in both pipelines as the safety net");
     }
 
     private static void existingWorldDappledUpgradeIsOneTimeAndAdditive() throws Exception {
