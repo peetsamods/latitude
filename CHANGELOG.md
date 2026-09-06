@@ -2,13 +2,62 @@
 
 ## Latitude 1.5.1-beta.4 (Minecraft 26.3)
 
-- **Smoother transitions into the polar region.** Taiga now thins out in patches
-  across the subpolar edge instead of disappearing along a straight latitude line.
-  The polar tree line is preserved.
-- This changes newly generated terrain. Existing chunks keep their current biomes.
-- Edge storm warnings now say whether the storm is to the east or west.
-- **Less repeat work while exploring new terrain.** Latitude no longer repeats a
-  custom-biome scan that was only needed for disabled diagnostics during chunk decoration.
+First Latitude release for Minecraft 26.3, built against 26.3 Pre-Release 2. It carries everything
+from Beta 4 on Minecraft 26.2 and adds Minecraft's new Dappled Forest to Latitude's climate map.
+**Beta:** shipped for testing before the 1.5.1 stable tag.
+
+### New
+
+- **Minecraft 26.3.** Latitude's terrain settings, features, and world-border rendering are ported to
+  the 26.3 world-generation format. A seed lays out essentially the same climate map on 26.3 as it
+  did on 26.2, apart from a scattering of single cells at coasts and biome edges; the only new
+  element is the Dappled Forest below.
+- **Dappled Forest.** Minecraft 26.3's new forest joins the temperate band. It is a cool-climate
+  forest, so Latitude admits it only along the cool edge of the temperate zone: lowland ground in the
+  transition where temperate gives way to the subpolar taiga, roughly 43° to 51° on a Regular world,
+  wandering a couple of degrees either way where the boundary itself meanders. That strip is a fixed
+  700 blocks or so deep, so it spans a wider stretch of latitude on a small world and a narrower one
+  on the largest. It steps aside where wetlands or the Pale Garden take the ground. Every new world
+  reserves a guaranteed patch of Dappled Forest somewhere in that strip, so there is always one to
+  find. Where the Dappled Forest is not allowed, terrain keeps the biome it would have had before,
+  so the rest of the temperate zone is unchanged.
+- **Existing worlds get the Dappled Forest too, in terrain you have not explored yet.** The first
+  time a 26.2 Latitude world opens on 26.3, Latitude stamps it once so that eligible cool-border
+  terrain generated from then on may contain the Dappled Forest. Explored chunks are never rewritten,
+  the world's original biome plan is unchanged, opening the world again adds nothing further, and if
+  all the eligible ground was explored already the biome simply stays unavailable in that world.
+  Carried-over worlds do not get the reserved patch that new worlds do. This applies to worlds made
+  by a recent Latitude with the current world-generation policy; worlds made by an older Latitude,
+  or whose Latitude data is incomplete, are left exactly as they are. Back up a world before opening
+  it on 26.3: saving there can update Minecraft's own data, so taking that save back to 26.2 is
+  unsupported.
+- **A still background for the create-world screen.** The **Still** toggle at the left of the
+  bottom button row on Latitude's create-world screen swaps the moving panorama for a flat dark
+  backdrop, and the choice is remembered between sessions.
+
+### Improved
+
+- **Smoother transitions into the polar region.** Taiga now thins out in patches across the subpolar
+  edge instead of disappearing along a straight latitude line. The polar tree line is preserved.
+  (Also in Beta 4 for Minecraft 26.2.)
+- Edge storm warnings now say whether the storm is to the east or west. (Also in Beta 4 for 26.2.)
+- **Less repeat work while exploring new terrain.** Latitude no longer repeats a custom-biome scan
+  that was only needed for disabled diagnostics during chunk decoration. (Also in Beta 4 for 26.2.)
+- **Create-world screen layout.** Panels sit tighter with less empty space, the World and Settings
+  tab headers are now real buttons you can reach and activate from the keyboard (and Minecraft's
+  narrator announces them), and panel backgrounds are slightly see-through so the panorama behind
+  shows through.
+
+### Known issues
+
+- This build targets 26.3 Pre-Release 2 and will be refreshed for the final 26.3 release. Minecraft
+  shows its own version-change warning when a world made on one pre-release is opened on a later one.
+- Minecraft's own biome tags decide where the Dappled Forest variant of the Abandoned Camp can
+  generate. Latitude never places camps itself; it can only turn a structure down when it would
+  straddle the wrong biome or sit in the border danger zone. A camp inside a Latitude Dappled Forest
+  has not yet been confirmed in testing.
+
+World-generation changes apply to newly generated terrain. Existing chunks keep their current biomes.
 
 ## Latitude 1.5.1-beta.3 (Minecraft 26.2)
 
