@@ -3,7 +3,14 @@
   "values": [
     "#minecraft:flowers",
     "#minecraft:crops",
-    "minecraft:short_grass",
+    {
+      "id": "minecraft:grass",
+      "required": false
+    },
+    {
+      "id": "minecraft:short_grass",
+      "required": false
+    },
     "minecraft:tall_grass",
     {
       "id": "minecraft:short_dry_grass",

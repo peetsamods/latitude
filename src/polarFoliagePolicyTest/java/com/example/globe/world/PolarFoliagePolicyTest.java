@@ -156,9 +156,9 @@ public final class PolarFoliagePolicyTest {
         // ground vegetation at the 80-degree limit. Assert against the UNION so the split cannot
         // silently drop an entry — losing one here reopens a leak in the band it belonged to.
         String foliageTag = read(
-                "src/main/resources/data/globe/tags/block/polar_foliage.json");
+                "src/main/resources/data/globe/tags/blocks/polar_foliage.json");
         String woodyTag = read(
-                "src/main/resources/data/globe/tags/block/polar_woody.json");
+                "src/main/resources/data/globe/tags/blocks/polar_woody.json");
         String guardedContent = foliageTag + woodyTag;
         for (String nestedTag : new String[]{
                 "#minecraft:flowers",
@@ -328,7 +328,7 @@ public final class PolarFoliagePolicyTest {
     }
 
     private static java.util.Set<String> tagValues(String name) throws Exception {
-        String raw = read("src/main/resources/data/globe/tags/block/" + name + ".json");
+        String raw = read("src/main/resources/data/globe/tags/blocks/" + name + ".json");
         java.util.Set<String> out = new java.util.TreeSet<>();
         java.util.regex.Matcher m = java.util.regex.Pattern
                 .compile("\"(#?[a-z0-9_.-]+:[a-z0-9_./-]+)\"").matcher(raw);
