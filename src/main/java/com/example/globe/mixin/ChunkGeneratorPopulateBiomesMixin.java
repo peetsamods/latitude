@@ -6,7 +6,7 @@ import com.example.globe.world.LatitudeBiomeSource;
 import com.example.globe.world.LatitudeBiomes;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags;
+import net.fabricmc.fabric.api.tag.convention.v1.ConventionalBiomeTags;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -99,34 +99,34 @@ public abstract class ChunkGeneratorPopulateBiomesMixin {
 
     // Only apply Latitude to your globe overworld settings (keeps Nether/End sane).
     @Unique
-    private static final ResourceLocation GLOBE_SETTINGS_ID = ResourceLocation.fromNamespaceAndPath("globe", "overworld");
+    private static final ResourceLocation GLOBE_SETTINGS_ID = new ResourceLocation("globe", "overworld");
 
     @Unique
-    private static final ResourceLocation GLOBE_SETTINGS_XSMALL_ID = ResourceLocation.fromNamespaceAndPath("globe", "overworld_xsmall");
+    private static final ResourceLocation GLOBE_SETTINGS_XSMALL_ID = new ResourceLocation("globe", "overworld_xsmall");
 
     @Unique
-    private static final ResourceLocation GLOBE_SETTINGS_SMALL_ID = ResourceLocation.fromNamespaceAndPath("globe", "overworld_small");
+    private static final ResourceLocation GLOBE_SETTINGS_SMALL_ID = new ResourceLocation("globe", "overworld_small");
 
     @Unique
-    private static final ResourceLocation GLOBE_SETTINGS_REGULAR_ID = ResourceLocation.fromNamespaceAndPath("globe", "overworld_regular");
+    private static final ResourceLocation GLOBE_SETTINGS_REGULAR_ID = new ResourceLocation("globe", "overworld_regular");
 
     @Unique
-    private static final ResourceLocation GLOBE_SETTINGS_LARGE_ID = ResourceLocation.fromNamespaceAndPath("globe", "overworld_large");
+    private static final ResourceLocation GLOBE_SETTINGS_LARGE_ID = new ResourceLocation("globe", "overworld_large");
 
     @Unique
-    private static final ResourceLocation GLOBE_SETTINGS_MASSIVE_ID = ResourceLocation.fromNamespaceAndPath("globe", "overworld_massive");
+    private static final ResourceLocation GLOBE_SETTINGS_MASSIVE_ID = new ResourceLocation("globe", "overworld_massive");
 
     @Unique
-    private static final ResourceLocation LUSH_CAVES_ID = ResourceLocation.fromNamespaceAndPath("minecraft", "lush_caves");
+    private static final ResourceLocation LUSH_CAVES_ID = new ResourceLocation("minecraft", "lush_caves");
 
     @Unique
-    private static final ResourceLocation DRIPSTONE_CAVES_ID = ResourceLocation.fromNamespaceAndPath("minecraft", "dripstone_caves");
+    private static final ResourceLocation DRIPSTONE_CAVES_ID = new ResourceLocation("minecraft", "dripstone_caves");
 
     @Unique
-    private static final ResourceLocation DEEP_DARK_ID = ResourceLocation.fromNamespaceAndPath("minecraft", "deep_dark");
+    private static final ResourceLocation DEEP_DARK_ID = new ResourceLocation("minecraft", "deep_dark");
 
     @Unique
-    private static final ResourceLocation SULFUR_CAVES_ID = ResourceLocation.fromNamespaceAndPath("minecraft", "sulfur_caves");
+    private static final ResourceLocation SULFUR_CAVES_ID = new ResourceLocation("minecraft", "sulfur_caves");
 
     @Unique
     private static final ResourceKey<NoiseGeneratorSettings> GLOBE_SETTINGS_KEY =
@@ -281,7 +281,7 @@ public abstract class ChunkGeneratorPopulateBiomesMixin {
             boolean caveCurrent = isCaveBiome(biomes, current);
 
             if (blockY > HARD_DECK_SURFACE_Y && isCaveBiome(biomes, base)) {
-                Holder<Biome> plains = biomes.getHolder(ResourceLocation.fromNamespaceAndPath("minecraft", "plains")).orElse(null);
+                Holder<Biome> plains = biomes.getHolder(ResourceKey.create(Registries.BIOME, new ResourceLocation("minecraft", "plains"))).orElse(null);
                 if (DEBUG_CAVE_DECK) {
                     LOGGER.info("[LAT_CAVE_DECK] replaced {} at blockY={} x={} z={}",
                             biomeId(biomes, base), blockY, blockX, blockZ);
@@ -369,8 +369,8 @@ public abstract class ChunkGeneratorPopulateBiomesMixin {
 
     @Unique
     private static boolean isCaveBiome(Registry<Biome> biomes, Holder<Biome> entry) {
-        if (entry.is(ConventionalBiomeTags.IS_CAVE)
-                || entry.is(ConventionalBiomeTags.IS_UNDERGROUND)) {
+        if (entry.is(ConventionalBiomeTags.CAVES)
+                || entry.is(ConventionalBiomeTags.UNDERGROUND)) {
             return true;
         }
         ResourceLocation actual = biomes.getKey(entry.value());
@@ -546,28 +546,28 @@ public abstract class ChunkGeneratorPopulateBiomesMixin {
     @Unique
     private static Holder<Biome> pickSafeFallback(Registry<Biome> biomes, int blockZ) {
         boolean farNorth = Math.abs(blockZ) > 8000;
-        ResourceLocation id = ResourceLocation.fromNamespaceAndPath("minecraft", farNorth ? "snowy_plains" : "plains");
-        Holder<Biome> entry = biomes.getHolder(id).orElse(null);
+        ResourceLocation id = new ResourceLocation("minecraft", farNorth ? "snowy_plains" : "plains");
+        Holder<Biome> entry = biomes.getHolder(ResourceKey.create(Registries.BIOME, id)).orElse(null);
         if (entry != null) {
             return entry;
         }
-        return biomes.getHolder(ResourceLocation.fromNamespaceAndPath("minecraft", "plains")).orElse(null);
+        return biomes.getHolder(ResourceKey.create(Registries.BIOME, new ResourceLocation("minecraft", "plains"))).orElse(null);
     }
 
     @Unique
     private static Holder<Biome> pickFallback(Registry<Biome> biomes, Holder<Biome> base, String... ids) {
         for (String id : ids) {
-            Holder<Biome> entry = biomes.getHolder(ResourceLocation.parse(id)).orElse(null);
+            Holder<Biome> entry = biomes.getHolder(ResourceKey.create(Registries.BIOME, new ResourceLocation(id))).orElse(null);
             if (entry != null) {
                 return entry;
             }
         }
-        return base != null ? base : biomes.getHolder(ResourceLocation.fromNamespaceAndPath("minecraft", "plains")).orElse(null);
+        return base != null ? base : biomes.getHolder(ResourceKey.create(Registries.BIOME, new ResourceLocation("minecraft", "plains"))).orElse(null);
     }
 
     @Unique
     private static boolean isBiomeId(Registry<Biome> biomes, Holder<Biome> entry, String id) {
-        ResourceLocation target = ResourceLocation.parse(id);
+        ResourceLocation target = new ResourceLocation(id);
         ResourceLocation actual = biomes.getKey(entry.value());
         if (actual != null) {
             return actual.equals(target);

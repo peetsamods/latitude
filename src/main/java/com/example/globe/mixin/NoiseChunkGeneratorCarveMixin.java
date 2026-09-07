@@ -22,7 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class NoiseChunkGeneratorCarveMixin {
     private static final ResourceKey<NoiseGeneratorSettings> GLOBE_SETTINGS_KEY = ResourceKey.create(
             Registries.NOISE_SETTINGS,
-            ResourceLocation.fromNamespaceAndPath("globe", "overworld")
+            new ResourceLocation("globe", "overworld")
     );
 
     @Inject(

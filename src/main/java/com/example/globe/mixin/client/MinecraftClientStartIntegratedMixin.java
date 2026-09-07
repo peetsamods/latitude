@@ -157,6 +157,6 @@ public abstract class MinecraftClientStartIntegratedMixin {
     @Unique
     private static ResourceKey<NoiseGeneratorSettings> globe$noiseSettingsKey(String path) {
         return ResourceKey.create(net.minecraft.core.registries.Registries.NOISE_SETTINGS,
-                ResourceLocation.fromNamespaceAndPath("globe", path));
+                new ResourceLocation("globe", path));
     }
 }

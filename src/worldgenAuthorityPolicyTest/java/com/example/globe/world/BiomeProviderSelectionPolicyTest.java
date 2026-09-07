@@ -1737,7 +1737,7 @@ final class BiomeProviderSelectionPolicyTest {
                 "minecraft:snowy_beach", "minecraft:stony_shore"));
         MappedRegistry<Biome> writable = new MappedRegistry<>(Registries.BIOME, Lifecycle.stable());
         for (String id : ids) {
-            ResourceKey<Biome> key = ResourceKey.create(Registries.BIOME, ResourceLocation.parse(id));
+            ResourceKey<Biome> key = ResourceKey.create(Registries.BIOME, new ResourceLocation(id));
             writable.register(key, minimalBiome(), RegistrationInfo.BUILT_IN);
         }
         List<Holder<Biome>> temperateMountainHolders = new ArrayList<>();
@@ -1756,7 +1756,7 @@ final class BiomeProviderSelectionPolicyTest {
                 "byg:crag_gardens",
                 "terrestria:caldera",
                 "terrestria:canyon")) {
-            writable.getHolder(ResourceLocation.parse(id)).ifPresent(temperateMountainHolders::add);
+            writable.getHolder(ResourceKey.create(Registries.BIOME, new ResourceLocation(id))).ifPresent(temperateMountainHolders::add);
         }
         // 1.21.1's MappedRegistry publishes only the whole-map bindTags, and that call rebinds every
         // tag it knows about. Passing this one tag therefore binds it and leaves every other tag
@@ -1764,7 +1764,7 @@ final class BiomeProviderSelectionPolicyTest {
         writable.bindTags(Map.of(
                 TagKey.create(
                         Registries.BIOME,
-                        ResourceLocation.fromNamespaceAndPath("globe", "lat_temperate_mountain")),
+                        new ResourceLocation("globe", "lat_temperate_mountain")),
                 temperateMountainHolders));
         Registry<Biome> registry = writable.freeze();
         List<Holder<Biome>> holders = registry.holders()
@@ -1792,7 +1792,7 @@ final class BiomeProviderSelectionPolicyTest {
     }
 
     private static Holder<Biome> holder(Registry<Biome> registry, String id) {
-        return registry.getHolder(ResourceLocation.parse(id))
+        return registry.getHolder(ResourceKey.create(Registries.BIOME, new ResourceLocation(id)))
                 .orElseThrow(() -> new AssertionError("missing test biome holder: " + id));
     }
 

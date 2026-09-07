@@ -3,11 +3,9 @@ package com.example.globe.world;
 import com.example.globe.GlobeMod;
 import com.example.globe.mixin.BiomeSourceAccessor;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.DynamicOps;
-import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.MapLike;
-import com.mojang.serialization.RecordBuilder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -16,7 +14,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags;
+import net.fabricmc.fabric.api.tag.convention.v1.ConventionalBiomeTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -37,10 +35,10 @@ public final class LatitudeBiomeSource extends BiomeSource {
     private static final int MAX_CAVE_BIOME_Y = Integer.getInteger("latitude.maxCaveBiomeY", 96);
     private static final int HARD_DECK_SURFACE_Y = Integer.getInteger("latitude.hardDeckSurfaceY", 20);
     private static final int DEEP_DARK_MAX_Y = -16;
-    private static final ResourceLocation LUSH_CAVES_ID = ResourceLocation.fromNamespaceAndPath("minecraft", "lush_caves");
-    private static final ResourceLocation DRIPSTONE_CAVES_ID = ResourceLocation.fromNamespaceAndPath("minecraft", "dripstone_caves");
-    private static final ResourceLocation DEEP_DARK_ID = ResourceLocation.fromNamespaceAndPath("minecraft", "deep_dark");
-    private static final ResourceLocation SULFUR_CAVES_ID = ResourceLocation.fromNamespaceAndPath("minecraft", "sulfur_caves");
+    private static final ResourceLocation LUSH_CAVES_ID = new ResourceLocation("minecraft", "lush_caves");
+    private static final ResourceLocation DRIPSTONE_CAVES_ID = new ResourceLocation("minecraft", "dripstone_caves");
+    private static final ResourceLocation DEEP_DARK_ID = new ResourceLocation("minecraft", "deep_dark");
+    private static final ResourceLocation SULFUR_CAVES_ID = new ResourceLocation("minecraft", "sulfur_caves");
 
     private final BiomeSource original;
     private final Collection<Holder<Biome>> biomes;
@@ -88,24 +86,19 @@ public final class LatitudeBiomeSource extends BiomeSource {
     }
 
     @Override
-    protected com.mojang.serialization.MapCodec<? extends BiomeSource> codec() {
+    protected Codec<? extends BiomeSource> codec() {
         @SuppressWarnings("unchecked")
-        MapCodec<BiomeSource> delegate = (MapCodec<BiomeSource>) ((BiomeSourceAccessor) original).globe$invokeCodec();
-        return new MapCodec<>() {
+        Codec<BiomeSource> delegate = (Codec<BiomeSource>) ((BiomeSourceAccessor) original).globe$invokeCodec();
+        return new Codec<BiomeSource>() {
             @Override
-            public <T> RecordBuilder<T> encode(BiomeSource input, DynamicOps<T> ops, RecordBuilder<T> prefix) {
+            public <T> DataResult<T> encode(BiomeSource input, DynamicOps<T> ops, T prefix) {
                 BiomeSource toEncode = input instanceof LatitudeBiomeSource wrapper ? wrapper.original : input;
                 return delegate.encode(toEncode, ops, prefix);
             }
 
             @Override
-            public <T> DataResult<BiomeSource> decode(DynamicOps<T> ops, MapLike<T> input) {
+            public <T> DataResult<Pair<BiomeSource, T>> decode(DynamicOps<T> ops, T input) {
                 return delegate.decode(ops, input);
-            }
-
-            @Override
-            public <T> java.util.stream.Stream<T> keys(DynamicOps<T> ops) {
-                return delegate.keys(ops);
             }
         };
     }
@@ -615,8 +608,8 @@ public final class LatitudeBiomeSource extends BiomeSource {
     }
 
     static boolean isCaveBiome(Holder<Biome> entry) {
-        if (entry.is(ConventionalBiomeTags.IS_CAVE)
-                || entry.is(ConventionalBiomeTags.IS_UNDERGROUND)) {
+        if (entry.is(ConventionalBiomeTags.CAVES)
+                || entry.is(ConventionalBiomeTags.UNDERGROUND)) {
             return true;
         }
         ResourceLocation id = biomeId(entry);

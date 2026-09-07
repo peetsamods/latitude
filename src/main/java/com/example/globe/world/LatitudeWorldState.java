@@ -1,15 +1,15 @@
 package com.example.globe.world;
 
+import com.example.globe.util.McCompat;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.mojang.serialization.Codec;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.Optional;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
-import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.saveddata.SavedData;
 
 public final class LatitudeWorldState extends SavedData {
@@ -45,10 +45,12 @@ public final class LatitudeWorldState extends SavedData {
     public static final String STATE_ID = "globe_latitude_world_state";
 
     /**
-     * 1.21.1 has no codec-driven {@code SavedDataType}: {@link SavedData.Factory} carries a plain
-     * constructor plus a {@code (CompoundTag, HolderLookup.Provider)} deserializer, and the id is
-     * passed at lookup time instead. The record codec below is kept verbatim and driven manually in
-     * {@link #load} / {@link #save} so the on-disk field names stay byte-identical to the newer lines.
+     * The 1.20 line has no codec-driven saved-data type, and no registry lookup reaches the
+     * deserializer either: the storage takes a plain constructor plus a {@code (CompoundTag)}
+     * deserializer, and the id is passed at lookup time. The shape of that storage call changes
+     * inside the supported range, so both forms go through {@link McCompat}. The record codec below
+     * is kept verbatim and driven manually in {@link #load} / {@link #save} so the on-disk field
+     * names stay byte-identical to the newer lines.
      */
     private static final Codec<LatitudeWorldState> CODEC =
             RecordCodecBuilder.<LatitudeWorldState>create(instance -> instance.group(
@@ -76,18 +78,24 @@ public final class LatitudeWorldState extends SavedData {
                             vanillaRepresentationProfile.orElse(null), caveRepresentationProfile.orElse(null),
                             lastKnownBandId.orElse(null), retrofitEnabled)));
 
-    private static final SavedData.Factory<LatitudeWorldState> STATE_TYPE = new SavedData.Factory<>(
-            LatitudeWorldState::new,
-            LatitudeWorldState::load,
-            DataFixTypes.SAVED_DATA_COMMAND_STORAGE
-    );
+    /**
+     * Packed chunk positions already decorated under the fixed feature index, stored as one NBT long
+     * array beside the record fields. The 1.20 range has no per-chunk attachment API to carry that
+     * marker, so the world state carries it instead (maintainer ruling, 2026-09-07).
+     */
+    private static final String RETROFITTED_CHUNKS_KEY = "retrofitted_chunks";
 
-    private static LatitudeWorldState load(CompoundTag tag, HolderLookup.Provider registries) {
-        return CODEC.parse(NbtOps.INSTANCE, tag).result().orElseGet(LatitudeWorldState::new);
+    private static LatitudeWorldState load(CompoundTag tag) {
+        LatitudeWorldState state = CODEC.parse(NbtOps.INSTANCE, tag).result()
+                .orElseGet(LatitudeWorldState::new);
+        for (long packedChunkPos : tag.getLongArray(RETROFITTED_CHUNKS_KEY)) {
+            state.retrofittedChunks.add(packedChunkPos);
+        }
+        return state;
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
+    public CompoundTag save(CompoundTag tag) {
         CODEC.encodeStart(NbtOps.INSTANCE, this).result().ifPresent(encoded -> {
             if (encoded instanceof CompoundTag encodedTag) {
                 for (String key : encodedTag.getAllKeys()) {
@@ -98,6 +106,9 @@ public final class LatitudeWorldState extends SavedData {
                 }
             }
         });
+        if (!retrofittedChunks.isEmpty()) {
+            tag.putLongArray(RETROFITTED_CHUNKS_KEY, retrofittedChunks.toLongArray());
+        }
         return tag;
     }
 
@@ -109,6 +120,7 @@ public final class LatitudeWorldState extends SavedData {
     private String caveRepresentationProfile;
     private String lastKnownBandId;
     private boolean retrofitEnabled;
+    private final LongOpenHashSet retrofittedChunks = new LongOpenHashSet();
 
     public LatitudeWorldState() {
         this(false, Optional.empty(), 0, null, null, null, null, false);
@@ -140,19 +152,33 @@ public final class LatitudeWorldState extends SavedData {
         }
     }
 
+    /** Whether the chunk at this packed position was already decorated under the fixed index. */
+    public boolean isRetrofitted(long packedChunkPos) {
+        return retrofittedChunks.contains(packedChunkPos);
+    }
+
+    /** Records the chunk at this packed position as decorated under the fixed index. */
+    public void markRetrofitted(long packedChunkPos) {
+        if (retrofittedChunks.add(packedChunkPos)) {
+            setDirty();
+        }
+    }
+
     private static Optional<WorldgenPolicyVersion> normalizeWorldgenPolicy(Optional<WorldgenPolicyVersion> worldgenPolicy) {
         return worldgenPolicy == null ? Optional.empty() : worldgenPolicy;
     }
 
     public static LatitudeWorldState get(ServerLevel world) {
-        LatitudeWorldState state = world.getDataStorage().computeIfAbsent(STATE_TYPE, STATE_ID);
+        LatitudeWorldState state = McCompat.computeIfAbsent(world.getDataStorage(),
+                LatitudeWorldState::new, LatitudeWorldState::load, STATE_ID);
         state.ensureWorldgenPolicy(world);
         return state;
     }
 
     /** Reads an existing Latitude state without creating or dirtying a vanilla save. */
     public static LatitudeWorldState getIfPresent(ServerLevel world) {
-        return world.getDataStorage().get(STATE_TYPE, STATE_ID);
+        return McCompat.get(world.getDataStorage(),
+                LatitudeWorldState::new, LatitudeWorldState::load, STATE_ID);
     }
 
     public boolean isSpawnPickerDismissed() {

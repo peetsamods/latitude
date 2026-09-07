@@ -73,7 +73,7 @@ public final class BiomePreviewExporter {
             "minecraft:windswept_hills",
             "minecraft:stony_peaks");
     private static final int DEFAULT_INVENTORY_DISCOVERY_STEP = 32;
-    private static final ResourceLocation MANGROVE_SWAMP_BIOME_ID = ResourceLocation.parse("minecraft:mangrove_swamp");
+    private static final ResourceLocation MANGROVE_SWAMP_BIOME_ID = new ResourceLocation("minecraft:mangrove_swamp");
     private static final DateTimeFormatter RUN_LABEL_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
             .withLocale(Locale.ROOT)
             .withZone(ZoneOffset.UTC);
@@ -2864,7 +2864,7 @@ public final class BiomePreviewExporter {
 
     private record TagSpec(String id, TagKey<Biome> tagKey) {
         private TagSpec(String id) {
-            this(id, TagKey.create(Registries.BIOME, ResourceLocation.parse(id)));
+            this(id, TagKey.create(Registries.BIOME, new ResourceLocation(id)));
         }
     }
 

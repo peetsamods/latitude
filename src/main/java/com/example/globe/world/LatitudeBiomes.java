@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags;
+import net.fabricmc.fabric.api.tag.convention.v1.ConventionalBiomeTags;
 import net.minecraft.core.Holder;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.Registry;
@@ -694,7 +694,7 @@ public final class LatitudeBiomes {
         if (entry == null) {
             return false;
         }
-        return hasBiomeIdentifier(entry, ResourceLocation.parse(id));
+        return hasBiomeIdentifier(entry, new ResourceLocation(id));
     }
 
     public static Collection<Holder<Biome>> expandSourceCandidatePool(Collection<Holder<Biome>> basePool) {
@@ -1100,8 +1100,8 @@ public final class LatitudeBiomes {
     }
 
     private static boolean isUndergroundCaveBiome(Holder<Biome> biome) {
-        return biome != null && (biome.is(ConventionalBiomeTags.IS_CAVE)
-                || biome.is(ConventionalBiomeTags.IS_UNDERGROUND)
+        return biome != null && (biome.is(ConventionalBiomeTags.CAVES)
+                || biome.is(ConventionalBiomeTags.UNDERGROUND)
                 || SURFACE_CAVE_DENYLIST.contains(biomeId(biome)));
     }
 
@@ -3579,63 +3579,63 @@ public final class LatitudeBiomes {
     private static final long SWAMP_PATCH_SALT = 0x53A95A4DL;
     private static final int SWAMP_SUBTROPICAL_PATCH_MAX_OCEAN_DISTANCE = 192;
 
-    private static final TagKey<Biome> LAT_EQUATOR_PRIMARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_equator_primary"));
-    private static final TagKey<Biome> LAT_EQUATOR_SECONDARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_equator_secondary"));
-    private static final TagKey<Biome> LAT_EQUATOR_ACCENT = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_equator_accent"));
+    private static final TagKey<Biome> LAT_EQUATOR_PRIMARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_equator_primary"));
+    private static final TagKey<Biome> LAT_EQUATOR_SECONDARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_equator_secondary"));
+    private static final TagKey<Biome> LAT_EQUATOR_ACCENT = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_equator_accent"));
 
-    private static final TagKey<Biome> LAT_TROPICS_PRIMARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_tropics_primary"));
-    private static final TagKey<Biome> LAT_TROPICS_SECONDARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_tropics_secondary"));
-    private static final TagKey<Biome> LAT_TROPICS_ACCENT = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_tropics_accent"));
+    private static final TagKey<Biome> LAT_TROPICS_PRIMARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_tropics_primary"));
+    private static final TagKey<Biome> LAT_TROPICS_SECONDARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_tropics_secondary"));
+    private static final TagKey<Biome> LAT_TROPICS_ACCENT = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_tropics_accent"));
 
-    private static final TagKey<Biome> LAT_ARID_PRIMARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_arid_primary"));
-    private static final TagKey<Biome> LAT_ARID_SECONDARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_arid_secondary"));
-    private static final TagKey<Biome> LAT_ARID_ACCENT = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_arid_accent"));
+    private static final TagKey<Biome> LAT_ARID_PRIMARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_arid_primary"));
+    private static final TagKey<Biome> LAT_ARID_SECONDARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_arid_secondary"));
+    private static final TagKey<Biome> LAT_ARID_ACCENT = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_arid_accent"));
 
-    private static final TagKey<Biome> LAT_TRANS_ARID_TROPICS_1_PRIMARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_trans_arid_tropics_1_primary"));
-    private static final TagKey<Biome> LAT_TRANS_ARID_TROPICS_1_SECONDARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_trans_arid_tropics_1_secondary"));
-    private static final TagKey<Biome> LAT_TRANS_ARID_TROPICS_1_ACCENT = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_trans_arid_tropics_1_accent"));
+    private static final TagKey<Biome> LAT_TRANS_ARID_TROPICS_1_PRIMARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_trans_arid_tropics_1_primary"));
+    private static final TagKey<Biome> LAT_TRANS_ARID_TROPICS_1_SECONDARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_trans_arid_tropics_1_secondary"));
+    private static final TagKey<Biome> LAT_TRANS_ARID_TROPICS_1_ACCENT = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_trans_arid_tropics_1_accent"));
 
-    private static final TagKey<Biome> LAT_TRANS_ARID_TROPICS_2_PRIMARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_trans_arid_tropics_2_primary"));
-    private static final TagKey<Biome> LAT_TRANS_ARID_TROPICS_2_SECONDARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_trans_arid_tropics_2_secondary"));
-    private static final TagKey<Biome> LAT_TRANS_ARID_TROPICS_2_ACCENT = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_trans_arid_tropics_2_accent"));
+    private static final TagKey<Biome> LAT_TRANS_ARID_TROPICS_2_PRIMARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_trans_arid_tropics_2_primary"));
+    private static final TagKey<Biome> LAT_TRANS_ARID_TROPICS_2_SECONDARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_trans_arid_tropics_2_secondary"));
+    private static final TagKey<Biome> LAT_TRANS_ARID_TROPICS_2_ACCENT = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_trans_arid_tropics_2_accent"));
 
-    private static final TagKey<Biome> LAT_SUBTROPICAL_HUMID_PRIMARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_subtropical_humid_primary"));
-    private static final TagKey<Biome> LAT_SUBTROPICAL_HUMID_SECONDARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_subtropical_humid_secondary"));
-    private static final TagKey<Biome> LAT_SUBTROPICAL_HUMID_ACCENT = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_subtropical_humid_accent"));
+    private static final TagKey<Biome> LAT_SUBTROPICAL_HUMID_PRIMARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_subtropical_humid_primary"));
+    private static final TagKey<Biome> LAT_SUBTROPICAL_HUMID_SECONDARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_subtropical_humid_secondary"));
+    private static final TagKey<Biome> LAT_SUBTROPICAL_HUMID_ACCENT = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_subtropical_humid_accent"));
 
-    private static final TagKey<Biome> LAT_TEMPERATE_PRIMARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_temperate_primary"));
-    private static final TagKey<Biome> LAT_TEMPERATE_SECONDARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_temperate_secondary"));
-    private static final TagKey<Biome> LAT_TEMPERATE_ACCENT = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_temperate_accent"));
-    private static final TagKey<Biome> LAT_TEMPERATE_MOUNTAIN = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_temperate_mountain"));
-    private static final TagKey<Biome> LAT_TEMPERATE_WETLAND = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_temperate_wetland"));
+    private static final TagKey<Biome> LAT_TEMPERATE_PRIMARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_temperate_primary"));
+    private static final TagKey<Biome> LAT_TEMPERATE_SECONDARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_temperate_secondary"));
+    private static final TagKey<Biome> LAT_TEMPERATE_ACCENT = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_temperate_accent"));
+    private static final TagKey<Biome> LAT_TEMPERATE_MOUNTAIN = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_temperate_mountain"));
+    private static final TagKey<Biome> LAT_TEMPERATE_WETLAND = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_temperate_wetland"));
 
-    private static final TagKey<Biome> LAT_SUBPOLAR_PRIMARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_subpolar_primary"));
-    private static final TagKey<Biome> LAT_SUBPOLAR_SECONDARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_subpolar_secondary"));
-    private static final TagKey<Biome> LAT_SUBPOLAR_ACCENT = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_subpolar_accent"));
+    private static final TagKey<Biome> LAT_SUBPOLAR_PRIMARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_subpolar_primary"));
+    private static final TagKey<Biome> LAT_SUBPOLAR_SECONDARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_subpolar_secondary"));
+    private static final TagKey<Biome> LAT_SUBPOLAR_ACCENT = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_subpolar_accent"));
 
-    private static final TagKey<Biome> LAT_POLAR_PRIMARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_polar_primary"));
-    private static final TagKey<Biome> LAT_POLAR_SECONDARY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_polar_secondary"));
-    private static final TagKey<Biome> LAT_POLAR_ACCENT = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_polar_accent"));
+    private static final TagKey<Biome> LAT_POLAR_PRIMARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_polar_primary"));
+    private static final TagKey<Biome> LAT_POLAR_SECONDARY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_polar_secondary"));
+    private static final TagKey<Biome> LAT_POLAR_ACCENT = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_polar_accent"));
 
-    private static final TagKey<Biome> LAT_OCEAN_TROPICAL = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_ocean_tropical"));
+    private static final TagKey<Biome> LAT_OCEAN_TROPICAL = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_ocean_tropical"));
     // Beach and river admission. Before these existed both were hard authorities hardcoded to
     // vanilla ids -- pickBeachForBand returned minecraft:beach/snowy_beach/stony_shore literals and
     // the river branch returned minecraft:river/frozen_river literals -- so NO pack's beach or river
     // could ever be admitted, by data or otherwise. These follow the lat_ocean_* precedent, which is
     // a live tag authority (unlike the land lat_* tags, which the ledger shadows).
-    private static final TagKey<Biome> LAT_BEACH_TROPICAL = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_beach_tropical"));
-    private static final TagKey<Biome> LAT_BEACH_TEMPERATE = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_beach_temperate"));
-    private static final TagKey<Biome> LAT_BEACH_COLD_SNOWY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_beach_cold_snowy"));
-    private static final TagKey<Biome> LAT_BEACH_COLD_ROCKY = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_beach_cold_rocky"));
-    private static final TagKey<Biome> LAT_RIVER_WARM = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_river_warm"));
+    private static final TagKey<Biome> LAT_BEACH_TROPICAL = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_beach_tropical"));
+    private static final TagKey<Biome> LAT_BEACH_TEMPERATE = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_beach_temperate"));
+    private static final TagKey<Biome> LAT_BEACH_COLD_SNOWY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_beach_cold_snowy"));
+    private static final TagKey<Biome> LAT_BEACH_COLD_ROCKY = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_beach_cold_rocky"));
+    private static final TagKey<Biome> LAT_RIVER_WARM = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_river_warm"));
     // Subtropical rivers draw from their own pool so a tropical-declared pack river can never
     // surface poleward of the tropical band (maintainer ruling, 2026-08-16).
-    private static final TagKey<Biome> LAT_RIVER_SUBTROPICAL = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_river_subtropical"));
-    private static final TagKey<Biome> LAT_RIVER_TEMPERATE = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_river_temperate"));
-    private static final TagKey<Biome> LAT_RIVER_FROZEN = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_river_frozen"));
-    private static final TagKey<Biome> LAT_OCEAN_TEMPERATE = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_ocean_temperate"));
-    private static final TagKey<Biome> LAT_OCEAN_SUBPOLAR = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_ocean_subpolar"));
-    private static final TagKey<Biome> LAT_OCEAN_POLAR = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_ocean_polar"));
+    private static final TagKey<Biome> LAT_RIVER_SUBTROPICAL = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_river_subtropical"));
+    private static final TagKey<Biome> LAT_RIVER_TEMPERATE = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_river_temperate"));
+    private static final TagKey<Biome> LAT_RIVER_FROZEN = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_river_frozen"));
+    private static final TagKey<Biome> LAT_OCEAN_TEMPERATE = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_ocean_temperate"));
+    private static final TagKey<Biome> LAT_OCEAN_SUBPOLAR = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_ocean_subpolar"));
+    private static final TagKey<Biome> LAT_OCEAN_POLAR = TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_ocean_polar"));
 
     private enum TransitionMode {
         SMOOTH_WARP,
@@ -6620,8 +6620,8 @@ public final class LatitudeBiomes {
     }
 
     private static Holder<Biome> biome(Registry<Biome> biomes, String id) {
-        ResourceLocation ident = ResourceLocation.parse(id);
-        return biomes.getHolder(ident).orElseThrow();
+        ResourceLocation ident = new ResourceLocation(id);
+        return biomes.getHolder(ResourceKey.create(Registries.BIOME, ident)).orElseThrow();
     }
 
     private static Holder<Biome> pickFrom(Registry<Biome> biomes, int blockX, int blockZ, int bandIndex, String... options) {
@@ -8574,9 +8574,9 @@ public final class LatitudeBiomes {
      * <p>Deliberately NOT a substring match on "windswept": {@code minecraft:windswept_savanna} is
      * a hot savanna variant that lives in the warm bands and has nothing to do with this family.
      */
-    private static final ResourceLocation COLD_WINDSWEPT_HILLS_ID = ResourceLocation.parse("minecraft:windswept_hills");
-    private static final ResourceLocation COLD_WINDSWEPT_FOREST_ID = ResourceLocation.parse("minecraft:windswept_forest");
-    private static final ResourceLocation COLD_WINDSWEPT_GRAVELLY_ID = ResourceLocation.parse("minecraft:windswept_gravelly_hills");
+    private static final ResourceLocation COLD_WINDSWEPT_HILLS_ID = new ResourceLocation("minecraft:windswept_hills");
+    private static final ResourceLocation COLD_WINDSWEPT_FOREST_ID = new ResourceLocation("minecraft:windswept_forest");
+    private static final ResourceLocation COLD_WINDSWEPT_GRAVELLY_ID = new ResourceLocation("minecraft:windswept_gravelly_hills");
 
     private static boolean isColdWindsweptFamilyBiome(Holder<Biome> candidate) {
         // Resolve the identifier ONCE. The three-isBiomeId form unwrapped the holder's key three
@@ -9162,10 +9162,10 @@ public final class LatitudeBiomes {
      */
     /** The maintainer's own polar roster: biomes she placed in the polar pools by hand. */
     private static final List<TagKey<Biome>> POLAR_ROSTER_TAGS = List.of(
-            TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_polar")),
-            TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_polar_primary")),
-            TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_polar_secondary")),
-            TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", "lat_polar_accent")));
+            TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_polar")),
+            TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_polar_primary")),
+            TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_polar_secondary")),
+            TagKey.create(Registries.BIOME, new ResourceLocation("globe", "lat_polar_accent")));
 
     private static boolean hasTreedVegetalDecoration(Holder<Biome> candidate) {
         String id = candidate.unwrapKey().map(key -> key.location().toString()).orElse(null);
@@ -9934,7 +9934,7 @@ public final class LatitudeBiomes {
     private static Holder<Biome> entryById(Collection<Holder<Biome>> biomes, String id) {
         // Same parse cache the registry-side id match uses. This is the collection twin of a warm-belt
         // hot path, so it was re-parsing a constant string per call while its sibling did not.
-        ResourceLocation target = ID_PARSE_CACHE.computeIfAbsent(id, ResourceLocation::parse);
+        ResourceLocation target = ID_PARSE_CACHE.computeIfAbsent(id, ResourceLocation::new);
         for (Holder<Biome> entry : biomes) {
             var key = entry.unwrapKey();
             if (key.isPresent() && key.get().location().equals(target)) {
@@ -10027,7 +10027,7 @@ public final class LatitudeBiomes {
         if (entry == null) {
             return false;
         }
-        ResourceLocation target = ID_PARSE_CACHE.computeIfAbsent(id, ResourceLocation::parse);
+        ResourceLocation target = ID_PARSE_CACHE.computeIfAbsent(id, ResourceLocation::new);
         return hasBiomeIdentifier(entry, target);
     }
 
@@ -12000,7 +12000,7 @@ public final class LatitudeBiomes {
             }
             boolean isWater = biome.is(BiomeTags.IS_OCEAN) || biome.is(BiomeTags.IS_RIVER);
             // Treat mangrove itself as land for the scan to avoid self-justification.
-            boolean isMangrove = biome.unwrapKey().map(k -> k.location().equals(ResourceLocation.parse(MANGROVE_ID))).orElse(false);
+            boolean isMangrove = biome.unwrapKey().map(k -> k.location().equals(new ResourceLocation(MANGROVE_ID))).orElse(false);
             if (isWater && !isMangrove) {
                 waterCount++;
                 shallowWaterCount++; // biome-based scan cannot tell depth; count as shallow

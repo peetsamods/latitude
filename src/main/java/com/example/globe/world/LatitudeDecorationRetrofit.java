@@ -1,7 +1,6 @@
 package com.example.globe.world;
 
 import com.example.globe.GlobeMod;
-import com.mojang.serialization.Codec;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -10,8 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
-import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -20,6 +17,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -30,7 +28,7 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
-import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraft.world.level.levelgen.WorldgenRandom;
 import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
@@ -66,11 +64,9 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
  * tag list below must stay APPEND-ONLY history: removing an entry would widen retrofit onto
  * chunks that were never bare.
  *
- * <p>Chunks are marked with a persistent {@code globe:retrofit_decorated} attachment once handled
- * — and every newly generated chunk is marked at decoration time by
- * {@code ChunkGeneratorGenerateFeaturesBiomeSetMixin} — so no chunk is ever processed twice, and
- * post-fix chunks are never touched at all. Work is throttled to two chunks per server tick, with
- * at most 2,048 chunks pending at once.
+ * <p>Handled chunks are recorded on the world state, which persists the marker with the save, so
+ * no chunk is ever processed twice. Work is throttled to two chunks per server tick, with at most
+ * 2,048 chunks pending at once.
  *
  * <p>On a world that never captured a provider-ticket profile (created by a dedicated server
  * before that fix), enabling the retrofit also adopts a profile so NEW chunks gain the full
@@ -119,11 +115,6 @@ public final class LatitudeDecorationRetrofit {
             "lat_ocean_polar"
     };
 
-    /** Present (true) on any chunk whose eligible biomes were decorated under the fixed index. */
-    public static final AttachmentType<Boolean> DECORATED_UNDER_FIXED_INDEX =
-            AttachmentRegistry.createPersistent(
-                    ResourceLocation.fromNamespaceAndPath("globe", "retrofit_decorated"), Codec.BOOL);
-
     private static final int CHUNKS_PER_TICK = 2;
     private static final int MAX_PENDING_CHUNKS = 2048;
     private static final int ENABLE_SWEEP_RADIUS_CHUNKS = 10;
@@ -149,20 +140,33 @@ public final class LatitudeDecorationRetrofit {
     }
 
     public static void init() {
-        // Touch the attachment type so registration happens during mod init, before any world
-        // exists; the field initializer performs the actual registration.
-        // Fabric API 0.115.6 (1.21.1) names the attachment accessor identifier(), not location().
-        ResourceLocation registered = DECORATED_UNDER_FIXED_INDEX.identifier();
-        GlobeMod.LOGGER.debug("[Latitude] retrofit chunk marker registered: {}", registered);
-
         ServerChunkEvents.CHUNK_LOAD.register(LatitudeDecorationRetrofit::onChunkLoad);
         ServerTickEvents.END_SERVER_TICK.register(LatitudeDecorationRetrofit::onEndTick);
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> clearQueueState());
     }
 
-    /** Marks a chunk as decorated under the fixed index; called from the decoration mixin. */
+    /**
+     * Marks a chunk as decorated under the fixed index; called from the decoration mixin and once
+     * more for every chunk the repair loop handles.
+     *
+     * <p>The 1.20 range has no per-chunk attachment API, so the marker lives on the world state
+     * instead of on the chunk. The world state is only safe to touch from the server thread, which
+     * is why a chunk that has no loaded server level in reach — every chunk still being generated —
+     * records nothing here.</p>
+     */
     public static void markDecoratedUnderFixedIndex(ChunkAccess chunk) {
-        chunk.setAttached(DECORATED_UNDER_FIXED_INDEX, Boolean.TRUE);
+        if (!(chunk instanceof LevelChunk loaded)
+                || !(loaded.getLevel() instanceof ServerLevel world)
+                || !isEnabled(world)) {
+            return;
+        }
+        LatitudeWorldState.get(world).markRetrofitted(loaded.getPos().toLong());
+    }
+
+    /** Whether this chunk was already decorated under the fixed index. */
+    private static boolean isDecoratedUnderFixedIndex(ServerLevel world, ChunkPos pos) {
+        LatitudeWorldState state = LatitudeWorldState.getIfPresent(world);
+        return state != null && state.isRetrofitted(pos.toLong());
     }
 
     public static boolean isEnabled(ServerLevel world) {
@@ -266,7 +270,7 @@ public final class LatitudeDecorationRetrofit {
         if (world != world.getServer().overworld() || !isEnabled(world)) {
             return;
         }
-        if (Boolean.TRUE.equals(chunk.getAttached(DECORATED_UNDER_FIXED_INDEX))) {
+        if (isDecoratedUnderFixedIndex(world, chunk.getPos())) {
             return;
         }
         if (!enqueue(chunk.getPos())) {
@@ -321,7 +325,7 @@ public final class LatitudeDecorationRetrofit {
                     ChunkAccess chunk = world.getChunkSource()
                             .getChunk(center.x + dx, center.z + dz, ChunkStatus.FULL, false);
                     if (chunk instanceof LevelChunk level
-                            && !Boolean.TRUE.equals(level.getAttached(DECORATED_UNDER_FIXED_INDEX))) {
+                            && !isDecoratedUnderFixedIndex(world, level.getPos())) {
                         if (enqueue(level.getPos())) {
                             seeded++;
                         }
@@ -340,7 +344,7 @@ public final class LatitudeDecorationRetrofit {
         if (!(access instanceof LevelChunk chunk)) {
             return;
         }
-        if (Boolean.TRUE.equals(chunk.getAttached(DECORATED_UNDER_FIXED_INDEX))) {
+        if (isDecoratedUnderFixedIndex(world, pos)) {
             return;
         }
         CHUNKS_SCANNED.incrementAndGet();
@@ -431,7 +435,7 @@ public final class LatitudeDecorationRetrofit {
         // Re-resolve through the registry so downstream feature lookups use canonical holders.
         List<Holder<Biome>> out = new ArrayList<>();
         for (ResourceLocation id : found.keySet()) {
-            registry.getHolder(id).ifPresent(out::add);
+            registry.getHolder(ResourceKey.create(Registries.BIOME, id)).ifPresent(out::add);
         }
         return out;
     }
@@ -485,7 +489,7 @@ public final class LatitudeDecorationRetrofit {
     public static List<Holder<Biome>> allPaintableCustomBiomes(Registry<Biome> biomeRegistry) {
         Map<ResourceLocation, Holder<Biome>> out = new LinkedHashMap<>();
         for (String tagPath : DECORATION_POLICY_TAG_PATHS) {
-            TagKey<Biome> tag = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", tagPath));
+            TagKey<Biome> tag = TagKey.create(Registries.BIOME, new ResourceLocation("globe", tagPath));
             for (Holder<Biome> holder : biomeRegistry.getTagOrEmpty(tag)) {
                 holder.unwrapKey().ifPresent(key -> {
                     ResourceLocation id = key.location();
@@ -500,7 +504,8 @@ public final class LatitudeDecorationRetrofit {
             if (id == null || "minecraft".equals(id.getNamespace()) || out.containsKey(id)) {
                 continue;
             }
-            biomeRegistry.getHolder(id).ifPresent(holder -> out.putIfAbsent(id, holder));
+            biomeRegistry.getHolder(ResourceKey.create(Registries.BIOME, id))
+                    .ifPresent(holder -> out.putIfAbsent(id, holder));
         }
         return List.copyOf(out.values());
     }
@@ -513,7 +518,7 @@ public final class LatitudeDecorationRetrofit {
         Registry<Biome> registry = world.registryAccess().registryOrThrow(Registries.BIOME);
         Set<ResourceLocation> tagged = new HashSet<>();
         for (String tagPath : DECORATION_POLICY_TAG_PATHS) {
-            TagKey<Biome> tag = TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath("globe", tagPath));
+            TagKey<Biome> tag = TagKey.create(Registries.BIOME, new ResourceLocation("globe", tagPath));
             for (Holder<Biome> holder : registry.getTagOrEmpty(tag)) {
                 holder.unwrapKey().ifPresent(key -> tagged.add(key.location()));
             }
@@ -524,7 +529,7 @@ public final class LatitudeDecorationRetrofit {
             if (id == null || "minecraft".equals(id.getNamespace()) || tagged.contains(id)) {
                 continue;
             }
-            if (registry.getHolder(id).isPresent()) {
+            if (registry.getHolder(ResourceKey.create(Registries.BIOME, id)).isPresent()) {
                 out.add(id);
             }
         }

@@ -28,7 +28,7 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(SimpleBlockFeature.class)
 public class ExtremePolarSimpleFoliageGuardMixin {
     private static final TagKey<Block> POLAR_FOLIAGE =
-            TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("globe", "polar_foliage"));
+            TagKey.create(Registries.BLOCK, new ResourceLocation("globe", "polar_foliage"));
 
     /**
      * 26.2 suppressed a placement by returning null from {@code BlockStateProvider.getOptionalState},

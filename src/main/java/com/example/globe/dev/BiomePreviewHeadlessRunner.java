@@ -23,7 +23,7 @@ import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGenerator;
-import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.RandomState;
@@ -70,7 +70,7 @@ public final class BiomePreviewHeadlessRunner {
     private static final int PREVIEW_RADIUS_MASSIVE = 20000;
     private static final int PREVIEW_RADIUS_MAX = PREVIEW_RADIUS_MASSIVE;
     private static final ResourceKey<NoiseGeneratorSettings> GLOBE_REGULAR_SETTINGS_KEY =
-            ResourceKey.create(Registries.NOISE_SETTINGS, ResourceLocation.fromNamespaceAndPath("globe", "overworld_regular"));
+            ResourceKey.create(Registries.NOISE_SETTINGS, new ResourceLocation("globe", "overworld_regular"));
 
     private BiomePreviewHeadlessRunner() {
     }

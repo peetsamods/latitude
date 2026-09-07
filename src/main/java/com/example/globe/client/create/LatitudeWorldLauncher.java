@@ -80,9 +80,9 @@ public final class LatitudeWorldLauncher {
             // ── 1. Size preset resolution ──
             net.minecraft.resources.ResourceLocation presetId;
             if (worldTypeIdx == 2) {
-                presetId = net.minecraft.resources.ResourceLocation.withDefaultNamespace("flat");
+                presetId = new net.minecraft.resources.ResourceLocation("flat");
             } else if (worldTypeIdx == 1) {
-                presetId = net.minecraft.resources.ResourceLocation.withDefaultNamespace("normal");
+                presetId = new net.minecraft.resources.ResourceLocation("normal");
             } else {
                 presetId = size.worldPresetId;
             }

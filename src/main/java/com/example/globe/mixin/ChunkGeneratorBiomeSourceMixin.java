@@ -44,12 +44,12 @@ public abstract class ChunkGeneratorBiomeSourceMixin {
     private static final String GLOBE_SETTINGS_CHECKED =
             "globe:overworld|globe:overworld_xsmall|globe:overworld_small|globe:overworld_regular|globe:overworld_large|globe:overworld_massive";
 
-    private static final ResourceLocation GLOBE_SETTINGS_ID = ResourceLocation.fromNamespaceAndPath("globe", "overworld");
-    private static final ResourceLocation GLOBE_SETTINGS_XSMALL_ID = ResourceLocation.fromNamespaceAndPath("globe", "overworld_xsmall");
-    private static final ResourceLocation GLOBE_SETTINGS_SMALL_ID = ResourceLocation.fromNamespaceAndPath("globe", "overworld_small");
-    private static final ResourceLocation GLOBE_SETTINGS_REGULAR_ID = ResourceLocation.fromNamespaceAndPath("globe", "overworld_regular");
-    private static final ResourceLocation GLOBE_SETTINGS_LARGE_ID = ResourceLocation.fromNamespaceAndPath("globe", "overworld_large");
-    private static final ResourceLocation GLOBE_SETTINGS_MASSIVE_ID = ResourceLocation.fromNamespaceAndPath("globe", "overworld_massive");
+    private static final ResourceLocation GLOBE_SETTINGS_ID = new ResourceLocation("globe", "overworld");
+    private static final ResourceLocation GLOBE_SETTINGS_XSMALL_ID = new ResourceLocation("globe", "overworld_xsmall");
+    private static final ResourceLocation GLOBE_SETTINGS_SMALL_ID = new ResourceLocation("globe", "overworld_small");
+    private static final ResourceLocation GLOBE_SETTINGS_REGULAR_ID = new ResourceLocation("globe", "overworld_regular");
+    private static final ResourceLocation GLOBE_SETTINGS_LARGE_ID = new ResourceLocation("globe", "overworld_large");
+    private static final ResourceLocation GLOBE_SETTINGS_MASSIVE_ID = new ResourceLocation("globe", "overworld_massive");
 
     private static final ResourceKey<NoiseGeneratorSettings> GLOBE_SETTINGS_KEY =
             ResourceKey.create(Registries.NOISE_SETTINGS, GLOBE_SETTINGS_ID);

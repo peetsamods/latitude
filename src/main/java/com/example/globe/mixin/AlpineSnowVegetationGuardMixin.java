@@ -50,7 +50,7 @@ public class AlpineSnowVegetationGuardMixin {
 
     @Unique
     private static final TagKey<Block> GLOBE_ALPINE_FOLIAGE =
-            TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("globe", "polar_foliage"));
+            TagKey.create(Registries.BLOCK, new ResourceLocation("globe", "polar_foliage"));
 
     @Unique
     private static final BlockState GLOBE_ALPINE_AIR = Blocks.AIR.defaultBlockState();

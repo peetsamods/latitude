@@ -5,15 +5,15 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 public enum GlobeWorldSize {
-    ITTY_BITTY(Component.literal("Itty Bitty (7,500 x 7,500)"), ResourceLocation.fromNamespaceAndPath("globe", "globe_xsmall"), 3750),
-    TINY(Component.literal("Tiny (10,000 x 10,000)"),           ResourceLocation.fromNamespaceAndPath("globe", "globe_small"), 5000),
-    SMALL(Component.literal("Small (15,000 x 15,000)"),         ResourceLocation.fromNamespaceAndPath("globe", "globe_regular"), 7500),
+    ITTY_BITTY(Component.literal("Itty Bitty (7,500 x 7,500)"), new ResourceLocation("globe", "globe_xsmall"), 3750),
+    TINY(Component.literal("Tiny (10,000 x 10,000)"),           new ResourceLocation("globe", "globe_small"), 5000),
+    SMALL(Component.literal("Small (15,000 x 15,000)"),         new ResourceLocation("globe", "globe_regular"), 7500),
 
-    REGULAR(Component.literal("Regular (20,000 x 20,000)"),     ResourceLocation.fromNamespaceAndPath("globe", "globe_large"), 10000),
-    LARGE(Component.literal("Large (30,000 x 30,000)"),         ResourceLocation.fromNamespaceAndPath("globe", "globe"), 15000),
+    REGULAR(Component.literal("Regular (20,000 x 20,000)"),     new ResourceLocation("globe", "globe_large"), 10000),
+    LARGE(Component.literal("Large (30,000 x 30,000)"),         new ResourceLocation("globe", "globe"), 15000),
     MASSIVE(
             Component.literal("Ginormous! (40,000 x 40,000)").withStyle(ChatFormatting.ITALIC),
-            ResourceLocation.fromNamespaceAndPath("globe", "globe_massive"),
+            new ResourceLocation("globe", "globe_massive"),
             20000
     );
 

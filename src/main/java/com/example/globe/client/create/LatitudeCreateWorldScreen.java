@@ -403,7 +403,7 @@ public class LatitudeCreateWorldScreen extends Screen {
                 || effectivePresetId.equals(selectedPreset.location().toString())) {
             return selectedPreset;
         }
-        return ResourceKey.create(Registries.WORLD_PRESET, ResourceLocation.parse(effectivePresetId));
+        return ResourceKey.create(Registries.WORLD_PRESET, new ResourceLocation(effectivePresetId));
     }
 
     @Nullable

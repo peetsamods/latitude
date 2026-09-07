@@ -66,11 +66,11 @@ public class ProtoChunkPolarVegetationGuardMixin {
 
     @Unique
     private static final TagKey<Block> POLAR_FOLIAGE =
-            TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("globe", "polar_foliage"));
+            TagKey.create(Registries.BLOCK, new ResourceLocation("globe", "polar_foliage"));
 
     @Unique
     private static final TagKey<Block> POLAR_WOODY =
-            TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("globe", "polar_woody"));
+            TagKey.create(Registries.BLOCK, new ResourceLocation("globe", "polar_woody"));
 
     @Unique
     private static final BlockState AIR_STATE = Blocks.AIR.defaultBlockState();

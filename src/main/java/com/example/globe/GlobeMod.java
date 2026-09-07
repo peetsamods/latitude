@@ -44,7 +44,7 @@ import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.chunk.ChunkGenerator;
-import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
@@ -113,13 +113,13 @@ public class GlobeMod implements ModInitializer {
         HOPELESS
     }
 
-    private static final ResourceLocation GLOBE_SETTINGS_ID = ResourceLocation.fromNamespaceAndPath(MOD_ID, "overworld");
-    private static final ResourceLocation GLOBE_SETTINGS_XSMALL_ID = ResourceLocation.fromNamespaceAndPath(MOD_ID, "overworld_xsmall");
-    private static final ResourceLocation GLOBE_SETTINGS_SMALL_ID = ResourceLocation.fromNamespaceAndPath(MOD_ID, "overworld_small");
-    private static final ResourceLocation GLOBE_SETTINGS_REGULAR_ID = ResourceLocation.fromNamespaceAndPath(MOD_ID, "overworld_regular");
+    private static final ResourceLocation GLOBE_SETTINGS_ID = new ResourceLocation(MOD_ID, "overworld");
+    private static final ResourceLocation GLOBE_SETTINGS_XSMALL_ID = new ResourceLocation(MOD_ID, "overworld_xsmall");
+    private static final ResourceLocation GLOBE_SETTINGS_SMALL_ID = new ResourceLocation(MOD_ID, "overworld_small");
+    private static final ResourceLocation GLOBE_SETTINGS_REGULAR_ID = new ResourceLocation(MOD_ID, "overworld_regular");
 
-    private static final ResourceLocation GLOBE_SETTINGS_LARGE_ID = ResourceLocation.fromNamespaceAndPath(MOD_ID, "overworld_large");
-    private static final ResourceLocation GLOBE_SETTINGS_MASSIVE_ID = ResourceLocation.fromNamespaceAndPath(MOD_ID, "overworld_massive");
+    private static final ResourceLocation GLOBE_SETTINGS_LARGE_ID = new ResourceLocation(MOD_ID, "overworld_large");
+    private static final ResourceLocation GLOBE_SETTINGS_MASSIVE_ID = new ResourceLocation(MOD_ID, "overworld_massive");
 
     private static final ResourceKey<NoiseGeneratorSettings> GLOBE_SETTINGS_KEY = ResourceKey.create(net.minecraft.core.registries.Registries.NOISE_SETTINGS, GLOBE_SETTINGS_ID);
     private static final ResourceKey<NoiseGeneratorSettings> GLOBE_SETTINGS_XSMALL_KEY = ResourceKey.create(net.minecraft.core.registries.Registries.NOISE_SETTINGS, GLOBE_SETTINGS_XSMALL_ID);

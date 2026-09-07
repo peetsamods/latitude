@@ -3,7 +3,6 @@ package com.example.globe.world.feature;
 import com.example.globe.util.ValueNoise2D;
 import com.example.globe.world.LatitudeWorldgenScope;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
@@ -100,7 +99,7 @@ public class RiparianPlacement extends PlacementFilter {
         return offsets.toArray(new int[0][]);
     }
 
-    public static final MapCodec<RiparianPlacement> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+    public static final Codec<RiparianPlacement> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             // Capped at 15 on purpose: a feature may start 15 blocks into its own chunk, and the
             // decoration region only reaches one chunk out, so 15 + 15 is the last offset that is
             // guaranteed readable.

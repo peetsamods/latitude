@@ -116,7 +116,7 @@ public class GlobeModClient implements ClientModInitializer {
 
         List<Block> blocks = new ArrayList<>();
         for (String blockId : PROMENADE_PALM_TINT_BLOCKS) {
-            ResourceLocation id = ResourceLocation.parse(blockId);
+            ResourceLocation id = new ResourceLocation(blockId);
             if (BuiltInRegistries.BLOCK.containsKey(id)) {
                 blocks.add(BuiltInRegistries.BLOCK.get(id));
             }

@@ -28,7 +28,7 @@ import net.minecraft.world.Difficulty;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.chunk.ChunkAccess;
-import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.storage.LevelData;
 import java.util.ArrayDeque;
@@ -47,7 +47,7 @@ public final class AutoCreateWorldProbe {
     private AutoCreateWorldProbe() {
     }
 
-    private static final ResourceLocation MANGROVE_SWAMP_ID = ResourceLocation.fromNamespaceAndPath("minecraft", "mangrove_swamp");
+    private static final ResourceLocation MANGROVE_SWAMP_ID = new ResourceLocation("minecraft", "mangrove_swamp");
     private static final int DEFAULT_AUTO_CREATE_WORLD_PROBE_POST_ENTRY_WAIT_TICKS = 60;
     private static final int DEFAULT_AUTO_CREATE_WORLD_PROBE_SPAWN_SCAN_RADIUS = 768;
     private static final int DEFAULT_AUTO_CREATE_WORLD_PROBE_SPAWN_SCAN_STEP = 32;

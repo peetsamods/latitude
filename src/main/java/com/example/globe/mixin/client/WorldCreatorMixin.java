@@ -20,7 +20,7 @@ import net.minecraft.world.level.levelgen.presets.WorldPreset;
 
 @Mixin(WorldCreationUiState.class)
 public abstract class WorldCreatorMixin implements VanillaOnlyWorldCreationState {
-    private static final ResourceLocation GLOBE_WORLD_PRESET_ID = ResourceLocation.fromNamespaceAndPath("globe", "globe");
+    private static final ResourceLocation GLOBE_WORLD_PRESET_ID = new ResourceLocation("globe", "globe");
 
     @Shadow
     private WorldCreationContext settings;

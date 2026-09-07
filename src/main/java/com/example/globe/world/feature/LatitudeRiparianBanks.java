@@ -12,6 +12,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
@@ -39,15 +40,15 @@ public final class LatitudeRiparianBanks {
             Boolean.parseBoolean(System.getProperty("latitude.riparianDesertBanks", "true"));
 
     private static final ResourceLocation RIPARIAN_TYPE_ID =
-            ResourceLocation.fromNamespaceAndPath(GlobeMod.MOD_ID, "riparian");
+            new ResourceLocation(GlobeMod.MOD_ID, "riparian");
 
     /**
      * Order is load-bearing: the ground patch has to exist before the plants that stand on it, and
      * this list is the order the features are appended to the vegetal step in.
      */
     private static final List<ResourceLocation> ORDERED_FEATURE_IDS = List.of(
-            ResourceLocation.fromNamespaceAndPath(GlobeMod.MOD_ID, "riparian/desert_bank_soil"),
-            ResourceLocation.fromNamespaceAndPath(GlobeMod.MOD_ID, "riparian/desert_bank_plants"));
+            new ResourceLocation(GlobeMod.MOD_ID, "riparian/desert_bank_soil"),
+            new ResourceLocation(GlobeMod.MOD_ID, "riparian/desert_bank_plants"));
 
     /** Ledger-described arid surface land: vanilla desert and the badlands family, plus any
      *  optional-mod identity the ledger routes the same way. */
@@ -103,7 +104,7 @@ public final class LatitudeRiparianBanks {
         }
         List<Holder<PlacedFeature>> resolved = new ArrayList<>(ORDERED_FEATURE_IDS.size());
         for (ResourceLocation id : ORDERED_FEATURE_IDS) {
-            Optional<Holder.Reference<PlacedFeature>> holder = registry.get().getHolder(id);
+            Optional<Holder.Reference<PlacedFeature>> holder = registry.get().getHolder(ResourceKey.create(Registries.PLACED_FEATURE, id));
             if (holder.isEmpty()) {
                 GlobeMod.LOGGER.warn("[LAT][RIPARIAN] missing placed feature {}; desert banks stay bare", id);
                 return List.of();
@@ -117,7 +118,7 @@ public final class LatitudeRiparianBanks {
         Set<ResourceLocation> ids = new HashSet<>();
         for (BiomeDescriptorLedger.Descriptor descriptor : BiomeDescriptorLedger.descriptors()) {
             if (BiomeDescriptorLedger.isAridSurfaceLand(descriptor.biomeId())) {
-                ids.add(ResourceLocation.parse(descriptor.biomeId()));
+                ids.add(new ResourceLocation(descriptor.biomeId()));
             }
         }
         return Set.copyOf(ids);
