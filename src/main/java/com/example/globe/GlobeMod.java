@@ -20,9 +20,11 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
@@ -37,7 +39,6 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.RelativeMovement;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.BundleContents;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeSource;
@@ -49,8 +50,9 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.RandomState;
-import net.minecraft.world.RandomizableContainer;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 import net.minecraft.world.level.storage.LevelData;
@@ -76,6 +78,9 @@ public class GlobeMod implements ModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     private static final String SPAWN_CHOSEN_TAG = "globe_spawn_chosen";
+    // The list tag a bundle item keeps its stored stacks in. Vanilla declares it privately, so
+    // the key is repeated here rather than referenced.
+    private static final String BUNDLE_ITEMS_TAG = "Items";
     // Duplicates vanilla's own join logging once per player join; opt-in only (maintainer ruling, 2026-08-18).
     private static final boolean DEBUG_JOIN = Boolean.getBoolean("latitude.debugJoin");
 
@@ -226,9 +231,10 @@ public class GlobeMod implements ModInitializer {
             }
         });
 
-        ServerPlayNetworking.registerGlobalReceiver(GlobeNet.SetSpawnPickerPayload.ID, (payload, context) -> {
-            context.server().execute(() -> applySpawnChoice(context.player(), payload.zoneId()));
-        });
+        ServerPlayNetworking.registerGlobalReceiver(GlobeNet.SetSpawnPickerPayload.ID,
+                (payload, player, responseSender) -> {
+                    player.server.execute(() -> applySpawnChoice(player, payload.zoneId()));
+                });
 
         ServerTickEvents.END_SERVER_TICK.register(GlobeMod::borderUxTick);
 
@@ -754,8 +760,20 @@ public class GlobeMod implements ModInitializer {
             }
 
             world.setBlock(chestPos, Blocks.CHEST.defaultBlockState(), 2);
-            RandomizableContainer.setBlockEntityLootTable(
-                    world, world.getRandom(), chestPos, BuiltInLootTables.SPAWN_BONUS_CHEST);
+            // Vanilla's own "attach a loot table to the container at this position" helper moved
+            // class and changed shape inside the supported Minecraft range, so neither form can be
+            // named from source that has to serve all of it. Writing the two loot-table keys the
+            // container reads is the one route that is identical on every supported version: it is
+            // the same pair of fields the helper assigns, and the same pair a saved chest restores.
+            BlockEntity placed = world.getBlockEntity(chestPos);
+            if (placed instanceof RandomizableContainerBlockEntity) {
+                CompoundTag lootTag = new CompoundTag();
+                lootTag.putString(RandomizableContainerBlockEntity.LOOT_TABLE_TAG,
+                        BuiltInLootTables.SPAWN_BONUS_CHEST.toString());
+                lootTag.putLong(RandomizableContainerBlockEntity.LOOT_TABLE_SEED_TAG,
+                        world.getRandom().nextLong());
+                placed.load(lootTag);
+            }
 
             BlockState torch = Blocks.TORCH.defaultBlockState();
             int torches = 0;
@@ -1294,10 +1312,15 @@ public class GlobeMod implements ModInitializer {
         if (depth >= 6) return false;
 
         if (stack.is(Items.BUNDLE)) {
-            BundleContents contents = stack.get(DataComponents.BUNDLE_CONTENTS);
-            if (contents != null) {
-                for (var inside : contents.items()) {
-                    if (containsCompass(inside, depth + 1)) return true;
+            // A bundle's contents live in the stack's own NBT on this line: the list tag the
+            // bundle item reads, holding one saved item compound per stored stack. Restoring each
+            // compound gives back the nested stack -- including a bundle inside a bundle, whose
+            // own list rides along in its tag -- so the recursion below is unchanged.
+            CompoundTag tag = stack.getTag();
+            if (tag != null) {
+                ListTag stored = tag.getList(BUNDLE_ITEMS_TAG, Tag.TAG_COMPOUND);
+                for (int i = 0; i < stored.size(); i++) {
+                    if (containsCompass(ItemStack.of(stored.getCompound(i)), depth + 1)) return true;
                 }
             }
         }

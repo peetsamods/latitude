@@ -1,10 +1,8 @@
 package com.example.globe;
 
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.fabricmc.fabric.api.networking.v1.FabricPacket;
+import net.fabricmc.fabric.api.networking.v1.PacketType;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 
 public final class GlobeNet {
@@ -13,16 +11,21 @@ public final class GlobeNet {
     private GlobeNet() {
     }
 
+    /**
+     * Claims the three channel ids.
+     *
+     * <p>On this Minecraft line the id is claimed by {@code PacketType.create}, which runs inside
+     * each payload record's static initialiser rather than in a separate registry call. Naming the
+     * three constants here is what forces those initialisers, so every id is still claimed at
+     * exactly the point in start-up this method was always called from.
+     */
     public static void registerPayloads() {
         if (registered) {
             return;
         }
-        registered = true;
-
-        PayloadTypeRegistry.playS2C().register(GlobeStatePayload.ID, GlobeStatePayload.CODEC);
-
-        PayloadTypeRegistry.playS2C().register(OpenSpawnPickerPayload.ID, OpenSpawnPickerPayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(SetSpawnPickerPayload.ID, SetSpawnPickerPayload.CODEC);
+        registered = GlobeStatePayload.ID != null
+                && OpenSpawnPickerPayload.ID != null
+                && SetSpawnPickerPayload.ID != null;
     }
 
     /**
@@ -34,46 +37,62 @@ public final class GlobeNet {
      * discarded by vanilla instead, so a mixed pair now simply loses the loading-screen zone name
      * and keeps playing.
      */
-    public record GlobeStatePayload(boolean isGlobe, String loadingBandId) implements CustomPacketPayload {
-        public static final Type<GlobeStatePayload> ID = new Type<>(new ResourceLocation("globe", "s2c_globe_state_v2"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, GlobeStatePayload> CODEC = StreamCodec.composite(
-                ByteBufCodecs.BOOL,
-                GlobeStatePayload::isGlobe,
-                ByteBufCodecs.STRING_UTF8,
-                GlobeStatePayload::loadingBandId,
-                GlobeStatePayload::new
-        );
+    public record GlobeStatePayload(boolean isGlobe, String loadingBandId) implements FabricPacket {
+        public static final PacketType<GlobeStatePayload> ID = PacketType.create(
+                new ResourceLocation("globe", "s2c_globe_state_v2"), GlobeStatePayload::read);
+
+        private static GlobeStatePayload read(FriendlyByteBuf buf) {
+            boolean isGlobe = buf.readBoolean();
+            String loadingBandId = buf.readUtf();
+            return new GlobeStatePayload(isGlobe, loadingBandId);
+        }
 
         @Override
-        public Type<? extends CustomPacketPayload> type() {
+        public void write(FriendlyByteBuf buf) {
+            buf.writeBoolean(isGlobe);
+            buf.writeUtf(loadingBandId);
+        }
+
+        @Override
+        public PacketType<?> getType() {
             return ID;
         }
     }
 
-    public record OpenSpawnPickerPayload(boolean open) implements CustomPacketPayload {
-        public static final Type<OpenSpawnPickerPayload> ID = new Type<>(new ResourceLocation("globe", "s2c_open_spawn_picker"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, OpenSpawnPickerPayload> CODEC = StreamCodec.composite(
-                ByteBufCodecs.BOOL,
-                OpenSpawnPickerPayload::open,
-                OpenSpawnPickerPayload::new
-        );
+    public record OpenSpawnPickerPayload(boolean open) implements FabricPacket {
+        public static final PacketType<OpenSpawnPickerPayload> ID = PacketType.create(
+                new ResourceLocation("globe", "s2c_open_spawn_picker"), OpenSpawnPickerPayload::read);
+
+        private static OpenSpawnPickerPayload read(FriendlyByteBuf buf) {
+            return new OpenSpawnPickerPayload(buf.readBoolean());
+        }
 
         @Override
-        public Type<? extends CustomPacketPayload> type() {
+        public void write(FriendlyByteBuf buf) {
+            buf.writeBoolean(open);
+        }
+
+        @Override
+        public PacketType<?> getType() {
             return ID;
         }
     }
 
-    public record SetSpawnPickerPayload(String zoneId) implements CustomPacketPayload {
-        public static final Type<SetSpawnPickerPayload> ID = new Type<>(new ResourceLocation("globe", "c2s_set_spawn_picker"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, SetSpawnPickerPayload> CODEC = StreamCodec.composite(
-                ByteBufCodecs.STRING_UTF8,
-                SetSpawnPickerPayload::zoneId,
-                SetSpawnPickerPayload::new
-        );
+    public record SetSpawnPickerPayload(String zoneId) implements FabricPacket {
+        public static final PacketType<SetSpawnPickerPayload> ID = PacketType.create(
+                new ResourceLocation("globe", "c2s_set_spawn_picker"), SetSpawnPickerPayload::read);
+
+        private static SetSpawnPickerPayload read(FriendlyByteBuf buf) {
+            return new SetSpawnPickerPayload(buf.readUtf());
+        }
 
         @Override
-        public Type<? extends CustomPacketPayload> type() {
+        public void write(FriendlyByteBuf buf) {
+            buf.writeUtf(zoneId);
+        }
+
+        @Override
+        public PacketType<?> getType() {
             return ID;
         }
     }

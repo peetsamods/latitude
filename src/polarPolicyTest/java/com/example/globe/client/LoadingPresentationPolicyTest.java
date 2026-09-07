@@ -8,14 +8,15 @@ import java.nio.file.Path;
  * Guards the Latitude loading pane's coverage of the whole world-open screen chain, and the flag
  * that decides whether the pane draws at all.
  *
- * <p>The chain a resumed world passes through, enumerated from the remapped 1.21.11 jar rather than
- * from source: three {@code GenericMessageScreen}s ({@code WorldOpenFlows.openWorld},
- * {@code openWorldLoadLevelData}, {@code openWorldLoadLevelStem}), one {@code ProgressScreen}
+ * <p>The chain a resumed world passes through, enumerated from the remapped jar rather than from
+ * source: up to three plain dirt message screens (the world-open flow's own head, then while the
+ * level data and the world stem are read), one {@code ProgressScreen}
  * ({@code Minecraft.doWorldLoad}'s opening {@code disconnectWithProgressScreen}), then
  * {@code LevelLoadingScreen} twice ({@code doWorldLoad}, then {@code ClientPacketListener.handleLogin}).
  * Every one of those is shown through {@code setScreenAndShow} or {@code setScreen}, and every one
  * must carry the pane. The chain's remaining screens are all interactive error/confirm screens and
- * must stay vanilla.
+ * must stay vanilla. The oldest supported Minecraft versions show no message screen from the
+ * world-open flow at all, so on those the chain simply starts at the progress screen.
  *
  * <p>Two distinct defects have hidden in here, and this file guards both:
  * <ul>
@@ -47,7 +48,7 @@ public final class LoadingPresentationPolicyTest {
         theVanillaPercentageIsHiddenOnlyBehindTheLatitudePane();
         theSharedPaneOwnsTheDrawingSoTheTwoScreensCannotDrift();
         thePaneClockIsSharedSoTheHandoffDoesNotRestartIt();
-        theVanillaMessageWidgetIsRestoredWheneverLatitudeIsNotLoading();
+        theVanillaMessageScreenIsUntouchedWheneverLatitudeIsNotLoading();
         theResumedWorldVerdictIsNotDecidedByTheStemCheckAlone();
         releaseBuildCarriesNoLoadingTraceHook();
     }
@@ -87,10 +88,11 @@ public final class LoadingPresentationPolicyTest {
 
         String generic = read(
                 "src/main/java/com/example/globe/mixin/client/GenericMessageScreenLatitudeOverlayMixin.java");
-        // GenericMessageScreen inherits render() from Screen and only declares renderBackground,
-        // so that is the only hook Mixin can resolve on this target.
-        assertTrue(generic.contains("method = \"renderBackground\""),
-                "GenericMessageScreen declares renderBackground, not render — the hook must target it");
+        // The dirt message screen declares render(), and painting at its TAIL is what puts the pane
+        // over vanilla's own centred message line — that line is drawn from inside render() rather
+        // than by a widget the overlay could hide.
+        assertTrue(generic.contains("method = \"render\""),
+                "the message-screen hook must target the render() the screen declares");
         assertTrue(generic.contains("LatitudeLoadingPane.render("),
                 "the message screens must paint the same pane as the loading screen");
 
@@ -182,20 +184,25 @@ public final class LoadingPresentationPolicyTest {
     }
 
     /**
-     * Fail-open: the hook runs for every message screen in the game, so it must never leave an
-     * unrelated one blank.
+     * Fail-open: the hook runs for every message screen in the game, so it must never paint over an
+     * unrelated one. The pane covers vanilla's message line rather than hiding it, so the only thing
+     * standing between an unrelated screen and a Latitude-branded one is the loading flag — which
+     * makes that guard the whole of this guarantee.
      */
-    private static void theVanillaMessageWidgetIsRestoredWheneverLatitudeIsNotLoading() throws IOException {
+    private static void theVanillaMessageScreenIsUntouchedWheneverLatitudeIsNotLoading() throws IOException {
         String generic = read(
                 "src/main/java/com/example/globe/mixin/client/GenericMessageScreenLatitudeOverlayMixin.java");
-        assertTrue(generic.contains("textWidget.visible = !loading"),
-                "the vanilla message text is suppressed only while Latitude owns the screen, and "
-                        + "restored on every other frame");
-        int restore = generic.indexOf("textWidget.visible = !loading");
+        assertTrue(generic.contains("boolean loading = LatitudeClientState.isLatitudeWorldLoading();"),
+                "the pane is painted on a message screen only while Latitude owns the load");
+        int verdict = generic.indexOf("boolean loading = LatitudeClientState.isLatitudeWorldLoading();");
         int earlyReturn = generic.indexOf("if (!loading) {");
-        assertTrue(restore > 0 && earlyReturn > restore,
-                "the widget must be restored BEFORE the not-loading early return, or an aborted "
-                        + "load leaves every later message screen permanently blank");
+        int paint = generic.indexOf("LatitudeLoadingPane.render(");
+        assertTrue(verdict > 0 && earlyReturn > verdict && paint > earlyReturn,
+                "the not-loading early return must sit between the flag read and the paint, or an "
+                        + "aborted load brands every later message screen in the game");
+        assertFalse(generic.contains("textWidget"),
+                "this screen draws its message line from inside render() rather than through a "
+                        + "widget — reaching for one again would resolve against nothing");
         assertTrue(generic.contains("require = 0"),
                 "the overlay hook fails soft, per the GitHub #7 rule");
     }

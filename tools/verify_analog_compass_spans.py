@@ -313,7 +313,7 @@ def main() -> int:
     )
 
     baseline_match_methods = (
-        "public static void render(GuiGraphicsExtractor ctx, DeltaTracker tickCounter)",
+        "public static void render(GuiGraphicsExtractor ctx, float partialTick)",
         "public static void render(GuiGraphicsExtractor ctx, int screenW, int screenH)",
         "public static void renderAdjustPreview(GuiGraphicsExtractor ctx, int screenW, int screenH)",
         "private static void renderInternal(GuiGraphicsExtractor ctx, int screenW, int screenH, boolean forceVisible)",

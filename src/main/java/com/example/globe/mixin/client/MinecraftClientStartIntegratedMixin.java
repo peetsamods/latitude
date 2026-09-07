@@ -3,6 +3,7 @@ package com.example.globe.mixin.client;
 import com.example.globe.client.LatitudeClientState;
 import com.example.globe.client.create.RecreatedWorldMetadata;
 import com.example.globe.util.LatitudeBands;
+import java.lang.ref.WeakReference;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.registries.Registries;
@@ -40,19 +41,59 @@ public abstract class MinecraftClientStartIntegratedMixin {
     @Unique private static final ResourceKey<NoiseGeneratorSettings> GLOBE_SETTINGS_MASSIVE_KEY =
             globe$noiseSettingsKey("overworld_massive");
 
-    // 26.2's doWorldLoad(LevelStorageAccess, PackRepository, WorldStem, Optional<GameRules>,
-    // boolean) carries an Optional<GameRules> parameter that 1.21.11's does not: this target's
-    // signature is (LevelStorageAccess, PackRepository, WorldStem, boolean). Mixin does not
-    // validate an @Inject handler's own parameter list against the target's real descriptor until
-    // runtime bytecode weaving, so a stale handler signature compiles cleanly and only fails when
-    // this class is actually loaded -- which is CLIENT-ONLY and neither the static verifier nor a
-    // dedicated-server boot proof ever exercises it.
-    @Inject(method = "doWorldLoad", at = @At("HEAD"))
-    private void globe$beginExistingLatitudeWorldLoading(LevelStorageSource.LevelStorageAccess session,
-                                                         PackRepository packRepository,
-                                                         WorldStem worldStem,
-                                                         boolean safeMode,
-                                                         CallbackInfo ci) {
+    /**
+     * The world load this class has already acted on, held weakly so an abandoned load cannot pin
+     * its save handle. Only one of the two injectors below can match on a given Minecraft version,
+     * but comparing against the load in flight makes a double-apply a no-op without needing a reset
+     * point, and re-arms of its own accord for the next world.
+     */
+    @Unique
+    private static WeakReference<Object> globe$handledWorldLoad;
+
+    // doWorldLoad carries a leading level-id String on the two oldest versions in the supported
+    // range and drops it on the two newest. Mixin does not validate an @Inject handler's own
+    // parameter list against the target's real descriptor until runtime bytecode weaving, so a
+    // stale handler signature compiles cleanly and only fails when this class is actually loaded --
+    // which is CLIENT-ONLY and neither the static verifier nor a dedicated-server boot proof ever
+    // exercises it. Both shapes are therefore spelled out with an explicit descriptor and
+    // require = 0, so the one this version declares applies and the other is simply skipped.
+    @Inject(
+            // One literal, not a concatenation: the descriptor is read from source by the
+            // mixin-target verifier, which sees each string literal as a selector of its own.
+            method = "doWorldLoad(Ljava/lang/String;Lnet/minecraft/world/level/storage/LevelStorageSource$LevelStorageAccess;Lnet/minecraft/server/packs/repository/PackRepository;Lnet/minecraft/server/WorldStem;Z)V",
+            at = @At("HEAD"),
+            require = 0,
+            expect = 0)
+    private void globe$beginExistingLatitudeWorldLoadingWithLevelId(String levelId,
+                                                                    LevelStorageSource.LevelStorageAccess session,
+                                                                    PackRepository packRepository,
+                                                                    WorldStem worldStem,
+                                                                    boolean safeMode,
+                                                                    CallbackInfo ci) {
+        globe$beginExistingLatitudeWorldLoading(session, worldStem);
+    }
+
+    @Inject(
+            method = "doWorldLoad(Lnet/minecraft/world/level/storage/LevelStorageSource$LevelStorageAccess;Lnet/minecraft/server/packs/repository/PackRepository;Lnet/minecraft/server/WorldStem;Z)V",
+            at = @At("HEAD"),
+            require = 0,
+            expect = 0)
+    private void globe$beginExistingLatitudeWorldLoadingWithoutLevelId(LevelStorageSource.LevelStorageAccess session,
+                                                                       PackRepository packRepository,
+                                                                       WorldStem worldStem,
+                                                                       boolean safeMode,
+                                                                       CallbackInfo ci) {
+        globe$beginExistingLatitudeWorldLoading(session, worldStem);
+    }
+
+    @Unique
+    private static void globe$beginExistingLatitudeWorldLoading(LevelStorageSource.LevelStorageAccess session,
+                                                                WorldStem worldStem) {
+        if (globe$handledWorldLoad != null && globe$handledWorldLoad.get() == session) {
+            return;
+        }
+        globe$handledWorldLoad = new WeakReference<>(session);
+
         boolean stemDetected = globe$isLatitudeWorld(worldStem);
         boolean diskDetected = globe$hasLatitudeSaveMarker(session);
         boolean detectedLatitudeWorld = stemDetected || diskDetected;

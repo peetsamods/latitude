@@ -1,15 +1,15 @@
 package com.example.globe.client;
 
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.BundleContents;
 
 public final class CompassHud {
     private static final int ANALOG_FACE_RGB = 0x1A1410;
@@ -22,6 +22,9 @@ public final class CompassHud {
     private static final int PREVIEW_HOTBAR_BG = 0x33241814;
     private static final int PREVIEW_HOTBAR_BORDER = 0x66A08972;
     private static final int PREVIEW_HOTBAR_SLOT = 0x22382F26;
+    // The list tag a bundle item keeps its stored stacks in. Vanilla declares it privately, so
+    // the key is repeated here rather than referenced.
+    private static final String BUNDLE_ITEMS_TAG = "Items";
 
     private static long lastCheckWorldTime = Long.MIN_VALUE;
     private static boolean cachedHasCompass = false;
@@ -53,7 +56,7 @@ public final class CompassHud {
     // Keep for compatibility with existing GlobeModClient init call.
     public static void init() {}
 
-    public static void render(GuiGraphics ctx, DeltaTracker tickCounter) {
+    public static void render(GuiGraphics ctx, float partialTick) {
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.getWindow() == null) {
             return;
@@ -839,12 +842,16 @@ public final class CompassHud {
         // Prevent infinite recursion
         if (depth >= 6) return false;
 
-        // Bundle contents (modern data component)
+        // Bundle contents (this line keeps them in the stack's own NBT: the list tag the bundle
+        // item reads, holding one saved item compound per stored stack). Restoring each compound
+        // gives back the nested stack -- a bundle inside a bundle carries its own list along in its
+        // tag -- so the recursion below is unchanged.
         if (stack.is(Items.BUNDLE)) {
-            BundleContents contents = stack.get(DataComponents.BUNDLE_CONTENTS);
-            if (contents != null) {
-                for (var inside : contents.items()) {
-                    if (containsCompass(inside, depth + 1)) return true;
+            CompoundTag tag = stack.getTag();
+            if (tag != null) {
+                ListTag stored = tag.getList(BUNDLE_ITEMS_TAG, Tag.TAG_COMPOUND);
+                for (int i = 0; i < stored.size(); i++) {
+                    if (containsCompass(ItemStack.of(stored.getCompound(i)), depth + 1)) return true;
                 }
             }
         }

@@ -20,6 +20,12 @@ public class LatitudeHudStudioScreen extends Screen {
     private static final int TAB_TITLE = 1;
     private static final int TAB_SETTINGS = 2;
 
+    // The two ARGB stops vanilla's own translucent in-game backdrop uses, top then bottom. Read off
+    // Screen's renderTransparentBackground on a version that declares it, because the oldest
+    // supported version does not.
+    private static final int TRANSPARENT_BACKDROP_TOP = 0xC0101010;
+    private static final int TRANSPARENT_BACKDROP_BOTTOM = 0xD0101010;
+
     private final Screen parent;
 
     private boolean sidebarVisible = true;
@@ -453,7 +459,11 @@ public class LatitudeHudStudioScreen extends Screen {
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         this.lastMouseX = mouseX;
         this.lastMouseY = mouseY;
-        this.renderTransparentBackground(ctx);
+        // Screen's own translucent in-game backdrop is not published on the oldest supported
+        // version, so its two gradient stops are drawn directly here. Both values are read off the
+        // helper on a version that does declare it, so this paints the identical backdrop.
+        ctx.fillGradient(0, 0, this.width, this.height,
+                TRANSPARENT_BACKDROP_TOP, TRANSPARENT_BACKDROP_BOTTOM);
         ctx.fill(0, 0, this.width, this.height, 0x66000000);
 
         int sidebarX = 6;
@@ -543,8 +553,11 @@ public class LatitudeHudStudioScreen extends Screen {
         wasLDown = lDown;
     }
 
+    // The oldest supported version passes a single scroll amount; later ones split it into a
+    // horizontal and a vertical one. Only the vertical amount was ever read here, and it is the
+    // single amount on the older shape.
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double verticalAmount) {
         if (sidebarVisible && mouseX < sidebarWidth + 10) {
             int viewportH = sidebarViewportBottom - sidebarViewportTop;
             int maxScroll = Math.max(0, sidebarContentHeight - viewportH);
@@ -552,7 +565,7 @@ public class LatitudeHudStudioScreen extends Screen {
             sidebarScrollY = Mth.clamp(sidebarScrollY, 0, maxScroll);
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+        return super.mouseScrolled(mouseX, mouseY, verticalAmount);
     }
 
     @Override

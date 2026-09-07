@@ -69,18 +69,38 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
         LatitudeLoadingPane.render(context, this.font, delta, rawProgress, now);
     }
 
-    // 1.21.1 queues the numeric chunk percentage as a separate text draw. Text batching can place
-    // it over the Latitude pane even though the pane is painted at render TAIL, so suppress that
-    // one label while Latitude owns the screen. Vanilla worlds retain their normal percentage.
+    // The loading screen queues the numeric chunk percentage as a separate text draw. Text batching
+    // can place it over the Latitude pane even though the pane is painted at render TAIL, so
+    // suppress that one label while Latitude owns the screen. Vanilla worlds retain their normal
+    // percentage.
+    //
+    // The percentage is a String on the oldest supported version and a Component on every later
+    // one, so the single call site is a different GuiGraphics overload per version. Both are
+    // redirected, each with require = 0 and expect = 0: exactly one of the pair matches on any
+    // given version, and the other is skipped rather than reported as a miss.
     @Redirect(
             method = "render",
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/minecraft/client/gui/GuiGraphics;drawCenteredString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V"),
             require = 0,
-            expect = 1)
+            expect = 0)
     private void globe$drawVanillaProgressUnlessLatitudeLoading(
             GuiGraphics context, Font font, Component text, int x, int y, int color) {
+        if (!LatitudeClientState.isLatitudeWorldLoading()) {
+            context.drawCenteredString(font, text, x, y, color);
+        }
+    }
+
+    @Redirect(
+            method = "render",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/GuiGraphics;drawCenteredString(Lnet/minecraft/client/gui/Font;Ljava/lang/String;III)V"),
+            require = 0,
+            expect = 0)
+    private void globe$drawVanillaProgressTextUnlessLatitudeLoading(
+            GuiGraphics context, Font font, String text, int x, int y, int color) {
         if (!LatitudeClientState.isLatitudeWorldLoading()) {
             context.drawCenteredString(font, text, x, y, color);
         }
@@ -198,13 +218,16 @@ class LatitudeLoadingClientTickMixin {
         if (client.levelRenderer == null || this.player == null) {
             return false;
         }
-        // 1.21.1's LevelRenderer publishes no per-section visibility query and no visible-section
-        // list -- isSectionCompiledAndVisible and getVisibleSections are both later additions. The
-        // coarse pair it does publish carries the same "the world is drawn" signal the overlay needs;
-        // the per-position shortcut is simply unavailable on this target, so readiness waits for the
-        // whole queue instead of just the player's own section.
-        boolean renderQueueEmpty = client.levelRenderer.hasRenderedAllSections();
-        int renderedSections = client.levelRenderer.countRenderedSections();
+        // The renderer publishes no per-section visibility query and no visible-section list on this
+        // line -- both are later additions. The coarse pair it does publish carries the same "the
+        // world is drawn" signal the overlay needs; the per-position shortcut is simply unavailable
+        // here, so readiness waits for the whole queue instead of just the player's own section.
+        //
+        // These two are the same members on every supported version -- only their readable names
+        // changed mid-range, from chunks to sections, and the compiled call is by the stable
+        // identifier rather than the readable name. So the oldest line's spelling serves all of them.
+        boolean renderQueueEmpty = client.levelRenderer.hasRenderedAllChunks();
+        int renderedSections = client.levelRenderer.countRenderedChunks();
         return renderQueueEmpty && renderedSections > 0;
     }
 }

@@ -4,6 +4,7 @@ import com.example.globe.client.LatitudeClientState;
 import com.example.globe.client.create.RecreatedWorldMetadata;
 import com.example.globe.util.LatitudeBands;
 import java.nio.file.Path;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.worldselection.WorldOpenFlows;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import org.slf4j.Logger;
@@ -19,8 +20,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Activates the Latitude loading overlay before vanilla shows its own first screen for a resumed
  * world, not after.
  *
- * <p>{@code WorldOpenFlows.openWorld}'s very first action — before any file is even opened — is
- * {@code Minecraft.setScreen(new GenericMessageScreen("selectWorld.data_read"))}. Only much
+ * <p>The first action of the flow that opens a saved world — before any file is even opened — is
+ * to put a plain message screen on screen. Only much
  * later, after the save's registries and world stem are fully resolved, does
  * {@code Minecraft.doWorldLoad} run — the point {@link MinecraftClientStartIntegratedMixin} already
  * hooks to activate the overlay, because that is the earliest point a live {@code WorldStem} exists
@@ -33,9 +34,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * <p>{@link RecreatedWorldMetadata} already solves the "identify a Latitude world before it loads"
  * problem for a different purpose — reading {@code latitude_world_state.dat} straight off disk to
  * recover a save's identity and last-known band before starting a server. This applies the same
- * read at the true first opportunity: {@code openWorld}'s own head, using only the level id and
- * {@code LevelStorageSource.getLevelPath(String)} (a plain path resolve, no I/O) to find the save
- * without needing an opened {@code LevelStorageAccess} at all.
+ * read at the true first opportunity: the head of the flow's own entry point, using only the level
+ * id and the save-directory resolve (a plain path resolve, no I/O) to find the save without needing
+ * an opened {@code LevelStorageAccess} at all.
  *
  * <p>Fails soft like every other overlay hook in this lifecycle: a missing target, an unreadable or
  * absent save file, or any other exception here just means the overlay activates at its old, later
@@ -50,14 +51,53 @@ public abstract class WorldOpenFlowsEarlyLatitudeActivationMixin {
     @Shadow
     private LevelStorageSource levelSource;
 
-    @Inject(method = "openWorld", at = @At("HEAD"), require = 0, expect = 1)
-    private void globe$activateEarlyForResumedLatitudeWorld(String levelId, Runnable onFail, CallbackInfo ci) {
+    /**
+     * The level id this class has already acted on for a load that is still in flight. Only one of
+     * the two injectors below can match on a given Minecraft version, but the comparison makes a
+     * double-apply a no-op — and it re-arms of its own accord, because the loading flag is cleared
+     * when a load ends, so re-entering the same world later still activates the overlay.
+     */
+    @Unique
+    private static String globe$activatedLevelId;
+
+    // The entry point renamed inside the supported range: the two oldest versions take the screen
+    // to return to alongside the level id, the two newest take the level id and a failure callback.
+    // Both shapes carry an explicit descriptor and require = 0, so whichever one this version
+    // declares is the one that applies and the other is simply skipped.
+    @Inject(
+            method = "loadLevel(Lnet/minecraft/client/gui/screens/Screen;Ljava/lang/String;)V",
+            at = @At("HEAD"),
+            require = 0,
+            expect = 0)
+    private void globe$activateEarlyBeforeLevelLoad(Screen lastScreen, String levelId, CallbackInfo ci) {
+        globe$activateEarlyForResumedLatitudeWorld(levelId);
+    }
+
+    @Inject(
+            method = "checkForBackupAndLoad(Ljava/lang/String;Ljava/lang/Runnable;)V",
+            at = @At("HEAD"),
+            require = 0,
+            expect = 0)
+    private void globe$activateEarlyBeforeBackupCheck(String levelId, Runnable onFail, CallbackInfo ci) {
+        globe$activateEarlyForResumedLatitudeWorld(levelId);
+    }
+
+    @Unique
+    private void globe$activateEarlyForResumedLatitudeWorld(String levelId) {
+        if (levelId != null && levelId.equals(globe$activatedLevelId)
+                && LatitudeClientState.isLatitudeWorldLoading()) {
+            return;
+        }
         try {
-            Path worldRoot = levelSource.getLevelPath(levelId);
+            // Vanilla's own one-line "save directory for this id" resolve is not public on every
+            // version in the supported range, so the same resolve is spelled out here: the same
+            // base directory, the same single path resolve, and still no file touched.
+            Path worldRoot = levelSource.getBaseDir().resolve(levelId);
             String presetId = RecreatedWorldMetadata.latitudePresetId(worldRoot);
             if (presetId == null) {
                 return;
             }
+            globe$activatedLevelId = levelId;
             LatitudeClientState.beginExpedition(System.currentTimeMillis());
             LatitudeClientState.activateLatitudeLoading();
             LatitudeBands.Band band =

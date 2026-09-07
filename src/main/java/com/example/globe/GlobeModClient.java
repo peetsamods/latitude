@@ -57,9 +57,11 @@ public class GlobeModClient implements ClientModInitializer {
             LatitudeClientState.clearLatitudeLoadingState();
         });
 
-        ClientPlayNetworking.registerGlobalReceiver(GlobeNet.GlobeStatePayload.ID, (payload, context) -> {
+        ClientPlayNetworking.registerGlobalReceiver(GlobeNet.GlobeStatePayload.ID,
+                (payload, localPlayer, responseSender) -> {
+            Minecraft client = Minecraft.getInstance();
             if (payload.isGlobe()) {
-                // Flip the bespoke loading flag as soon as the handshake packet arrives (network thread).
+                // Flip the bespoke loading flag as soon as the handshake packet arrives.
                 LatitudeClientState.activateLatitudeLoading();
                 // LatitudeWorldLauncher (fresh creation) and the resumed-world mixins run ONLY on the
                 // client hosting its own IntegratedServer -- hasSingleplayerServer() is exactly that
@@ -70,7 +72,7 @@ public class GlobeModClient implements ClientModInitializer {
                 // other client (a remote dedicated-server join, or a friend joining an opened-to-LAN
                 // world) never had any of those three mechanisms touch it, so there's nothing to
                 // clobber: apply freely there.
-                if (!context.client().hasSingleplayerServer()) {
+                if (!client.hasSingleplayerServer()) {
                     LatitudeBands.Band band = LatitudeBands.fromCanonicalId(payload.loadingBandId());
                     if (band != null) {
                         LatitudeClientState.setLoadingZoneLabel(band.displayName());
@@ -79,16 +81,17 @@ public class GlobeModClient implements ClientModInitializer {
             } else if (LatitudeClientState.isLatitudeWorldLoading()) {
                 LatitudeClientState.clearLatitudeLoadingState();
             }
-            context.client().execute(() -> GlobeClientState.setGlobeWorld(payload.isGlobe()));
+            client.execute(() -> GlobeClientState.setGlobeWorld(payload.isGlobe()));
         });
 
-        ClientPlayNetworking.registerGlobalReceiver(GlobeNet.OpenSpawnPickerPayload.ID, (payload, context) -> {
+        ClientPlayNetworking.registerGlobalReceiver(GlobeNet.OpenSpawnPickerPayload.ID,
+                (payload, localPlayer, responseSender) -> {
             // Legacy spawn picker is no longer part of the first-load flow; ignore any stale payloads.
             if (!payload.open()) {
                 return;
             }
 
-            context.client().execute(() -> {
+            Minecraft.getInstance().execute(() -> {
                 GlobeMod.LOGGER.info("Ignoring legacy open spawn picker payload");
             });
         });

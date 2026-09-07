@@ -3,7 +3,6 @@ package com.example.globe.client;
 import com.example.globe.GlobeMod;
 import com.example.globe.util.LatitudeBands;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.gui.Font;
@@ -129,7 +128,7 @@ public final class GlobeWarningOverlay {
         return text == null ? null : Component.literal(text);
     }
 
-    public static void render(GuiGraphics ctx, DeltaTracker tickCounter) {
+    public static void render(GuiGraphics ctx, float partialTick) {
         Minecraft client = Minecraft.getInstance();
 
         if (client == null) {
