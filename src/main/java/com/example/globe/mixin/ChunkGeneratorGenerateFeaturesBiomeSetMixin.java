@@ -122,8 +122,9 @@ public class ChunkGeneratorGenerateFeaturesBiomeSetMixin {
         }
         // Every chunk decorated from here on was decorated under the ledger-complete feature
         // index; the persistent marker is what tells the opt-in retrofit engine this chunk can
-        // never need repair.
-        com.example.globe.world.LatitudeDecorationRetrofit.markDecoratedUnderFixedIndex(chunk);
+        // never need repair. The level is passed through because this runs on a worldgen thread,
+        // where a chunk still being generated cannot name its own level.
+        com.example.globe.world.LatitudeDecorationRetrofit.markDecoratedUnderFixedIndex(world, chunk);
         if (this.globe$customBiomeFeaturesIndexed) {
             return;
         }
@@ -257,7 +258,7 @@ public class ChunkGeneratorGenerateFeaturesBiomeSetMixin {
         }
         List<HolderSet<PlacedFeature>> filtered = new ArrayList<>(features);
         if (frozenRiver) {
-            filtered.set(vegetalStep, HolderSet.empty());
+            filtered.set(vegetalStep, HolderSet.direct(List.of()));
             return filtered;
         }
         // Appended last, ground before plants, and in the same relative order for every arid

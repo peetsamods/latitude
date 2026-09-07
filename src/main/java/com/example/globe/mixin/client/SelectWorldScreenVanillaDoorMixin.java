@@ -3,6 +3,7 @@ package com.example.globe.mixin.client;
 import com.example.globe.client.create.VanillaCreateWorldHandoff;
 import com.example.globe.client.create.VanillaFooterLayoutPolicy;
 import com.example.globe.client.create.VanillaWorldListDoorPolicy;
+import com.example.globe.util.McCompat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
@@ -228,7 +229,7 @@ public abstract class SelectWorldScreenVanillaDoorMixin {
             this.globe$doorButton.setX(doorX);
             this.globe$doorButton.setY(rowY);
             this.globe$doorButton.setWidth(width);
-            this.globe$doorButton.setHeight(rowHeight);
+            McCompat.setWidgetHeight(this.globe$doorButton, rowHeight);
             this.globe$doorButton.visible = true;
             this.globe$doorButton.active = true;
         }

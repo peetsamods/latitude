@@ -447,14 +447,14 @@ public final class LatitudeStructureLocateService {
                     if (error != null) {
                         GlobeMod.LOGGER.warn("[Latitude] structure locate failed for target={}",
                                 target.asPrintable(), error);
-                        source.sendFailure(Component.translatableEscape(
+                        source.sendFailure(Component.translatable(
                                 "commands.locate.structure.not_found", target.asPrintable()));
                         return;
                     }
                     Pair<BlockPos, Holder<Structure>> result = outcome.result();
                     Tally tally = outcome.tally();
                     if (result == null) {
-                        source.sendFailure(Component.translatableEscape(
+                        source.sendFailure(Component.translatable(
                                 "commands.locate.structure.not_found", target.asPrintable()));
                     } else {
                         // Reported by us rather than through LocateCommand.showLocateResult,

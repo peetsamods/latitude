@@ -5,6 +5,7 @@ import com.example.globe.client.GlobeWorldSize;
 import com.example.globe.client.LatitudeConfig;
 import com.example.globe.client.LatitudeHudStudioScreen;
 import com.example.globe.util.LatitudeBands;
+import com.example.globe.util.McCompat;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.SharedConstants;
@@ -14,7 +15,8 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
-import net.minecraft.client.gui.screens.GenericMessageScreen;
+import net.minecraft.client.gui.ComponentPath;
+import net.minecraft.client.gui.screens.GenericDirtMessageScreen;
 import net.minecraft.client.gui.screens.Screen;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
@@ -29,7 +31,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.WorldLoader;
 import net.minecraft.server.packs.repository.PackRepository;
-import net.minecraft.server.packs.repository.ServerPacksSource;
 import net.minecraft.Util;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.flag.FeatureFlags;
@@ -58,6 +59,9 @@ public class LatitudeCreateWorldScreen extends Screen {
 
     // ── Theme constants ──
     private static final int STILL_BACKGROUND_COLOR = 0xFF2C2420;
+    // The two constants vanilla's own in-level screen background fades between.
+    private static final int GRADIENT_BACKGROUND_TOP = 0xC0101010;
+    private static final int GRADIENT_BACKGROUND_BOTTOM = 0xD0101010;
     private static final int PANEL_BG_RGB = 0x3A302A;
     private static final int TAB_INACTIVE_BG_RGB = 0x2A2420;
     private static final int GOLD = 0xFFD4A74A;
@@ -336,7 +340,7 @@ public class LatitudeCreateWorldScreen extends Screen {
     private void absorbVanillaCreateState(WorldCreationUiState state) {
         this.worldNameInput = state.getName();
         this.seedInput = state.getSeed();
-        this.allowCommands = state.isAllowCommands();
+        this.allowCommands = state.isAllowCheats();
         this.selectedDifficulty = state.getDifficulty();
         this.bonusChest = state.isBonusChest();
         this.generateStructures = state.isGenerateStructures();
@@ -348,7 +352,7 @@ public class LatitudeCreateWorldScreen extends Screen {
                                      @Nullable String recreatedPresetId) {
         this.worldNameInput = initialState.getName();
         this.seedInput = initialState.getSeed();
-        this.allowCommands = initialState.isAllowCommands();
+        this.allowCommands = initialState.isAllowCheats();
         this.selectedDifficulty = initialState.getDifficulty();
         this.bonusChest = initialState.isBonusChest();
         this.generateStructures = initialState.isGenerateStructures();
@@ -450,11 +454,11 @@ public class LatitudeCreateWorldScreen extends Screen {
      */
     public static void open(Minecraft client, Runnable onClose, @Nullable Screen parent) {
         // Show "Preparing..." message (vanilla pattern)
-        client.setScreen(new GenericMessageScreen(Component.translatable("createWorld.preparing")));
+        client.setScreen(new GenericDirtMessageScreen(Component.translatable("createWorld.preparing")));
 
         try {
             // Build datapack configuration (replicates createServerConfig, lines 511-513)
-            PackRepository resourcePackManager = new PackRepository(new ServerPacksSource(client.directoryValidator()));
+            PackRepository resourcePackManager = new PackRepository(McCompat.newServerPacksSource(client));
             resourcePackManager.reload();
             List<String> enabledPackIds = SharedConstants.IS_RUNNING_IN_IDE
                     ? List.of("vanilla", "tests", "globe")
@@ -495,7 +499,7 @@ public class LatitudeCreateWorldScreen extends Screen {
                     if (throwable != null) {
                         LOGGER.error("Failed to load datapacks for Latitude create-world screen", throwable);
                         onClose.run();
-                        if (client.screen == null || client.screen instanceof GenericMessageScreen) {
+                        if (client.screen == null || client.screen instanceof GenericDirtMessageScreen) {
                             client.setScreen(parent);
                         }
                         return;
@@ -509,7 +513,7 @@ public class LatitudeCreateWorldScreen extends Screen {
             LOGGER.error("Failed to load datapacks for Latitude create-world screen", e);
             // 5A error path: return to caller screen, never show bespoke screen
             onClose.run();
-            if (client.screen == null || client.screen instanceof GenericMessageScreen) {
+            if (client.screen == null || client.screen instanceof GenericDirtMessageScreen) {
                 client.setScreen(parent);
             }
         }
@@ -795,7 +799,10 @@ public class LatitudeCreateWorldScreen extends Screen {
         if ((!tabbedMode || activeTab == 0) && !introActive()) {
             this.worldNameField.setFocused(true);
             this.setFocused(this.worldNameField);
-            this.worldNameField.moveCursorToEnd(false);
+            // The end-of-text move gained a "keep the selection" flag mid-range; the cursor
+            // assignment underneath it never changed, and the highlight this pair wants is set
+            // explicitly on the next line regardless.
+            this.worldNameField.setCursorPosition(this.worldNameField.getValue().length());
             this.worldNameField.setHighlightPos(0);
         } else {
             this.worldNameField.setFocused(false);
@@ -959,22 +966,22 @@ public class LatitudeCreateWorldScreen extends Screen {
         int[] nameSeedSplit = nameSeedSplit(inputW);
         int seedFieldX = inputX + nameSeedSplit[0] + nameSeedSplit[1];
         if (worldNameField != null) {
-            worldNameField.setRectangle(nameSeedSplit[0], fieldH, inputX, worldFieldY);
+            McCompat.setWidgetRectangle(worldNameField, nameSeedSplit[0], fieldH, inputX, worldFieldY);
             worldNameField.visible = true;
             worldNameField.active = true;
         }
         if (seedField != null) {
-            seedField.setRectangle(nameSeedSplit[2], fieldH, seedFieldX, seedFieldY);
+            McCompat.setWidgetRectangle(seedField, nameSeedSplit[2], fieldH, seedFieldX, seedFieldY);
             seedField.visible = true;
             seedField.active = true;
         }
         if (sizePrevBtn != null) {
-            sizePrevBtn.setRectangle(stepperBtnW, btnH, inputX, sizeFieldY);
+            McCompat.setWidgetRectangle(sizePrevBtn, stepperBtnW, btnH, inputX, sizeFieldY);
             sizePrevBtn.visible = true;
             sizePrevBtn.active = true;
         }
         if (sizeNextBtn != null) {
-            sizeNextBtn.setRectangle(stepperBtnW, btnH, inputX + inputW - stepperBtnW, sizeFieldY);
+            McCompat.setWidgetRectangle(sizeNextBtn, stepperBtnW, btnH, inputX + inputW - stepperBtnW, sizeFieldY);
             sizeNextBtn.visible = true;
             sizeNextBtn.active = true;
         }
@@ -1081,7 +1088,7 @@ public class LatitudeCreateWorldScreen extends Screen {
 
         int zoneY = zoneListTopY;
         for (ZoneRowWidget row : zoneRows) {
-            row.setRectangle(rightW - 4 - SCROLLBAR_GUTTER, zoneRowHeight, rightX + 2, zoneY);
+            McCompat.setWidgetRectangle(row, rightW - 4 - SCROLLBAR_GUTTER, zoneRowHeight, rightX + 2, zoneY);
             boolean visible = isLatitudeWorld()
                     && (!tabbedMode || activeTab == 0)
                     && row.getX() >= paneStripViewportLeft
@@ -1387,14 +1394,19 @@ public class LatitudeCreateWorldScreen extends Screen {
         activeTab = tab;
         // Focus must not stay on a widget the outgoing tab owned: it is hidden now, and a hidden
         // focused widget keeps taking keystrokes the visible tab should be getting.
-        clearFocus();
+        // Screen's own clearFocus() is private on the oldest supported line; this is its body,
+        // which is unchanged on every line that does publish it.
+        ComponentPath focused = this.getCurrentFocusPath();
+        if (focused != null) {
+            focused.applyFocus(false);
+        }
         applyTabbedVisibility();
     }
 
     private void positionSettingsStepper(Button left, Button right, int x, int width, int y, int height) {
         int stepperW = left.getWidth();
-        left.setRectangle(stepperW, height, x, y);
-        right.setRectangle(stepperW, height, x + width - stepperW, y);
+        McCompat.setWidgetRectangle(left, stepperW, height, x, y);
+        McCompat.setWidgetRectangle(right, stepperW, height, x + width - stepperW, y);
         boolean visible = (!tabbedMode || activeTab == 1)
                 && left.getX() < paneStripViewportRight
                 && right.getX() + right.getWidth() > paneStripViewportLeft
@@ -1404,7 +1416,7 @@ public class LatitudeCreateWorldScreen extends Screen {
     }
 
     private void positionSettingsButton(AbstractWidget button, int x, int width, int y, int height) {
-        button.setRectangle(width - SCROLLBAR_GUTTER, height, x, y);
+        McCompat.setWidgetRectangle(button, width - SCROLLBAR_GUTTER, height, x, y);
         boolean visible = (!tabbedMode || activeTab == 1)
                 && button.getX() < paneStripViewportRight
                 && button.getX() + button.getWidth() > paneStripViewportLeft
@@ -1595,7 +1607,20 @@ public class LatitudeCreateWorldScreen extends Screen {
     }
 
     @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double verticalAmount) {
+        // The oldest supported line delivers only a vertical wheel amount. Its horizontal
+        // counterpart arrived later under the same name, so both spellings are declared and both
+        // hand the same body the same four values; vanilla calls whichever one its own line has.
+        return scrollPanes(mouseX, mouseY, 0.0D, verticalAmount);
+    }
+
+    // Deliberately not @Override: this four-argument form does not exist on the line this compiles
+    // against, and declaring it is what lets a newer line reach the same handler.
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        return scrollPanes(mouseX, mouseY, horizontalAmount, verticalAmount);
+    }
+
+    private boolean scrollPanes(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (getPaneStripMaxScroll() > 0
                 && horizontalAmount != 0.0D
                 && mouseX >= paneStripViewportLeft
@@ -1647,7 +1672,7 @@ public class LatitudeCreateWorldScreen extends Screen {
             applyPaneStripScroll(paneStripScroll - (int) Math.signum(verticalAmount) * scaledUi(28));
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+        return super.mouseScrolled(mouseX, mouseY, verticalAmount);
     }
 
     @Override
@@ -1766,13 +1791,15 @@ public class LatitudeCreateWorldScreen extends Screen {
             // separate mouseMoved event. Mouse navigation is hover-only; keyboard focus is retained.
             clearStillButtonMouseFocus();
         }
-        // 1.21.1's Screen.render() paints the panorama, then blurs the whole framebuffer and lays the
-        // menu overlay over everything drawn so far, before it renders the widgets. Everything this
+        // Screen.render() paints the background before it renders the widgets, so everything this
         // screen draws itself (panels, gold labels, the version footer, the Still backdrop) would be
-        // caught by that pass and come out soft and dimmed while the widgets stay crisp. Render the
-        // background exactly once, up front, and turn the inner call from super.render() into a no-op
-        // so Latitude's own drawing lands on top of the finished background like it does on newer lines.
-        super.renderBackground(context, mouseX, mouseY, delta);
+        // covered by that pass while the widgets stayed on top. Paint the background exactly once,
+        // up front, and turn the inner call from super.render() into a no-op so Latitude's own
+        // drawing lands on top of the finished background.
+        //
+        // The oldest supported line does not paint a background from Screen.render() at all, and
+        // none of them blurs; the suppression below is what keeps the newer lines in step with it.
+        paintScreenBackground(context);
         backgroundRenderedThisFrame = true;
         if (LatitudeConfig.createWorldStillBackground) {
             // Do not rewrite Minecraft's global panorama preference for one screen. Cover it with a
@@ -1984,12 +2011,28 @@ public class LatitudeCreateWorldScreen extends Screen {
         }
     }
 
+    /**
+     * Paints exactly what vanilla's own screen background paints: the darkening gradient when a
+     * level is showing behind the screen, the tiled dirt panel otherwise. Written out rather than
+     * delegated because the entry point that makes this choice changed shape mid-range, while the
+     * two branches it dispatches to did not.
+     */
+    private void paintScreenBackground(GuiGraphics context) {
+        if (this.minecraft != null && this.minecraft.level != null) {
+            context.fillGradient(0, 0, this.width, this.height, GRADIENT_BACKGROUND_TOP, GRADIENT_BACKGROUND_BOTTOM);
+        } else {
+            super.renderDirtBackground(context);
+        }
+    }
+
     @Override
-    public void renderBackground(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        // See render(): the background is painted once before Latitude's own drawing; the call that
-        // Screen.render() makes afterwards must not blur and overlay what was just drawn.
+    public void renderDirtBackground(GuiGraphics context) {
+        // See render(): the background is painted once before Latitude's own drawing, and the call
+        // Screen.render() makes afterwards must not paint over what was just drawn. This is the
+        // method that call reaches on every supported line, so suppressing it here suppresses the
+        // whole inner background pass.
         if (!backgroundRenderedThisFrame) {
-            super.renderBackground(context, mouseX, mouseY, delta);
+            super.renderDirtBackground(context);
         }
     }
 

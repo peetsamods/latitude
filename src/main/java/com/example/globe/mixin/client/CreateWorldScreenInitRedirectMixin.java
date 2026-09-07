@@ -5,6 +5,7 @@ import com.example.globe.client.create.RecreatedWorldPresetCarrier;
 import com.example.globe.client.create.VanillaCreateWorldHandoff;
 import com.example.globe.client.create.VanillaFooterLayoutPolicy;
 import com.example.globe.client.create.VanillaOnlyWorldCreationState;
+import com.example.globe.util.McCompat;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -231,7 +232,7 @@ public abstract class CreateWorldScreenInitRedirectMixin {
             button.setY(rowY);
         }
         this.globe$exitWidget.setWidth(width);
-        this.globe$exitWidget.setHeight(rowHeight);
+        McCompat.setWidgetHeight(this.globe$exitWidget, rowHeight);
         this.globe$exitWidget.setX(VanillaFooterLayoutPolicy.buttonXFrom(left, width, count - 1));
         this.globe$exitWidget.setY(rowY);
     }

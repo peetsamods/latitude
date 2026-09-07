@@ -3,10 +3,9 @@ package com.example.globe.client.create;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import com.example.globe.util.McCompat;
 import com.example.globe.world.LatitudeWorldState;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtAccounter;
-import net.minecraft.nbt.NbtIo;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -58,7 +57,7 @@ public final class RecreatedWorldMetadata {
         if (!Files.isRegularFile(statePath)) {
             return null;
         }
-        CompoundTag root = NbtIo.readCompressed(statePath, NbtAccounter.unlimitedHeap());
+        CompoundTag root = McCompat.readCompressedNbt(statePath);
         return root.getCompound("data");
     }
 }

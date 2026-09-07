@@ -555,7 +555,8 @@ public class LatitudeHudStudioScreen extends Screen {
 
     // The oldest supported version passes a single scroll amount; later ones split it into a
     // horizontal and a vertical one. Only the vertical amount was ever read here, and it is the
-    // single amount on the older shape.
+    // single amount on the older shape, so both spellings are declared and both reach the same
+    // body; vanilla calls whichever one its own line has.
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double verticalAmount) {
         if (sidebarVisible && mouseX < sidebarWidth + 10) {
@@ -566,6 +567,13 @@ public class LatitudeHudStudioScreen extends Screen {
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, verticalAmount);
+    }
+
+    // Deliberately not @Override: this four-argument form does not exist on the line this compiles
+    // against, and declaring it is what lets a newer line reach the same handler. The horizontal
+    // amount is dropped, exactly as the single-amount shape drops it.
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        return mouseScrolled(mouseX, mouseY, verticalAmount);
     }
 
     @Override

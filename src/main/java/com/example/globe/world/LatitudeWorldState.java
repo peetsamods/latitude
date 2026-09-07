@@ -82,6 +82,12 @@ public final class LatitudeWorldState extends SavedData {
      * Packed chunk positions already decorated under the fixed feature index, stored as one NBT long
      * array beside the record fields. The 1.20 range has no per-chunk attachment API to carry that
      * marker, so the world state carries it instead (maintainer ruling, 2026-09-07).
+     *
+     * <p>This is the one part of this state that is written from a thread other than the server's:
+     * chunk decoration runs on the worldgen threads, and a freshly generated chunk has to be marked
+     * as it is decorated or it would look bare to a retrofit armed later. Every read and write of
+     * the set is therefore synchronised on the state, and the save flag it raises is a separate
+     * volatile so the server thread sees it without a lock (maintainer ruling, 2026-09-07).</p>
      */
     private static final String RETROFITTED_CHUNKS_KEY = "retrofitted_chunks";
 
@@ -106,8 +112,10 @@ public final class LatitudeWorldState extends SavedData {
                 }
             }
         });
-        if (!retrofittedChunks.isEmpty()) {
-            tag.putLongArray(RETROFITTED_CHUNKS_KEY, retrofittedChunks.toLongArray());
+        synchronized (this) {
+            if (!retrofittedChunks.isEmpty()) {
+                tag.putLongArray(RETROFITTED_CHUNKS_KEY, retrofittedChunks.toLongArray());
+            }
         }
         return tag;
     }
@@ -121,6 +129,8 @@ public final class LatitudeWorldState extends SavedData {
     private String lastKnownBandId;
     private boolean retrofitEnabled;
     private final LongOpenHashSet retrofittedChunks = new LongOpenHashSet();
+    /** Raised off the server thread by {@link #markRetrofitted}; consulted by {@link #isDirty()}. */
+    private volatile boolean retrofitMarkerDirty;
 
     public LatitudeWorldState() {
         this(false, Optional.empty(), 0, null, null, null, null, false);
@@ -153,15 +163,33 @@ public final class LatitudeWorldState extends SavedData {
     }
 
     /** Whether the chunk at this packed position was already decorated under the fixed index. */
-    public boolean isRetrofitted(long packedChunkPos) {
+    public synchronized boolean isRetrofitted(long packedChunkPos) {
         return retrofittedChunks.contains(packedChunkPos);
     }
 
-    /** Records the chunk at this packed position as decorated under the fixed index. */
-    public void markRetrofitted(long packedChunkPos) {
+    /**
+     * Records the chunk at this packed position as decorated under the fixed index. Callable from a
+     * worldgen thread, which is why it raises the volatile save flag rather than the inherited
+     * non-volatile one.
+     */
+    public synchronized void markRetrofitted(long packedChunkPos) {
         if (retrofittedChunks.add(packedChunkPos)) {
-            setDirty();
+            retrofitMarkerDirty = true;
         }
+    }
+
+    @Override
+    public boolean isDirty() {
+        return retrofitMarkerDirty || super.isDirty();
+    }
+
+    @Override
+    public void setDirty(boolean dirty) {
+        if (!dirty) {
+            // The save has just been written; the marker it carried is on disk with it.
+            retrofitMarkerDirty = false;
+        }
+        super.setDirty(dirty);
     }
 
     private static Optional<WorldgenPolicyVersion> normalizeWorldgenPolicy(Optional<WorldgenPolicyVersion> worldgenPolicy) {

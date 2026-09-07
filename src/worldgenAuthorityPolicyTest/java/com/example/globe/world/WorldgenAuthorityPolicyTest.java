@@ -1421,7 +1421,7 @@ public final class WorldgenAuthorityPolicyTest {
                 "frozen-river vegetal contributions are omitted only inside Latitude decoration scope");
         assertTrue(
                 scheduler.contains("this::latitude$featuresForScopedIndex")
-                        && scheduler.contains("filtered.set(vegetalStep, HolderSet.empty())")
+                        && scheduler.contains("filtered.set(vegetalStep, HolderSet.direct(List.of()))")
                         && scheduler.contains("this.featuresPerStep = () -> expandedIndex;"),
                 "Latitude rebuilds its feature index with only frozen-river vegetation omitted");
 

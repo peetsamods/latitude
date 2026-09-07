@@ -60,8 +60,11 @@ public final class LatitudeTerraBlenderBridge {
             // empty sequence, and an empty sequence is exactly the rule that never answers.
             SurfaceRules.RuleSource passThrough = SurfaceRules.RuleSource.CODEC
                     .parse(JsonOps.INSTANCE, JsonParser.parseString(EMPTY_SEQUENCE_JSON))
-                    .getOrThrow(error -> new IllegalStateException(
-                            "empty sequence rule failed to parse: " + error));
+                    // This line's reporter hands the message to a consumer and throws its own
+                    // exception afterwards, so the consumer is where the message is raised.
+                    .getOrThrow(false, error -> {
+                        throw new IllegalStateException("empty sequence rule failed to parse: " + error);
+                    });
             registerWithTerraBlender(passThrough);
             GlobeMod.LOGGER.info(
                     "[Latitude] TerraBlender surface sweep active: minecraft-namespace biomes fall "

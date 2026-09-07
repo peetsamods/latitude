@@ -8,10 +8,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
@@ -24,6 +26,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -64,9 +69,11 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
  * tag list below must stay APPEND-ONLY history: removing an entry would widen retrofit onto
  * chunks that were never bare.
  *
- * <p>Handled chunks are recorded on the world state, which persists the marker with the save, so
- * no chunk is ever processed twice. Work is throttled to two chunks per server tick, with at most
- * 2,048 chunks pending at once.
+ * <p>Handled chunks are recorded on the world state, which persists the marker with the save —
+ * and every newly generated chunk is marked at decoration time by
+ * {@code ChunkGeneratorGenerateFeaturesBiomeSetMixin} — so no chunk is ever processed twice, and
+ * post-fix chunks are never touched at all. Work is throttled to two chunks per server tick, with
+ * at most 2,048 chunks pending at once.
  *
  * <p>On a world that never captured a provider-ticket profile (created by a dedicated server
  * before that fix), enabling the retrofit also adopts a profile so NEW chunks gain the full
@@ -136,36 +143,76 @@ public final class LatitudeDecorationRetrofit {
     private static volatile boolean completionSummaryPending;
     private static volatile List<ResourceLocation> eligibleCache;
 
+    /**
+     * The world state of every loaded Latitude overworld, captured on the server thread when the
+     * level loads. Decoration runs on the worldgen threads, where reaching into a level's data
+     * storage to find (or create) that state is not safe; marking through the already-resolved
+     * instance is. Cleared as levels unload and again when the server stops.
+     */
+    private static final Map<ServerLevel, LatitudeWorldState> WORLD_STATES = new ConcurrentHashMap<>();
+
     private LatitudeDecorationRetrofit() {
     }
 
     public static void init() {
+        ServerWorldEvents.LOAD.register((server, world) -> cacheWorldState(world));
+        ServerWorldEvents.UNLOAD.register((server, world) -> WORLD_STATES.remove(world));
         ServerChunkEvents.CHUNK_LOAD.register(LatitudeDecorationRetrofit::onChunkLoad);
         ServerTickEvents.END_SERVER_TICK.register(LatitudeDecorationRetrofit::onEndTick);
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> clearQueueState());
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            clearQueueState();
+            // Unlike the queue reset above, the level cache is not touched when the retrofit is
+            // merely switched off: generation-time marking has to keep working either way.
+            WORLD_STATES.clear();
+        });
     }
 
     /**
-     * Marks a chunk as decorated under the fixed index; called from the decoration mixin and once
-     * more for every chunk the repair loop handles.
-     *
-     * <p>The 1.20 range has no per-chunk attachment API, so the marker lives on the world state
-     * instead of on the chunk. The world state is only safe to touch from the server thread, which
-     * is why a chunk that has no loaded server level in reach — every chunk still being generated —
-     * records nothing here.</p>
+     * Captures a level's Latitude state while the server thread still owns it, so decoration can
+     * mark through it later. Only a Latitude overworld is ever retrofitted, and only a Latitude
+     * world has this state to begin with — caching anywhere else would write a Latitude state file
+     * into a save that has none.
      */
-    public static void markDecoratedUnderFixedIndex(ChunkAccess chunk) {
-        if (!(chunk instanceof LevelChunk loaded)
-                || !(loaded.getLevel() instanceof ServerLevel world)
-                || !isEnabled(world)) {
+    private static void cacheWorldState(ServerLevel world) {
+        if (world == null || WORLD_STATES.containsKey(world)
+                || world.dimension() != Level.OVERWORLD
+                || !GlobeMod.isLatitudeOverworld(world)) {
             return;
         }
-        LatitudeWorldState.get(world).markRetrofitted(loaded.getPos().toLong());
+        WORLD_STATES.put(world, LatitudeWorldState.get(world));
+    }
+
+    /**
+     * Marks a chunk as decorated under the fixed index; called from the decoration mixin for every
+     * freshly generated chunk, and once more for every chunk the repair loop handles.
+     *
+     * <p>The 1.20 range has no per-chunk attachment API, so the marker lives on the world state
+     * instead of on the chunk. Decoration runs on a worldgen thread, so this goes through the
+     * instance {@link #cacheWorldState} already resolved rather than through the level's data
+     * storage; a level with nothing cached — the window before it finished loading, and every world
+     * Latitude did not generate — records nothing.</p>
+     *
+     * <p>Marking is deliberately unconditional rather than gated on the retrofit being armed:
+     * a chunk generated correctly today has to look correct to a retrofit armed tomorrow, and the
+     * only record of that is this marker.</p>
+     */
+    public static void markDecoratedUnderFixedIndex(LevelAccessor level, ChunkAccess chunk) {
+        if (!(level instanceof ServerLevelAccessor serverLevel) || chunk == null) {
+            return;
+        }
+        LatitudeWorldState state = WORLD_STATES.get(serverLevel.getLevel());
+        if (state == null) {
+            return;
+        }
+        state.markRetrofitted(chunk.getPos().toLong());
     }
 
     /** Whether this chunk was already decorated under the fixed index. */
     private static boolean isDecoratedUnderFixedIndex(ServerLevel world, ChunkPos pos) {
-        LatitudeWorldState state = LatitudeWorldState.getIfPresent(world);
+        LatitudeWorldState state = WORLD_STATES.get(world);
+        if (state == null) {
+            state = LatitudeWorldState.getIfPresent(world);
+        }
         return state != null && state.isRetrofitted(pos.toLong());
     }
 
@@ -217,6 +264,9 @@ public final class LatitudeDecorationRetrofit {
         }
         pendingConfirmDeadlineMs = 0L;
         LatitudeWorldState state = LatitudeWorldState.get(world);
+        // Second chance at the level cache, on the server thread: a world recognised as Latitude's
+        // only after it finished loading would otherwise mark nothing for the repair loop.
+        cacheWorldState(world);
         if (state.getProviderTicketProfile().isEmpty()) {
             GlobeMod.adoptProviderTicketProfile(server, world, "retrofit adoption");
             lines.add("Provider-biome roster adopted: newly generated chunks will now place the "
@@ -281,6 +331,10 @@ public final class LatitudeDecorationRetrofit {
     }
 
     private static void onEndTick(MinecraftServer server) {
+        // Recognition of a Latitude overworld can complete after this class's own level-load
+        // handler has already run — the create screen records the world's radius from a handler
+        // registered later. Topping the cache up here costs one map probe and closes that window.
+        cacheWorldState(server.overworld());
         if (QUEUE.isEmpty()) {
             maybeLogCompletionSummary();
             return;
@@ -364,7 +418,7 @@ public final class LatitudeDecorationRetrofit {
             // wedge the queue by re-entering it on every load.
             GlobeMod.LOGGER.warn("[Latitude] retrofit failed for chunk {},{} (marking handled)", pos.x, pos.z, e);
         }
-        markDecoratedUnderFixedIndex(chunk);
+        markDecoratedUnderFixedIndex(world, chunk);
         chunk.setUnsaved(true);
     }
 

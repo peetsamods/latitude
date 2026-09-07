@@ -7,7 +7,7 @@ import com.example.globe.client.LatitudeClientState;
 import com.example.globe.util.LatitudeBands;
 import com.mojang.serialization.Lifecycle;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.GenericMessageScreen;
+import net.minecraft.client.gui.screens.GenericDirtMessageScreen;
 import net.minecraft.client.gui.screens.worldselection.WorldCreationContext;
 import net.minecraft.client.gui.screens.worldselection.WorldCreationUiState;
 import net.minecraft.core.Holder;
@@ -121,7 +121,7 @@ public final class LatitudeWorldLauncher {
                     : gameMode == GameType.CREATIVE ? WorldCreationUiState.SelectedGameMode.CREATIVE
                     : WorldCreationUiState.SelectedGameMode.SURVIVAL;
             wc.setGameMode(wcMode);
-            wc.setAllowCommands(allowCommands);
+            wc.setAllowCheats(allowCommands);
             wc.setDifficulty(difficulty);
             wc.setBonusChest(bonusChest);
             wc.setGenerateStructures(generateStructures);
@@ -230,7 +230,7 @@ public final class LatitudeWorldLauncher {
             final PrimaryLevelData launchLevelProperties = levelProperties;
 
             // ── 8. Show "Preparing..." ──
-            client.setScreen(new GenericMessageScreen(Component.translatable("createWorld.preparing")));
+            client.setScreen(new GenericDirtMessageScreen(Component.translatable("createWorld.preparing")));
             CompletableFuture.runAsync(() -> {
                 LevelStorageSource.LevelStorageAccess session;
                 try {
@@ -299,17 +299,44 @@ public final class LatitudeWorldLauncher {
     private static WorldDimensions forceLatitudeOverworld(WorldCreationContext context, Holder<WorldPreset> presetEntry) {
         WorldDimensions presetDimensions = presetEntry.value().createWorldDimensions();
         ChunkGenerator globeOverworldGen = presetDimensions.overworld();
-        Map<ResourceKey<LevelStem>, LevelStem> mergedDimensions =
-                new LinkedHashMap<>(presetDimensions.dimensions());
-        context.datapackDimensions().entrySet().forEach(entry -> {
-            if (!LevelStem.OVERWORLD.equals(entry.getKey())) {
-                mergedDimensions.put(entry.getKey(), entry.getValue());
-            }
-        });
+        Map<ResourceKey<LevelStem>, LevelStem> mergedDimensions = new LinkedHashMap<>();
+        Map<ResourceKey<LevelStem>, Lifecycle> mergedLifecycles = new LinkedHashMap<>();
+        collectDimensions(presetDimensions.dimensions(), mergedDimensions, mergedLifecycles, false);
+        // The overworld is the one entry the preset always wins: it is the generator this whole
+        // method exists to force.
+        collectDimensions(context.datapackDimensions(), mergedDimensions, mergedLifecycles, true);
 
-        WorldDimensions launchDimensions = new WorldDimensions(mergedDimensions)
+        WorldDimensions launchDimensions = new WorldDimensions(freeze(mergedDimensions, mergedLifecycles))
                 .replaceOverworldGenerator(context.worldgenLoadContext(), globeOverworldGen);
         return launchDimensions;
+    }
+
+    private static void collectDimensions(Registry<LevelStem> source,
+                                          Map<ResourceKey<LevelStem>, LevelStem> dimensions,
+                                          Map<ResourceKey<LevelStem>, Lifecycle> lifecycles,
+                                          boolean keepExistingOverworld) {
+        source.entrySet().forEach(entry -> {
+            if (keepExistingOverworld && LevelStem.OVERWORLD.equals(entry.getKey())) {
+                return;
+            }
+            dimensions.put(entry.getKey(), entry.getValue());
+            Lifecycle lifecycle = source.lifecycle(entry.getValue());
+            lifecycles.put(entry.getKey(), lifecycle != null ? lifecycle : Lifecycle.experimental());
+        });
+    }
+
+    /**
+     * A dimension set is a Registry rather than a Map on this Minecraft line, so the merge above is
+     * finished the way vanilla finishes its own ({@code WorldDimensions.withOverworld}): an
+     * experimental registry, each entry keeping the lifecycle the registry it came from gave it.
+     */
+    private static Registry<LevelStem> freeze(Map<ResourceKey<LevelStem>, LevelStem> dimensions,
+                                              Map<ResourceKey<LevelStem>, Lifecycle> lifecycles) {
+        MappedRegistry<LevelStem> merged =
+                new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.experimental());
+        dimensions.forEach((key, stem) ->
+                merged.register(key, stem, lifecycles.getOrDefault(key, Lifecycle.experimental())));
+        return merged.freeze();
     }
 
     /**

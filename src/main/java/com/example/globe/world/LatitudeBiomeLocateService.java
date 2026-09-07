@@ -262,7 +262,7 @@ public final class LatitudeBiomeLocateService {
             bossBar.removeAllPlayers();
             Duration elapsed = Duration.ofNanos(System.nanoTime() - startedNanos);
             if (result == null) {
-                source.sendFailure(Component.translatableEscape(
+                source.sendFailure(Component.translatable(
                         "commands.locate.biome.not_found", target.asPrintable()));
             } else {
                 LocateCommand.showLocateResult(source, target, origin, result,
