@@ -44,11 +44,30 @@ public final class LoadingPresentationPolicyTest {
 
     public static void runAll() throws Exception {
         everyScreenInTheResumeChainPaintsTheSharedPane();
+        theVanillaPercentageIsHiddenOnlyBehindTheLatitudePane();
         theSharedPaneOwnsTheDrawingSoTheTwoScreensCannotDrift();
         thePaneClockIsSharedSoTheHandoffDoesNotRestartIt();
         theVanillaMessageWidgetIsRestoredWheneverLatitudeIsNotLoading();
         theResumedWorldVerdictIsNotDecidedByTheStemCheckAlone();
         releaseBuildCarriesNoLoadingTraceHook();
+    }
+
+    /**
+     * Minecraft 1.21.1 queues its numeric chunk percentage as a separate text draw. Painting the
+     * Latitude pane at render TAIL therefore does not cover it reliably: text batching can place
+     * the percentage over the compass. Suppress that one call only while Latitude owns the screen,
+     * and preserve vanilla's draw for every other world.
+     */
+    private static void theVanillaPercentageIsHiddenOnlyBehindTheLatitudePane() throws IOException {
+        String source = read(
+                "src/main/java/com/example/globe/mixin/client/LevelLoadingScreenLatitudeOverlayMixin.java");
+        assertTrue(source.contains("globe$drawVanillaProgressUnlessLatitudeLoading"),
+                "the 1.21.1 loading-screen mixin must intercept vanilla's separately batched "
+                        + "numeric progress label");
+        assertTrue(source.contains("if (!LatitudeClientState.isLatitudeWorldLoading())"),
+                "the numeric label suppression must be scoped to the active Latitude pane");
+        assertTrue(source.contains("context.drawCenteredString(font, text, x, y, color)"),
+                "ordinary non-Latitude worlds must retain vanilla's numeric progress label");
     }
 
     /**

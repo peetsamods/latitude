@@ -489,6 +489,19 @@ class ModifyTest(unittest.TestCase):
 
 
 class ParsingTest(unittest.TestCase):
+    def test_explicit_accessor_member_names(self) -> None:
+        body = '''
+    @Accessor("state")
+    abstract State globe$getState();
+
+    @Accessor(value = "count")
+    abstract int globe$getCount();
+
+    @Accessor
+    abstract int globe$getInferred();
+'''
+        self.assertEqual(vmt.accessor_members(body), ["state", "count"])
+
     def test_javap_signatures(self) -> None:
         declared, supertypes = vmt.parse_javap_signatures(CLASSES["a.b.Foo"], "a.b.Foo")
         self.assertEqual(supertypes, ["a.b.Base", "java.lang.Runnable"])

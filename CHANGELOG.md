@@ -1,5 +1,14 @@
 # Changelog
 
+## Latitude 1.5.1-beta.5.1 (Minecraft 1.21.1)
+
+A small, 1.21.1-only hotfix for Beta 5.
+
+### Fixed
+
+- Backing out of Latitude's Create World screen no longer crashes the game.
+- Latitude's loading pane no longer shows Minecraft's extra numeric progress above the compass.
+
 ## Latitude 1.5.1-beta.5 (Minecraft 1.21.1)
 
 The first Latitude release for Minecraft 1.21.1 since 1.3.0, and it is a big jump: everything

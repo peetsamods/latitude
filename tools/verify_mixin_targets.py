@@ -9,11 +9,11 @@ This closes most of that gap without a client: it reads `globe.mixins.json`, res
 `@Mixin` target and every injector's `method = "..."` and `@At(target = "L...;name(...)...")`
 against the *remapped* Minecraft jar Loom built for this target, and reports anything missing.
 
-It also checks that every `@Shadow` names a member the target class DECLARES. Mixin does not
-resolve a shadow through the inheritance chain, so shadowing an inherited member compiles clean,
-passes `check`, and then fails at apply time -- the class never loads and the client wedges on a
-screen that simply never appears. That gap was described in this file for a while before it was
-covered; it cost a frozen test build on the sibling line first.
+It also checks that every `@Shadow` and explicit `@Accessor` names a member the target class
+DECLARES. Mixin resolves both at class-load time, so a renamed, removed, or inherited-only member
+compiles clean, passes `check`, and then fails at apply time. That gap was described in this file
+for a while before `@Shadow` was covered; an unchecked accessor later caused the same failure
+shape on the 1.21.1 client.
 
 Scope is per registered CLASS, never per file: one file may hold several top-level mixins with
 different targets, and pooling their members lets a member declared on one target satisfy a
@@ -222,6 +222,18 @@ def shadow_members(body: str) -> list[str]:
         if tokens:
             names.append(tokens[-1])
     return names
+
+
+def accessor_members(body: str) -> list[str]:
+    """Every explicit member name claimed by an `@Accessor` in this class body.
+
+    All accessors in this project name their target explicitly. Inferred targets are deliberately
+    left out until their JavaBeans-style name rules can be modelled without false positives.
+    """
+    return re.findall(
+        r'@Accessor\s*\(\s*(?:value\s*=\s*)?"([A-Za-z_$][\w$]*)"\s*\)',
+        body,
+    )
 
 
 def resolve_import(simple: str, source: str, mixin_package_hint: str) -> str | None:
@@ -1300,6 +1312,7 @@ def main() -> int:
     checked_classes = 0
     checked_methods = 0
     checked_shadows = 0
+    checked_accessors = 0
     checked_signatures = 0
     partial_signatures = 0
     unverifiable_signatures = 0
@@ -1375,6 +1388,23 @@ def main() -> int:
                     f"(inherited members do not satisfy @Shadow; it fails at apply time and wedges "
                     f"the class load -- use @Invoker/@Accessor on the declaring class instead)")
 
+        for accessor in accessor_members(body):
+            checked_accessors += 1
+            declared_anywhere = False
+            queried: list[str] = []
+            for target in targets:
+                if target not in declared_cache:
+                    declared_cache[target] = javap_declared_members(javap_bin, jar, target)
+                declared = declared_cache[target]
+                queried.append(target)
+                if declared and accessor in declared:
+                    declared_anywhere = True
+                    break
+            if not declared_anywhere:
+                problems.append(
+                    f"{entry}: @Accessor '{accessor}' is not DECLARED on {', '.join(queried)} "
+                    f"(the accessor fails at apply time and aborts the target class load)")
+
         if not resolved_members:
             continue
 
@@ -1417,7 +1447,8 @@ def main() -> int:
 
     print(f"MIXIN_TARGET_VERIFY_PASS mixins={len(registered)} "
           f"targetClasses={checked_classes} targetMethods={checked_methods} "
-          f"shadowMembers={checked_shadows} handlerSignatures={checked_signatures} "
+          f"shadowMembers={checked_shadows} accessorMembers={checked_accessors} "
+          f"handlerSignatures={checked_signatures} "
           f"handlerSignaturesPartial={partial_signatures} "
           f"handlerSignaturesUnverifiable={unverifiable_signatures}")
     print(f" classpathEntries={len(jar.split(':'))}")

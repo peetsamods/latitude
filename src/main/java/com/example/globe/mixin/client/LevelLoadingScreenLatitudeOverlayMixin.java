@@ -3,6 +3,7 @@ package com.example.globe.mixin.client;
 import com.example.globe.client.LatitudeClientState;
 import com.example.globe.client.LatitudeLoadingPane;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.gui.screens.Screen;
@@ -18,6 +19,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
@@ -65,6 +67,23 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
         float rawProgress = Mth.clamp(this.progressListener.getProgress() / 100.0F, 0f, 1f);
         LatitudeClientState.latitudeLoadingProgress = rawProgress;
         LatitudeLoadingPane.render(context, this.font, delta, rawProgress, now);
+    }
+
+    // 1.21.1 queues the numeric chunk percentage as a separate text draw. Text batching can place
+    // it over the Latitude pane even though the pane is painted at render TAIL, so suppress that
+    // one label while Latitude owns the screen. Vanilla worlds retain their normal percentage.
+    @Redirect(
+            method = "render",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/GuiGraphics;drawCenteredString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/network/chat/Component;III)V"),
+            require = 0,
+            expect = 1)
+    private void globe$drawVanillaProgressUnlessLatitudeLoading(
+            GuiGraphics context, Font font, Component text, int x, int y, int color) {
+        if (!LatitudeClientState.isLatitudeWorldLoading()) {
+            context.drawCenteredString(font, text, x, y, color);
+        }
     }
 
     /**
