@@ -34,6 +34,7 @@ public final class CreateWorldScreenUiPolicyTest {
         accessibilityFooterAvoidsTheCreateButtons();
         tabClicksUseRealWidgetOwnership();
         stillIsABespokeTabUnderThePanel();
+        screenWheelRoutingStaysOnTheFabricScreenEvents();
         System.out.println("PASS CreateWorldScreenUiPolicyTest assertions=" + assertions);
     }
 
@@ -184,6 +185,27 @@ public final class CreateWorldScreenUiPolicyTest {
                 "tab hitboxes must be registered for Minecraft input dispatch");
         expectTrue(!source.contains("handleTabClick("),
                 "manual tab click dispatch must not compete with widget ownership");
+    }
+
+    /**
+     * Minecraft 1.20.2 changed the scroll-wheel signature mid-range, and the shipped jar is remapped with
+     * 1.20.1's mappings, so a plain override can only ever reach one half of the 1.20 line. Wheel handling
+     * for the bespoke screens therefore goes through the Fabric screen events, which carry both amounts on
+     * every 1.20 version. Losing that registration would silently drop wheel scrolling in the create screen.
+     */
+    private static void screenWheelRoutingStaysOnTheFabricScreenEvents() throws IOException {
+        String client = Files.readString(Path.of("src/main/java/com/example/globe/GlobeModClient.java"));
+        String screen = Files.readString(Path.of(
+                "src/main/java/com/example/globe/client/create/LatitudeCreateWorldScreen.java"));
+        String studio = Files.readString(Path.of("src/main/java/com/example/globe/client/LatitudeHudStudioScreen.java"));
+        expectTrue(client.contains("registerScreenWheelRouting();"),
+                "the client entrypoint must register the screen wheel routing");
+        expectTrue(client.contains("ScreenMouseEvents.allowMouseScroll(screen)"),
+                "wheel routing must use the Fabric screen mouse events, which span every 1.20 version");
+        expectTrue(!screen.contains("mouseScrolled("),
+                "the create screen must not also override mouseScrolled, or one version would scroll twice");
+        expectTrue(!studio.contains("mouseScrolled("),
+                "the HUD studio must not also override mouseScrolled, or one version would scroll twice");
     }
 
     private static void expect(int expected, int actual, String label) {
