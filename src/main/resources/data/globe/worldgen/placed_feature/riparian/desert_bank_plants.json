@@ -23,10 +23,12 @@
       "type": "minecraft:random_offset",
       "xz_spread": {
         "type": "minecraft:clamped_normal",
-        "mean": 0.0,
-        "deviation": 2.0,
-        "min_inclusive": -4,
-        "max_inclusive": 4
+        "value": {
+          "mean": 0.0,
+          "deviation": 2.0,
+          "min_inclusive": -4,
+          "max_inclusive": 4
+        }
       },
       "y_spread": 0
     },
