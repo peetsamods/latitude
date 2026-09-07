@@ -31,9 +31,10 @@ from Beta 4 on Minecraft 26.2 and adds Minecraft's new Dappled Forest to Latitud
   or whose Latitude data is incomplete, are left exactly as they are. Back up a world before opening
   it on 26.3: saving there can update Minecraft's own data, so taking that save back to 26.2 is
   unsupported.
-- **A still background for the create-world screen.** The **Still** toggle at the left of the
-  bottom button row on Latitude's create-world screen swaps the moving panorama for a flat dark
-  backdrop, and the choice is remembered between sessions.
+- **A still background for the create-world screen.** A **Still** tab hangs under the bottom-left
+  corner of Latitude's create-world panel, styled like the World and Settings tabs above it. Switch
+  it on to swap the moving panorama for a flat dark backdrop; the choice is remembered between
+  sessions.
 
 ### Improved
 
