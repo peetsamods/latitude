@@ -914,9 +914,17 @@ enable-command-block=false
         def previewLevelName = (findProperty('latdev.preview.levelName') ?: System.getProperty('latdev.preview.levelName') ?: '').toString()
         def previewLevelSeed = (findProperty('latdev.preview.levelSeed') ?: System.getProperty('latdev.preview.levelSeed') ?: '').toString()
         def previewLevelType = (findProperty('latdev.preview.levelType') ?: System.getProperty('latdev.preview.levelType') ?: '').toString()
+        def props = new Properties()
+        propsFile.withInputStream { props.load(it) }
+        // A headless export runs inside one deliberately long server tick. Vanilla's watchdog
+        // (max-tick-time, 60 s by default) would kill the server before the exporter writes its
+        // completion marker, turning a finished bundle into a reported crash. Disable it for the
+        // preview run directory; this file is runtime state and never ships.
+        if (props.getProperty('max-tick-time') != '-1') {
+            props.setProperty('max-tick-time', '-1')
+            propsFile.withOutputStream { props.store(it, 'Minecraft server properties') }
+        }
         if (previewLevelName || previewLevelSeed || previewLevelType) {
-            def props = new Properties()
-            propsFile.withInputStream { props.load(it) }
             if (previewLevelName) {
                 props.setProperty('level-name', previewLevelName)
             }
