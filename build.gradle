@@ -218,8 +218,6 @@ dependencies {
     compileOnly "io.github.llamalad7:mixinextras-common:0.5.0"
 // DISABLED (was crashing compile):     annotationProcessor "io.github.llamalad7:mixinextras-common:0.5.0"
 
-    modCompileOnly "maven.modrinth:placeholder-api:${project.placeholder_api_version}"
-    modLocalRuntime "maven.modrinth:placeholder-api:${project.placeholder_api_version}"
 }
 
 sourceSets {
@@ -299,15 +297,15 @@ tasks.withType(JavaCompile).configureEach {
     it.javaCompiler = javaToolchains.compilerFor {
         languageVersion = JavaLanguageVersion.of(21)
     }
-    it.options.release = 21
+    it.options.release = 17
 }
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(21)
     withSourcesJar()
 
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 tasks.withType(Jar).configureEach {
@@ -529,7 +527,7 @@ tasks.register('compileLatitudeCreateScreenClipPolicyTest', JavaCompile) {
     }
     classpath = sourceSets.main.output
     destinationDirectory.set(latitudeCreateScreenClipPolicyTestClasses)
-    options.release = 21
+    options.release = 17
     dependsOn classes
 }
 
@@ -555,7 +553,7 @@ tasks.register('compileLatitudePolarPresentationPolicyTest', JavaCompile) {
     }
     classpath = sourceSets.main.output
     destinationDirectory.set(latitudePolarPresentationPolicyTestClasses)
-    options.release = 21
+    options.release = 17
     dependsOn classes
 }
 
@@ -644,7 +642,7 @@ tasks.register('compileLatitudeLocationDetailPolicyTest', JavaCompile) {
     }
     classpath = sourceSets.main.output
     destinationDirectory.set(latitudeLocationDetailPolicyTestClasses)
-    options.release = 21
+    options.release = 17
     dependsOn classes
 }
 
@@ -670,7 +668,7 @@ tasks.register('compileLatitudeVillageLatitudePolicyTest', JavaCompile) {
     }
     classpath = sourceSets.main.runtimeClasspath
     destinationDirectory.set(latitudeVillageLatitudePolicyTestClasses)
-    options.release = 21
+    options.release = 17
     dependsOn classes
 }
 
@@ -696,7 +694,7 @@ tasks.register('compileLatitudePolarFoliagePolicyTest', JavaCompile) {
     }
     classpath = sourceSets.main.output
     destinationDirectory.set(latitudePolarFoliagePolicyTestClasses)
-    options.release = 21
+    options.release = 17
     dependsOn classes
 }
 
@@ -722,7 +720,7 @@ tasks.register('compileLatitudeRiverBandPolicyTest', JavaCompile) {
     }
     classpath = sourceSets.main.output
     destinationDirectory.set(latitudeRiverBandPolicyTestClasses)
-    options.release = 21
+    options.release = 17
     dependsOn classes
 }
 
@@ -748,7 +746,7 @@ tasks.register('compileLatitudeWorldgenAuthorityPolicyTest', JavaCompile) {
     }
     classpath = sourceSets.main.runtimeClasspath
     destinationDirectory.set(latitudeWorldgenAuthorityPolicyTestClasses)
-    options.release = 21
+    options.release = 17
     dependsOn classes
 }
 
@@ -799,7 +797,7 @@ tasks.register('compileLatitudeDevToolPolicyTest', JavaCompile) {
     }
     classpath = sourceSets.main.output
     destinationDirectory.set(latitudeDevToolPolicyTestClasses)
-    options.release = 21
+    options.release = 17
     dependsOn classes
 }
 
@@ -825,7 +823,7 @@ tasks.register('compileLatitudeSpawnSafetyPolicyTest', JavaCompile) {
     }
     classpath = sourceSets.main.runtimeClasspath
     destinationDirectory.set(latitudeSpawnSafetyPolicyTestClasses)
-    options.release = 21
+    options.release = 17
     dependsOn classes
 }
 
@@ -851,7 +849,7 @@ tasks.register('compileLatitudeShippingToolsPolicyTest', JavaCompile) {
     }
     classpath = sourceSets.main.runtimeClasspath
     destinationDirectory.set(latitudeShippingToolsPolicyTestClasses)
-    options.release = 21
+    options.release = 17
     dependsOn classes
 }
 
