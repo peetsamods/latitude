@@ -553,12 +553,16 @@ public class LatitudeHudStudioScreen extends Screen {
         wasLDown = lDown;
     }
 
-    // The oldest supported version passes a single scroll amount; later ones split it into a
-    // horizontal and a vertical one. Only the vertical amount was ever read here, and it is the
-    // single amount on the older shape, so both spellings are declared and both reach the same
-    // body; vanilla calls whichever one its own line has.
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double verticalAmount) {
+    /**
+     * Scrolls the sidebar when the pointer is over it, and reports whether it consumed the wheel.
+     *
+     * <p>This is not an override, for the reason set out on the create-world screen's own wheel
+     * entry point: the screen method gained a horizontal amount partway through the supported
+     * range, so neither spelling can be dispatched on every version from a jar remapped against the
+     * oldest one. {@code GlobeModClient} registers this method against the loader's per-screen
+     * wheel event instead. Only the vertical amount was ever read here.</p>
+     */
+    public boolean scrollSidebar(double mouseX, double verticalAmount) {
         if (sidebarVisible && mouseX < sidebarWidth + 10) {
             int viewportH = sidebarViewportBottom - sidebarViewportTop;
             int maxScroll = Math.max(0, sidebarContentHeight - viewportH);
@@ -566,14 +570,7 @@ public class LatitudeHudStudioScreen extends Screen {
             sidebarScrollY = Mth.clamp(sidebarScrollY, 0, maxScroll);
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, verticalAmount);
-    }
-
-    // Deliberately not @Override: this four-argument form does not exist on the line this compiles
-    // against, and declaring it is what lets a newer line reach the same handler. The horizontal
-    // amount is dropped, exactly as the single-amount shape drops it.
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        return mouseScrolled(mouseX, mouseY, verticalAmount);
+        return false;
     }
 
     @Override

@@ -11,6 +11,7 @@ import com.example.globe.client.ClientKeybinds;
 import com.example.globe.client.GlobeWarningOverlay;
 import com.example.globe.client.LatitudeClientState;
 import com.example.globe.client.LatitudeHudStudioScreen;
+import com.example.globe.client.create.LatitudeCreateWorldScreen;
 import com.example.globe.client.EwPresentationPolicy;
 import com.example.globe.dev.DevCaptureKeybind;
 import com.example.globe.dev.client.SeamAuditClientBridge;
@@ -21,6 +22,8 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.BlockParticleOption;
@@ -96,6 +99,8 @@ public class GlobeModClient implements ClientModInitializer {
             });
         });
 
+        registerScreenWheelRouting();
+
         GlobeWarningOverlay.init();
         CompassHud.init();
         ClientTickEvents.END_CLIENT_TICK.register(GlobeModClient::polarCapClientTick);
@@ -110,6 +115,38 @@ public class GlobeModClient implements ClientModInitializer {
             com.example.globe.dev.AutoCreateWorldProbe.maybeRegister();
         }
 
+    }
+
+    /**
+     * Routes the mouse wheel to Latitude's two scrolling screens.
+     *
+     * <p>{@code Screen.mouseScrolled} gained a horizontal amount partway through the supported
+     * Minecraft range. The jar is remapped against the oldest line, so an override of either
+     * spelling is dispatched on only part of the range and is silently dead on the rest. The
+     * loader's own per-screen wheel event carries both amounts and has the same shape on every
+     * supported version, so both screens are served from here instead.</p>
+     *
+     * <p>Returning {@code false} from the callback stops the wheel before vanilla hands it to the
+     * screen, which is what makes this the single handling path -- neither screen declares a wheel
+     * override any more. Returning {@code true} when the screen did not consume the wheel lets
+     * vanilla's ordinary widget dispatch run, exactly as falling through to {@code super} did.</p>
+     *
+     * <p>The per-screen events are rebuilt by the loader at the head of every screen
+     * initialisation, immediately before this event fires, so registering here adds one callback
+     * per initialisation rather than accumulating them.</p>
+     */
+    private static void registerScreenWheelRouting() {
+        ScreenEvents.BEFORE_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
+            if (screen instanceof LatitudeCreateWorldScreen createScreen) {
+                ScreenMouseEvents.allowMouseScroll(screen).register(
+                        (scrolled, mouseX, mouseY, horizontalAmount, verticalAmount) ->
+                                !createScreen.scrollPanes(mouseX, mouseY, horizontalAmount, verticalAmount));
+            } else if (screen instanceof LatitudeHudStudioScreen studioScreen) {
+                ScreenMouseEvents.allowMouseScroll(screen).register(
+                        (scrolled, mouseX, mouseY, horizontalAmount, verticalAmount) ->
+                                !studioScreen.scrollSidebar(mouseX, verticalAmount));
+            }
+        });
     }
 
     private static void registerPromenadePalmTintCompat(Minecraft client) {

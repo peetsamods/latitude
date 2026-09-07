@@ -1606,21 +1606,17 @@ public class LatitudeCreateWorldScreen extends Screen {
         }
     }
 
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double verticalAmount) {
-        // The oldest supported line delivers only a vertical wheel amount. Its horizontal
-        // counterpart arrived later under the same name, so both spellings are declared and both
-        // hand the same body the same four values; vanilla calls whichever one its own line has.
-        return scrollPanes(mouseX, mouseY, 0.0D, verticalAmount);
-    }
-
-    // Deliberately not @Override: this four-argument form does not exist on the line this compiles
-    // against, and declaring it is what lets a newer line reach the same handler.
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        return scrollPanes(mouseX, mouseY, horizontalAmount, verticalAmount);
-    }
-
-    private boolean scrollPanes(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+    /**
+     * Scrolls whichever pane the pointer is over, and reports whether it consumed the wheel.
+     *
+     * <p>This is not an override. The screen's own wheel entry point gained a horizontal amount
+     * partway through the supported range, and the jar is remapped against the oldest line, so
+     * neither spelling can be dispatched on every version. {@code GlobeModClient} registers this
+     * method against the loader's own per-screen wheel event instead, which carries both amounts
+     * and is identical on the whole range; returning {@code false} here lets the screen's ordinary
+     * widget dispatch run exactly as falling through to {@code super} used to.</p>
+     */
+    public boolean scrollPanes(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         if (getPaneStripMaxScroll() > 0
                 && horizontalAmount != 0.0D
                 && mouseX >= paneStripViewportLeft
@@ -1672,7 +1668,7 @@ public class LatitudeCreateWorldScreen extends Screen {
             applyPaneStripScroll(paneStripScroll - (int) Math.signum(verticalAmount) * scaledUi(28));
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, verticalAmount);
+        return false;
     }
 
     @Override
