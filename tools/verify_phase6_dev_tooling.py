@@ -141,8 +141,11 @@ def verify_tools_sources(failures: list[str]) -> None:
 
     # T6 operator gating, applied exactly once at the /latitude root. The separate locate action
     # is authorized by an expiring player-bound token instead of an elevated command requirement.
-    # 1.21.1 publishes no Commands.hasPermission(int) predicate factory, so the same level-2 gate is
-    # spelled as an explicit source predicate. The required level is unchanged.
+    # No Minecraft version this jar supports publishes a Commands.hasPermission(int) predicate
+    # factory -- verified by javap on the oldest supported line, which declares LEVEL_GAMEMASTERS
+    # but no such factory -- so the same level-2 gate is spelled as an explicit source predicate
+    # against CommandSourceStack.hasPermission(int), which every one of them does declare. The
+    # required level is unchanged.
     require(command, ".requires(source -> source.hasPermission(Commands.LEVEL_GAMEMASTERS))",
             "shipping operator permission gate", failures)
     if command.count(".requires(") != 1:

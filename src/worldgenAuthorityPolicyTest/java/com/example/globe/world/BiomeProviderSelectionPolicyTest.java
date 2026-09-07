@@ -6,7 +6,6 @@ import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.MappedRegistry;
-import net.minecraft.core.RegistrationInfo;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -49,11 +48,10 @@ final class BiomeProviderSelectionPolicyTest {
     private BiomeProviderSelectionPolicyTest() {}
 
     static void run() throws Exception {
-        // Minecraft 1.21.11 static-initialises BuiltInRegistries from BiomeSource's own clinit, so any
-        // test that touches LatitudeBiomeSource live needs the bootstrap to have already run. The
-        // 26.2 twin of this suite gets away without it because its BiomeSource does not reach the
-        // registries that early. Bootstrap is idempotent, so the later call in buildTestBiomeRegistry
-        // becomes a no-op.
+        // Touching LatitudeBiomeSource live reaches Minecraft's built-in registries, and on every
+        // version this jar supports MappedRegistry's constructor refuses to run before the
+        // bootstrap. Bootstrap is idempotent, so the later call in buildTestBiomeRegistry becomes
+        // a no-op.
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
         descriptorAdmissionIsClosedAndCanonical();
@@ -1253,7 +1251,7 @@ final class BiomeProviderSelectionPolicyTest {
         int half = grove.radiusBlocks() / 2;
         assertEquals(5, samples.size(),
                 "planned land locate checks the centre and all four planner-certified shoulders");
-        assertEquals(new BlockPos(grove.blockX() + half, 80, grove.blockZ()), samples.getFirst(),
+        assertEquals(new BlockPos(grove.blockX() + half, 80, grove.blockZ()), samples.get(0),
                 "planned land locate returns the nearest final-output sample first");
         assertTrue(samples.contains(new BlockPos(grove.blockX(), 80, grove.blockZ()))
                         && samples.contains(new BlockPos(grove.blockX() - half, 80, grove.blockZ()))
@@ -1738,7 +1736,9 @@ final class BiomeProviderSelectionPolicyTest {
         MappedRegistry<Biome> writable = new MappedRegistry<>(Registries.BIOME, Lifecycle.stable());
         for (String id : ids) {
             ResourceKey<Biome> key = ResourceKey.create(Registries.BIOME, new ResourceLocation(id));
-            writable.register(key, minimalBiome(), RegistrationInfo.BUILT_IN);
+            // This line has no RegistrationInfo; a built-in registration is the stable
+            // lifecycle, which is what the vanilla register helper passes here.
+            writable.register(key, minimalBiome(), Lifecycle.stable());
         }
         List<Holder<Biome>> temperateMountainHolders = new ArrayList<>();
         for (String id : List.of(

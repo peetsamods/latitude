@@ -170,6 +170,11 @@ public final class PolarFoliagePolicyTest {
                     "the guarded-content tiers together must still nest " + nestedTag);
         }
         for (String block : new String[]{
+                // Ground grass is spelled minecraft:grass on the two oldest supported lines and
+                // minecraft:short_grass on the two newest. Both ids are carried, each optional, so
+                // the tag resolves on every one of them; both are asserted here so dropping either
+                // spelling -- which silently unguards grass on half the range -- fails.
+                "minecraft:grass",
                 "minecraft:short_grass",
                 "minecraft:tall_grass",
                 "minecraft:short_dry_grass",
@@ -321,9 +326,10 @@ public final class PolarFoliagePolicyTest {
                 "logs are tree-derived and belong to the tree-line tier");
         assertFalse(foliage.contains("#minecraft:logs"),
                 "logs must NOT remain in the ground-vegetation tier");
-        assertTrue(foliage.contains("minecraft:short_grass"),
-                "grass is ground vegetation and must survive above the tree line");
-        assertFalse(woody.contains("minecraft:short_grass"),
+        assertTrue(foliage.contains("minecraft:grass") && foliage.contains("minecraft:short_grass"),
+                "grass is ground vegetation and must survive above the tree line, under both the "
+                        + "older and the newer id");
+        assertFalse(woody.contains("minecraft:grass") || woody.contains("minecraft:short_grass"),
                 "grass must not be pulled down to the tree line");
     }
 

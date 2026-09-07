@@ -42,8 +42,9 @@ import net.minecraft.world.level.storage.DimensionDataStorage;
  * (maintainer ruling, 2026-09-07: one jar, method-handle adapters, fail loudly).</p>
  *
  * <p><b>Everything else here follows the same pattern:</b> the compressed-NBT reader gained a
- * mandatory accountant mid-range, the built-in datapack source gained a mandatory directory
- * validator, and widgets gained a public height setter. Each is resolved once, in its own holder
+ * mandatory accountant mid-range and its writer moved from a {@code File} to a {@code Path} at the
+ * same point, the built-in datapack source gained a mandatory directory validator, and widgets
+ * gained a public height setter. Each is resolved once, in its own holder
  * class so that resolution happens on first use rather than when this class loads — a dedicated
  * server touches only the saved-data pair, and the two client holders are stripped there.</p>
  */
@@ -67,6 +68,7 @@ public final class McCompat {
     private static final String WIDGET_HEIGHT_FIELD_INTERMEDIARY = "field_22759";
     private static final String DIRECTORY_VALIDATOR_INTERMEDIARY = "method_52702";
     private static final String READ_COMPRESSED_INTERMEDIARY = "method_30613";
+    private static final String WRITE_COMPRESSED_INTERMEDIARY = "method_30614";
     private static final String UNLIMITED_HEAP_INTERMEDIARY = "method_53898";
     private static final String SAVED_DATA_DESCRIPTOR = "Lnet/minecraft/class_18;";
     private static final String SAVED_DATA_FACTORY_DESCRIPTOR = "Lnet/minecraft/class_18$class_8645;";
@@ -249,6 +251,28 @@ public final class McCompat {
     }
 
     /**
+     * Writes a gzipped NBT file. The mirror of {@link #readCompressedNbt(Path)}: the oldest two
+     * supported lines take a {@code File} and the newer two take a {@code Path}, under one
+     * identifier. The bytes written are the same either way -- both shapes only open the file and
+     * hand the stream to the same writer -- so this preserves each line's own file handling rather
+     * than opening the stream here.
+     */
+    public static void writeCompressedNbt(CompoundTag tag, Path path) throws IOException {
+        try {
+            if (CompressedNbt.PATH_WRITER) {
+                CompressedNbt.WRITE.invoke(tag, path);
+            } else {
+                CompressedNbt.WRITE.invoke(tag, path.toFile());
+            }
+        } catch (IOException | RuntimeException | Error direct) {
+            throw direct;
+        } catch (Throwable failure) {
+            throw new IllegalStateException("Latitude could not write the compressed NBT at " + path,
+                    failure);
+        }
+    }
+
+    /**
      * Sets a widget's height. {@code AbstractWidget} publishes a height setter only from the second
      * supported line on; the protected field it assigns is declared, unchanged, on every one of
      * them, so the older line is served by writing that field directly — which is the whole body of
@@ -411,6 +435,8 @@ public final class McCompat {
         private static final boolean ACCOUNTED;
         private static final MethodHandle READ;
         private static final MethodHandle UNLIMITED_HEAP;
+        private static final boolean PATH_WRITER;
+        private static final MethodHandle WRITE;
 
         static {
             Set<String> names = methodNames(NBT_IO_OWNER, READ_COMPRESSED_INTERMEDIARY,
@@ -437,11 +463,26 @@ public final class McCompat {
                         + "reads but publishes no unlimited-heap accountant; Latitude cannot read a "
                         + "save's state file.");
             }
+            Set<String> writeNames = methodNames(NBT_IO_OWNER, WRITE_COMPRESSED_INTERMEDIARY,
+                    "writeCompressed",
+                    "(" + COMPOUND_TAG_DESCRIPTOR + "Ljava/io/File;)V",
+                    "(" + COMPOUND_TAG_DESCRIPTOR + "Ljava/nio/file/Path;)V");
+            Method toFile = findMethod(NbtIo.class, writeNames,
+                    parameters -> parameters.length == 2 && parameters[1] == java.io.File.class);
+            Method toPath = findMethod(NbtIo.class, writeNames,
+                    parameters -> parameters.length == 2 && parameters[1] == Path.class);
+            if (toFile == null && toPath == null) {
+                throw new IllegalStateException("This Minecraft version exposes neither supported "
+                        + "compressed-NBT writer; Latitude cannot write a save's state file.");
+            }
+
             MethodHandles.Lookup lookup = MethodHandles.lookup();
             try {
                 ACCOUNTED = accounted;
                 READ = lookup.unreflect(accounted ? fromPath : fromFile);
                 UNLIMITED_HEAP = accounted ? lookup.unreflect(accounter) : null;
+                PATH_WRITER = toFile == null;
+                WRITE = lookup.unreflect(toFile == null ? toPath : toFile);
             } catch (Throwable failure) {
                 throw new IllegalStateException("Latitude could not adapt the compressed-NBT reader "
                         + "of this Minecraft version.", failure);

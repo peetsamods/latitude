@@ -562,7 +562,7 @@ public final class DevToolPolicyTest {
         List<String> lines = Files.readAllLines(session.eventsPath());
         expectEquals(5, lines.size(), "append-only event log contains every lifecycle event");
         expectTrue(
-                lines.getFirst().startsWith(
+                lines.get(0).startsWith(
                         "{\"schema\":\"latitude-dev-case-v1\",\"sequence\":1,\"world_tick\":100,"
                                 + "\"event\":\"start\",\"case_id\":\"north-fog\","
                                 + "\"session_id\":\"north-fog\","

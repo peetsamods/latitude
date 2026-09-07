@@ -2,14 +2,21 @@ package com.example.globe.world;
 
 import com.example.globe.client.create.RecreatedWorldTypePolicy;
 import com.example.globe.client.create.RecreatedWorldMetadata;
+import com.example.globe.util.McCompat;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicBoolean;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtIo;
 
 public final class WorldgenAuthorityPolicyTest {
     public static void main(String[] args) throws Exception {
+        // Every entry point below reaches LatitudeBiomes or LatitudeBiomeSource, whose class
+        // initialisers touch Minecraft's built-in registries -- and on every version this jar
+        // supports, MappedRegistry's constructor refuses to run before the bootstrap. It is
+        // idempotent, so the calls the individual proofs already make become no-ops.
+        net.minecraft.SharedConstants.tryDetectVersion();
+        net.minecraft.server.Bootstrap.bootStrap();
+
         if (args.length == 1 && "polar-transition".equals(args[0])) {
             BiomeProviderSelectionPolicyTest.polarTaigaTransitionPreservesShouldersAndTreeLine();
             System.out.println("POLAR_TAIGA_TRANSITION_TEST_PASS");
@@ -482,7 +489,7 @@ public final class WorldgenAuthorityPolicyTest {
         data.putInt("globe_radius", 10000);
         CompoundTag root = new CompoundTag();
         root.put("data", data);
-        NbtIo.writeCompressed(root, statePath);
+        McCompat.writeCompressedNbt(root, statePath);
         assertEquals(
                 "globe:globe_large",
                 RecreatedWorldMetadata.latitudePresetId(worldRoot),
@@ -1282,10 +1289,18 @@ public final class WorldgenAuthorityPolicyTest {
 
         String state = normalize(read(
                 "src/main/java/com/example/globe/world/LatitudeWorldState.java"));
-        // 1.21.1 passes the saved-data id at lookup time rather than carrying it on the type.
+        // The saved-data storage takes a loose (deserializer, constructor, id) triple on the
+        // oldest supported line and a single factory record on every later one, so both lookups go
+        // through the McCompat adapter. What this guards is unchanged: the "if present" read must
+        // be the plain get, and the creating call must remain a separate computeIfAbsent, or a
+        // vanilla world gets a Latitude state file written into it just by being asked about.
         assertTrue(
-                state.contains("return world.getDataStorage().get(STATE_TYPE, STATE_ID);"),
-                "non-creating state lookup uses SavedDataStorage.get");
+                state.contains("return McCompat.get(world.getDataStorage(), "
+                        + "LatitudeWorldState::new, LatitudeWorldState::load, STATE_ID);"),
+                "non-creating state lookup uses the plain saved-data get");
+        assertTrue(
+                state.contains("McCompat.computeIfAbsent(world.getDataStorage(),"),
+                "the creating state lookup is a separate computeIfAbsent");
         assertFalse(
                 state.contains("return world.getGameTime() < 100L"),
                 "a very young old save is not guessed to be modern from game time alone");
@@ -1368,11 +1383,22 @@ public final class WorldgenAuthorityPolicyTest {
                 retrofit.indexOf("GlobeMod.isLatitudeOverworld(world)",
                         retrofit.indexOf("public static List<String> confirmEnable(")) > 0,
                 "retrofit confirm re-checks the world type rather than trusting the enable step");
-        assertFalse(
-                retrofit.contains("LatitudeWorldState.get(world)")
-                        && retrofit.indexOf("LatitudeWorldState.get(world)")
-                                < retrofit.indexOf("public static List<String> confirmEnable("),
+        // The generation-time marker needs the world state resolved on the server thread before
+        // any chunk is generated, so one creating read now happens at level load -- earlier than
+        // confirmEnable. The invariant it used to be spelled as is unchanged and is asserted
+        // directly instead: that read refuses a world Latitude did not generate before it touches
+        // the storage, it is the ONLY creating read before confirmEnable, and there are exactly
+        // two creating reads in the file, so a third one cannot be added unnoticed. Every other
+        // path -- warning-only, disable, the queue -- still uses the non-creating getIfPresent.
+        int cache = retrofit.indexOf("private static void cacheWorldState(ServerLevel world) {");
+        int cacheGuard = retrofit.indexOf("!GlobeMod.isLatitudeOverworld(world)", cache);
+        int cacheRead = retrofit.indexOf("LatitudeWorldState.get(world)", cache);
+        assertTrue(cache > 0 && cacheGuard > cache && cacheGuard < cacheRead,
+                "the level-load state cache refuses a non-Latitude world before it creates state");
+        assertEquals(cacheRead, retrofit.indexOf("LatitudeWorldState.get(world)"),
                 "warning-only and disable paths read state without creating a .dat on a vanilla save");
+        assertEquals(2, occurrences(retrofit, "LatitudeWorldState.get(world)"),
+                "only the level-load cache and confirmEnable may create the state file");
     }
 
     /**

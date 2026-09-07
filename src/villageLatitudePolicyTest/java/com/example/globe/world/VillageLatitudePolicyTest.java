@@ -12,6 +12,13 @@ public final class VillageLatitudePolicyTest {
     private static final double EPSILON = 0.0000001;
 
     public static void main(String[] args) throws Exception {
+        // The generation guard reaches LatitudeBiomes, whose class initialiser touches
+        // Registries -- and on every Minecraft version this jar supports, MappedRegistry's own
+        // constructor refuses to run before the bootstrap. Bootstrap here rather than stubbing the
+        // guard: the assertions below are about the guard's decisions, not about registry loading.
+        net.minecraft.SharedConstants.tryDetectVersion();
+        net.minecraft.server.Bootstrap.bootStrap();
+
         boundaryIsStrictAndSymmetricAtIttyRadius();
         boundaryIsStrictAndSymmetricAtGinormousRadius();
         integerChunkCentersMatchProductionForAllSupportedRadii();

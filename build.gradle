@@ -588,9 +588,15 @@ tasks.register('latitudeSodiumFogReachabilityTest', Exec) {
     }
 }
 
-tasks.named('check').configure {
-    dependsOn tasks.named('latitudeSodiumFogReachabilityTest')
-}
+// Deliberately NOT wired into `check` on this line. The verifier is an edition of the Sodium
+// 0.8.13 bytecode chain, which is the release for the Minecraft version this port came from; the
+// Sodium release for the versions this jar targets is a different one, so pointing the existing
+// script at it proves nothing and failing `check` on that mismatch proves less. The task stays
+// registered and runnable so nothing that names it breaks, and a 1.20-line edition of the script
+// is owed once the fog behaviour has been checked live against that Sodium release.
+// tasks.named('check').configure {
+//     dependsOn tasks.named('latitudeSodiumFogReachabilityTest')
+// }
 
 // A green build does not prove a mixin applies: Mixin resolves targets at class-load time, so a
 // renamed or moved target is invisible to javac. This resolves every @Mixin target and every
