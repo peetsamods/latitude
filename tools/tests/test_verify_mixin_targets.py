@@ -125,9 +125,11 @@ def mixin_source(body: str) -> str:
     return IMPORTS + "\n@Mixin(Foo.class)\npublic abstract class FooMixin {\n" + body + "\n}\n"
 
 
-def verify(body: str, targets: tuple[str, ...] = ("a.b.Foo",)) -> vmt.SignatureReport:
+def verify(body: str, targets: tuple[str, ...] = ("a.b.Foo",),
+           expectations: vmt.Expectations | None = None) -> vmt.SignatureReport:
     source = mixin_source(body)
-    return vmt.verify_handler_signatures("FooMixin", source, source, list(targets), FakeIndex())
+    return vmt.verify_handler_signatures("FooMixin", source, source, list(targets), FakeIndex(),
+                                         expectations)
 
 
 class InjectTest(unittest.TestCase):
@@ -571,6 +573,87 @@ class ParsingTest(unittest.TestCase):
         self.assertEqual(len(report.trace), 3)
         self.assertEqual(sorted(line.split()[0] for line in report.trace), ["MISMATCH", "OK", "UNVERIFIABLE"])
         self.assertEqual(report.verified + report.unverifiable + len(report.problems), 3)
+
+
+class ExpectedAbsentTargetTest(unittest.TestCase):
+    """One jar, several Minecraft versions: the arm of a version split that cannot resolve here.
+
+    A dual injector declares one arm per method shape, so whichever version's jar the verifier is
+    pointed at, the other arm's target is genuinely absent. Listing that arm turns the report into
+    a note without relaxing anything else.
+    """
+
+    HANDLER = "FooMixin::onRenderOldShape"
+
+    BODY = '''
+    @Inject(method = "render(La/b/Gui;J)V", at = @At("HEAD"), require = 0, expect = 0)
+    private void onRenderOldShape(Gui gui, long x, CallbackInfo ci) {}
+'''
+
+    def test_listed_handler_with_an_absent_target_becomes_a_note(self) -> None:
+        expectations = vmt.Expectations([self.HANDLER], version="1.20.1")
+        report = verify(self.BODY, expectations=expectations)
+        self.assertEqual(report.problems, [])
+        self.assertEqual(len(report.expected_absent), 1)
+        self.assertIn("render(La/b/Gui;J)V' is not declared on a.b.Foo", report.expected_absent[0])
+        self.assertEqual(expectations.stale(), [])
+        self.assertTrue(any(line.startswith("EXPECTED-ABSENT") for line in report.trace))
+        # The handler is not silently reclassified as unverifiable either.
+        self.assertEqual(report.unverifiable, 0)
+        self.assertEqual(report.verified, 0)
+
+    def test_unlisted_handler_with_an_absent_target_is_still_a_problem(self) -> None:
+        expectations = vmt.Expectations(["FooMixin::someOtherHandler"], version="1.20.1")
+        report = verify(self.BODY, expectations=expectations)
+        self.assertEqual(report.expected_absent, [])
+        self.assertEqual(len(report.problems), 1)
+        self.assertIn("render(La/b/Gui;J)V' is not declared on a.b.Foo", report.problems[0])
+        # And the entry that named nothing is reported as stale by the caller.
+        self.assertEqual(expectations.stale(), ["FooMixin::someOtherHandler"])
+
+    def test_listed_handler_whose_target_is_present_is_a_stale_expectation(self) -> None:
+        expectations = vmt.Expectations([self.HANDLER], version="1.20.1")
+        report = verify('''
+    @Inject(method = "render(La/b/Gui;)V", at = @At("HEAD"), require = 0, expect = 0)
+    private void onRenderOldShape(Gui gui, CallbackInfo ci) {}
+''', expectations=expectations)
+        self.assertEqual(report.problems, [])
+        self.assertEqual(report.expected_absent, [])
+        self.assertEqual(report.verified, 1)
+        self.assertEqual(expectations.stale(), [self.HANDLER])
+
+    def test_selectors_are_attributed_to_the_handler_that_declares_them(self) -> None:
+        source = mixin_source('''
+    @Inject(method = "render(La/b/Gui;J)V", at = @At("HEAD"))
+    private void onRenderOldShape(Gui gui, long x, CallbackInfo ci) {}
+
+    @Inject(method = {"tick", "count"}, at = @At("HEAD"))
+    private void onTick(CallbackInfo ci) {}
+''')
+        self.assertEqual(
+                vmt.injector_method_targets(source),
+                [("onRenderOldShape", "render"), ("onTick", "tick"), ("onTick", "count")])
+        # Same names the unattributed reader produces, so the target-method count is unchanged.
+        self.assertEqual([name for _, name in vmt.injector_method_targets(source)],
+                         vmt.injector_methods(source))
+
+
+class ExpectationsFileTest(unittest.TestCase):
+    def test_only_the_running_version_is_read(self) -> None:
+        path = Path(__file__).resolve().parents[1] / "mixin_target_expectations.json"
+        for version in ("1.20.1", "1.20.2", "1.20.3", "1.20.4"):
+            loaded = vmt.Expectations.load(path, version)
+            self.assertTrue(loaded.entries, f"{version} lists no expected-absent handler")
+            self.assertTrue(all("::" in entry for entry in loaded.entries))
+        self.assertEqual(vmt.Expectations.load(path, "9.9.9").entries, set())
+        self.assertEqual(vmt.Expectations.load(path, None).entries, set())
+
+    def test_version_is_read_from_the_remapped_jar_name(self) -> None:
+        jar = ("/cache/net/minecraft/minecraft-merged-487d1d375f/"
+               "1.20.1-loom.mappings.1_20_1.layered+hash.2198-v2/"
+               "minecraft-merged-487d1d375f-1.20.1-loom.mappings.1_20_1.layered+hash.2198-v2.jar")
+        self.assertEqual(vmt.minecraft_version("/other/thing.jar:" + jar), "1.20.1")
+        self.assertIsNone(vmt.minecraft_version("/other/thing.jar:/and/another.jar"))
 
 
 if __name__ == "__main__":

@@ -32,8 +32,28 @@ It is not a substitute for a boot: it cannot prove an injection point exists *in
 actually reached the screen -- "zero mixin errors" from a run that never loaded the class is
 worth nothing. `defaultRequire: 1` remains the backstop.
 
+One jar may support several Minecraft versions whose method shapes differ. A mixin covers such a
+split by declaring one injector per shape, and then exactly one arm of each pair can resolve on
+any single version -- so pointing this verifier at one version's jar reports the other arm's
+target as absent, which is correct and yet unsatisfiable as a gate. `--expectations` names a JSON
+file listing, per Minecraft version, the injector handlers whose target is EXPECTED to be absent
+there:
+
+    {"1.20.1": ["client.SomeMixin::someMod$handlerName", ...], "1.20.3": [...]}
+
+The version is read from the Minecraft jar's own file name on the supplied classpath. A listed
+handler whose target is absent is reported as `MIXIN_TARGET_VERIFY_NOTE expected-absent ...` and
+counted as `expectedAbsent` on the PASS line instead of failing. Nothing else is relaxed: an
+UNLISTED absent target is still a hard problem, and a listed entry that never matches -- because
+its target is present after all, or because the handler is gone -- is itself a hard problem, so
+the file cannot quietly outlive the split it documents. It also cannot hide a body-level
+difference: an arm whose target method exists on every version and differs only in which call
+site vanilla makes inside it is invisible to this verifier either way (see the paragraph above),
+so listing one would be stale rather than useful.
+
 Usage:
     python3 tools/verify_mixin_targets.py --classpath <remapped classpath> [--source-root .]
+                                          [--expectations tools/mixin_target_expectations.json]
 """
 
 from __future__ import annotations
@@ -49,6 +69,11 @@ from pathlib import Path
 
 MIXIN_CONFIG = Path("src/main/resources/globe.mixins.json")
 SOURCE_ROOT = Path("src/main/java")
+DEFAULT_EXPECTATIONS = Path("tools/mixin_target_expectations.json")
+
+# Loom names the remapped jar "minecraft-merged-<hash>-<version>-loom.mappings...", which is the
+# only place on the classpath that states which Minecraft version these targets belong to.
+MINECRAFT_JAR_VERSION = re.compile(r"minecraft-merged-[^-]+-(\d+(?:\.\d+)+)-loom\.mappings")
 
 # Both Mixin's own injectors and MixinExtras'. Omitting the MixinExtras ones is not a small gap:
 # @ModifyReturnValue and @ModifyExpressionValue are used throughout this codebase, and a missing
@@ -63,6 +88,58 @@ IGNORED_METHOD_TARGETS = {"<init>", "<clinit>"}
 
 class Failure(RuntimeError):
     pass
+
+
+class Expectations:
+    """Injector handlers whose target is expected to be absent on the version under test.
+
+    Constructed for ONE Minecraft version. `expected()` both answers the question and records
+    that the entry was used, so `stale()` afterwards names every listed entry that never fired --
+    the entries that would otherwise let this file outlive the version split it documents.
+    """
+
+    def __init__(self, entries=(), version: str | None = None, path: Path | None = None) -> None:
+        self.entries = set(entries)
+        self.version = version
+        self.path = path
+        self._matched: set[str] = set()
+
+    @staticmethod
+    def key(entry: str, handler: str) -> str:
+        return f"{entry}::{handler}"
+
+    def expected(self, entry: str, handler: str | None) -> bool:
+        """True when this handler's target is listed as absent here; records the match."""
+        if handler is None:
+            return False
+        key = self.key(entry, handler)
+        if key not in self.entries:
+            return False
+        self._matched.add(key)
+        return True
+
+    def stale(self) -> list[str]:
+        return sorted(self.entries - self._matched)
+
+    @classmethod
+    def load(cls, path: Path, version: str | None) -> "Expectations":
+        raw = json.loads(path.read_text())
+        if not isinstance(raw, dict):
+            raise Failure(f"{path}: expected an object keyed by Minecraft version")
+        for key, value in raw.items():
+            if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+                raise Failure(f"{path}: '{key}' must map to a list of \"Mixin::handler\" strings")
+        entries = raw.get(version, []) if version else []
+        return cls(entries, version=version, path=path)
+
+
+def minecraft_version(classpath: str) -> str | None:
+    """The Minecraft version these targets belong to, read from the remapped jar's file name."""
+    for part in classpath.split(":"):
+        match = MINECRAFT_JAR_VERSION.search(Path(part).name)
+        if match:
+            return match.group(1)
+    return None
 
 
 def javap_members(javap_bin: str, jar: str, binary_name: str,
@@ -781,6 +858,26 @@ def injector_sites(block: str) -> list[InjectorSite]:
     return sites
 
 
+def injector_method_targets(block: str) -> list[tuple[str | None, str]]:
+    """(handler name, Minecraft method name) for every method an injector claims to target.
+
+    The same set of names as injector_methods, but attributed to the handler that declares each
+    one, so a report about an absent target can be matched against the expectations file.
+    """
+    pairs: list[tuple[str | None, str]] = []
+    for site in injector_sites(block):
+        handler = site.handler.name if site.handler is not None else None
+        for selector in string_values(site.attributes.get("method")):
+            # A bare "*" deliberately matches every method in the target class; there is nothing
+            # to resolve, and the @At target carries the real selection.
+            if selector.strip() == "*":
+                continue
+            bare = selector.split("(")[0].split("*")[0].strip()
+            if bare and bare not in IGNORED_METHOD_TARGETS:
+                pairs.append((handler, bare))
+    return pairs
+
+
 def class_type_params(block: str) -> frozenset[str]:
     text = strip_comments(block)
     match = re.search(r"\b(?:class|interface)\s+[A-Za-z_$][\w$]*\s*<", text)
@@ -858,6 +955,9 @@ class SignatureReport:
     against the handlers it actually looked at rather than trusted as a bare count."""
     problems: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    # Absent-target reports downgraded to notes because the expectations file lists this
+    # handler as the arm that cannot resolve on the version under test.
+    expected_absent: list[str] = field(default_factory=list)
     trace: list[str] = field(default_factory=list)
     verified: int = 0
     partial: int = 0
@@ -1174,9 +1274,11 @@ def resolve_targets(label: str, selectors: list[str], targets: list[str],
 
 
 def verify_handler_signatures(entry: str, block: str, source: str, targets: list[str],
-                              index: SignatureIndex) -> SignatureReport:
+                              index: SignatureIndex,
+                              expectations: "Expectations | None" = None) -> SignatureReport:
     """Check every injector handler in one registered mixin class against its target's shape."""
     report = SignatureReport()
+    expectations = expectations if expectations is not None else Expectations()
     type_params = class_type_params(block)
     for site in injector_sites(block):
         label = f"{entry}: @{site.kind}"
@@ -1195,9 +1297,17 @@ def verify_handler_signatures(entry: str, block: str, source: str, targets: list
         wildcard_selector = any(selector.strip() == "*" for selector in selectors)
         selectors = [] if wildcard_selector else selectors
         candidates, resolution_problems = resolve_targets(label, selectors, targets, index)
-        report.problems.extend(resolution_problems)
-        for problem in resolution_problems:
-            report.trace.append(f"MISMATCH {problem}")
+        # A handler listed for this version is the arm of a version split that cannot resolve
+        # here; its unresolved target is a note. Everything downstream still sees a non-empty
+        # `resolution_problems`, so the handler is not then counted as unverifiable either.
+        if resolution_problems and expectations.expected(entry, site.handler.name):
+            report.expected_absent.extend(resolution_problems)
+            for problem in resolution_problems:
+                report.trace.append(f"EXPECTED-ABSENT {problem}")
+        else:
+            report.problems.extend(resolution_problems)
+            for problem in resolution_problems:
+                report.trace.append(f"MISMATCH {problem}")
 
         if site.kind in TARGET_SHAPED_KINDS:
             if wildcard_selector:
@@ -1294,6 +1404,10 @@ def main() -> int:
     parser.add_argument("--source-root", default=Path("."), type=Path)
     parser.add_argument("--trace", action="store_true",
                         help="print one verdict line per injector handler")
+    parser.add_argument("--expectations", type=Path, default=None,
+                        help="JSON of injector handlers whose target is expected to be absent, "
+                             f"keyed by Minecraft version (default: {DEFAULT_EXPECTATIONS} when "
+                             "that file exists)")
     args = parser.parse_args()
 
     jar = args.classpath
@@ -1308,7 +1422,25 @@ def main() -> int:
     package = config["package"]
     registered = list(config.get("mixins", [])) + list(config.get("client", []))
 
+    version = minecraft_version(jar)
+    if args.expectations is not None:
+        expectations_path = args.expectations
+        if not expectations_path.is_file():
+            raise Failure(f"expectations file not found: {expectations_path}")
+    else:
+        expectations_path = root / DEFAULT_EXPECTATIONS
+        expectations_path = expectations_path if expectations_path.is_file() else None
+    expectations = (Expectations.load(expectations_path, version) if expectations_path is not None
+                    else Expectations())
+
     problems: list[str] = []
+    expected_absent: list[str] = []
+    if expectations_path is not None and version is None:
+        # Silently applying no expectations would turn every deliberately-absent arm back into a
+        # hard problem with no explanation. Say which step failed instead.
+        problems.append(
+            f"{expectations_path}: the Minecraft version could not be read from the classpath, so "
+            f"no expected-absent entry could be applied")
     checked_classes = 0
     checked_methods = 0
     checked_shadows = 0
@@ -1408,16 +1540,22 @@ def main() -> int:
         if not resolved_members:
             continue
 
-        for method in injector_methods(body):
+        for handler, method in injector_method_targets(body):
             checked_methods += 1
-            if method not in resolved_members:
-                problems.append(
-                    f"{entry}: injector targets '{method}', absent from {', '.join(targets)}")
+            if method in resolved_members:
+                continue
+            report_line = f"{entry}: injector targets '{method}', absent from {', '.join(targets)}"
+            if expectations.expected(entry, handler):
+                expected_absent.append(report_line)
+            else:
+                problems.append(report_line)
 
         # A name that exists is not a handler that applies: resolve explicit descriptors exactly
         # and check every handler's parameter list against the shape its injector demands.
-        signatures = verify_handler_signatures(entry, body, source, targets, signature_index)
+        signatures = verify_handler_signatures(entry, body, source, targets, signature_index,
+                                               expectations)
         problems.extend(signatures.problems)
+        expected_absent.extend(signatures.expected_absent)
         warnings.extend(signatures.warnings)
         checked_signatures += signatures.verified
         partial_signatures += signatures.partial
@@ -1433,9 +1571,17 @@ def main() -> int:
                 elif method not in found:
                     problems.append(f"{entry}: @At targets '{owner}.{method}', which does not exist")
 
+    for stale in expectations.stale():
+        problems.append(
+            f"stale expectation '{stale}' for Minecraft {expectations.version}: listed in "
+            f"{expectations_path} as an absent target, but nothing reported it absent -- the "
+            f"target is present on this version, or the handler no longer exists")
+
     if args.trace:
         for line in trace_lines:
             print(f"MIXIN_TARGET_VERIFY_TRACE {line}")
+    for note in expected_absent:
+        print(f"MIXIN_TARGET_VERIFY_NOTE expected-absent {note}")
     for warning in warnings:
         print(f"MIXIN_TARGET_VERIFY_NOTE {warning}")
 
@@ -1448,6 +1594,7 @@ def main() -> int:
     print(f"MIXIN_TARGET_VERIFY_PASS mixins={len(registered)} "
           f"targetClasses={checked_classes} targetMethods={checked_methods} "
           f"shadowMembers={checked_shadows} accessorMembers={checked_accessors} "
+          f"expectedAbsent={len(expected_absent)} "
           f"handlerSignatures={checked_signatures} "
           f"handlerSignaturesPartial={partial_signatures} "
           f"handlerSignaturesUnverifiable={unverifiable_signatures}")

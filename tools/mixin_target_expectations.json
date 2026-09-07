@@ -1,0 +1,40 @@
+{
+  "_readme": [
+    "Injector handlers whose target is EXPECTED to be absent on one Minecraft version, read by",
+    "tools/verify_mixin_targets.py. Keys are Minecraft versions; only the key matching the jar on",
+    "the verifier's classpath is read, so a key starting with '_' is documentation.",
+    "",
+    "One jar serves 1.20.1 through 1.20.4. Two client mixins cover a method shape that changes",
+    "inside that range by declaring one arm per shape, each with require = 0 and expect = 0, so",
+    "exactly one arm resolves on any single version. Pointing the verifier at one version's jar",
+    "therefore reports the other arm's target as genuinely absent. Listing the arm here turns that",
+    "report into a note; an unlisted absent target is still a failure, and an entry that never",
+    "fires is a failure in its own right, so this file cannot outlive the split it documents.",
+    "",
+    "Minecraft.doWorldLoad leads with a level-id String on 1.20.1 and 1.20.2 and drops it on",
+    "1.20.3 and 1.20.4. WorldOpenFlows publishes loadLevel(Screen, String) on 1.20.1 and 1.20.2",
+    "and checkForBackupAndLoad(String, Runnable) on 1.20.3 and 1.20.4.",
+    "",
+    "The loading screen's two percentage redirects are the third such pair, and they are",
+    "deliberately NOT listed: both GuiGraphics.drawCenteredString overloads are declared on every",
+    "supported version, and only the call site inside LevelLoadingScreen.render differs. The",
+    "verifier cannot see inside a method body, so it reports neither arm as absent on any version",
+    "and listing either one would be stale. Their split is covered by require = 0 alone."
+  ],
+  "1.20.1": [
+    "client.MinecraftClientStartIntegratedMixin::globe$beginExistingLatitudeWorldLoadingWithoutLevelId",
+    "client.WorldOpenFlowsEarlyLatitudeActivationMixin::globe$activateEarlyBeforeBackupCheck"
+  ],
+  "1.20.2": [
+    "client.MinecraftClientStartIntegratedMixin::globe$beginExistingLatitudeWorldLoadingWithoutLevelId",
+    "client.WorldOpenFlowsEarlyLatitudeActivationMixin::globe$activateEarlyBeforeBackupCheck"
+  ],
+  "1.20.3": [
+    "client.MinecraftClientStartIntegratedMixin::globe$beginExistingLatitudeWorldLoadingWithLevelId",
+    "client.WorldOpenFlowsEarlyLatitudeActivationMixin::globe$activateEarlyBeforeLevelLoad"
+  ],
+  "1.20.4": [
+    "client.MinecraftClientStartIntegratedMixin::globe$beginExistingLatitudeWorldLoadingWithLevelId",
+    "client.WorldOpenFlowsEarlyLatitudeActivationMixin::globe$activateEarlyBeforeLevelLoad"
+  ]
+}
