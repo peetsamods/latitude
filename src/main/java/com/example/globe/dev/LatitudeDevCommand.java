@@ -279,7 +279,7 @@ public final class LatitudeDevCommand {
         try {
             String rawName = StringArgumentType.getString(ctx, "name");
             long tick = source.getLevel().getGameTime();
-            Path casesRoot = source.getServer().getServerDirectory()
+            Path casesRoot = source.getServer().getServerDirectory().toPath()
                     .resolve("latdev")
                     .resolve("cases");
             DevTestSession session = DevTestSession.startActive(
@@ -431,7 +431,7 @@ public final class LatitudeDevCommand {
                 path = (String) invokeIntegratedClientMethod(
                         method,
                         new Class<?>[]{Path.class, UUID.class, String.class, long.class},
-                        source.getServer().getServerDirectory(),
+                        source.getServer().getServerDirectory().toPath(),
                         player.getUUID(),
                         player.getName().getString(),
                         source.getLevel().getGameTime());
@@ -1054,7 +1054,7 @@ public final class LatitudeDevCommand {
                                 radiusBlocks,
                                 clampedStep,
                                 clampedY,
-                                source.getServer().getServerDirectory());
+                                source.getServer().getServerDirectory().toPath());
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -1105,7 +1105,7 @@ public final class LatitudeDevCommand {
                                 radiusBlocks,
                                 64,
                                 clampedY,
-                                source.getServer().getServerDirectory());
+                                source.getServer().getServerDirectory().toPath());
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -1174,7 +1174,7 @@ public final class LatitudeDevCommand {
     /** Writes explain output to run/latdev/explain/<timestamp>_x<X>_z<Z>.txt and latest.txt. Returns relative path string for user feedback, or null on failure. */
     private static String writeExplainLog(CommandSourceStack source, String header, String summary, String drivers, int x, int z) {
         try {
-            Path explainDir = source.getServer().getServerDirectory().resolve("latdev").resolve("explain");
+            Path explainDir = source.getServer().getServerDirectory().toPath().resolve("latdev").resolve("explain");
             Files.createDirectories(explainDir);
 
             String timestamp = EXPLAIN_TIMESTAMP_FMT.format(LocalDateTime.now());

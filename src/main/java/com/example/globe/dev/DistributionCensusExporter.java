@@ -117,7 +117,7 @@ public final class DistributionCensusExporter {
         long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
 
         Path outputRoot = "true".equalsIgnoreCase(property) || property.isBlank()
-                ? server.getServerDirectory().resolve("latdev-distribution")
+                ? server.getServerDirectory().toPath().resolve("latdev-distribution")
                 : Path.of(property);
         String levelName = server.getWorldData().getLevelName().replaceAll("[^A-Za-z0-9._-]", "_");
         try {

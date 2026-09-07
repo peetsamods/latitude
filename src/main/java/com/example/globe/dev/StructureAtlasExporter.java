@@ -95,7 +95,7 @@ public final class StructureAtlasExporter {
             String runScope = sanitize(overworld.getServer().getWorldData().getLevelName())
                     + "_R" + radius;
             Path outputRoot = "true".equalsIgnoreCase(property) || property.isBlank()
-                    ? server.getServerDirectory().resolve("latdev-structures")
+                    ? server.getServerDirectory().toPath().resolve("latdev-structures")
                     : Path.of(property);
             Files.createDirectories(outputRoot);
             Path outputDir = Files.createTempDirectory(outputRoot, runScope + "_");

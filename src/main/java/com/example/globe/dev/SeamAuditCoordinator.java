@@ -132,7 +132,7 @@ public final class SeamAuditCoordinator {
             String timestamp = TIMESTAMP_FMT.format(LocalDateTime.now());
             String pairId = lower.id() + "-" + higher.id();
             String dirName = timestamp + "_" + pairId + "_" + edge.argName();
-            Path auditDir = source.getServer().getServerDirectory()
+            Path auditDir = source.getServer().getServerDirectory().toPath()
                     .toAbsolutePath().normalize()
                     .resolve("latdev").resolve("seam-audits").resolve(dirName);
             Files.createDirectories(auditDir);

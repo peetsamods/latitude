@@ -133,7 +133,7 @@ public final class AutonomousSeamAuditJob {
 
             String timestamp = TIMESTAMP_FMT.format(LocalDateTime.now());
             String dirName = timestamp + "_auto_" + pair.lower.id() + "-" + pair.higher.id() + "_" + edge.argName();
-            Path auditDir = server.getServerDirectory()
+            Path auditDir = server.getServerDirectory().toPath()
                     .toAbsolutePath().normalize()
                     .resolve("latdev").resolve("seam-audits").resolve(dirName);
             Files.createDirectories(auditDir);

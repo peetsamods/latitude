@@ -15,12 +15,13 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
 import net.minecraft.client.gui.screens.worldselection.WorldCreationContext;
+import com.mojang.datafixers.util.Either;
 import net.minecraft.client.gui.screens.worldselection.WorldCreationUiState;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ChunkResult;
+import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.RelativeMovement;
@@ -574,7 +575,7 @@ public final class AutoCreateWorldProbe {
             recreatedState.setName(worldName);
             recreatedState.setSeed(Long.toString(seed));
             recreatedState.setGameMode(WorldCreationUiState.SelectedGameMode.CREATIVE);
-            recreatedState.setAllowCommands(true);
+            recreatedState.setAllowCheats(true);
             recreatedState.setDifficulty(Difficulty.PEACEFUL);
             recreatedState.setBonusChest(true);
             recreatedState.setGenerateStructures(false);
@@ -827,7 +828,7 @@ public final class AutoCreateWorldProbe {
             state.pendingHitFullChunkRequested = true;
             GlobeMod.LOGGER.info("[LATDEV_LIVE_TARGET_SEARCH] request full chunk async chunk={},{} target={} targetBand={} forceLoadRequested={} action=await_full_chunk_future",
                     hitChunkX, hitChunkZ, state.expectedBiome, bandProofLabel(state.requiredBand), state.forceLoad);
-            CompletableFuture<ChunkResult<ChunkAccess>> future = level.getChunkSource()
+            CompletableFuture<Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure>> future = level.getChunkSource()
                     .getChunkFuture(hitChunkX, hitChunkZ, ChunkStatus.FULL, true);
             future.whenComplete((result, throwable) -> level.getServer().execute(() ->
                     finishLiveTargetSearchHitAfterFullChunk(level, state, hit, result, throwable)));
@@ -849,7 +850,7 @@ public final class AutoCreateWorldProbe {
     private static void finishLiveTargetSearchHitAfterFullChunk(ServerLevel level,
                                                                 LiveTargetSearchState state,
                                                                 LiveTargetSearchHit hit,
-                                                                ChunkResult<ChunkAccess> result,
+                                                                Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure> result,
                                                                 Throwable throwable) {
         if (autoCreateWorldProbeLatdevLiveTargetSearchState != state || state.pendingHit != hit) {
             return;
@@ -862,12 +863,14 @@ public final class AutoCreateWorldProbe {
                     state.expectedBiome, hit.x(), hit.z(), throwable);
             return;
         }
-        ChunkAccess chunk = result != null ? result.orElse(null) : null;
+        ChunkAccess chunk = result != null ? result.left().orElse(null) : null;
         if (chunk == null) {
             autoCreateWorldProbeLatdevServerTargetSetupFailed = true;
             autoCreateWorldProbeLatdevServerTargetSetupPending = false;
             autoCreateWorldProbeLatdevLiveTargetSearchState = null;
-            String error = result != null ? result.getError() : "missing chunk result";
+            String error = result != null
+                    ? result.right().map(String::valueOf).orElse("unknown chunk loading failure")
+                    : "missing chunk result";
             GlobeMod.LOGGER.error("[LAT][CWPATH][PROOF_FAIL] live target async full chunk unavailable target={} x={} z={} error={}",
                     state.expectedBiome, hit.x(), hit.z(), error);
             return;
@@ -1155,7 +1158,7 @@ public final class AutoCreateWorldProbe {
                 ServerLevel level = serverPlayer.serverLevel();
                 GlobeMod.LOGGER.info("[LAT][CWPATH] server requesting configured latdev proof target full chunk async chunk={},{} blockX={} blockZ={} forceLoadRequested={}",
                         chunkX, chunkZ, targetBlockX, targetBlockZ, forceLoad);
-                CompletableFuture<ChunkResult<ChunkAccess>> future = level.getChunkSource()
+                CompletableFuture<Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure>> future = level.getChunkSource()
                         .getChunkFuture(chunkX, chunkZ, ChunkStatus.FULL, true);
                 future.whenComplete((result, throwable) -> server.execute(() ->
                         finishAutoCreateWorldProbeServerTargetSetup(level, playerId, x, y, z,
@@ -1183,7 +1186,7 @@ public final class AutoCreateWorldProbe {
                                                                     int targetBlockZ,
                                                                     int chunkX,
                                                                     int chunkZ,
-                                                                    ChunkResult<ChunkAccess> result,
+                                                                    Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure> result,
                                                                     Throwable throwable) {
         try {
             if (throwable != null) {
@@ -1195,10 +1198,12 @@ public final class AutoCreateWorldProbe {
                         throwable);
                 return;
             }
-            ChunkAccess chunk = result != null ? result.orElse(null) : null;
+            ChunkAccess chunk = result != null ? result.left().orElse(null) : null;
             if (chunk == null) {
                 autoCreateWorldProbeLatdevServerTargetSetupFailed = true;
-                String error = result != null ? result.getError() : "missing chunk result";
+                String error = result != null
+                        ? result.right().map(String::valueOf).orElse("unknown chunk loading failure")
+                        : "missing chunk result";
                 GlobeMod.LOGGER.error("[LAT][CWPATH][PROOF_FAIL] configured latdev proof target async full chunk unavailable chunk={},{} expectedBiome={} error={}",
                         chunkX,
                         chunkZ,

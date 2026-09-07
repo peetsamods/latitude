@@ -1,14 +1,14 @@
 package com.example.globe.dev;
 
 import com.example.globe.GlobeMod;
+import com.mojang.datafixers.util.Either;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundChunksBiomesPacket;
-import net.minecraft.server.level.ChunkResult;
+import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ThreadedLevelLightEngine;
@@ -154,7 +154,8 @@ public final class ChunkRegenerator {
     }
 
     private static Map<Long, ChunkAccess> generateToFeatures(ServerLevel tempWorld, List<ChunkPos> targets) {
-        List<CompletableFuture<ChunkResult<ChunkAccess>>> futures = new ArrayList<>(targets.size());
+        List<CompletableFuture<Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure>>> futures =
+                new ArrayList<>(targets.size());
         for (ChunkPos chunkPos : targets) {
             futures.add(tempWorld.getChunkSource().getChunkFuture(
                     chunkPos.x,
@@ -170,12 +171,13 @@ public final class ChunkRegenerator {
         Map<Long, ChunkAccess> generated = new HashMap<>(targets.size());
         for (int i = 0; i < targets.size(); i++) {
             ChunkPos chunkPos = targets.get(i);
-            ChunkResult<ChunkAccess> maybeChunk = futures.get(i).join();
-            if (!maybeChunk.isSuccess()) {
+            Either<ChunkAccess, ChunkHolder.ChunkLoadingFailure> maybeChunk = futures.get(i).join();
+            ChunkHolder.ChunkLoadingFailure failure = maybeChunk.right().orElse(null);
+            if (failure != null) {
                 throw new IllegalStateException("Failed to generate chunk " + chunkPos.x + "," + chunkPos.z
-                        + " (" + maybeChunk.getError() + ")");
+                        + " (" + failure + ")");
             }
-            generated.put(chunkPos.toLong(), maybeChunk.orElseThrow(() ->
+            generated.put(chunkPos.toLong(), maybeChunk.left().orElseThrow(() ->
                     new IllegalStateException("Chunk " + chunkPos.x + "," + chunkPos.z + " unavailable")));
         }
         return generated;
@@ -188,7 +190,6 @@ public final class ChunkRegenerator {
             boolean copyBiomes
     ) {
         RegenStats stats = new RegenStats();
-        HolderLookup.Provider registries = realWorld.registryAccess();
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
         List<LevelChunk> biomeRefreshChunks = copyBiomes ? new ArrayList<>(targets.size()) : List.of();
         ThreadedLevelLightEngine lightingProvider = realWorld.getChunkSource().getLightEngine();
@@ -217,7 +218,7 @@ public final class ChunkRegenerator {
                         cursor.set(worldX, y, worldZ);
                         BlockState sourceState = sourceChunk.getBlockState(cursor);
                         BlockState targetState = realWorld.getBlockState(cursor);
-                        CompoundTag sourceBlockEntityNbt = sourceChunk.getBlockEntityNbtForSaving(cursor, registries);
+                        CompoundTag sourceBlockEntityNbt = sourceChunk.getBlockEntityNbtForSaving(cursor);
 
                         boolean stateChanged = !targetState.equals(sourceState);
                         if (stateChanged) {
@@ -230,8 +231,7 @@ public final class ChunkRegenerator {
                             BlockEntity recreated = BlockEntity.loadStatic(
                                     cursor,
                                     sourceState,
-                                    sourceBlockEntityNbt.copy(),
-                                    registries
+                                    sourceBlockEntityNbt.copy()
                             );
                             if (recreated != null) {
                                 realWorld.setBlockEntity(recreated);

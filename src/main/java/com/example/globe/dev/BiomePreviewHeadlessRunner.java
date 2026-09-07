@@ -126,7 +126,7 @@ public final class BiomePreviewHeadlessRunner {
             int firstStep = !config.steps().isEmpty() ? config.steps().get(0) : 64;
             long effectiveSeed = config.seedOverride != null ? config.seedOverride : worldSeed;
             String runLabel = BiomePreviewExporter.resolveRunLabel(config.runLabel);
-            Path outputDir = config.outDir != null ? config.outDir : defaultOutDir(server.getServerDirectory());
+            Path outputDir = config.outDir != null ? config.outDir : defaultOutDir(server.getServerDirectory().toPath());
 
             LatitudeBiomes.setWorldSeed(effectiveSeed);
             LatitudeBiomes.setActiveRadiusBlocks(radius);
@@ -163,7 +163,7 @@ public final class BiomePreviewHeadlessRunner {
             // Drain the export synchronously on the server thread. END_SERVER_TICK
             // would otherwise stop firing once vanilla's pause-when-empty-seconds
             // (60s) elapses, freezing tick-driven sampling at full radius.
-            job = new ExportJob(world, config, outputDir, effectiveSeed, worldSeed, radius, y, runLabel, server.getServerDirectory());
+            job = new ExportJob(world, config, outputDir, effectiveSeed, worldSeed, radius, y, runLabel, server.getServerDirectory().toPath());
             while (!job.isDone()) {
                 job.tick();
             }
@@ -196,7 +196,7 @@ public final class BiomePreviewHeadlessRunner {
             Instant generatedAt = Instant.now();
             Path outputRoot = config.outDir != null
                     ? config.outDir
-                    : server.getServerDirectory().toAbsolutePath().normalize().resolve("seed-search");
+                    : server.getServerDirectory().toPath().toAbsolutePath().normalize().resolve("seed-search");
             Path outputDir = outputRoot.resolve(SEARCH_TIMESTAMP.format(generatedAt));
             GitStamp gitStamp = currentGitStamp();
             BiomeSamplerTools.SearchOptions options = new BiomeSamplerTools.SearchOptions(
@@ -266,7 +266,7 @@ public final class BiomePreviewHeadlessRunner {
 
             Path outputDir = config.outDir != null
                     ? config.outDir
-                    : server.getServerDirectory().toAbsolutePath().normalize()
+                    : server.getServerDirectory().toPath().toAbsolutePath().normalize()
                             .getParent().resolve("run").resolve("latdev");
             Files.createDirectories(outputDir);
 
@@ -312,7 +312,7 @@ public final class BiomePreviewHeadlessRunner {
         long worldSeed = world.getSeed();
         Path outputDir = config.outDir != null
                 ? config.outDir
-                : server.getServerDirectory().toAbsolutePath().normalize().resolve("locate-boundary");
+                : server.getServerDirectory().toPath().toAbsolutePath().normalize().resolve("locate-boundary");
         Path proofFile = outputDir.resolve("proof.txt");
         try {
             Files.createDirectories(outputDir);
@@ -518,7 +518,8 @@ public final class BiomePreviewHeadlessRunner {
             lines.add("locate_result_final_matches_target=false");
             return new LocateSearchProof(false, lines);
         }
-        Holder<Biome> targetHolder = biomes.getHolder(targetId).orElse(null);
+        ResourceKey<Biome> targetKey = ResourceKey.create(Registries.BIOME, targetId);
+        Holder<Biome> targetHolder = biomes.getHolder(targetKey).orElse(null);
         if (targetHolder == null) {
             lines.add("locate_result_error=target_not_registered");
             lines.add("locate_result_final_matches_target=false");
@@ -527,7 +528,7 @@ public final class BiomePreviewHeadlessRunner {
 
         int startY = Mth.clamp(config.startY, world.getMinBuildHeight(), (world.getMaxBuildHeight() - 1) - 1);
         Pair<BlockPos, Holder<Biome>> result = world.findClosestBiome3d(
-                candidate -> candidate.is(targetHolder),
+                candidate -> candidate.is(targetKey),
                 new BlockPos(config.startX, startY, config.startZ),
                 Math.max(1, config.searchRadius),
                 Math.max(1, config.horizontalStep),
