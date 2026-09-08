@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -151,11 +152,24 @@ public final class LatitudeDecorationRetrofit {
      */
     private static final Map<ServerLevel, LatitudeWorldState> WORLD_STATES = new ConcurrentHashMap<>();
 
+    /**
+     * Phase of the level-load event in which {@link #cacheWorldState} runs. Whether an overworld is
+     * Latitude's can depend on the create-screen radius, and the handler that records it (in
+     * {@code GlobeMod}) sits in the default phase, registered after this class's own. Fabric runs a
+     * phase in registration order, so an unordered handler here would ask before the answer exists
+     * and such a world would cache nothing. Running after the whole default phase instead makes
+     * the load event the moment the answer is final: nothing has to ask again on later ticks, and
+     * a world Latitude did not generate is probed exactly once.
+     */
+    private static final ResourceLocation AFTER_RECOGNITION_PHASE =
+            new ResourceLocation("globe", "retrofit_after_recognition");
+
     private LatitudeDecorationRetrofit() {
     }
 
     public static void init() {
-        ServerWorldEvents.LOAD.register((server, world) -> cacheWorldState(world));
+        ServerWorldEvents.LOAD.addPhaseOrdering(Event.DEFAULT_PHASE, AFTER_RECOGNITION_PHASE);
+        ServerWorldEvents.LOAD.register(AFTER_RECOGNITION_PHASE, (server, world) -> cacheWorldState(world));
         ServerWorldEvents.UNLOAD.register((server, world) -> WORLD_STATES.remove(world));
         ServerChunkEvents.CHUNK_LOAD.register(LatitudeDecorationRetrofit::onChunkLoad);
         ServerTickEvents.END_SERVER_TICK.register(LatitudeDecorationRetrofit::onEndTick);
@@ -331,10 +345,6 @@ public final class LatitudeDecorationRetrofit {
     }
 
     private static void onEndTick(MinecraftServer server) {
-        // Recognition of a Latitude overworld can complete after this class's own level-load
-        // handler has already run — the create screen records the world's radius from a handler
-        // registered later. Topping the cache up here costs one map probe and closes that window.
-        cacheWorldState(server.overworld());
         if (QUEUE.isEmpty()) {
             maybeLogCompletionSummary();
             return;
