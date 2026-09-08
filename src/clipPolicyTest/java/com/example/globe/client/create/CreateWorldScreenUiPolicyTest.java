@@ -26,14 +26,12 @@ public final class CreateWorldScreenUiPolicyTest {
         rejectsNonPositivePanelCount();
         highScaleFrameKeepsTightMargins();
         bespokeBackgroundUsesFixedEightyPercentOpacity();
-        stillBackgroundControlStaysOnTheMainScreenAndPersists();
+        panelOpacityStaysAFixedDesignValue();
         mouseAndKeyboardFocusFollowInputMode();
-        stillBackgroundUsesTheSharedFocusRule();
-        stillBackgroundWaitsForTheIntroReveal();
         selectedClimateDescriptionUsesReadableContrast();
         accessibilityFooterAvoidsTheCreateButtons();
         tabClicksUseRealWidgetOwnership();
-        stillIsABespokeTabUnderThePanel();
+        theStillTabStaysGone();
         screenWheelRoutingStaysOnTheFabricScreenEvents();
         System.out.println("PASS CreateWorldScreenUiPolicyTest assertions=" + assertions);
     }
@@ -71,23 +69,17 @@ public final class CreateWorldScreenUiPolicyTest {
         }
     }
 
-    private static void stillIsABespokeTabUnderThePanel() throws IOException {
+    /**
+     * This Minecraft line draws the create-world screen over a flat dirt backdrop, with no moving
+     * panorama behind it, so a control that swaps the panorama for a flat fill has nothing to do
+     * here and must not be offered (maintainer ruling, 2026-09-08). Pinning its absence is what
+     * stops a later port merge from quietly reintroducing the widget and its saved setting.
+     */
+    private static void theStillTabStaysGone() throws IOException {
         String screen = Files.readString(Path.of(
                 "src/main/java/com/example/globe/client/create/LatitudeCreateWorldScreen.java"));
-        expectTrue(screen.contains("class StillTabWidget extends AbstractWidget"),
-                "Still must be a real widget of its own, not a vanilla Button");
-        expectTrue(!screen.contains("Button.builder(stillBackgroundLabel()"),
-                "Still must not be built as a vanilla button beside Create World and Cancel");
-        expectTrue(screen.contains("stillTabY = panelBottom;"),
-                "the Still tab must hang from the panel's bottom edge");
-        expectTrue(screen.contains("stillTabX = paneStripViewportLeft;"),
-                "the Still tab must align with the tab strip's left edge");
-        expectTrue(screen.contains("drawStillTab(context, mouseX, mouseY);"),
-                "the screen must draw the Still tab in the bespoke tab style");
-        expectTrue(screen.contains("int bg = active || hovered ? PANEL_BG : TAB_INACTIVE_BG;"),
-                "the Still tab must use the same fill rule as the World/Settings tabs");
-        expectTrue(screen.contains("context.fill(x + 1, y - 1, x + w - 1, y, PANEL_BG);"),
-                "an active Still tab must merge into the panel above it");
+        expectTrue(!screen.contains("StillTabWidget") && !screen.contains("createWorldStillBackground"),
+                "the create-world screen must carry no Still tab and no still-background setting");
     }
 
     private static void bespokeBackgroundUsesFixedEightyPercentOpacity() {
@@ -99,21 +91,15 @@ public final class CreateWorldScreenUiPolicyTest {
                 "bespoke background keeps its brown color");
     }
 
-    private static void stillBackgroundControlStaysOnTheMainScreenAndPersists() throws IOException {
+    private static void panelOpacityStaysAFixedDesignValue() throws IOException {
         String screen = Files.readString(Path.of(
                 "src/main/java/com/example/globe/client/create/LatitudeCreateWorldScreen.java"));
         String config = Files.readString(Path.of(
                 "src/main/java/com/example/globe/client/LatitudeConfig.java"));
         expectTrue(!screen.contains("BackgroundOpacitySlider"),
                 "world creation must not carry a one-use opacity slider");
-        expectTrue(screen.contains("this.addRenderableWidget(this.stillBackgroundBtn)"),
-                "still-background control must belong to the main screen");
-        expectTrue(screen.contains("LatitudeConfig.saveCurrent()"),
-                "accessibility changes must be remembered immediately");
         expectTrue(!config.contains("createWorldPanelOpacity"),
                 "panel opacity must remain a fixed design value, not saved configuration");
-        expectTrue(config.contains("private Boolean createWorldStillBackgroundValue = false;"),
-                "older configs must retain the scenic background by default");
     }
 
     private static void mouseAndKeyboardFocusFollowInputMode() {
@@ -123,32 +109,6 @@ public final class CreateWorldScreenUiPolicyTest {
                 "real mouse hover must remain highlighted");
         expectTrue(CreateWorldScreenUiPolicy.shouldRetainButtonFocus(false, false),
                 "keyboard focus must remain visible without mouse hover");
-    }
-
-    private static void stillBackgroundUsesTheSharedFocusRule() throws IOException {
-        String screen = Files.readString(Path.of(
-                "src/main/java/com/example/globe/client/create/LatitudeCreateWorldScreen.java"));
-        expectTrue(screen.contains("lastInputWasMouse = true;"),
-                "mouse clicks must select mouse focus behavior");
-        expectTrue(screen.contains("lastInputWasMouse = false;"),
-                "keyboard input must select keyboard focus behavior");
-        expectTrue(screen.contains("CreateWorldScreenUiPolicy.shouldRetainButtonFocus("),
-                "Still must use the tested shared input-mode rule during rendering");
-        expectTrue(screen.contains("stillBackgroundBtn.setFocused(false)"),
-                "the Still button must not retain its click highlight");
-        expectTrue(screen.contains("this.setFocused(null)"),
-                "the screen must release its matching focus owner");
-        expectTrue(!screen.contains("stillButtonMouseInteraction"),
-                "failed per-click focus bookkeeping must not remain in the runtime path");
-    }
-
-    private static void stillBackgroundWaitsForTheIntroReveal() throws IOException {
-        String screen = Files.readString(Path.of(
-                "src/main/java/com/example/globe/client/create/LatitudeCreateWorldScreen.java"));
-        expectTrue(screen.contains("setTabbedWidgetVisible(stillBackgroundBtn, true)"),
-                "Still must appear with the rest of the create-world UI");
-        expectTrue(screen.contains("setTabbedWidgetVisible(stillBackgroundBtn, false)"),
-                "Still must remain hidden during the Latitude title intro");
     }
 
     private static void selectedClimateDescriptionUsesReadableContrast() throws IOException {

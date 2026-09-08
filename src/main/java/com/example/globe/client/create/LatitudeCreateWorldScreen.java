@@ -58,7 +58,6 @@ public class LatitudeCreateWorldScreen extends Screen {
     private static final Logger LOGGER = LoggerFactory.getLogger("LatitudeCreateWorldScreen");
 
     // ── Theme constants ──
-    private static final int STILL_BACKGROUND_COLOR = 0xFF2C2420;
     // The two constants vanilla's own in-level screen background fades between.
     private static final int GRADIENT_BACKGROUND_TOP = 0xC0101010;
     private static final int GRADIENT_BACKGROUND_BOTTOM = 0xD0101010;
@@ -76,8 +75,6 @@ public class LatitudeCreateWorldScreen extends Screen {
     private static final int MIN_RAIL_W = 130;   // Rules: enough for world-type label (safeWidth = railW-66 >= 64px)
     private static final int HIGH_GUI_SCALE = 3;
     private static final int MIN_COMFORTABLE_THREE_COL_WIDTH = 720;
-    /** The wider of the two Still labels sizes the tab, so toggling never changes its width. */
-    private static final String STILL_TAB_WIDEST_LABEL = "Still: OFF";
     private static final double[] PREVIEW_LABEL_DEGREES = {0.0, 23.5, 35.0, 50.0, 66.5, 90.0};
 
     private static final GlobeWorldSize DEFAULT_SIZE = GlobeWorldSize.REGULAR;
@@ -268,12 +265,6 @@ public class LatitudeCreateWorldScreen extends Screen {
     private boolean introClockClaimed;
     private Button createWorldBtn;
     private Button cancelBtn;
-    /** The Still control: a bespoke tab hung from the panel's bottom-left edge (see drawStillTab). */
-    private StillTabWidget stillBackgroundBtn;
-    private int stillTabX;
-    private int stillTabY;
-    private int stillTabW;
-    private boolean lastInputWasMouse;
     /** True between this screen's own up-front background render and the end of the frame, so the
      *  background pass that {@code super.render()} triggers does not run a second time. */
     private boolean backgroundRenderedThisFrame;
@@ -575,12 +566,6 @@ public class LatitudeCreateWorldScreen extends Screen {
         int cancelW = Math.max(70, this.font.width("Cancel") + 20);
         int totalBtnW = beginW + btnSpacing + cancelW;
         int btnStartX = cx - totalBtnW / 2;
-        // The Still tab hangs from the panel's bottom-left edge into the button band. When the
-        // Create/Cancel row would run into it (narrow screens), the panel bottom rises by one tab
-        // height so the tab sits above the row instead of beside it.
-        stillTabW = uiTextWidth(STILL_TAB_WIDEST_LABEL) + scaledUi(16);
-        boolean accessibilityOwnRow = CreateWorldScreenUiPolicy.accessibilityControlsNeedOwnRow(
-                btnStartX, stillTabW);
         paneGap = scaledUi(CreateWorldScreenUiPolicy.PANE_GAP);
         paneStripViewportLeft = CreateWorldScreenUiPolicy.EDGE_MARGIN;
         paneStripViewportRight = Math.max(
@@ -603,10 +588,9 @@ public class LatitudeCreateWorldScreen extends Screen {
 
         headerY = headerGap;
         panelTop = headerY + headerToPanel;
-        panelBottom = this.height - bottomMargin
-                - (accessibilityOwnRow ? TAB_H + scaledUi(4) : 0);
-        stillTabX = paneStripViewportLeft;
-        stillTabY = panelBottom;
+        // Nothing hangs below the panel on this line, so the panel keeps the full height down to its
+        // bottom margin and never reserves a spare row above the Create/Cancel band.
+        panelBottom = this.height - bottomMargin;
         paneStripScrollbarX = paneStripViewportLeft;
         paneStripScrollbarW = paneStripViewportWidth;
         paneStripScrollbarY = panelBottom + 2;
@@ -658,8 +642,8 @@ public class LatitudeCreateWorldScreen extends Screen {
         // Frozen tab order — widgets added in exact sequence:
         // 1–2. Tabs when present  3. World Name  4. Seed  5. Size ◀  6. Size ▶
         // 7–11. Zone rows (Tropical → Polar)
-        // 12–20. Settings rail  21. Still background
-        // 22. Begin Expedition  23. Cancel
+        // 12–20. Settings rail
+        // 21. Begin Expedition  22. Cancel
         // ═══════════════════════════════════════════════
 
         // ── 3. World Name + 4. Seed (share one row to free up vertical space) ──
@@ -779,17 +763,13 @@ public class LatitudeCreateWorldScreen extends Screen {
             applyTabbedVisibility();
         }
 
-        // ── 21. Always-visible accessibility control: the Still tab under the panel ──
-        this.stillBackgroundBtn = new StillTabWidget(stillTabX, stillTabY, stillTabW, TAB_H);
-        this.addRenderableWidget(this.stillBackgroundBtn);
-
-        // ── 22. Create World ──
+        // ── 21. Create World ──
         this.createWorldBtn = Button.builder(Component.literal("Create World"), b -> beginExpedition())
                 .bounds(btnStartX, bottomY, beginW, btnH)
                 .build();
         this.addRenderableWidget(this.createWorldBtn);
 
-        // ── 23. Cancel ──
+        // ── 22. Cancel ──
         this.cancelBtn = Button.builder(Component.literal("Cancel"), b -> onClose())
                 .bounds(btnStartX + beginW + btnSpacing, bottomY, cancelW, btnH)
                 .build();
@@ -1284,7 +1264,6 @@ public class LatitudeCreateWorldScreen extends Screen {
             setTabbedWidgetVisible(tab, showTabs);
         }
         if (!introActive()) {
-            setTabbedWidgetVisible(stillBackgroundBtn, true);
             setTabbedWidgetVisible(createWorldBtn, true);
             setTabbedWidgetVisible(cancelBtn, true);
             return;
@@ -1307,7 +1286,6 @@ public class LatitudeCreateWorldScreen extends Screen {
         setTabbedWidgetVisible(bonusChestBtn, false);
         setTabbedWidgetVisible(gameRulesBtn, false);
         setTabbedWidgetVisible(hudStudioBtn, false);
-        setTabbedWidgetVisible(stillBackgroundBtn, false);
         setTabbedWidgetVisible(createWorldBtn, false);
         setTabbedWidgetVisible(cancelBtn, false);
     }
@@ -1673,7 +1651,6 @@ public class LatitudeCreateWorldScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        lastInputWasMouse = true;
         if (introActive()) {
             skipIntro();
             return true;
@@ -1730,7 +1707,6 @@ public class LatitudeCreateWorldScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        lastInputWasMouse = false;
         if (introActive()) {
             skipIntro();
             return true;
@@ -1760,15 +1736,6 @@ public class LatitudeCreateWorldScreen extends Screen {
         return super.mouseReleased(mouseX, mouseY, button);
     }
 
-    private void clearStillButtonMouseFocus() {
-        if (stillBackgroundBtn != null) {
-            stillBackgroundBtn.setFocused(false);
-            if (this.getFocused() == stillBackgroundBtn) {
-                this.setFocused(null);
-            }
-        }
-    }
-
     // ══════════════════════════════════════════════════════════════
     // Rendering
     // ══════════════════════════════════════════════════════════════
@@ -1780,16 +1747,9 @@ public class LatitudeCreateWorldScreen extends Screen {
         // three-column run, which would make the NEXT create-world attempt inherit a stale
         // mid-fade. See CreateWorldIntroClock: the fade is frame-driven, never wall-clock.
         CreateWorldIntroClock.advance(Util.getMillis());
-        if (stillBackgroundBtn != null
-                && !CreateWorldScreenUiPolicy.shouldRetainButtonFocus(
-                        lastInputWasMouse, stillBackgroundBtn.isMouseOver(mouseX, mouseY))) {
-            // Rendering always has the current pointer position, even when SDL does not deliver a
-            // separate mouseMoved event. Mouse navigation is hover-only; keyboard focus is retained.
-            clearStillButtonMouseFocus();
-        }
         // Screen.render() paints the background before it renders the widgets, so everything this
-        // screen draws itself (panels, gold labels, the version footer, the Still backdrop) would be
-        // covered by that pass while the widgets stayed on top. Paint the background exactly once,
+        // screen draws itself (panels, gold labels, the version footer) would be covered by that
+        // pass while the widgets stayed on top. Paint the background exactly once,
         // up front, and turn the inner call from super.render() into a no-op so Latitude's own
         // drawing lands on top of the finished background.
         //
@@ -1797,11 +1757,6 @@ public class LatitudeCreateWorldScreen extends Screen {
         // none of them blurs; the suppression below is what keeps the newer lines in step with it.
         paintScreenBackground(context);
         backgroundRenderedThisFrame = true;
-        if (LatitudeConfig.createWorldStillBackground) {
-            // Do not rewrite Minecraft's global panorama preference for one screen. Cover it with a
-            // stable Latitude backdrop instead, then restore the scenic view instantly when toggled off.
-            context.fill(0, 0, this.width, this.height, STILL_BACKGROUND_COLOR);
-        }
         // One authoritative layout pass per rendered frame keeps rectangles, culling, focus, and narration
         // synchronized after scroll, resize, tab changes, world-size changes, or sub-screen return.
         updateLeftLayout();
@@ -1992,8 +1947,6 @@ public class LatitudeCreateWorldScreen extends Screen {
             drawHorizontalScrollbar(context);
         }
 
-        // Drawn after every panel so its top edge can merge into the panel above it.
-        drawStillTab(context, mouseX, mouseY);
         renderCreateVersionLabel(context);
         } // end !introShowing
 
@@ -2536,11 +2489,6 @@ public class LatitudeCreateWorldScreen extends Screen {
         return WORLD_TYPE_NAMES[Math.max(0, Math.min(worldTypeIdx, WORLD_TYPE_NAMES.length - 1))];
     }
 
-    private static Component stillBackgroundLabel() {
-        return Component.literal("Still: "
-                + (LatitudeConfig.createWorldStillBackground ? "ON" : "OFF"));
-    }
-
     // ══════════════════════════════════════════════════════════════
     // Drawing helpers
     // ══════════════════════════════════════════════════════════════
@@ -2681,47 +2629,6 @@ public class LatitudeCreateWorldScreen extends Screen {
         }
     }
 
-    /**
-     * The Still control drawn as a tab hung from the panel's bottom-left edge, in the same bespoke
-     * style as the World/Settings tabs above: ON reads as the active tab (gold, merged into the
-     * panel), OFF as an inactive one. Keeping it attached to Latitude's own window makes it read
-     * as part of that window rather than a vanilla button beside Create World and Cancel
-     * (maintainer ruling, 2026-09-06). The widget beneath owns hitbox, focus, narration and
-     * activation; keyboard focus shows as the hovered look so it is never invisible.
-     */
-    private void drawStillTab(GuiGraphics context, int mouseX, int mouseY) {
-        if (stillBackgroundBtn == null || !stillBackgroundBtn.visible) {
-            return;
-        }
-        int x = stillTabX;
-        int y = stillTabY;
-        int w = stillTabW;
-        int h = TAB_H;
-        boolean active = LatitudeConfig.createWorldStillBackground;
-        boolean hovered = !active
-                && ((mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h)
-                        || stillBackgroundBtn.isFocused());
-        int bg = active || hovered ? PANEL_BG : TAB_INACTIVE_BG;
-        int border = active ? GOLD : PANEL_BORDER;
-        // Tab background, then side + bottom borders (the mirror of the top tabs)
-        context.fill(x, y, x + w, y + h, bg);
-        context.fill(x, y, x + 1, y + h, border);
-        context.fill(x + w - 1, y, x + w, y + h, border);
-        context.fill(x, y + h - 1, x + w, y + h, border);
-        if (active) {
-            // Active tab: no top border, and the panel's bottom border opens up so the two merge
-            context.fill(x + 1, y - 1, x + w - 1, y, PANEL_BG);
-        } else {
-            // Inactive tab: top border closes it off from the panel
-            context.fill(x, y, x + w, y + 1, PANEL_BORDER);
-        }
-        String label = stillBackgroundLabel().getString();
-        int labelColor = active ? GOLD : (hovered ? WARM_WHITE : MUTED);
-        int labelX = x + (w - uiTextWidth(label)) / 2;
-        int labelY = y + (h - uiFontHeight()) / 2;
-        drawUiText(context, label, labelX, labelY, labelColor, active);
-    }
-
     private void drawHorizontalScrollbar(GuiGraphics context) {
         int maxScroll = getPaneStripMaxScroll();
         if (maxScroll <= 0 || paneStripScrollbarH <= 0) {
@@ -2809,46 +2716,6 @@ public class LatitudeCreateWorldScreen extends Screen {
             // The parent screen owns the hand-drawn tab appearance. This widget owns only the
             // standard Minecraft hitbox, focus, narration, and activation path. 1.21.1 publishes
             // no cursor hook here, so the widget paints nothing at all.
-        }
-
-        @Override
-        protected void updateWidgetNarration(NarrationElementOutput builder) {
-            this.defaultButtonNarrationText(builder);
-        }
-    }
-
-    /** Hitbox, focus, narration and activation for the Still tab; the screen draws its look. */
-    private class StillTabWidget extends AbstractWidget {
-        StillTabWidget(int x, int y, int width, int height) {
-            super(x, y, width, height, stillBackgroundLabel());
-        }
-
-        private void toggle() {
-            LatitudeConfig.createWorldStillBackground = !LatitudeConfig.createWorldStillBackground;
-            this.setMessage(stillBackgroundLabel());
-            LatitudeConfig.saveCurrent();
-        }
-
-        @Override
-        public void onClick(double mouseX, double mouseY) {
-            toggle();
-        }
-
-        @Override
-        public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-            if (!this.isActive() || !CommonInputs.selected(keyCode)) {
-                return false;
-            }
-            this.playDownSound(Minecraft.getInstance().getSoundManager());
-            toggle();
-            return true;
-        }
-
-        @Override
-        protected void renderWidget(GuiGraphics context, int mouseX, int mouseY, float deltaTicks) {
-            // The parent screen draws the tab (drawStillTab); this widget owns only the standard
-            // Minecraft hitbox, focus, narration, and activation path. 1.21.1 publishes no cursor
-            // hook here, so the widget paints nothing at all.
         }
 
         @Override
