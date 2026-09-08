@@ -25,6 +25,15 @@ public final class CompassHud {
     // The list tag a bundle item keeps its stored stacks in. Vanilla declares it privately, so
     // the key is repeated here rather than referenced.
     private static final String BUNDLE_ITEMS_TAG = "Items";
+    // The keys ItemStack.save writes into each stored compound: the item's registry id, the
+    // count, and the stack's own tag (for a nested bundle, that tag carries its own stored list).
+    private static final String STORED_ID_TAG = "id";
+    private static final String STORED_COUNT_TAG = "Count";
+    private static final String STORED_TAG_TAG = "tag";
+    private static final StoredItemId COMPASS_ID = StoredItemId.vanilla("compass");
+    private static final StoredItemId BUNDLE_ID = StoredItemId.vanilla("bundle");
+    // How many bundles deep the compass search looks before giving up.
+    private static final int MAX_BUNDLE_DEPTH = 6;
 
     private static long lastCheckWorldTime = Long.MIN_VALUE;
     private static boolean cachedHasCompass = false;
@@ -49,6 +58,25 @@ public final class CompassHud {
             int textHeight,
             int boxWidth,
             int boxHeight) {
+    }
+
+    /**
+     * A vanilla item's registry id as it appears in a stored item compound. ItemStack.of reads
+     * that id through ResourceLocation, which treats a missing or empty namespace as
+     * {@code minecraft}, so the bare path and a leading colon name the same item as the
+     * canonical spelling. Matching the raw string keeps the bundle walk allocation-free while
+     * giving the answer the restored stack would.
+     */
+    private record StoredItemId(String canonical, String path) {
+        static StoredItemId vanilla(String path) {
+            return new StoredItemId("minecraft:" + path, path);
+        }
+
+        boolean matches(String id) {
+            return id.equals(canonical)
+                    || id.equals(path)
+                    || (id.length() == path.length() + 1 && id.charAt(0) == ':' && id.endsWith(path));
+        }
     }
 
     private CompassHud() {}
@@ -840,22 +868,44 @@ public final class CompassHud {
         if (stack.is(Items.COMPASS)) return true;
 
         // Prevent infinite recursion
-        if (depth >= 6) return false;
+        if (depth >= MAX_BUNDLE_DEPTH) return false;
 
         // Bundle contents (this line keeps them in the stack's own NBT: the list tag the bundle
-        // item reads, holding one saved item compound per stored stack). Restoring each compound
-        // gives back the nested stack -- a bundle inside a bundle carries its own list along in its
-        // tag -- so the recursion below is unchanged.
+        // item reads, holding one saved item compound per stored stack). The compounds are read
+        // in place rather than restored to stacks; see storedItemsContainCompass.
         if (stack.is(Items.BUNDLE)) {
-            CompoundTag tag = stack.getTag();
-            if (tag != null) {
-                ListTag stored = tag.getList(BUNDLE_ITEMS_TAG, Tag.TAG_COMPOUND);
-                for (int i = 0; i < stored.size(); i++) {
-                    if (containsCompass(ItemStack.of(stored.getCompound(i)), depth + 1)) return true;
-                }
-            }
+            return storedItemsContainCompass(stack.getTag(), depth + 1);
         }
 
+        return false;
+    }
+
+    /**
+     * Answers containsCompass for a bundle's stored list without restoring the entries. Restoring
+     * each compound with ItemStack.of costs a registry lookup and a deep copy of the entry's tag
+     * (the whole nested list, for a bundle inside a bundle) for every stored stack, every tick.
+     * Reading the id and count in place gives the same answer: an entry restores as empty when
+     * its count is not positive, as a compass when its id names one, and only a bundle entry with
+     * a tag of its own has a nested list to walk.
+     *
+     * @param bundleTag the bundle stack's tag, or null when it has none
+     * @param depth     nesting depth of the entries in this list, for the same recursion cap
+     */
+    private static boolean storedItemsContainCompass(CompoundTag bundleTag, int depth) {
+        if (bundleTag == null || !bundleTag.contains(BUNDLE_ITEMS_TAG, Tag.TAG_LIST)) return false;
+        ListTag stored = bundleTag.getList(BUNDLE_ITEMS_TAG, Tag.TAG_COMPOUND);
+        for (int i = 0; i < stored.size(); i++) {
+            CompoundTag entry = stored.getCompound(i);
+            if (entry.getByte(STORED_COUNT_TAG) <= 0) continue;
+            String id = entry.getString(STORED_ID_TAG);
+            if (COMPASS_ID.matches(id)) return true;
+            if (depth < MAX_BUNDLE_DEPTH
+                    && BUNDLE_ID.matches(id)
+                    && entry.contains(STORED_TAG_TAG, Tag.TAG_COMPOUND)
+                    && storedItemsContainCompass(entry.getCompound(STORED_TAG_TAG), depth + 1)) {
+                return true;
+            }
+        }
         return false;
     }
 
