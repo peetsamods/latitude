@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased (Minecraft 1.21.1)
+
+### Fixed
+
+- **Choosing a climate zone now puts you in it, even on seeds where the middle of that zone is
+  open sea.** The spawn search used to look at one small patch of the zone's latitude, straight
+  north or south of the world's centre, and give up when every one of its nine landing spots was
+  water — so on those seeds (Subtropical with seed 1, for one) you quietly started at the
+  equator instead. It now walks along that latitude until it finds solid land, and it no longer
+  refuses a perfectly good landing spot just because a snow layer or a flower was in the way.
+  Subtropical and Polar starts were the ones most often affected.
+
 ## Latitude 1.5.1-beta.6 (Minecraft 1.21.1)
 
 A performance pass and one world-generation change on top of Beta 5.1: Latitude does less repeated

@@ -1259,13 +1259,16 @@ public class GlobeMod implements ModInitializer {
                 new BlockPos(x, world.getMinBuildHeight(), z));
         BlockPos ground = spawn.below();
 
-        // Same validation as the old tryLandAt. Each rejection is named in the log: a spawn
-        // search that ends in the vanilla fallback used to leave no trace of what the nine
-        // chunks actually held.
+        // Same validation as the old tryLandAt, except that the spawn cell and the headroom only
+        // have to be open (nothing a player collides with, nothing harmful) rather than strictly
+        // air: a snow layer, short grass or a flower is not an obstruction. Leaves are, so a
+        // column under a jungle bush still fails and the next candidate is tried. Each rejection
+        // is named in the log: a spawn search that ends in the vanilla fallback used to leave no
+        // trace of what the nine chunks actually held.
         if (!world.getFluidState(spawn).isEmpty()) return rejectSpawnColumn(world, spawn, ground, "fluid at spawn");
         if (!world.getFluidState(spawn.above()).isEmpty()) return rejectSpawnColumn(world, spawn, ground, "fluid above spawn");
-        if (!world.getBlockState(spawn).isAir()) return rejectSpawnColumn(world, spawn, ground, "spawn block not air");
-        if (!world.getBlockState(spawn.above()).isAir()) return rejectSpawnColumn(world, spawn, ground, "headroom not air");
+        if (!isOpenSpawnCell(world, spawn)) return rejectSpawnColumn(world, spawn, ground, "spawn cell obstructed");
+        if (!isOpenSpawnCell(world, spawn.above())) return rejectSpawnColumn(world, spawn, ground, "headroom obstructed");
         if (!world.getFluidState(ground).isEmpty()) return rejectSpawnColumn(world, spawn, ground, "ground is fluid");
         BlockState groundState = world.getBlockState(ground);
         ResourceLocation groundBlockId = BuiltInRegistries.BLOCK.getKey(groundState.getBlock());
@@ -1281,6 +1284,23 @@ public class GlobeMod implements ModInitializer {
         LOGGER.info("[Latitude] Prepared spawn target surface: x={} y={} z={} loadedTeleportChunks={}",
                 x, spawn.getY(), z, loadedNeighborChunks + 1);
         return spawn;
+    }
+
+    /**
+     * A cell a newly spawned player can occupy: air, or a block with no collision box that is not
+     * intrinsically harmful. Snow layers, grass and flowers pass; leaves, logs and any block on the
+     * hazardous-surface list (sweet berry bush, fire, powder snow) do not.
+     */
+    private static boolean isOpenSpawnCell(ServerLevel world, BlockPos pos) {
+        BlockState state = world.getBlockState(pos);
+        if (state.isAir()) {
+            return true;
+        }
+        if (state.blocksMotion()) {
+            return false;
+        }
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        return id != null && !SpawnSafetyPolicy.isDangerousSurfaceId(id.toString());
     }
 
     private static BlockPos rejectSpawnColumn(ServerLevel world, BlockPos spawn, BlockPos ground, String reason) {

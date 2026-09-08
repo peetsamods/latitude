@@ -24,6 +24,7 @@ public final class SpawnSafetyPolicyTest {
         initialSpawnStaysInRequestedLatitudeWithBoundedFallback();
         compactBiomePrefilterFindsIslandMissedByBlindFallback();
         compactCohortIsDeterministicBoundedAndOrdered();
+        compactCohortWalksTheLatitudeRowUntilItFindsLand();
         compactCohortStaysInEveryRequestedZone();
         compactCohortFallsBackWhenClassificationFails();
         validationStopsAtAcceptanceOrNine();
@@ -248,12 +249,20 @@ public final class SpawnSafetyPolicyTest {
                 classifier);
         assertEquals(cohort.probes().size(), probeCalls.get(),
                 "each unique chunk-free probe is classified exactly once");
-        assertTrue(cohort.probes().size() <= 85,
-                "the clamped and deduplicated 17x5 lattice performs at most 85 biome probes");
+        int safeMaxX = SpawnSafetyPolicy.safeSearchMaxAbsX(
+                radius, TERRAIN_MARGIN, WARNING_DISTANCE, WARNING_PADDING);
+        int latticeCount = SpawnSafetyPolicy.compactLatticeCount(safeMaxX);
+        assertTrue(latticeCount > 1, "a Regular world's row holds more than one lattice");
+        assertTrue(cohort.probes().size() <= SpawnSafetyPolicy.MAX_COMPACT_PROBES * latticeCount,
+                "a row with no fully-land window classifies at most 85 probes per lattice, row-wide");
+        assertTrue(cohort.probes().size() > SpawnSafetyPolicy.MAX_COMPACT_PROBES,
+                "a row with no fully-land window is searched past the central lattice");
         assertEquals(9, cohort.validationCandidates().size(),
                 "the selected 3x3 cohort contains at most nine unique targets");
         assertEquals(3, cohort.landCandidateCount(),
                 "the land-rich subsection wins over nearer water-only subsections");
+        assertEquals(3, cohort.landProbeCount(),
+                "the cohort reports how many probes classified as land row-wide");
         assertEquals(
                 cohort,
                 SpawnSafetyPolicy.compactValidationCohort(
@@ -292,6 +301,93 @@ public final class SpawnSafetyPolicyTest {
         }
         assertTrue(maxX - minX <= 64, "one cohort spans no more than 64 blocks on X");
         assertTrue(maxZ - minZ <= 64, "one cohort spans no more than 64 blocks on Z");
+    }
+
+    /**
+     * Seed 1 with Subtropical on a Regular world: every one of the 85 probes around x=0 at that
+     * latitude is deep ocean, the nine chunk loads all hit water, and the world fell back to
+     * vanilla's equator spawn. The search now walks the latitude row outward until a window is
+     * land end to end, and stops there. An all-land row still costs one lattice.
+     */
+    private static void compactCohortWalksTheLatitudeRowUntilItFindsLand() {
+        int radius = 10_000;
+        int targetZ = -3_250;
+        int oceanHalfWidth = 1_024;
+        AtomicInteger probeCalls = new AtomicInteger();
+        BiPredicate<Integer, Integer> oceanAroundTheMeridian = (x, z) -> {
+            probeCalls.incrementAndGet();
+            return Math.abs(x) > oceanHalfWidth;
+        };
+
+        SpawnSafetyPolicy.CompactCohort cohort = SpawnSafetyPolicy.compactValidationCohort(
+                radius,
+                targetZ,
+                TERRAIN_MARGIN,
+                WARNING_DISTANCE,
+                WARNING_PADDING,
+                oceanAroundTheMeridian);
+        assertEquals(9, cohort.validationCandidates().size(),
+                "the row-wide search still hands production one nine-coordinate cohort");
+        assertEquals(9, cohort.landCandidateCount(),
+                "the first fully-land window along the row wins");
+        assertFalse(cohort.terrainOnlyFallback(),
+                "finding land along the row is a classified result, not the terrain-only fallback");
+        int minAbsX = Integer.MAX_VALUE;
+        int maxAbsX = 0;
+        for (SpawnSafetyPolicy.FallbackCandidate candidate : cohort.validationCandidates()) {
+            assertTrue(Math.abs(candidate.x()) > oceanHalfWidth,
+                    "every cohort candidate sits on the land beyond the ocean");
+            assertTrue(Math.abs(candidate.z() - targetZ) <= 64,
+                    "walking the row never leaves the requested latitude envelope");
+            minAbsX = Math.min(minAbsX, Math.abs(candidate.x()));
+            maxAbsX = Math.max(maxAbsX, Math.abs(candidate.x()));
+        }
+        assertTrue(minAbsX <= oceanHalfWidth + 3 * SpawnSafetyPolicy.COMPACT_PROBE_STEP_BLOCKS,
+                "the nearest fully-land window is chosen, not a farther one");
+        assertTrue(maxAbsX - minAbsX <= 64, "the chosen cohort is still one compact 3x3 window");
+        assertEquals(cohort.probes().size(), probeCalls.get(),
+                "row-wide probes are classified exactly once each");
+        int visitedLattices = 1 + 2 * (int) Math.ceil(
+                (oceanHalfWidth - SpawnSafetyPolicy.COMPACT_PROBE_X_HALF_SPAN_BLOCKS)
+                        / (double) SpawnSafetyPolicy.COMPACT_LATTICE_STRIDE_BLOCKS);
+        assertTrue(cohort.probes().size() <= SpawnSafetyPolicy.MAX_COMPACT_PROBES * visitedLattices,
+                "the search stops at the ring that holds the first fully-land window");
+        assertEquals(
+                cohort,
+                SpawnSafetyPolicy.compactValidationCohort(
+                        radius, targetZ, TERRAIN_MARGIN, WARNING_DISTANCE, WARNING_PADDING,
+                        (x, z) -> Math.abs(x) > oceanHalfWidth),
+                "the row-wide search is deterministic");
+
+        AtomicInteger allLandCalls = new AtomicInteger();
+        SpawnSafetyPolicy.CompactCohort allLand = SpawnSafetyPolicy.compactValidationCohort(
+                radius, targetZ, TERRAIN_MARGIN, WARNING_DISTANCE, WARNING_PADDING,
+                (x, z) -> {
+                    allLandCalls.incrementAndGet();
+                    return true;
+                });
+        assertTrue(allLandCalls.get() <= SpawnSafetyPolicy.MAX_COMPACT_PROBES,
+                "an all-land central lattice stops the search after at most 85 probes");
+        assertEquals(9, allLand.landCandidateCount(), "an all-land central lattice wins outright");
+        for (SpawnSafetyPolicy.FallbackCandidate candidate : allLand.validationCandidates()) {
+            assertTrue(Math.abs(candidate.x()) <= 64,
+                    "an all-land central lattice keeps the cohort at the meridian, as before");
+        }
+
+        int ittyRadius = 3_750;
+        int ittyMaxX = SpawnSafetyPolicy.safeSearchMaxAbsX(
+                ittyRadius, TERRAIN_MARGIN, WARNING_DISTANCE, WARNING_PADDING);
+        SpawnSafetyPolicy.CompactCohort allOcean = SpawnSafetyPolicy.compactValidationCohort(
+                ittyRadius, 1_200, TERRAIN_MARGIN, WARNING_DISTANCE, WARNING_PADDING,
+                (x, z) -> false);
+        assertTrue(allOcean.probes().size()
+                        <= SpawnSafetyPolicy.MAX_COMPACT_PROBES * SpawnSafetyPolicy.compactLatticeCount(ittyMaxX),
+                "an all-ocean row is bounded by the world's own east/west search limit");
+        assertEquals(0, allOcean.landCandidateCount(),
+                "an all-ocean row still returns the nearest central cohort for terrain probing");
+        for (SpawnSafetyPolicy.FallbackCandidate candidate : allOcean.validationCandidates()) {
+            assertTrue(Math.abs(candidate.x()) <= ittyMaxX, "row-wide probes respect the X bound");
+        }
     }
 
     private static void compactCohortStaysInEveryRequestedZone() {
@@ -560,6 +656,32 @@ public final class SpawnSafetyPolicyTest {
         assertTrue(
                 source.contains("groundState.isFaceSturdy(world, ground, Direction.UP)"),
                 "spawn ground must support the player");
+        // Seed 1: Tropical's nine jungle columns and two of Polar's snowy-plains columns were
+        // rejected as "not air" -- the no-leaves heightmap left leaves in the spawn cell over a
+        // bush, and a snow layer is not air. Neither is an obstruction to a player.
+        assertTrue(
+                source.contains("if (!isOpenSpawnCell(world, spawn)) return rejectSpawnColumn("),
+                "the spawn cell must be open (no collision, nothing harmful), not strictly air");
+        assertTrue(
+                source.contains("if (!isOpenSpawnCell(world, spawn.above())) return rejectSpawnColumn("),
+                "the headroom must be open, not strictly air");
+        assertFalse(
+                source.contains("if (!world.getBlockState(spawn).isAir()) return"),
+                "a snow layer or a plant in the spawn cell no longer rejects the column");
+        assertFalse(
+                source.contains("Heightmap.Types.MOTION_BLOCKING, new BlockPos(x, world.getMinBuildHeight(), z)"),
+                "no canopy climb: leaves cannot support a block, so a canopy top never passes the "
+                        + "sturdy-ground check and the column is simply the next candidate's problem");
+        String openCell = between(
+                source,
+                "private static boolean isOpenSpawnCell(",
+                "private static BlockPos rejectSpawnColumn(");
+        assertTrue(
+                openCell.contains("if (state.blocksMotion()) { return false; }"),
+                "any block with a collision box obstructs the spawn cell");
+        assertTrue(
+                openCell.contains("!SpawnSafetyPolicy.isDangerousSurfaceId(id.toString())"),
+                "a collision-free but harmful block (berry bush, fire, powder snow) still obstructs");
     }
 
     private static long distanceSquared(
