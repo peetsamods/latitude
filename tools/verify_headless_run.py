@@ -13,8 +13,15 @@ that is the only evidence of what happened. So the run task tees the server's co
 file and this gate reads it afterwards. It answers three ways, never two:
 
   PASS     a completion marker from the headless runner was seen and no failure marker
-  FAIL     a known failure marker was seen: server start failure, server crash, job failure
+  FAIL     a known failure marker was seen: server start failure, server crash, job failure,
+           or a job that refused to run on the world it was given
   INVALID  neither -- the run left no completion evidence, which is not a pass
+
+A refusal is a failure, not a skip. BiomePreviewHeadlessRunner refuses an export whose recipe
+radius differs from the radius the live Latitude overworld seeded the worldgen context with (a run
+dir left holding a world of another size); that export completed and passed here before, with a
+map 17% different from the clean-run-dir map. The refusal line is the only console evidence, so
+it must fail the run.
 
 Only PASS exits 0. Wired in build.gradle: the headless run tasks capture their console under
 build/latitude-headless/ and run this gate in doLast, so the task fails when the run did.
@@ -37,6 +44,7 @@ FAILURE_MARKERS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("server crash", re.compile(r"Encountered an unexpected exception")),
     ("headless job failure", re.compile(r"\[latdev\]\[[\w-]+\] (?:export|seed search|audit|proof|spawn probe) failed")),
     ("headless job failure", re.compile(r"\[latdev\]\[[\w-]+\] no overworld available")),
+    ("headless job refused", re.compile(r"\[latdev\]\[[\w-]+\] REFUSED:")),
     ("headless job failure", re.compile(r"\[Latitude\] (?:structure atlas export|distribution census) failed")),
     ("headless job refused", re.compile(r"\[Latitude\] structure atlas REFUSED")),
 )

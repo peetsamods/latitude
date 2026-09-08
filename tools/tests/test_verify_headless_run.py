@@ -91,6 +91,44 @@ class ClassifyTest(unittest.TestCase):
         failed = CLEAN_RUN[:2] + ["[12:00:40] [Server thread/ERROR]: [Latitude] distribution census failed"]
         self.assertEqual(gate.classify(failed)[0], "FAIL")
 
+    def test_radius_mismatch_refusal_is_fail(self) -> None:
+        # A run dir holding a Latitude world of another size: the runner refuses instead of
+        # sampling through that world's coverage plans, then its finally block still logs the
+        # completion marker. The refusal must win.
+        lines = CLEAN_RUN[:2] + [
+            "[12:00:19] [Server thread/INFO]: [Latitude] Early init: province authority seeded before "
+            "spawn-chunk generation (seed=1 radius=7500)",
+            "[12:00:21] [Server thread/ERROR]: [latdev][headless] REFUSED: live overworld radius 7500 "
+            "differs from recipe radius 10000 (the run dir holds a Latitude world of another size)",
+            "[12:00:21] [Server thread/INFO]: [latdev][headless] stopping server",
+        ]
+        verdict, detail = gate.classify(lines)
+        self.assertEqual(verdict, "FAIL")
+        self.assertIn("headless job refused", detail)
+        self.assertIn("REFUSED: live overworld radius 7500 differs from recipe radius 10000", detail)
+
+    def test_every_job_can_refuse(self) -> None:
+        for job in ("search", "audit", "locate-boundary"):
+            with self.subTest(job=job):
+                lines = CLEAN_RUN[:2] + [
+                    f"[12:00:21] [Server thread/ERROR]: [latdev][{job}] REFUSED: live overworld radius 7500 "
+                    "differs from recipe radius 10000",
+                    f"[12:00:31] [Server thread/INFO]: [latdev][{job}] stopping server",
+                ]
+                self.assertEqual(gate.classify(lines)[0], "FAIL")
+
+    def test_the_mismatch_is_invisible_without_the_refusal_line(self) -> None:
+        # Negative control on this gate: the pre-fix console (context seeded at 7500, export run at
+        # 10000, completion marker) is a PASS here. The runner's refusal line is load-bearing;
+        # nothing this gate can see in the boot lines distinguishes that run from a clean one.
+        lines = CLEAN_RUN[:2] + [
+            "[12:00:19] [Server thread/INFO]: [Latitude] Early init: province authority seeded before "
+            "spawn-chunk generation (seed=1 radius=7500)",
+            "[12:00:21] [Server thread/INFO]: [latdev][headless] starting export seed=1 worldSeed=1 radius=10000 ...",
+            "[12:00:31] [Server thread/INFO]: [latdev][headless] stopping server",
+        ]
+        self.assertEqual(gate.classify(lines)[0], "PASS")
+
     def test_no_completion_evidence_is_invalid_not_pass(self) -> None:
         # A boot that hangs, is killed, or never reaches the runner must not read as green.
         verdict, _ = gate.classify(CLEAN_RUN[:2])
