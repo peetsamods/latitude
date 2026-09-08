@@ -6619,9 +6619,21 @@ public final class LatitudeBiomes {
         return clamp(deg, 0.0, 90.0);
     }
 
+    /**
+     * Registry keys for {@link #biome(Registry, String)}, one per id string. 1.20.1's {@code Registry} has
+     * no {@code getHolder(ResourceLocation)}, and {@code ResourceKey.create} interns through a global map on
+     * every call, so the keys are built once and looked up by string afterwards: the per-sample path stays
+     * allocation-free (the donor's profile was one {@code ResourceLocation} per call).
+     */
+    private static final ConcurrentHashMap<String, ResourceKey<Biome>> BIOME_KEYS = new ConcurrentHashMap<>();
+
     private static Holder<Biome> biome(Registry<Biome> biomes, String id) {
-        ResourceLocation ident = new ResourceLocation(id);
-        return biomes.getHolder(ResourceKey.create(Registries.BIOME, ident)).orElseThrow();
+        ResourceKey<Biome> key = BIOME_KEYS.computeIfAbsent(id, LatitudeBiomes::biomeKey);
+        return biomes.getHolder(key).orElseThrow();
+    }
+
+    private static ResourceKey<Biome> biomeKey(String id) {
+        return ResourceKey.create(Registries.BIOME, new ResourceLocation(id));
     }
 
     private static Holder<Biome> pickFrom(Registry<Biome> biomes, int blockX, int blockZ, int bandIndex, String... options) {
