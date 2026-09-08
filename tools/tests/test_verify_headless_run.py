@@ -59,10 +59,20 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(gate.classify(lines)[0], "FAIL")
 
     def test_other_jobs_complete_the_same_way(self) -> None:
-        for job in ("search", "audit", "locate-boundary"):
+        for job in ("search", "audit", "locate-boundary", "spawn-probe"):
             with self.subTest(job=job):
                 lines = CLEAN_RUN[:2] + [f"[12:00:31] [Server thread/INFO]: [latdev][{job}] stopping server"]
                 self.assertEqual(gate.classify(lines)[0], "PASS")
+
+    def test_spawn_probe_failure_is_fail(self) -> None:
+        # The spawn probe's finally block also logs "stopping server" after "spawn probe failed".
+        lines = CLEAN_RUN[:2] + [
+            "[12:00:25] [Server thread/ERROR]: [latdev][spawn-probe] spawn probe failed",
+            "[12:00:25] [Server thread/INFO]: [latdev][spawn-probe] stopping server",
+        ]
+        verdict, detail = gate.classify(lines)
+        self.assertEqual(verdict, "FAIL")
+        self.assertIn("headless job failure", detail)
 
     def test_structure_atlas_and_census_exporters_log_their_own_summary(self) -> None:
         # These exporters own server shutdown and never print "[latdev][...] stopping server".

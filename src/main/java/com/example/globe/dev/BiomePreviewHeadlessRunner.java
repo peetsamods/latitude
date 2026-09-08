@@ -76,11 +76,18 @@ public final class BiomePreviewHeadlessRunner {
     }
 
     public static void register() {
+        SpawnProbeHeadlessJob.armPendingZone();
         ServerLifecycleEvents.SERVER_STARTED.register(BiomePreviewHeadlessRunner::onServerStarted);
     }
 
     private static void onServerStarted(MinecraftServer server) {
         if (!TRIGGERED.compareAndSet(false, true)) {
+            return;
+        }
+
+        SpawnProbeHeadlessJob.Config spawnProbeConfig = SpawnProbeHeadlessJob.parseConfig();
+        if (spawnProbeConfig.enabled()) {
+            server.execute(() -> SpawnProbeHeadlessJob.runAndStop(server, spawnProbeConfig));
             return;
         }
 

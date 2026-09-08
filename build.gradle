@@ -169,6 +169,20 @@ loom {
             // (their exporters own server shutdown and sampling radius).
             vmArg "-Dlatdev.structureAtlas=${System.getProperty('latdev.structureAtlas', 'true')}"
         }
+        spawnProbe {
+            server()
+            name "Spawn Probe (Headless)"
+            runDir latitudePreviewRunDir
+            vmArg "-Xms1G"
+            vmArg "-Xmx4G"
+            // Reproduces the create-world initial-spawn path on a dedicated server and censuses
+            // the cohort policy; see com.example.globe.dev.SpawnProbeHeadlessJob for the keys.
+            vmArg "-Dlatdev.spawnProbe=${System.getProperty('latdev.spawnProbe', '')}"
+            vmArg "-Dlatitude.dev.gitCommit=${latitudeGitCommit}"
+            vmArg "-Dlatitude.dev.gitBranch=${latitudeGitBranch}"
+            vmArg "-Dlatitude.dev.buildDirty=${latitudeGitDirty}"
+            vmArg "-Dlatitude.dev.buildTime=${latitudeBuildTime}"
+        }
     }
 }
 
@@ -977,7 +991,7 @@ def latitudeGuardHeadlessRun = { String taskName ->
         }
     }
 }
-['runBiomePreview', 'runBiomeSeedSearch', 'runBandAudit', 'runStructureAtlas'].each { latitudeGuardHeadlessRun(it) }
+['runBiomePreview', 'runBiomeSeedSearch', 'runBandAudit', 'runStructureAtlas', 'runSpawnProbe'].each { latitudeGuardHeadlessRun(it) }
 
 tasks.named('runBiomePreview').configure {
     workingDir file(latitudePreviewRunDir)
@@ -1160,6 +1174,11 @@ tasks.named('runBiomeSeedSearch').configure {
 }
 
 tasks.named('runStructureAtlas').configure {
+    workingDir file(latitudePreviewRunDir)
+    dependsOn tasks.named('prepareBiomePreviewRunDir')
+}
+
+tasks.named('runSpawnProbe').configure {
     workingDir file(latitudePreviewRunDir)
     dependsOn tasks.named('prepareBiomePreviewRunDir')
 }

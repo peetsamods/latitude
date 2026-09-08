@@ -27,10 +27,18 @@ public final class SpawnSafetyPolicy {
     public record FallbackCandidate(int x, int z) {
     }
 
+    /**
+     * @param probes all unique chunk-free probes that were classified
+     * @param validationCandidates the ordered cohort production may terrain-validate
+     * @param landCandidateCount how many of the cohort's candidates classified as land
+     * @param landProbeCount how many of all probes classified as land
+     * @param terrainOnlyFallback true when classification was unavailable and the cohort is central
+     */
     public record CompactCohort(
             List<FallbackCandidate> probes,
             List<FallbackCandidate> validationCandidates,
             int landCandidateCount,
+            int landProbeCount,
             boolean terrainOnlyFallback) {
         public CompactCohort {
             probes = List.copyOf(probes);
@@ -213,10 +221,17 @@ public final class SpawnSafetyPolicy {
                 orderedLandCount++;
             }
         }
+        int landProbeCount = 0;
+        for (Boolean land : landByProbe.values()) {
+            if (Boolean.TRUE.equals(land)) {
+                landProbeCount++;
+            }
+        }
         return new CompactCohort(
                 List.copyOf(uniqueProbes),
                 ordered,
                 orderedLandCount,
+                landProbeCount,
                 false);
     }
 
@@ -254,7 +269,7 @@ public final class SpawnSafetyPolicy {
                         distanceSquared(candidate, 0, centerZ))
                 .thenComparingInt(FallbackCandidate::x)
                 .thenComparingInt(FallbackCandidate::z));
-        return new CompactCohort(List.of(), ordered, 0, true);
+        return new CompactCohort(List.of(), ordered, 0, 0, true);
     }
 
     /**

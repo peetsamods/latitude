@@ -870,9 +870,26 @@ public class GlobeMod implements ModInitializer {
         LatitudeWorldState.get(world).setSpawnPickerDismissed(true);
     }
 
-    private static SpawnChoice resolveInitialSpawnChoice(ServerLevel world, String id) {
+    /**
+     * The chunk-free half of an initial-spawn choice: the requested zone resolved to its target
+     * latitude row, and the compact validation cohort the biome probes selected there. Nothing in
+     * it has generated a chunk yet, so it can be computed for any seed on a live world.
+     */
+    public record InitialSpawnPlan(
+            String zoneId,
+            int radius,
+            int targetZ,
+            SpawnSafetyPolicy.CompactCohort cohort) {
+    }
+
+    /**
+     * Builds the chunk-free initial-spawn plan for {@code zoneId} at {@code seed}. Production
+     * calls it with the world's own seed from {@link #resolveInitialSpawnChoice}; the excluded
+     * dev tooling calls it with other seeds to census the cohort policy without loading chunks.
+     * Leaves {@link LatitudeBiomes}'s world seed set to {@code seed}.
+     */
+    public static InitialSpawnPlan planInitialSpawn(ServerLevel world, String id, long seed) {
         String zoneId = id;
-        long seed = world.getServer().getWorldData().worldGenOptions().seed();
         if (zoneId != null && zoneId.equals("RANDOM")) {
             zoneId = resolveSpawnZoneId(zoneId, seed);
             LOGGER.info("Resolved RANDOM initial spawn zone: seed={}, chosen={}", seed, zoneId);
@@ -933,6 +950,13 @@ public class GlobeMod implements ModInitializer {
                     EW_WARNING_DISTANCE_BLOCKS,
                     EW_SPAWN_PADDING_BLOCKS);
         }
+        return new InitialSpawnPlan(zoneId, radius, targetZ, cohort);
+    }
+
+    private static SpawnChoice resolveInitialSpawnChoice(ServerLevel world, String id) {
+        long seed = world.getServer().getWorldData().worldGenOptions().seed();
+        InitialSpawnPlan plan = planInitialSpawn(world, id, seed);
+        SpawnSafetyPolicy.CompactCohort cohort = plan.cohort();
 
         BlockPos spawnPos = SpawnSafetyPolicy.firstValidatedCandidate(
                 cohort.validationCandidates(),
@@ -947,10 +971,34 @@ public class GlobeMod implements ModInitializer {
                     }
                 }).orElse(null);
         if (spawnPos == null) {
+            // One summary line before the exception: the per-column rejections above say what
+            // each of the nine chunks looked like, this says how the chunk-free probes saw the
+            // latitude row that produced them (an all-ocean lattice is the usual story).
+            LOGGER.warn(
+                    "[Latitude] Initial spawn cohort exhausted: zone={} seed={} radius={} targetZ={} landProbes={}/{} cohortLand={}/{} terrainOnlyCohort={}",
+                    plan.zoneId(),
+                    seed,
+                    plan.radius(),
+                    plan.targetZ(),
+                    cohort.landProbeCount(),
+                    cohort.probes().size(),
+                    cohort.landCandidateCount(),
+                    cohort.validationCandidates().size(),
+                    cohort.terrainOnlyFallback());
             throw new InitialSpawnSelectionException(
                     "Latitude could not find a safe initial spawn in the selected climate zone after nine bounded attempts.");
         }
-        return new SpawnChoice(zoneId, spawnPos, radius);
+        return new SpawnChoice(plan.zoneId(), spawnPos, plan.radius());
+    }
+
+    /**
+     * Runs the real initial-spawn choice for {@code zoneId} on a live world and returns the
+     * validated position, or throws {@link InitialSpawnSelectionException} exactly as the
+     * create-world path would. Diagnostics entry point for the excluded dev tooling; it loads
+     * at most the nine cohort chunks, like the production path.
+     */
+    public static BlockPos probeInitialSpawn(ServerLevel world, String zoneId) {
+        return resolveInitialSpawnChoice(world, zoneId).pos();
     }
 
     private static SpawnChoice resolveSpawnChoice(ServerLevel world, String id) {
@@ -1211,19 +1259,21 @@ public class GlobeMod implements ModInitializer {
                 new BlockPos(x, world.getMinBuildHeight(), z));
         BlockPos ground = spawn.below();
 
-        // Same validation as the old tryLandAt
-        if (!world.getFluidState(spawn).isEmpty()) return null;
-        if (!world.getFluidState(spawn.above()).isEmpty()) return null;
-        if (!world.getBlockState(spawn).isAir()) return null;
-        if (!world.getBlockState(spawn.above()).isAir()) return null;
-        if (!world.getFluidState(ground).isEmpty()) return null;
+        // Same validation as the old tryLandAt. Each rejection is named in the log: a spawn
+        // search that ends in the vanilla fallback used to leave no trace of what the nine
+        // chunks actually held.
+        if (!world.getFluidState(spawn).isEmpty()) return rejectSpawnColumn(world, spawn, ground, "fluid at spawn");
+        if (!world.getFluidState(spawn.above()).isEmpty()) return rejectSpawnColumn(world, spawn, ground, "fluid above spawn");
+        if (!world.getBlockState(spawn).isAir()) return rejectSpawnColumn(world, spawn, ground, "spawn block not air");
+        if (!world.getBlockState(spawn.above()).isAir()) return rejectSpawnColumn(world, spawn, ground, "headroom not air");
+        if (!world.getFluidState(ground).isEmpty()) return rejectSpawnColumn(world, spawn, ground, "ground is fluid");
         BlockState groundState = world.getBlockState(ground);
         ResourceLocation groundBlockId = BuiltInRegistries.BLOCK.getKey(groundState.getBlock());
         if (groundBlockId == null
                 || SpawnSafetyPolicy.isDangerousSurfaceId(groundBlockId.toString())) {
-            return null;
+            return rejectSpawnColumn(world, spawn, ground, "hazardous ground");
         }
-        if (!groundState.isFaceSturdy(world, ground, Direction.UP)) return null;
+        if (!groundState.isFaceSturdy(world, ground, Direction.UP)) return rejectSpawnColumn(world, spawn, ground, "ground not sturdy");
 
         int loadedNeighborChunks = prepareTeleportNeighbors
                 ? loadSpawnTargetNeighborRing(world, x, z)
@@ -1231,6 +1281,16 @@ public class GlobeMod implements ModInitializer {
         LOGGER.info("[Latitude] Prepared spawn target surface: x={} y={} z={} loadedTeleportChunks={}",
                 x, spawn.getY(), z, loadedNeighborChunks + 1);
         return spawn;
+    }
+
+    private static BlockPos rejectSpawnColumn(ServerLevel world, BlockPos spawn, BlockPos ground, String reason) {
+        ResourceLocation groundId = BuiltInRegistries.BLOCK.getKey(world.getBlockState(ground).getBlock());
+        String biome = world.getBiome(ground).unwrapKey()
+                .map(key -> key.location().toString())
+                .orElse("?");
+        LOGGER.info("[Latitude] Spawn column rejected: x={} y={} z={} ground={} biome={} reason={}",
+                spawn.getX(), spawn.getY(), spawn.getZ(), groundId, biome, reason);
+        return null;
     }
 
     private static void loadSpawnTargetChunk(ServerLevel world, int x, int z) {
