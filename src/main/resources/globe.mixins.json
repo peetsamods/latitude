@@ -28,7 +28,11 @@
     "ExtremePolarVillageStartGuardMixin",
     "ExtremePolarVegetationGuardMixin",
     "ExtremePolarSimpleFoliageGuardMixin",
-    "SnowAndFreezeWindsweptSnowLineMixin"
+    "SnowAndFreezeWindsweptSnowLineMixin",
+    "ChunkAccessRetrofitMarkerMixin",
+    "ImposterProtoChunkRetrofitMarkerMixin",
+    "LevelChunkRetrofitMarkerMixin",
+    "ChunkSerializerRetrofitMarkerMixin"
   ],
   "client": [
     "client.CreateWorldScreenMixin",

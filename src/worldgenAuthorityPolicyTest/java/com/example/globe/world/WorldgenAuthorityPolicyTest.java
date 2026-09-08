@@ -1383,22 +1383,11 @@ public final class WorldgenAuthorityPolicyTest {
                 retrofit.indexOf("GlobeMod.isLatitudeOverworld(world)",
                         retrofit.indexOf("public static List<String> confirmEnable(")) > 0,
                 "retrofit confirm re-checks the world type rather than trusting the enable step");
-        // The generation-time marker needs the world state resolved on the server thread before
-        // any chunk is generated, so one creating read now happens at level load -- earlier than
-        // confirmEnable. The invariant it used to be spelled as is unchanged and is asserted
-        // directly instead: that read refuses a world Latitude did not generate before it touches
-        // the storage, it is the ONLY creating read before confirmEnable, and there are exactly
-        // two creating reads in the file, so a third one cannot be added unnoticed. Every other
-        // path -- warning-only, disable, the queue -- still uses the non-creating getIfPresent.
-        int cache = retrofit.indexOf("private static void cacheWorldState(ServerLevel world) {");
-        int cacheGuard = retrofit.indexOf("!GlobeMod.isLatitudeOverworld(world)", cache);
-        int cacheRead = retrofit.indexOf("LatitudeWorldState.get(world)", cache);
-        assertTrue(cache > 0 && cacheGuard > cache && cacheGuard < cacheRead,
-                "the level-load state cache refuses a non-Latitude world before it creates state");
-        assertEquals(cacheRead, retrofit.indexOf("LatitudeWorldState.get(world)"),
+        assertFalse(
+                retrofit.contains("LatitudeWorldState.get(world)")
+                        && retrofit.indexOf("LatitudeWorldState.get(world)")
+                                < retrofit.indexOf("public static List<String> confirmEnable("),
                 "warning-only and disable paths read state without creating a .dat on a vanilla save");
-        assertEquals(2, occurrences(retrofit, "LatitudeWorldState.get(world)"),
-                "only the level-load cache and confirmEnable may create the state file");
     }
 
     /**
