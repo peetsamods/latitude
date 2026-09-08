@@ -1,3 +1,96 @@
+## Latitude 1.5.1-beta.5.1 (Minecraft 1.20.1–1.20.4)
+
+The first Latitude release for Minecraft 1.20 since 1.3.0, and it is a big jump: everything from 1.4
+and the whole 1.5 line arrives at once, in one file that runs on 1.20.1, 1.20.2, 1.20.3 and 1.20.4.
+If you are coming from 1.3.0 on this version, read this as one long release rather than a point
+update. It needs Fabric API and Java 17 or newer.
+
+**Existing worlds keep the terrain they already have.** Everything below shapes newly generated
+chunks. Explore outward from an old world and you will see the new rules take over at the edge of
+what was already generated. Your settings file carries over as it is.
+
+### New
+
+- **Biome packs work with Latitude now.** Biomes O' Plenty, Terralith and friends have their
+  biomes sorted into the climate band each one belongs to, instead of being ignored or scattered.
+  There is a TerraBlender bridge for packs that use it.
+- **Operator commands.** `/latitude` gives you a small set of tools for finding your way around a
+  Latitude world — including a latitude-aware `/locate` that answers with somewhere you can
+  actually reach, and a teleport that lands you on solid ground.
+- **A door to the vanilla world types.** The world list now has a way through to Minecraft's own
+  create-world screen, so a Latitude install is no longer a one-world-type install. Your name and
+  seed come with you, and there is a way back.
+- **Your saves say which climate you left off in.** Each world in the list carries the band you
+  were last standing in, next to the date.
+- **Riverbanks in dry country.** Rivers cutting through desert and badlands now get banks that
+  look like they belong there rather than stopping at the water's edge.
+- **A tree line at the pole.** Trees thin out and then stop as you go north or south, the way they
+  do on Earth, and the plants that need a floor no longer end up floating when the ground beneath
+  them is taken away.
+- **Villages are sited on purpose.** A village will not turn up past the tree line, will not
+  contradict the climate it is standing in, and will not be dropped onto ground it cannot sit on.
+- **A safer first step into a new world.** Latitude picks a spawn that is on land, in the band you
+  chose, and not inside a hazard.
+- **The loading screen is Latitude's.** Entering a Latitude world — new or existing — shows the
+  Latitude loading pane instead of the bare vanilla screen.
+
+### Improved
+
+- **The climate map reads like a real world.** Band boundaries wobble instead of running as
+  straight lines, deserts sit where deserts sit, and mesa country is rare inland scenery rather
+  than a seed lottery.
+- **The poles feel like the poles.** Snow line, ice, fog and the polar cap were all retuned
+  together, and the transition into the subpolar band now thins out in patches instead of changing
+  along a hard line.
+- **The compass HUD and HUD Studio** gained the location-detail readout, snapping, and per-element
+  placement. The old settings screen is gone; everything it held lives in HUD Studio now, on its
+  keybind.
+- **The create-world screen** was rebuilt around a climate picker with a live map, an intro
+  title, and a layout that copes with high GUI scales by moving to tabs instead of cramming three
+  columns.
+- **Edge storm warnings** now tell you whether the storm is to your east or your west.
+- **Less repeat work while exploring.** Latitude no longer redoes a custom-biome scan that was
+  only needed for diagnostics that are switched off, and several worldgen paths cache what they
+  had been recomputing per chunk.
+- **Create-world screen layout.** Panels sit tighter with less empty space, the World and Settings
+  tab headers are now real buttons you can reach and activate from the keyboard (and Minecraft's
+  narrator announces them). On these versions the screen sits on Minecraft's flat backdrop, so there is
+  no panorama toggle here.
+
+- **Under the hood.** Each chunk now carries its own note of whether it was decorated under the
+  current rules, replacing a world-wide list; older saves load as before and simply gain the note
+  as chunks are visited.
+
+### Fixed
+
+- **`/locate` and the world agree with each other.** Structure prediction used to judge the raw
+  biome while generation judged the one Latitude had painted, so `/locate` could promise a desert
+  pyramid that never existed. Both now judge the same biome.
+- **No more snow in warm bands**, and no windswept snow appearing below the snow line.
+- **Frozen rivers** no longer sprout warm-climate plants.
+- **Mushroom islands** stopped appearing as thin slivers pressed against other terrain.
+- **Alpine surfaces** keep their snow and stone consistent with the height they are at.
+- **Backing out of Latitude's Create World screen** no longer crashes the game.
+- **Latitude's loading pane** no longer shows Minecraft's extra numeric progress above the compass.
+
+### Known limitations on Minecraft 1.20.1–1.20.4
+
+These are differences from the 1.21.x and 26.x releases of the same version, and they come from
+what these Minecraft versions provide rather than from choices made here.
+
+- Blocks and structures that Minecraft added after 1.20 — the pale garden and its moss, the
+  firefly bush, leaf litter, wildflowers, the dry grasses, and trial chambers — simply do not
+  exist here, so the rules that mention them have nothing to act on.
+- When you open an existing world, the brief "Loading world" message shown before Latitude's
+  loading pane is Minecraft's plain one on 1.20.1 and 1.20.2; from 1.20.3 it carries Latitude's
+  look. The loading pane itself is Latitude's on all four versions.
+- In the world list, a row whose text is too long is shortened with an ellipsis but gets no
+  hover tooltip. These versions do not attach one to that line at all.
+- Fog narrows as a single range rather than the four separate ranges the newer versions expose.
+  The effect is the same wall of fog; it is just described to the game in one piece.
+- The loading screen waits for the whole terrain queue to be drawn rather than checking the
+  chunk you are standing in, because these versions do not publish the per-chunk answer.
+
 # Changelog
 
 ## Latitude 1.5.1-beta.5.1 (Minecraft 1.21.1)
