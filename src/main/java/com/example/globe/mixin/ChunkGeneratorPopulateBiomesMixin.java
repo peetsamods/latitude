@@ -3,6 +3,7 @@ package com.example.globe.mixin;
 import com.example.globe.GlobeMod;
 import com.example.globe.util.LatitudeBands;
 import com.example.globe.world.LatitudeBiomeSource;
+import com.example.globe.world.PaintedBiomeSiting;
 import com.example.globe.world.LatitudeBiomes;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
@@ -253,6 +254,11 @@ public abstract class ChunkGeneratorPopulateBiomesMixin {
         int borderRadiusBlocks = this.globe$borderRadiusBlocks();
         NoiseBasedChunkGenerator generator = (NoiseBasedChunkGenerator)(Object) this;
         RandomState noiseConfig = globe$noiseConfigTL.get();
+        // Normally already adopted by the structure guard (starts precede biomes); this keeps
+        // siting and painting aligned for a generator whose first work is a biome pass.
+        if ((Object) this instanceof PaintedBiomeSiting siting) {
+            siting.globe$adoptPaintedBiomeSource(biomes, noiseConfig, chunk);
+        }
         Long2LongOpenHashMap surfaceYCache = new Long2LongOpenHashMap();
         surfaceYCache.defaultReturnValue(Long.MIN_VALUE);
         Long2ObjectOpenHashMap<Holder<Biome>> columnPickCache = new Long2ObjectOpenHashMap<>();

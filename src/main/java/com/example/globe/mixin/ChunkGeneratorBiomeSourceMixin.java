@@ -2,6 +2,10 @@ package com.example.globe.mixin;
 
 import com.example.globe.GlobeMod;
 import com.example.globe.world.LatitudeBiomeSource;
+import com.example.globe.world.PaintedBiomeSiting;
+import net.minecraft.core.Registry;
+import net.minecraft.world.level.LevelHeightAccessor;
+import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
@@ -19,7 +23,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ChunkGenerator.class)
-public abstract class ChunkGeneratorBiomeSourceMixin {
+public abstract class ChunkGeneratorBiomeSourceMixin implements PaintedBiomeSiting {
     private static final boolean DEBUG_WORLDGEN_PATH =
             Boolean.getBoolean("latitude.debugWorldgenPath");
 
@@ -68,7 +72,39 @@ public abstract class ChunkGeneratorBiomeSourceMixin {
     private BiomeSource biomeSource;
 
     @org.spongepowered.asm.mixin.Unique
-    private BiomeSource globe$wrappedBiomeSource;
+    private volatile BiomeSource globe$wrappedBiomeSource;
+
+    /** Set once the exposed source is the registry-backed resolver the painter uses. */
+    @org.spongepowered.asm.mixin.Unique
+    private volatile boolean globe$paintedSourceAdopted;
+
+    @Override
+    public void globe$adoptPaintedBiomeSource(Registry<Biome> biomeRegistry, RandomState randomState,
+                                              LevelHeightAccessor heightView) {
+        if (this.globe$paintedSourceAdopted
+                || biomeRegistry == null || randomState == null || heightView == null
+                || !((Object) this instanceof NoiseBasedChunkGenerator noise)
+                || !globe$isAnyGlobeSettings()) {
+            return;
+        }
+        synchronized (this) {
+            if (this.globe$paintedSourceAdopted) {
+                return;
+            }
+            // Only the dimension's bounds are kept: the caller's accessor may be a single
+            // chunk, and this resolver outlives every chunk.
+            LevelHeightAccessor bounds =
+                    LevelHeightAccessor.create(heightView.getMinBuildHeight(), heightView.getHeight());
+            this.globe$wrappedBiomeSource = LatitudeBiomeSource.forLocate(
+                    this.biomeSource, biomeRegistry, globe$borderRadiusBlocks(),
+                    noise, randomState, bounds);
+            this.globe$paintedSourceAdopted = true;
+            if (DEBUG_WORLDGEN_PATH) {
+                GlobeMod.LOGGER.info("[Latitude] structure siting now judges the painted biome settings={} radius={}",
+                        globe$matchedSettingsLabel(), globe$borderRadiusBlocks());
+            }
+        }
+    }
 
     @Inject(method = "<init>(Lnet/minecraft/world/level/biome/BiomeSource;)V", at = @At("TAIL"), require = 0)
     private void globe$wrapBiomeSource(BiomeSource biomeSource, CallbackInfo ci) {
