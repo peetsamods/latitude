@@ -67,6 +67,9 @@ what was already generated. Your settings file carries over as it is.
   biome while generation judged the one Latitude had painted, so `/locate` could promise a desert
   pyramid that never existed. Both now judge the same biome.
 - **No more snow in warm bands**, and no windswept snow appearing below the snow line.
+- **Structures land in the biome you see.** With biome packs installed, a woodland mansion could pass
+  its dark-forest check on ground that was then painted as flower forest or a pack biome. Structure
+  placement now reads the same biome resolver that paints the world.
 - **Frozen rivers** no longer sprout warm-climate plants.
 - **Mushroom islands** stopped appearing as thin slivers pressed against other terrain.
 - **Alpine surfaces** keep their snow and stone consistent with the height they are at.
