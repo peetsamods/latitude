@@ -55,6 +55,7 @@ public final class WorldgenAuthorityPolicyTest {
         biomeLocateServiceClaimsAllSupportedTargets();
         structureLocateUsesTheLatitudeBossBarSurface();
         woodlandMansionKeepsVanillaBiomeSiting();
+        structureSitingJudgesThePaintedBiome();
         customSurfaceLocatePreviewUsesRegistryAuthority();
         profileAdoptionRefusesWorldsLatitudeDidNotGenerate();
         offDiskStateReaderDerivesItsPathFromTheSavedDataId();
@@ -1628,6 +1629,53 @@ public final class WorldgenAuthorityPolicyTest {
         assertTrue(
                 occurrences(generatorScope + noiseScope, "Level.OVERWORLD") >= 3,
                 "each dimension-bearing wrapper explicitly restricts authority to the overworld");
+    }
+
+    /**
+     * Structure siting must read the same resolver the chunk painter writes with. The wrapper a
+     * generator builds at construction has no registry and no terrain; with biome packs
+     * installed its answer diverged from the painter's, and a woodland mansion passed vanilla's
+     * dark-forest test on a column the world painted as flower forest (maintainer ruling,
+     * 2026-09-09; reproduced on a dedicated server with Terralith, CliffTree and BoP). The
+     * generator must adopt the painter's registry-backed resolver before the first structure
+     * start is judged, and the guard must do that BEFORE it reads the exposed biome source.
+     */
+    private static void structureSitingJudgesThePaintedBiome() throws Exception {
+        String sourceMixin = read("src/main/java/com/example/globe/mixin/ChunkGeneratorBiomeSourceMixin.java");
+        assertTrue(sourceMixin.contains("implements PaintedBiomeSiting"),
+                "the biome-source mixin must offer the painted-biome adoption hook");
+        int adoptAt = sourceMixin.indexOf("public void globe$adoptPaintedBiomeSource(");
+        assertTrue(adoptAt >= 0, "the adoption hook must be implemented on the generator");
+        String adoptBody = conditionalBody(sourceMixin, adoptAt, "globe$adoptPaintedBiomeSource");
+        assertTrue(adoptBody.contains("LatitudeBiomeSource.forLocate("),
+                "adoption must expose the same registry-backed resolver the painter and locate use");
+        assertTrue(adoptBody.contains("globe$isAnyGlobeSettings()"),
+                "adoption stays gated on Latitude owning the generator's worldgen");
+        assertTrue(adoptBody.contains(".adoptPainted(") && !adoptBody.contains("this.globe$wrappedBiomeSource = LatitudeBiomeSource.forLocate("),
+                "adoption must forward the exposed instance in place, never swap it: ServerLevel "
+                        + "captured that instance for StructureCheck (explorer maps, eyes of ender)");
+        String biomeSource = read("src/main/java/com/example/globe/world/LatitudeBiomeSource.java");
+        int noiseAt = biomeSource.indexOf("public Holder<Biome> getNoiseBiome(int x, int y, int z, Climate.Sampler sampler) {");
+        int delegateAt = biomeSource.indexOf("this.paintedDelegate;", noiseAt);
+        int rawAt = biomeSource.indexOf("original.getNoiseBiome(x, y, z, sampler)", noiseAt);
+        assertTrue(noiseAt >= 0 && delegateAt > noiseAt && rawAt > delegateAt,
+                "getNoiseBiome must consult the painted delegate before sampling the raw source");
+
+        String guard = read("src/main/java/com/example/globe/mixin/ExtremePolarVillageStartGuardMixin.java");
+        int guardAdopt = guard.indexOf("globe$adoptPaintedBiomeSource(");
+        int guardRead = guard.indexOf("BiomeSource authoritative = chunkGenerator.getBiomeSource();");
+        int guardCall = guard.indexOf("original.call(");
+        assertTrue(guardAdopt >= 0 && guardRead > guardAdopt && guardCall > guardRead,
+                "the structure guard must adopt the painted resolver before it reads the exposed "
+                        + "biome source and before vanilla generates the start");
+
+        String painter = read("src/main/java/com/example/globe/mixin/ChunkGeneratorPopulateBiomesMixin.java");
+        assertTrue(painter.contains("globe$adoptPaintedBiomeSource(biomes, noiseConfig, chunk)"),
+                "the painter must also adopt, so a generator whose first work is a biome pass stays aligned");
+
+        String locate = read("src/main/java/com/example/globe/world/LatitudeStructureLocateService.java");
+        assertTrue(locate.split("globe\\$adoptPaintedBiomeSource\\(").length >= 3,
+                "both locate entry points must adopt before sampling the exposed biome source");
     }
 
     private static String read(String path) throws Exception {
