@@ -273,6 +273,9 @@ public final class LatitudeStructureLocateService {
         Registry<Biome> biomeRegistry = level.registryAccess().registryOrThrow(Registries.BIOME);
         ChunkGeneratorStructureState structureState = level.getChunkSource().getGeneratorState();
         RandomState randomState = level.getChunkSource().randomState();
+        if ((Object) generator instanceof PaintedBiomeSiting siting) {
+            siting.globe$adoptPaintedBiomeSource(biomeRegistry, randomState, level);
+        }
         BiomeSource rawSource = generator.getBiomeSource();
         if (rawSource instanceof LatitudeBiomeSource wrapped) {
             rawSource = wrapped.original();
@@ -376,6 +379,11 @@ public final class LatitudeStructureLocateService {
         }
 
         ChunkGeneratorStructureState structureState = level.getChunkSource().getGeneratorState();
+        RandomState sitingRandomState = level.getChunkSource().randomState();
+        if ((Object) generator instanceof PaintedBiomeSiting siting) {
+            siting.globe$adoptPaintedBiomeSource(
+                    level.registryAccess().registryOrThrow(Registries.BIOME), sitingRandomState, level);
+        }
         List<Candidate> candidateSources = new ArrayList<>();
         for (Holder<Structure> holder : matched) {
             for (StructurePlacement placement : structureState.getPlacementsForStructure(holder)) {
@@ -863,9 +871,9 @@ public final class LatitudeStructureLocateService {
         // which can straddle a different biome cell than the one real generation judges.
         int blockX = candidateChunk.getMiddleBlockX();
         int blockZ = candidateChunk.getMiddleBlockZ();
-        // Judge the biome the world will PAINT at this column — the authoritative wrapper
-        // source, exactly what populateBiomes writes — never a fresh pick with different terrain
-        // evidence. Re-picking under STRUCTURE_START/VILLAGE_START computed preview heights the
+        // Judge the biome the world will PAINT at this column — the generator's exposed source,
+        // which PaintedBiomeSiting has swapped for the painter's own registry-backed resolver —
+        // never a fresh pick with different terrain evidence. Re-picking under STRUCTURE_START/VILLAGE_START computed preview heights the
         // SOURCE paint path skips, and the two disagreed about where desert is: a measured world
         // at ~1.7% desert produced 0/1348 accepted desert-village candidates with a rejection
         // profile identical to a world with half the desert (2026-08-16).

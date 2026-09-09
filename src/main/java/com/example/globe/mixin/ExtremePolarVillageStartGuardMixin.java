@@ -6,6 +6,7 @@ import com.example.globe.GlobeMod;
 import com.example.globe.util.LatitudeBands;
 import com.example.globe.world.LatitudeBiomes;
 import com.example.globe.world.LatitudeWorldgenScope;
+import com.example.globe.world.PaintedBiomeSiting;
 import com.example.globe.world.StructureSitingPolicy;
 import com.example.globe.world.VillageBiomeAdmissionPolicy;
 import com.example.globe.world.VillageTerrainSuitabilityPolicy;
@@ -93,6 +94,18 @@ public abstract class ExtremePolarVillageStartGuardMixin {
             // repainted to snow. Substituting the wrapper here makes siting judge the final
             // biome, so prediction and generation agree and structures land in the biome a
             // player sees.
+            //
+            // The wrapper built at generator construction is not yet that final biome: it has
+            // no registry and no terrain, and with biome packs installed its answer diverges from
+            // the painter's (a mansion approved as dark forest on a column painted flower
+            // forest). Structure starts are the first thing generated for a chunk, so this is
+            // where the generator first learns the registry, random state and height bounds it
+            // needs to expose the painter's own resolver; vanilla's biome test then reads that
+            // resolver through getBiomeSource().
+            if (chunkGenerator instanceof PaintedBiomeSiting siting) {
+                siting.globe$adoptPaintedBiomeSource(
+                        registryAccess.registryOrThrow(Registries.BIOME), randomState, heightAccessor);
+            }
             BiomeSource authoritative = chunkGenerator.getBiomeSource();
             if (authoritative instanceof com.example.globe.world.LatitudeBiomeSource) {
                 effectiveBiomeSource = authoritative;
