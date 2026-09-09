@@ -49,9 +49,15 @@ public final class RecreatedWorldTypePolicy {
             String selectedPresetId,
             String persistedPresetId,
             String overworldNoiseSettingsId) {
-        if (!recreated || selectedPresetId == null) {
+        if (!recreated) {
             return selectedPresetId;
         }
+        // On 1.20.1-1.20.4 vanilla's preset recognition for an existing world knows only the Flat
+        // and Debug generators; every noise world, Latitude's included, arrives here with NO
+        // selected preset (1.21.1 reports Normal for the same world). A missing selection must
+        // therefore not short-circuit the recovery below, or Re-Create on a Latitude world falls
+        // through to vanilla's screen. With no persisted radius and no Latitude noise settings the
+        // missing selection is returned as-is, which keeps a genuinely vanilla world vanilla.
         if (persistedPresetId != null && LATITUDE_PRESET_BY_RADIUS.containsValue(persistedPresetId)) {
             return persistedPresetId;
         }

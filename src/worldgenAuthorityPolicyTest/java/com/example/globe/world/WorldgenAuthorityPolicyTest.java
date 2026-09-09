@@ -473,6 +473,35 @@ public final class WorldgenAuthorityPolicyTest {
                         "globe:globe_large",
                         null),
                 "persisted Latitude identity must override vanilla's generic Normal classification");
+        // 1.20.1-1.20.4: vanilla recognises no preset at all for a noise world, so Re-Create hands
+        // over a null selection. Latitude's identity must still be recovered from either source,
+        // and only a world with neither stays unrepresentable.
+        assertEquals(
+                "globe:globe_regular",
+                RecreatedWorldTypePolicy.effectivePresetId(
+                        true,
+                        null,
+                        "globe:globe_regular",
+                        null),
+                "a null vanilla selection must not hide the persisted Latitude identity");
+        assertEquals(
+                "globe:globe_small",
+                RecreatedWorldTypePolicy.effectivePresetId(
+                        true,
+                        null,
+                        null,
+                        "globe:overworld_small"),
+                "a null vanilla selection must not hide the Latitude noise settings");
+        String unrecognised = RecreatedWorldTypePolicy.effectivePresetId(
+                true,
+                null,
+                null,
+                "minecraft:overworld");
+        if (unrecognised != null) {
+            throw new AssertionError(
+                    "an unrecognised vanilla world with no Latitude identity stays unrepresentable, got "
+                            + unrecognised);
+        }
 
         // The fixture MUST be written where Minecraft actually puts the overworld's SavedData on
         // this target -- <world>/data/<SavedData id>.dat -- and the id must come from the same
