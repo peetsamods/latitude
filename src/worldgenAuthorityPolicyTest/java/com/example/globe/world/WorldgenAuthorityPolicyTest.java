@@ -1690,7 +1690,7 @@ public final class WorldgenAuthorityPolicyTest {
      * Structure siting must read the same resolver the chunk painter writes with. The wrapper a
      * generator builds at construction has no registry and no terrain; with biome packs
      * installed its answer diverged from the painter's, and a woodland mansion passed vanilla's
-     * dark-forest test on a column the world painted as flower forest (maintainer flight,
+     * dark-forest test on a column the world painted as flower forest (maintainer ruling,
      * 2026-09-09; reproduced on a dedicated server with Terralith, CliffTree and BoP). The
      * generator must adopt the painter's registry-backed resolver before the first structure
      * start is judged, and the guard must do that BEFORE it reads the exposed biome source.
