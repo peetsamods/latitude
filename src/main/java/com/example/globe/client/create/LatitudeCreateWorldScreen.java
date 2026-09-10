@@ -386,16 +386,16 @@ public class LatitudeCreateWorldScreen extends Screen {
             boolean recreated,
             @Nullable String recreatedPresetId) {
         ResourceKey<WorldPreset> selectedPreset = presetKey(initialState);
-        if (selectedPreset == null) {
-            return null;
-        }
+        // On 1.20.1-1.20.4 a re-created noise world arrives with NO selected preset (vanilla
+        // recognises only Flat and Debug there), so a null selection must still reach the policy,
+        // which recovers Latitude's preset from the saved radius or noise settings.
+        String selectedPresetId = selectedPreset == null ? null : selectedPreset.location().toString();
         String effectivePresetId = RecreatedWorldTypePolicy.effectivePresetId(
                 recreated,
-                selectedPreset.location().toString(),
+                selectedPresetId,
                 recreatedPresetId,
                 overworldNoiseSettingsId(initialState));
-        if (effectivePresetId == null
-                || effectivePresetId.equals(selectedPreset.location().toString())) {
+        if (effectivePresetId == null || effectivePresetId.equals(selectedPresetId)) {
             return selectedPreset;
         }
         return ResourceKey.create(Registries.WORLD_PRESET, new ResourceLocation(effectivePresetId));

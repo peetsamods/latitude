@@ -510,6 +510,18 @@ public final class WorldgenAuthorityPolicyTest {
         // dimensions/minecraft/overworld/data/globe/ path, which happened to match the reader's
         // own stale literal: both sides were wrong in the same way, so this assertion passed
         // while the shipped feature found nothing on every real world.
+        // The screen has its own copy of this decision: effectivePresetKey used to return null on
+        // a null selection before ever asking the policy, which left Re-Create on vanilla's screen
+        // even with the policy fixed. Keep the null selection flowing into the policy there too.
+        String screen = read("src/main/java/com/example/globe/client/create/LatitudeCreateWorldScreen.java");
+        int keyAt = screen.indexOf("private static ResourceKey<WorldPreset> effectivePresetKey(");
+        assertTrue(keyAt >= 0, "effectivePresetKey must exist on the create screen");
+        String keyBody = conditionalBody(screen, keyAt, "effectivePresetKey");
+        assertTrue(!keyBody.contains("if (selectedPreset == null) {"),
+                "effectivePresetKey must not short-circuit on a null vanilla selection");
+        assertTrue(keyBody.contains("RecreatedWorldTypePolicy.effectivePresetId("),
+                "effectivePresetKey must delegate the recreate decision to the policy");
+
         Path worldRoot = Path.of("build", "tmp", "recreated-world-metadata-test");
         Path statePath = worldRoot.resolve(
                 Path.of("data", LatitudeWorldState.STATE_ID + ".dat"));
