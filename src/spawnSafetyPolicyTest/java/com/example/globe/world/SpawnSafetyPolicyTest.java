@@ -20,6 +20,7 @@ public final class SpawnSafetyPolicyTest {
         hazardousSurfacesAreRejected();
         heightmapPositionIsTheSpawnSpaceAboveGround();
         productionUsesTheValidatedCoordinateAndSurfacePolicy();
+        spawnSearchJudgesThePaintedBiome();
         System.out.println("SPAWN_SAFETY_POLICY_TEST_PASS");
     }
 
@@ -312,6 +313,41 @@ public final class SpawnSafetyPolicyTest {
         assertTrue(
                 source.contains("groundState.isFaceSturdy(world, ground, Direction.UP)"),
                 "spawn ground must support the player");
+    }
+
+    /**
+     * The first-spawn search must judge candidates through the painted biome view (registry,
+     * terrain generator, noise state and height view all supplied), never through a bare pick
+     * that lacks terrain evidence: that blind copy disagreed with the painter at coasts and on
+     * raised ground, so the search could accept a column that generates as water.
+     */
+    private static void spawnSearchJudgesThePaintedBiome() throws IOException {
+        String source = normalize(Files.readString(
+                Path.of("src/main/java/com/example/globe/GlobeMod.java")));
+        assertTrue(
+                source.contains(
+                        "return LatitudeBiomeSource.forLocate( template.baseSource(), template.biomeRegistry(), radiusBlocks, terrainGenerator, noiseConfig, world);"),
+                "the spawn view is the same painted, terrain-aware source that locate and structure siting use");
+        int probeStart = source.indexOf("private static boolean isLandBiome(");
+        assertTrue(probeStart >= 0, "the spawn search keeps its land probe");
+        int probeEnd = source.indexOf("private static BlockPos placeSafeY(", probeStart);
+        assertTrue(probeEnd > probeStart, "the land probe precedes the terrain validator");
+        String probe = source.substring(probeStart, probeEnd);
+        assertTrue(
+                probe.contains("Holder<Biome> resolved = painted.getNoiseBiome("),
+                "the land probe asks the painted view for the biome");
+        assertFalse(
+                probe.contains("LatitudeBiomes.pick("),
+                "the land probe never re-derives the biome through a bare pick");
+        assertFalse(
+                source.contains("\"SPAWN_PROBE\""),
+                "no terrain-blind spawn-probe pick context remains");
+        assertTrue(
+                source.contains("isLandBiome(painted, sampler, x, z, classifyY)"),
+                "every spawn candidate is judged through the painted view");
+        assertFalse(
+                source.contains("isLandBiome(template,"),
+                "no spawn candidate is judged through the bare template");
     }
 
     private static String normalize(String value) {
