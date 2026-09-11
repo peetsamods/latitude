@@ -844,6 +844,33 @@ public final class LatitudeBiomes {
                                                              int seaLevel,
                                                              Registry<Biome> biomeRegistry,
                                                              RandomState randomState) {
+        activateWorldgenContext(radiusBlocks, seed, policy, providerTicketProfile, representationProfile,
+                caveRepresentationProfile, sampler, donorSource, seaLevel, biomeRegistry, randomState,
+                null, null);
+    }
+
+    /**
+     * The two trailing arguments are the fresh-world coverage plan's terrain evidence. The plan
+     * classifies an upland route from the raw climate sample alone, and that sample is only the
+     * vanilla erosion field: a pack that rewrites the erosion noise (Terralith does) leaves it
+     * almost never "mountain-like" while the terrain it shapes still has mountains, which the
+     * painter recognises by measured height. Without these, the plan cannot anchor any upland
+     * province in such a world (meadow, grove, stony peaks, the windswept family). Null is
+     * accepted: the plan then judges upland from the raw sample only, as before.
+     */
+    public static synchronized void activateWorldgenContext(int radiusBlocks, long seed,
+                                                             WorldgenPolicyVersion policy,
+                                                             BiomeSelectionProfile providerTicketProfile,
+                                                             VanillaBiomeRepresentationProfile representationProfile,
+                                                             CaveBiomeRepresentationProfile caveRepresentationProfile,
+                                                             Climate.Sampler sampler,
+                                                             BiomeSource donorSource,
+                                                             int seaLevel,
+                                                             Registry<Biome> biomeRegistry,
+                                                             RandomState randomState,
+                                                             NoiseBasedChunkGenerator terrainGenerator,
+                                                             LevelHeightAccessor terrainHeightView) {
+        RandomState terrainNoise = randomState;
         ACTIVE_WORLDGEN_AUTHORITY = false;
         ACTIVE_WORLDGEN_POLICY = policy != null ? policy : WorldgenPolicyVersion.MODERN_1_3;
         ACTIVE_PROVIDER_TICKET_PROFILE = isProviderTicketPolicy(ACTIVE_WORLDGEN_POLICY)
@@ -888,7 +915,9 @@ public final class LatitudeBiomes {
                         landTargets,
                         sizeAwareV3,
                         (biomeId, route, x, z) -> vanillaCoverageRouteEligible(
-                                biomeId, route, x, z, sampler))
+                                biomeId, route, x, z, sampler,
+                                plannedUplandByHeight(route, x, z, terrainGenerator, terrainNoise,
+                                        terrainHeightView, seaLevel)))
                 : null;
         if (ACTIVE_VANILLA_COVERAGE_PLAN != null && !ACTIVE_VANILLA_COVERAGE_PLAN.complete()) {
             LOGGER.error("[Latitude] Fresh-world vanilla coverage plan is incomplete; missing route-managed biomes: {} diagnostics={}",
@@ -1010,16 +1039,50 @@ public final class LatitudeBiomes {
                 || policy == WorldgenPolicyVersion.PROVIDER_TICKET_V4_CAVE_COVERAGE;
     }
 
+    /**
+     * The coverage plan's second upland witness, the painter's own: a column whose preview
+     * surface sits at least {@link TerrainBiomeCohesionPolicy#HIGH_ABOVE_SEA_BLOCKS} above sea
+     * level is upland to the final picker whatever the raw erosion sample says. Only upland
+     * routes ask, only when terrain evidence was supplied, and only the height clause is used
+     * (no relief probe), so every column the plan calls upland here the painter calls upland too.
+     */
+    private static boolean plannedUplandByHeight(BiomeRoute route, int blockX, int blockZ,
+                                                 NoiseBasedChunkGenerator generator,
+                                                 RandomState noiseConfig,
+                                                 LevelHeightAccessor heightView,
+                                                 int seaLevel) {
+        if (generator == null || noiseConfig == null || heightView == null || !isUplandRoute(route)) {
+            return false;
+        }
+        int surfaceY = previewHeight(generator, noiseConfig, heightView, blockX & ~3, blockZ & ~3);
+        return surfaceY >= seaLevel + TerrainBiomeCohesionPolicy.HIGH_ABOVE_SEA_BLOCKS;
+    }
+
+    private static boolean isUplandRoute(BiomeRoute route) {
+        return route == BiomeRoute.TEMPERATE_UPLAND
+                || route == BiomeRoute.SUBPOLAR_UPLAND
+                || route == BiomeRoute.COLD_UPLAND
+                || route == BiomeRoute.WARM_UPLAND
+                || route == BiomeRoute.ARID_UPLAND;
+    }
+
+
+    /**
+     * {@code measuredUpland} is the painter's second upland witness (a preview surface high
+     * enough above sea level). It widens only the mountain term, so a column the plan reserved
+     * for an upland identity on that evidence is one the painter admits on the same evidence.
+     */
     private static boolean vanillaCoverageRouteEligible(String biomeId, BiomeRoute route,
                                                          int blockX, int blockZ,
-                                                         Climate.Sampler sampler) {
+                                                         Climate.Sampler sampler,
+                                                         boolean measuredUpland) {
         if (sampler == null || route == null) return false;
         Climate.TargetPoint point = sampler.sample(
                 blockX >> 2, SURFACE_CLASSIFY_Y >> 2, blockZ >> 2);
         double continentalness = Climate.unquantizeCoord(point.continentalness());
         if (continentalness <= -0.05) return false;
         int band = authoritativeLandBandIndex(blockX, blockZ, ACTIVE_RADIUS_BLOCKS);
-        boolean mountain = isMountainLike(sampler, blockX, blockZ);
+        boolean mountain = isMountainLike(sampler, blockX, blockZ) || measuredUpland;
         ProvinceAuthority.Province province = classifyProvince(blockX, blockZ);
         return switch (route) {
             case TROPICAL_HUMID_LOWLAND -> band == BAND_TROPICAL && !mountain
@@ -1054,6 +1117,12 @@ public final class LatitudeBiomes {
             case POLAR_LOWLAND -> band == BAND_POLAR && !mountain;
             case CAVE_SHALLOW, CAVE_DEEP -> false;
         };
+    }
+
+    private static boolean vanillaCoverageRouteEligible(String biomeId, BiomeRoute route,
+                                                         int blockX, int blockZ,
+                                                         Climate.Sampler sampler) {
+        return vanillaCoverageRouteEligible(biomeId, route, blockX, blockZ, sampler, false);
     }
 
     private static boolean caveCoverageRouteEligible(BiomeRoute route, int blockX, int blockY, int blockZ,
@@ -1311,13 +1380,14 @@ public final class LatitudeBiomes {
             Holder<Biome> out,
             int blockX,
             int blockZ,
-            Climate.Sampler sampler) {
+            Climate.Sampler sampler,
+            boolean measuredUpland) {
         VanillaBiomeCoveragePlan plan = ACTIVE_VANILLA_COVERAGE_PLAN;
         if (plan == null || sampler == null || isOcean(base) || isRiver(base) || isBeachLike(base)
                 || isOcean(out) || isRiver(out) || isBeachLike(out)) return out;
         for (VanillaBiomeCoveragePlan.Anchor anchor : plan.matches(blockX, blockZ)) {
             if (!vanillaCoverageRouteEligible(
-                    anchor.biomeId(), anchor.route(), blockX, blockZ, sampler)) continue;
+                    anchor.biomeId(), anchor.route(), blockX, blockZ, sampler, measuredUpland)) continue;
             if (!mayReplaceWithVanillaLandCoverage(out, anchor.route())) continue;
             try {
                 Holder<Biome> target = biome(biomes, anchor.biomeId());
@@ -1336,13 +1406,14 @@ public final class LatitudeBiomes {
             Holder<Biome> out,
             int blockX,
             int blockZ,
-            Climate.Sampler sampler) {
+            Climate.Sampler sampler,
+            boolean measuredUpland) {
         VanillaBiomeCoveragePlan plan = ACTIVE_VANILLA_COVERAGE_PLAN;
         if (plan == null || sampler == null || isOcean(base) || isRiver(base) || isBeachLike(base)
                 || isOcean(out) || isRiver(out) || isBeachLike(out)) return out;
         for (VanillaBiomeCoveragePlan.Anchor anchor : plan.matches(blockX, blockZ)) {
             if (!vanillaCoverageRouteEligible(
-                    anchor.biomeId(), anchor.route(), blockX, blockZ, sampler)) continue;
+                    anchor.biomeId(), anchor.route(), blockX, blockZ, sampler, measuredUpland)) continue;
             if (!mayReplaceWithVanillaLandCoverage(out, anchor.route())) continue;
             Holder<Biome> target = resolveVanillaCoverageBiome(biomes, anchor.biomeId());
             if (target == null) continue;
@@ -4301,7 +4372,9 @@ public final class LatitudeBiomes {
             auditSparseJungle(bucket, blockX, blockZ, landBandIndex, detail, biomeId(preBandEnforce), biomeId(out));
         }
         out = applyVanillaCoverage(
-                biomeRegistry, base, out, blockX, blockZ, sampler);
+                biomeRegistry, base, out, blockX, blockZ, sampler,
+                terrainEvidenceAvailable
+                        && terrainGateHeight >= ACTIVE_SEA_LEVEL + TerrainBiomeCohesionPolicy.HIGH_ABOVE_SEA_BLOCKS);
         // Atlas/headless parity: when terrain probes are absent, synthesize authority values
         // that satisfy polarMountainAuthority() for noise-confirmed mountain cells.
         // POLAR_AUTHORITY_PARITY_DELTA / _HEIGHT match the existing authority thresholds exactly.
@@ -5065,7 +5138,9 @@ public final class LatitudeBiomes {
         logAtlasViewportJungleReturn("pick-collection", callerContext, blockX, blockZ, t, landBandIndex, overlayBandIndex, base, chosen, sanitized, preBandEnforce, postBandEnforce, postFinalClamp, out);
         traceSubpolarJunglePick(blockX, blockZ, effectiveRadius, landBandIndex, base, out);
         out = applyVanillaCoverage(
-                biomePool, base, out, blockX, blockZ, sampler);
+                biomePool, base, out, blockX, blockZ, sampler,
+                terrainEvidenceAvailable
+                        && terrainGateHeight >= ACTIVE_SEA_LEVEL + TerrainBiomeCohesionPolicy.HIGH_ABOVE_SEA_BLOCKS);
         // Atlas/headless parity: when terrain probes are absent, synthesize authority values
         // that satisfy polarMountainAuthority() for noise-confirmed mountain cells.
         // POLAR_AUTHORITY_PARITY_DELTA / _HEIGHT match the existing authority thresholds exactly.

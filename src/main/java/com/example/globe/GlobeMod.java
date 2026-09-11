@@ -399,7 +399,9 @@ public class GlobeMod implements ModInitializer {
                 donorBiomeSource(generator),
                 generator.getSeaLevel(),
                 biomeRegistry,
-                randomState);
+                randomState,
+                generator instanceof NoiseBasedChunkGenerator terrainGenerator ? terrainGenerator : null,
+                world);
         LOGGER.info("[Latitude] Early init: province authority seeded before spawn-chunk generation (seed={} radius={})", seed, radius);
         setGlobeBorder(world, radius);
     }
@@ -443,7 +445,9 @@ public class GlobeMod implements ModInitializer {
                 donorBiomeSource(generator),
                 generator.getSeaLevel(),
                 biomeRegistry,
-                randomState);
+                randomState,
+                generator instanceof NoiseBasedChunkGenerator terrainGenerator ? terrainGenerator : null,
+                overworld);
 
         setGlobeBorder(overworld, borderRadiusBlocks);
     }

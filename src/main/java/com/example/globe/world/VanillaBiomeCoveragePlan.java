@@ -169,6 +169,22 @@ public final class VanillaBiomeCoveragePlan {
                     worldRadius, provinceRadius, worldSeed, biomeId, route,
                     evaluator, existing, stats);
         }
+        // Two passes over the same seeded candidate sequence. The first is the original
+        // four-shoulder test, kept exactly so every world that anchored under it keeps the same
+        // anchor after this change (the plan is birth-stable: it is rebuilt from the seed on every
+        // load, and a moved province would seam new chunks against old ones). The second is the
+        // proportional test the wetland note below asked for as "occurrence four": a sparse route
+        // -- upland terrain is a sparse field, and sparser still where a pack reshapes it -- can
+        // own a coherent province that the four exact shoulders never all land on at once.
+        Anchor anchor = findAnchor(worldRadius, provinceRadius, worldSeed, biomeId, route,
+                evaluator, existing, stats, false);
+        return anchor != null ? anchor : findAnchor(worldRadius, provinceRadius, worldSeed,
+                biomeId, route, evaluator, existing, stats, true);
+    }
+
+    private static Anchor findAnchor(int worldRadius, int provinceRadius, long worldSeed,
+                                     String biomeId, BiomeRoute route, CandidateEvaluator evaluator,
+                                     List<Anchor> existing, int[] stats, boolean proportional) {
         long baseSalt = mix64(worldSeed ^ biomeId.hashCode() * 0x9e3779b97f4a7c15L);
         double[] latRange = latitudeRange(route);
         int margin = provinceRadius + 48;
@@ -184,10 +200,13 @@ public final class VanillaBiomeCoveragePlan {
             int x = align16((int) Math.round((unit(h2) * 2.0 - 1.0) * maxX));
             if (!evaluator.isEligible(biomeId, route, x, z)) continue;
             stats[0]++;
-            if (!evaluator.isEligible(biomeId, route, x + provinceRadius / 2, z)
-                    || !evaluator.isEligible(biomeId, route, x - provinceRadius / 2, z)
-                    || !evaluator.isEligible(biomeId, route, x, z + provinceRadius / 2)
-                    || !evaluator.isEligible(biomeId, route, x, z - provinceRadius / 2)) continue;
+            boolean topology = proportional
+                    ? hasSubstantialTopology(biomeId, route, x, z, provinceRadius, evaluator)
+                    : evaluator.isEligible(biomeId, route, x + provinceRadius / 2, z)
+                            && evaluator.isEligible(biomeId, route, x - provinceRadius / 2, z)
+                            && evaluator.isEligible(biomeId, route, x, z + provinceRadius / 2)
+                            && evaluator.isEligible(biomeId, route, x, z - provinceRadius / 2);
+            if (!topology) continue;
             stats[1]++;
             if (!hasDistinctVisibleCore(existing, route, x, z)) {
                 stats[2]++;
@@ -198,6 +217,44 @@ public final class VanillaBiomeCoveragePlan {
         }
         return null;
     }
+
+
+    /**
+     * The proportional topology test, in the shape VanillaSurfaceWaterCoveragePlan already uses
+     * for its narrow features: a dense 16-block grid over the province's inner disk, enough exact
+     * eligible columns, and a multi-chunk span in at least one direction. The final picker still
+     * re-checks the exact route predicate at every column it paints, so a province anchored here
+     * paints its identity on every eligible column inside it and nothing on the rest.
+     */
+    static boolean hasSubstantialTopology(String biomeId, BiomeRoute route, int x, int z,
+                                          int provinceRadius, CandidateEvaluator evaluator) {
+        int half = Math.max(48, provinceRadius / 2);
+        int matches = 0;
+        int samples = 0;
+        int occupiedRows = 0;
+        boolean[] occupiedColumns = new boolean[(half * 2) / 16 + 1];
+        for (int dz = -half; dz <= half; dz += 16) {
+            boolean rowOccupied = false;
+            int columnIndex = 0;
+            for (int dx = -half; dx <= half; dx += 16, columnIndex++) {
+                if ((long) dx * dx + (long) dz * dz > (long) half * half) continue;
+                samples++;
+                if (evaluator.isEligible(biomeId, route, x + dx, z + dz)) {
+                    matches++;
+                    rowOccupied = true;
+                    occupiedColumns[columnIndex] = true;
+                }
+            }
+            if (rowOccupied) occupiedRows++;
+        }
+        int occupiedColumnCount = 0;
+        for (boolean occupied : occupiedColumns) {
+            if (occupied) occupiedColumnCount++;
+        }
+        int minimumMatches = Math.max(6, samples / 8);
+        return matches >= minimumMatches && Math.max(occupiedRows, occupiedColumnCount) >= 4;
+    }
+
 
     /**
      * Exhaustive, seed-rotated search of Dappled's narrow cool-border corridor.

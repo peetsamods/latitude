@@ -1987,17 +1987,49 @@ final class BiomeProviderSelectionPolicyTest {
         assertTrue(eroded != null && eroded.route() == BiomeRoute.ARID_LOWLAND,
                 "the reservation Eroded Badlands receives is a lowland arid province");
 
-        // The pinch is real: the same shape still starves a route that genuinely requires upland.
+        // The pinch is real for the four-shoulder test, and the proportional fallback is what
+        // answers it: a 48-block stripe is a coherent multi-chunk province even though no
+        // 16-aligned centre keeps both x-shoulders on it. The planner must anchor ON the stripe.
         VanillaBiomeCoveragePlan uplandOnly = VanillaBiomeCoveragePlan.build(
                 radius, seed, vanilla,
                 Map.of("minecraft:eroded_badlands", BiomeRoute.ARID_UPLAND),
                 (id, route, x, z) -> insideSyntheticRoute(route, x, z, radius)
                         && Math.floorMod(x, 512) < 48);
-        VanillaBiomeCoveragePlan.SearchStats pinched =
-                uplandOnly.missingDiagnostics().get("minecraft:eroded_badlands");
-        assertTrue(pinched != null && pinched.centerEligible() > 0
-                        && pinched.topologyEligible() == 0,
-                "the modelled pocket reproduces the live centre-eligible/shoulder-failing shape");
+        assertTrue(uplandOnly.complete(),
+                "a coherent stripe narrower than the reservation still anchors through the "
+                        + "proportional topology test: " + uplandOnly.missingDiagnostics());
+        VanillaBiomeCoveragePlan.Anchor stripe = uplandOnly.anchors().get(0);
+        assertTrue(Math.floorMod(stripe.blockX(), 512) < 48
+                        && insideSyntheticRoute(stripe.route(), stripe.blockX(), stripe.blockZ(), radius),
+                "the fallback anchor sits on the eligible stripe, inside its route");
+        assertTrue(VanillaBiomeCoveragePlan.hasSubstantialTopology(
+                        "minecraft:eroded_badlands", BiomeRoute.ARID_UPLAND,
+                        stripe.blockX(), stripe.blockZ(), stripe.radiusBlocks(),
+                        (id, route, x, z) -> insideSyntheticRoute(route, x, z, radius)
+                                && Math.floorMod(x, 512) < 48),
+                "the anchored province passes the proportional test it was admitted by");
+
+        // A genuinely empty field still yields nothing, and says so through the same counters.
+        VanillaBiomeCoveragePlan nowhere = VanillaBiomeCoveragePlan.build(
+                radius, seed, vanilla,
+                Map.of("minecraft:eroded_badlands", BiomeRoute.ARID_UPLAND),
+                (id, route, x, z) -> false);
+        VanillaBiomeCoveragePlan.SearchStats empty =
+                nowhere.missingDiagnostics().get("minecraft:eroded_badlands");
+        assertTrue(empty != null && empty.centerEligible() == 0 && empty.topologyEligible() == 0,
+                "an empty field is reported as no eligible centre, not as a topology failure");
+
+        // Isolated eligible specks (one column each, nothing around them) are not a province:
+        // the proportional test needs several eligible columns spanning several chunks.
+        VanillaBiomeCoveragePlan specks = VanillaBiomeCoveragePlan.build(
+                radius, seed, vanilla,
+                Map.of("minecraft:eroded_badlands", BiomeRoute.ARID_UPLAND),
+                (id, route, x, z) -> insideSyntheticRoute(route, x, z, radius)
+                        && Math.floorMod(x, 512) == 0 && Math.floorMod(z, 512) == 0);
+        VanillaBiomeCoveragePlan.SearchStats speckStats =
+                specks.missingDiagnostics().get("minecraft:eroded_badlands");
+        assertTrue(!specks.complete() && speckStats != null && speckStats.topologyEligible() == 0,
+                "one-column specks never anchor a province");
     }
 
     private static void caveCoverageIsClosedAndWorldSizeSafe() throws Exception {
