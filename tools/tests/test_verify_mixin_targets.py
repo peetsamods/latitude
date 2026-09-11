@@ -622,6 +622,16 @@ class ExpectedAbsentTargetTest(unittest.TestCase):
         self.assertEqual(report.verified, 1)
         self.assertEqual(expectations.stale(), [self.HANDLER])
 
+    def test_intermediary_form_selectors_are_production_only_arms(self) -> None:
+        block = """
+        @Inject(method = {"doWorldLoad(Ljava/lang/String;)V", "method_29610(Ljava/lang/String;)V"},
+                at = @At("HEAD"), require = 0, expect = 0)
+        private void handler(String levelId, CallbackInfo ci) {}
+        """
+        self.assertTrue(vmt.is_intermediary_selector("method_29610(Ljava/lang/String;)V"))
+        self.assertFalse(vmt.is_intermediary_selector("doWorldLoad(Ljava/lang/String;)V"))
+        self.assertEqual([("handler", "doWorldLoad")], vmt.injector_method_targets(block))
+
     def test_selectors_are_attributed_to_the_handler_that_declares_them(self) -> None:
         source = mixin_source('''
     @Inject(method = "render(La/b/Gui;J)V", at = @At("HEAD"))

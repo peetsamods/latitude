@@ -14,6 +14,7 @@ public final class LocationDetailPolicyTest {
         defaultDetachedBoundsStayReachableAtAcceptedGuiSize();
         locationTextScalePolicyIsBoundedAndIndependent();
         staticIntegrationProofsHold();
+        hudStudioKeepsTheInheritedBackgroundPassOffItsPreviews();
         System.out.println("LOCATION_DETAIL_POLICY_TEST_PASS");
     }
 
@@ -393,6 +394,23 @@ public final class LocationDetailPolicyTest {
                 "SNAP title coordinate rounds to the grid");
         assertEquals(13.25, HudTextLayoutPolicy.titleDragCoordinate(13.25, false, 8),
                 "FREE title coordinate remains unquantized");
+    }
+
+    /**
+     * Screen.render paints a translucent in-game backdrop through a four-argument
+     * renderBackground from 1.20.2 on. The studio draws that backdrop itself before its previews,
+     * so the inherited pass would darken the previews a second time from inside super.render().
+     * The studio must declare the newer overload as a no-op (without @Override: 1.20.1 lacks it).
+     */
+    private static void hudStudioKeepsTheInheritedBackgroundPassOffItsPreviews() throws IOException {
+        String studio = read("src/main/java/com/example/globe/client/LatitudeHudStudioScreen.java");
+        int at = studio.indexOf("public void renderBackground(GuiGraphics ctx, int mouseX, int mouseY, float delta) {");
+        assertTrue(at >= 0, "the studio must declare the four-argument renderBackground");
+        String body = studio.substring(at, studio.indexOf("}", at));
+        assertTrue(!body.contains("super.renderBackground") && !body.contains("fill"),
+                "the four-argument renderBackground must be a no-op");
+        assertTrue(!studio.substring(Math.max(0, at - 40), at).contains("@Override"),
+                "the overload is declared without @Override so 1.20.1 still compiles");
     }
 
     private static String read(String relativePath) throws IOException {

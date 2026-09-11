@@ -858,6 +858,19 @@ def injector_sites(block: str) -> list[InjectorSite]:
     return sites
 
 
+INTERMEDIARY_METHOD = re.compile(r"method_\d+")
+
+
+def is_intermediary_selector(selector: str) -> bool:
+    """A selector spelled in intermediary form (method_NNNN(...)).
+
+    Such an arm exists for a method the build target's mappings cannot remap -- a shape that
+    only a newer version in the declared range declares -- and it is what production matches
+    there. The named jar this verifier reads cannot resolve it, by construction, so it is
+    neither a target nor an absence; the named twin beside it carries the check."""
+    return INTERMEDIARY_METHOD.fullmatch(selector.split("(")[0].strip()) is not None
+
+
 def injector_method_targets(block: str) -> list[tuple[str | None, str]]:
     """(handler name, Minecraft method name) for every method an injector claims to target.
 
@@ -870,7 +883,7 @@ def injector_method_targets(block: str) -> list[tuple[str | None, str]]:
         for selector in string_values(site.attributes.get("method")):
             # A bare "*" deliberately matches every method in the target class; there is nothing
             # to resolve, and the @At target carries the real selection.
-            if selector.strip() == "*":
+            if selector.strip() == "*" or is_intermediary_selector(selector):
                 continue
             bare = selector.split("(")[0].split("*")[0].strip()
             if bare and bare not in IGNORED_METHOD_TARGETS:
@@ -962,6 +975,9 @@ class SignatureReport:
     verified: int = 0
     partial: int = 0
     unverifiable: int = 0
+    # Handlers carrying an intermediary-form selector: a production-only arm the named jar
+    # cannot resolve; the named twin beside it is what gets checked.
+    intermediary_arms: int = 0
 
 
 def lvt_slots(target: MethodSig) -> dict[int, TypeRef]:
@@ -1296,6 +1312,13 @@ def verify_handler_signatures(entry: str, block: str, source: str, targets: list
         selectors = string_values(site.attributes.get("method"))
         wildcard_selector = any(selector.strip() == "*" for selector in selectors)
         selectors = [] if wildcard_selector else selectors
+        intermediary = [selector for selector in selectors if is_intermediary_selector(selector)]
+        if intermediary:
+            report.intermediary_arms += 1
+            for selector in intermediary:
+                report.trace.append(f"INTERMEDIARY-ARM {label}: '{selector}' is a production-only "
+                                    f"spelling; checked through its named twin")
+            selectors = [selector for selector in selectors if not is_intermediary_selector(selector)]
         candidates, resolution_problems = resolve_targets(label, selectors, targets, index)
         # A handler listed for this version is the arm of a version split that cannot resolve
         # here; its unresolved target is a note. Everything downstream still sees a non-empty
@@ -1448,6 +1471,7 @@ def main() -> int:
     checked_signatures = 0
     partial_signatures = 0
     unverifiable_signatures = 0
+    intermediary_arms = 0
     warnings: list[str] = []
     trace_lines: list[str] = []
     signature_index = SignatureIndex(javap_bin, jar)
@@ -1560,6 +1584,7 @@ def main() -> int:
         checked_signatures += signatures.verified
         partial_signatures += signatures.partial
         unverifiable_signatures += signatures.unverifiable
+        intermediary_arms += signatures.intermediary_arms
         trace_lines.extend(signatures.trace)
 
         for owner, method in at_targets(body):
@@ -1597,7 +1622,8 @@ def main() -> int:
           f"expectedAbsent={len(expected_absent)} "
           f"handlerSignatures={checked_signatures} "
           f"handlerSignaturesPartial={partial_signatures} "
-          f"handlerSignaturesUnverifiable={unverifiable_signatures}")
+          f"handlerSignaturesUnverifiable={unverifiable_signatures} "
+          f"intermediaryArms={intermediary_arms}")
     print(f" classpathEntries={len(jar.split(':'))}")
     return 0
 

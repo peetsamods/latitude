@@ -455,6 +455,17 @@ public class LatitudeHudStudioScreen extends Screen {
         }
     }
 
+    /**
+     * Not an {@code @Override}: Screen.render calls a four-argument renderBackground from 1.20.2
+     * on, and 1.20.1 does not declare that overload. The studio paints the identical translucent
+     * backdrop itself at the top of render(), before its previews, so on 1.20.2 to 1.20.4 the
+     * inherited pass would paint the same darkening a second time, over the previews, from inside
+     * super.render(). Declaring the newer overload here makes that pass a no-op where it exists
+     * and is inert on 1.20.1.
+     */
+    public void renderBackground(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+    }
+
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         this.lastMouseX = mouseX;

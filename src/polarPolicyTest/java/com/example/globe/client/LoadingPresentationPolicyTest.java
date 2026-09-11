@@ -40,6 +40,7 @@ public final class LoadingPresentationPolicyTest {
 
     public static void main(String[] args) throws Exception {
         runAll();
+        newestVersionArmsCarryIntermediarySelectors();
         System.out.println("LOADING_PRESENTATION_POLICY_TEST_PASS");
     }
 
@@ -205,6 +206,21 @@ public final class LoadingPresentationPolicyTest {
                         + "widget — reaching for one again would resolve against nothing");
         assertTrue(generic.contains("require = 0"),
                 "the overlay hook fails soft, per the GitHub #7 rule");
+    }
+
+    /**
+     * The 1.20.3/1.20.4 arms of the two version-split loading hooks must carry an intermediary-
+     * form selector. This jar is remapped with 1.20.1's mappings, which cannot remap a method
+     * that 1.20.1 does not declare, so a named-only arm ships unremapped and silently never
+     * applies on the two newest versions; the audit found both arms dead there.
+     */
+    private static void newestVersionArmsCarryIntermediarySelectors() throws IOException {
+        String start = read("src/main/java/com/example/globe/mixin/client/MinecraftClientStartIntegratedMixin.java");
+        assertTrue(start.contains("\"method_29610(Lnet/minecraft/class_32$class_5143;Lnet/minecraft/class_3283;Lnet/minecraft/class_6904;Z)V\""),
+                "doWorldLoad's 1.20.3/1.20.4 arm must be spelled in intermediary form too");
+        String flows = read("src/main/java/com/example/globe/mixin/client/WorldOpenFlowsEarlyLatitudeActivationMixin.java");
+        assertTrue(flows.contains("\"method_54618(Ljava/lang/String;Ljava/lang/Runnable;)V\""),
+                "checkForBackupAndLoad's arm must be spelled in intermediary form too");
     }
 
     private static String read(String path) throws IOException {

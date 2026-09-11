@@ -64,6 +64,11 @@ public abstract class WorldOpenFlowsEarlyLatitudeActivationMixin {
     // to return to alongside the level id, the two newest take the level id and a failure callback.
     // Both shapes carry an explicit descriptor and require = 0, so whichever one this version
     // declares is the one that applies and the other is simply skipped.
+    //
+    // The 1.20.3/1.20.4 entry point is also spelled in intermediary form: this jar is remapped
+    // with 1.20.1's mappings, which do not know checkForBackupAndLoad, so the named selector
+    // shipped unremapped and never matched at runtime. The named form stays for the target
+    // verifier; the intermediary form is what production matches on the two newest versions.
     @Inject(
             method = "loadLevel(Lnet/minecraft/client/gui/screens/Screen;Ljava/lang/String;)V",
             at = @At("HEAD"),
@@ -74,7 +79,10 @@ public abstract class WorldOpenFlowsEarlyLatitudeActivationMixin {
     }
 
     @Inject(
-            method = "checkForBackupAndLoad(Ljava/lang/String;Ljava/lang/Runnable;)V",
+            method = {
+                    "checkForBackupAndLoad(Ljava/lang/String;Ljava/lang/Runnable;)V",
+                    "method_54618(Ljava/lang/String;Ljava/lang/Runnable;)V"
+            },
             at = @At("HEAD"),
             require = 0,
             expect = 0)

@@ -57,6 +57,14 @@ public abstract class MinecraftClientStartIntegratedMixin {
     // which is CLIENT-ONLY and neither the static verifier nor a dedicated-server boot proof ever
     // exercises it. Both shapes are therefore spelled out with an explicit descriptor and
     // require = 0, so the one this version declares applies and the other is simply skipped.
+    //
+    // The 1.20.3/1.20.4 shape needs a second spelling. This jar is remapped with 1.20.1's
+    // mappings, and a method that 1.20.1 does not declare cannot be remapped: the named selector
+    // ships as-is and never matches the intermediary-named class at runtime, so the arm silently
+    // did nothing on the two newest versions. The intermediary form is therefore given
+    // alongside it (intermediary ids are stable across versions; the id is the same method,
+    // the descriptor is the newer shape). The named form stays for the target verifier, which
+    // reads the named jar; the intermediary form is what production actually matches.
     @Inject(
             // One literal, not a concatenation: the descriptor is read from source by the
             // mixin-target verifier, which sees each string literal as a selector of its own.
@@ -74,7 +82,10 @@ public abstract class MinecraftClientStartIntegratedMixin {
     }
 
     @Inject(
-            method = "doWorldLoad(Lnet/minecraft/world/level/storage/LevelStorageSource$LevelStorageAccess;Lnet/minecraft/server/packs/repository/PackRepository;Lnet/minecraft/server/WorldStem;Z)V",
+            method = {
+                    "doWorldLoad(Lnet/minecraft/world/level/storage/LevelStorageSource$LevelStorageAccess;Lnet/minecraft/server/packs/repository/PackRepository;Lnet/minecraft/server/WorldStem;Z)V",
+                    "method_29610(Lnet/minecraft/class_32$class_5143;Lnet/minecraft/class_3283;Lnet/minecraft/class_6904;Z)V"
+            },
             at = @At("HEAD"),
             require = 0,
             expect = 0)
