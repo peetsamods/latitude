@@ -152,7 +152,7 @@ final class VanillaCoverageFinalAdmissionPolicy {
      * {@code DEFER_TO_PHYSICAL_TERRAIN} would fire on exactly the mountains the route exists to
      * describe — the guaranteed windswept province would lose its own admission.
      */
-    private static boolean isUplandRoute(BiomeRoute route) {
+    static boolean isUplandRoute(BiomeRoute route) {
         return route == BiomeRoute.TEMPERATE_UPLAND
                 || route == BiomeRoute.SUBPOLAR_UPLAND
                 || route == BiomeRoute.COLD_UPLAND

@@ -810,6 +810,31 @@ public final class LatitudeBiomes {
                                                              Climate.Sampler sampler,
                                                              BiomeSource donorSource,
                                                              int seaLevel) {
+        activateWorldgenContext(radiusBlocks, seed, policy, providerTicketProfile, representationProfile,
+                caveRepresentationProfile, sampler, donorSource, seaLevel, null, null, null);
+    }
+
+    /**
+     * The three trailing arguments are the fresh-world coverage plan's terrain evidence. The plan
+     * classifies an upland route from the raw climate sample alone, and that sample is only the
+     * vanilla erosion field: a pack that rewrites the erosion noise (Terralith does) leaves it
+     * almost never "mountain-like" while the terrain it shapes still has mountains, which the
+     * painter recognises by measured height. Without these, the plan cannot anchor any upland
+     * province in such a world (meadow, grove, stony peaks, the windswept family) and the
+     * painter is left to chance for identities the plan exists to guarantee. Null is accepted:
+     * the plan then judges upland from the raw sample only, as before.
+     */
+    public static synchronized void activateWorldgenContext(int radiusBlocks, long seed,
+                                                             WorldgenPolicyVersion policy,
+                                                             BiomeSelectionProfile providerTicketProfile,
+                                                             VanillaBiomeRepresentationProfile representationProfile,
+                                                             CaveBiomeRepresentationProfile caveRepresentationProfile,
+                                                             Climate.Sampler sampler,
+                                                             BiomeSource donorSource,
+                                                             int seaLevel,
+                                                             NoiseBasedChunkGenerator terrainGenerator,
+                                                             RandomState terrainNoise,
+                                                             LevelHeightAccessor terrainHeightView) {
         ACTIVE_WORLDGEN_AUTHORITY = false;
         ACTIVE_WORLDGEN_POLICY = policy != null ? policy : WorldgenPolicyVersion.MODERN_1_3;
         ACTIVE_PROVIDER_TICKET_PROFILE = isProviderTicketPolicy(ACTIVE_WORLDGEN_POLICY)
@@ -859,7 +884,11 @@ public final class LatitudeBiomes {
                                                 BiomeDescriptorLedger.descriptor(biomeId),
                                                 route,
                                                 vanillaCoverageFinalAdmissionFacts(
-                                                        x, z, sampler, isMountainLike(sampler, x, z)))
+                                                        x, z, sampler,
+                                                        isMountainLike(sampler, x, z)
+                                                                || plannedUplandByHeight(route, x, z,
+                                                                        terrainGenerator, terrainNoise,
+                                                                        terrainHeightView, seaLevel)))
                                                 == VanillaCoverageFinalAdmissionPolicy.Decision.PRESERVE_EXACT
                                 : vanillaCoverageRouteEligible(
                                         biomeId, route, x, z, sampler))
@@ -1024,6 +1053,26 @@ public final class LatitudeBiomes {
             case POLAR_LOWLAND -> band == BAND_POLAR && !mountain;
             case CAVE_SHALLOW, CAVE_DEEP -> false;
         };
+    }
+
+    /**
+     * The coverage plan's second upland witness, the painter's own: a column whose preview
+     * surface sits at least {@link TerrainBiomeCohesionPolicy#HIGH_ABOVE_SEA_BLOCKS} above sea
+     * level is upland to the final picker whatever the raw erosion sample says. Only upland
+     * routes ask, only when terrain evidence was supplied, and only the height clause is used
+     * (no relief probe), so every column the plan calls upland here the painter calls upland too.
+     */
+    private static boolean plannedUplandByHeight(BiomeRoute route, int blockX, int blockZ,
+                                                 NoiseBasedChunkGenerator generator,
+                                                 RandomState noiseConfig,
+                                                 LevelHeightAccessor heightView,
+                                                 int seaLevel) {
+        if (generator == null || noiseConfig == null || heightView == null
+                || !VanillaCoverageFinalAdmissionPolicy.isUplandRoute(route)) {
+            return false;
+        }
+        int surfaceY = previewHeight(generator, noiseConfig, heightView, blockX & ~3, blockZ & ~3);
+        return surfaceY >= seaLevel + TerrainBiomeCohesionPolicy.HIGH_ABOVE_SEA_BLOCKS;
     }
 
     private static VanillaCoverageFinalAdmissionPolicy.Facts vanillaCoverageFinalAdmissionFacts(
