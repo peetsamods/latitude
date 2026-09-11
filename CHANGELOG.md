@@ -70,6 +70,10 @@ what was already generated. Your settings file carries over as it is.
 - **Structures land in the biome you see.** With biome packs installed, a woodland mansion could pass
   its dark-forest check on ground that was then painted as flower forest or a pack biome. Structure
   placement now reads the same biome resolver that paints the world.
+- **Your first spawn is judged on the biome you see.** The spawn search used to ask a terrain-blind
+  copy of Latitude's biome rules whether a column was land, so at coasts and on raised ground it
+  could disagree with the world it was choosing a spawn in. It now asks the same painted biome view
+  that world generation and structure placement use.
 - **Frozen rivers** no longer sprout warm-climate plants.
 - **Mushroom islands** stopped appearing as thin slivers pressed against other terrain.
 - **Alpine surfaces** keep their snow and stone consistent with the height they are at.
