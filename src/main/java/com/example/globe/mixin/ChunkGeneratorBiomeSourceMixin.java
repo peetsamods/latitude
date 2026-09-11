@@ -74,9 +74,13 @@ public abstract class ChunkGeneratorBiomeSourceMixin implements PaintedBiomeSiti
     @org.spongepowered.asm.mixin.Unique
     private volatile BiomeSource globe$wrappedBiomeSource;
 
-    /** Set once the exposed source is the registry-backed resolver the painter uses. */
+    /** Set once the exposed source forwards to the registry-backed resolver the painter uses. */
     @org.spongepowered.asm.mixin.Unique
     private volatile boolean globe$paintedSourceAdopted;
+
+    @org.spongepowered.asm.mixin.Unique
+    private static final java.util.concurrent.atomic.AtomicBoolean DEBUG_ADOPT_DEFERRED_LOGGED =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
 
     @Override
     public void globe$adoptPaintedBiomeSource(Registry<Biome> biomeRegistry, RandomState randomState,
@@ -91,15 +95,31 @@ public abstract class ChunkGeneratorBiomeSourceMixin implements PaintedBiomeSiti
             if (this.globe$paintedSourceAdopted) {
                 return;
             }
-            // Only the dimension's bounds are kept: the caller's accessor may be a single
-            // chunk, and this resolver outlives every chunk.
-            LevelHeightAccessor bounds =
-                    LevelHeightAccessor.create(heightView.getMinBuildHeight(), heightView.getHeight());
-            this.globe$wrappedBiomeSource = LatitudeBiomeSource.forLocate(
-                    this.biomeSource, biomeRegistry, globe$borderRadiusBlocks(),
-                    noise, randomState, bounds);
-            this.globe$paintedSourceAdopted = true;
-            if (DEBUG_WORLDGEN_PATH) {
+            globe$maybeWrapBiomeSource();
+            if (!(this.globe$wrappedBiomeSource instanceof LatitudeBiomeSource exposed)) {
+                return;
+            }
+            try {
+                // Only the dimension's bounds are kept: the caller's accessor may be a single
+                // chunk, and this resolver outlives every chunk.
+                LevelHeightAccessor bounds =
+                        LevelHeightAccessor.create(heightView.getMinBuildHeight(), heightView.getHeight());
+                // The exposed instance is kept and made to forward: ServerLevel captured it at
+                // construction for StructureCheck, so a swapped instance would leave structure
+                // prediction (explorer maps, eyes of ender) on the old answer.
+                LatitudeBiomeSource painted = LatitudeBiomeSource.forLocate(
+                        this.biomeSource, biomeRegistry, globe$borderRadiusBlocks(),
+                        noise, randomState, bounds);
+                this.globe$paintedSourceAdopted = exposed.adoptPainted(painted);
+            } catch (RuntimeException deferred) {
+                // possibleBiomes() can still be unbound this early on some mod stacks; the next
+                // caller retries, exactly like the construction-time wrap.
+                if (DEBUG_ADOPT_DEFERRED_LOGGED.compareAndSet(false, true)) {
+                    GlobeMod.LOGGER.warn("[Latitude] painted-biome adoption deferred: {}", deferred.toString());
+                }
+                return;
+            }
+            if (DEBUG_WORLDGEN_PATH && this.globe$paintedSourceAdopted) {
                 GlobeMod.LOGGER.info("[Latitude] structure siting now judges the painted biome settings={} radius={}",
                         globe$matchedSettingsLabel(), globe$borderRadiusBlocks());
             }

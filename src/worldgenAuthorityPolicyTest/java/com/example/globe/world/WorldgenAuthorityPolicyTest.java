@@ -1718,6 +1718,15 @@ public final class WorldgenAuthorityPolicyTest {
                 "adoption must expose the same registry-backed resolver the painter and locate use");
         assertTrue(adoptBody.contains("globe$isAnyGlobeSettings()"),
                 "adoption stays gated on Latitude owning the generator's worldgen");
+        assertTrue(adoptBody.contains(".adoptPainted(") && !adoptBody.contains("this.globe$wrappedBiomeSource = LatitudeBiomeSource.forLocate("),
+                "adoption must forward the exposed instance in place, never swap it: ServerLevel "
+                        + "captured that instance for StructureCheck (explorer maps, eyes of ender)");
+        String biomeSource = read("src/main/java/com/example/globe/world/LatitudeBiomeSource.java");
+        int noiseAt = biomeSource.indexOf("public Holder<Biome> getNoiseBiome(int x, int y, int z, Climate.Sampler sampler) {");
+        int delegateAt = biomeSource.indexOf("this.paintedDelegate;", noiseAt);
+        int rawAt = biomeSource.indexOf("original.getNoiseBiome(x, y, z, sampler)", noiseAt);
+        assertTrue(noiseAt >= 0 && delegateAt > noiseAt && rawAt > delegateAt,
+                "getNoiseBiome must consult the painted delegate before sampling the raw source");
 
         String guard = read("src/main/java/com/example/globe/mixin/ExtremePolarVillageStartGuardMixin.java");
         int guardAdopt = guard.indexOf("globe$adoptPaintedBiomeSource(");

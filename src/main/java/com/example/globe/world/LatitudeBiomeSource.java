@@ -49,6 +49,15 @@ public final class LatitudeBiomeSource extends BiomeSource {
     private final LevelHeightAccessor heightView;
     private final String callerContext;
 
+    /**
+     * The painter's registry-backed, terrain-aware resolver, adopted in place once the level can
+     * supply it. Vanilla captures the generator's exposed biome source at construction (ServerLevel
+     * hands it to StructureCheck, which explorer maps and eyes of ender predict from), so the
+     * exposed INSTANCE must never be swapped; it forwards instead, and every holder of it, early or
+     * late, answers with the biome the world paints.
+     */
+    private volatile LatitudeBiomeSource paintedDelegate;
+
     public LatitudeBiomeSource(BiomeSource original, Collection<Holder<Biome>> biomes, int borderRadiusBlocks) {
         this(original, biomes, null, borderRadiusBlocks, null, null, null, "SOURCE");
     }
@@ -83,6 +92,25 @@ public final class LatitudeBiomeSource extends BiomeSource {
 
     public BiomeSource original() {
         return original;
+    }
+
+    /**
+     * Forward this construction-time source to the painter's resolver. Only a registry-less
+     * source adopts (the painter's own resolver never forwards), only once, and only a resolver
+     * built over the same raw source.
+     */
+    public boolean adoptPainted(LatitudeBiomeSource painted) {
+        if (painted == null || painted == this || this.biomeRegistry != null
+                || painted.biomeRegistry == null || painted.original != this.original
+                || this.paintedDelegate != null) {
+            return false;
+        }
+        this.paintedDelegate = painted;
+        return true;
+    }
+
+    public boolean hasPaintedDelegate() {
+        return this.paintedDelegate != null;
     }
 
     @Override
@@ -132,6 +160,10 @@ public final class LatitudeBiomeSource extends BiomeSource {
 
     @Override
     public Holder<Biome> getNoiseBiome(int x, int y, int z, Climate.Sampler sampler) {
+        LatitudeBiomeSource painted = this.paintedDelegate;
+        if (painted != null) {
+            return painted.getNoiseBiome(x, y, z, sampler);
+        }
         Holder<Biome> current = original.getNoiseBiome(x, y, z, sampler);
         Holder<Biome> base = original.getNoiseBiome(x, LatitudeBiomes.SURFACE_CLASSIFY_Y >> 2, z, sampler);
         // The populate-biomes resolver classifies the center of each quart cell. Locate's
