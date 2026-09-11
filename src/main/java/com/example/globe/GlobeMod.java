@@ -41,7 +41,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.BundleContents;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.biome.BiomeResolver;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.border.WorldBorder;
@@ -880,6 +879,7 @@ public class GlobeMod implements ModInitializer {
                     world,
                     template,
                     sampler,
+                    noiseConfig,
                     radius,
                     targetZ,
                     seed,
@@ -964,6 +964,7 @@ public class GlobeMod implements ModInitializer {
 
     private static ResolvedSpawn findLandSpawn(ServerLevel world, SamplerTemplate template,
                                                Climate.Sampler sampler,
+                                               RandomState noiseConfig,
                                                int borderHalf, int targetZ, long seed,
                                                int terrainValidationBudget,
                                                boolean prepareTeleportNeighbors) {
@@ -982,7 +983,7 @@ public class GlobeMod implements ModInitializer {
         int radiusBlocks = LatitudeBiomes.getActiveRadiusBlocks();
         if (radiusBlocks <= 0) radiusBlocks = borderHalf;
         int classifyY = LatitudeBiomes.SURFACE_CLASSIFY_Y;
-        BiomeResolver baseResolver = template.baseSource().createResolver(sampler);
+        LatitudeBiomeSource painted = paintedSpawnView(world, template, noiseConfig, radiusBlocks);
 
         LatitudeBiomes.setWorldSeed(seed);
 
@@ -999,7 +1000,7 @@ public class GlobeMod implements ModInitializer {
                                 -maxAbsZ,
                                 maxAbsZ);
 
-                if (!isLandBiome(template, baseResolver, sampler, x, z, classifyY, radiusBlocks)) {
+                if (!isLandBiome(painted, sampler, x, z, classifyY)) {
                     continue;
                 }
 
@@ -1064,24 +1065,42 @@ public class GlobeMod implements ModInitializer {
     }
 
     /**
-     * Pure biome-source probe — no chunk generation. Returns true if the biome
-     * at (blockX, blockZ) is land (not ocean or river).
+     * The spawn search judges a candidate column through the same painted, terrain-aware biome
+     * view that chunk population and structure siting use, so "land" here means the biome the
+     * player will actually stand in. A bare pick without terrain evidence disagreed with that view
+     * at coasts and on raised ground, where the painter turns a donor ocean label into land or a
+     * low land label into ocean, so the search could accept a column that generates as water.
      */
-    private static boolean isLandBiome(SamplerTemplate template,
-                                        BiomeResolver baseResolver,
+    private static LatitudeBiomeSource paintedSpawnView(ServerLevel world,
+                                                        SamplerTemplate template,
+                                                        RandomState noiseConfig,
+                                                        int radiusBlocks) {
+        ChunkGenerator generator = world.getChunkSource().getGenerator();
+        if (!(generator instanceof NoiseBasedChunkGenerator terrainGenerator)) {
+            throw new IllegalStateException("Spawn search requires a NoiseChunkGenerator");
+        }
+        return LatitudeBiomeSource.forLocate(
+                template.baseSource(),
+                template.biomeRegistry(),
+                radiusBlocks,
+                terrainGenerator,
+                noiseConfig,
+                world);
+    }
+
+    /**
+     * Pure biome probe — no chunk generation. Returns true if the painted biome at
+     * (blockX, blockZ) is land (not ocean or river).
+     */
+    private static boolean isLandBiome(LatitudeBiomeSource painted,
                                         Climate.Sampler sampler,
                                         int blockX, int blockZ,
-                                        int classifyY, int radiusBlocks) {
-        int noiseX = Math.floorDiv(blockX, 4);
-        int noiseZ = Math.floorDiv(blockZ, 4);
-        int noiseY = Math.floorDiv(classifyY, 4);
-
-        Holder<Biome> base = baseResolver.getNoiseBiome(noiseX, noiseY, noiseZ);
-        Holder<Biome> picked = LatitudeBiomes.pick(
-                template.biomeRegistry(), base,
-                blockX, blockZ, classifyY, radiusBlocks,
-                sampler, "SPAWN_PROBE");
-        Holder<Biome> resolved = picked != null ? picked : base;
+                                        int classifyY) {
+        Holder<Biome> resolved = painted.getNoiseBiome(
+                Math.floorDiv(blockX, 4),
+                Math.floorDiv(classifyY, 4),
+                Math.floorDiv(blockZ, 4),
+                sampler);
 
         // Tag-based checks — safe against substring false positives
         return !resolved.is(BiomeTags.IS_OCEAN) && !resolved.is(BiomeTags.IS_RIVER);
