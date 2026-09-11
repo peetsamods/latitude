@@ -449,11 +449,28 @@ public class LatitudeHudStudioScreen extends Screen {
         }
     }
 
+    /**
+     * Screen.render runs this pass from inside super.render(), after the studio has drawn its
+     * previews. With no world behind the screen (opened from the create screen) the inherited
+     * pass blurs everything drawn so far, previews included, and then paints the menu backdrop
+     * over them; with a world behind it, it darkens them a second time. The studio paints the
+     * right backdrop itself at the top of render(), before the previews, so this is a no-op.
+     */
+    @Override
+    public void renderBackground(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+    }
+
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         this.lastMouseX = mouseX;
         this.lastMouseY = mouseY;
-        this.renderTransparentBackground(ctx);
+        if (this.minecraft.level == null) {
+            // Vanilla's own menu backdrop, minus the blur pass that would smear the previews.
+            this.renderPanorama(ctx, delta);
+            this.renderMenuBackground(ctx);
+        } else {
+            this.renderTransparentBackground(ctx);
+        }
         ctx.fill(0, 0, this.width, this.height, 0x66000000);
 
         int sidebarX = 6;

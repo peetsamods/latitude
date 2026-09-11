@@ -14,6 +14,7 @@ public final class LocationDetailPolicyTest {
         defaultDetachedBoundsStayReachableAtAcceptedGuiSize();
         locationTextScalePolicyIsBoundedAndIndependent();
         staticIntegrationProofsHold();
+        hudStudioPaintsItsBackdropBeforeThePreviews();
         System.out.println("LOCATION_DETAIL_POLICY_TEST_PASS");
     }
 
@@ -397,6 +398,32 @@ public final class LocationDetailPolicyTest {
                 "SNAP title coordinate rounds to the grid");
         assertEquals(13.25, HudTextLayoutPolicy.titleDragCoordinate(13.25, false, 8),
                 "FREE title coordinate remains unquantized");
+    }
+
+    /**
+     * Screen.render runs renderBackground from inside super.render(), after the studio has drawn
+     * its previews; with no world behind the screen that pass blurs everything drawn so far
+     * (maintainer flight, opened from the create screen). The studio must neutralise the
+     * inherited pass and paint its own backdrop first: panorama plus menu backdrop, never the
+     * blur, when no world is loaded; the translucent darkening otherwise.
+     */
+    private static void hudStudioPaintsItsBackdropBeforeThePreviews() throws IOException {
+        String studio = read("src/main/java/com/example/globe/client/LatitudeHudStudioScreen.java");
+        int override = studio.indexOf("public void renderBackground(GuiGraphics ctx, int mouseX, int mouseY, float delta) {");
+        assertTrue(override >= 0, "the studio must override the four-argument renderBackground");
+        String body = studio.substring(studio.indexOf("{", override) + 1, studio.indexOf("}", override)).trim();
+        assertTrue(body.isEmpty(),
+                "the inherited background pass must be a no-op inside the studio");
+        int render = studio.indexOf("public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {");
+        int panorama = studio.indexOf("this.renderPanorama(ctx, delta);", render);
+        int menu = studio.indexOf("this.renderMenuBackground(ctx);", render);
+        int transparent = studio.indexOf("this.renderTransparentBackground(ctx);", render);
+        int previews = studio.indexOf("CompassHud.renderAdjustPreview(", render);
+        assertTrue(panorama > render && menu > panorama && transparent > menu && previews > transparent,
+                "render() must paint the backdrop (panorama + menu backdrop without a world, "
+                        + "translucent darkening with one) before the previews");
+        assertTrue(!studio.contains("renderBlurredBackground"),
+                "the studio never runs the blur pass over its previews");
     }
 
     private static String read(String relativePath) throws IOException {
