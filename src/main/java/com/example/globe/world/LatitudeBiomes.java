@@ -1066,6 +1066,58 @@ public final class LatitudeBiomes {
                 || route == BiomeRoute.ARID_UPLAND;
     }
 
+    /**
+     * The final picker's measured-height upland witness: real terrain evidence and a column
+     * surface at least {@link TerrainBiomeCohesionPolicy#HIGH_ABOVE_SEA_BLOCKS} above sea level.
+     * This is the exact clause {@link #plannedUplandByHeight} anchors upland provinces on and the
+     * coverage re-check accepts, hoisted into one predicate so every consumer in {@code pick}
+     * (the coverage re-check, the subpolar mountain truth) reads the same witness. The height
+     * clause alone, deliberately: live worldgen has no relief probe (see the MIXIN skip rule), so
+     * a ruggedness term would silently make the witness false exactly where it is needed.
+     */
+    private static boolean isMeasuredUplandWitness(boolean terrainEvidenceAvailable,
+                                                   int terrainGateHeight,
+                                                   int seaLevel) {
+        return terrainEvidenceAvailable
+                && terrainGateHeight >= seaLevel + TerrainBiomeCohesionPolicy.HIGH_ABOVE_SEA_BLOCKS;
+    }
+
+    /**
+     * Whether a subpolar column is a mountain to the windswept gate and its ownership veto
+     * (maintainer ruling, 2026-09-12): the raw climate read OR the measured-height witness,
+     * band-qualified here so neither term can reach any band but the family's one legal home.
+     *
+     * <p>The raw read is {@code isMountainLike}, which is only the vanilla erosion field. A pack
+     * that rewrites the erosion noise (Terralith does) leaves it almost never true while the
+     * terrain it shapes still has mountains, which the painter measures by height — the same
+     * defect the coverage plan closed for its upland provinces. Until this witness existed the
+     * subpolar band had no measured-terrain path at all: temperate has
+     * {@code temperateMountainTerrainAuthority}, polar has {@code polarTerrainMountainLike}, and
+     * subpolar read the raw sample alone, so under Terralith its windswept family was illegal on
+     * every mountain and the anchors the plan reserved on measured height were vetoed on the same
+     * columns. Where the raw read already says mountain nothing changes: OR-ing a witness onto
+     * a true term is the identity.
+     */
+    private static boolean isSubpolarMountainTruth(int landBandIndex,
+                                                   boolean rawMountainTruth,
+                                                   boolean measuredUplandWitness) {
+        return landBandIndex == BAND_SUBPOLAR && (rawMountainTruth || measuredUplandWitness);
+    }
+
+    /** Exported for the policy suite; see {@link #isMeasuredUplandWitness}. */
+    static boolean measuredUplandWitnessForPolicyTest(boolean terrainEvidenceAvailable,
+                                                      int terrainGateHeight,
+                                                      int seaLevel) {
+        return isMeasuredUplandWitness(terrainEvidenceAvailable, terrainGateHeight, seaLevel);
+    }
+
+    /** Exported for the policy suite; see {@link #isSubpolarMountainTruth}. */
+    static boolean subpolarMountainTruthForPolicyTest(int landBandIndex,
+                                                      boolean rawMountainTruth,
+                                                      boolean measuredUplandWitness) {
+        return isSubpolarMountainTruth(landBandIndex, rawMountainTruth, measuredUplandWitness);
+    }
+
 
     /**
      * {@code measuredUpland} is the painter's second upland witness (a preview surface high
@@ -3847,12 +3899,18 @@ public final class LatitudeBiomes {
         gateDappledForColumn(blockX, blockZ, effectiveRadius, landBandIndex, mountainLike, sampler);
         // Renamed from polarMountainNoiseLike (2026-08-18): this is the raw, ungated mountain-noise
         // read, and it is no longer polar-only. It still feeds the polar authority chain below, and
-        // it is now ALSO what tells the windswept gate whether a subpolar column is a real mountain
-        // — see the isWindsweptFamilyLegal call in rerollTerrainCompatibleCandidate. Sampled once
-        // per column and reused; isMountainLike costs a climate sample, so do not re-evaluate it.
+        // it is now ALSO one of the two terms (with the measured-height witness below) that tell
+        // the windswept gate whether a subpolar column is a real mountain — see the
+        // isWindsweptFamilyLegal call in rerollTerrainCompatibleCandidate. Sampled once per column
+        // and reused; isMountainLike costs a climate sample, so do not re-evaluate it.
         boolean rawMountainTruth = sampler != null && isMountainLike(sampler, blockX, blockZ);
         boolean terrainEvidenceAvailable = hasPreviewTerrainInputs
                 || (!hasPreviewTerrainInputs && isAtlasHeadlessContext(callerContext) && mountainNoiseLike);
+        // One measured witness for the coverage re-check and the subpolar mountain truth, so a
+        // province the plan reserved on this evidence is a column the gate and the veto both
+        // call mountain (maintainer ruling, 2026-09-12).
+        boolean measuredUplandWitness = isMeasuredUplandWitness(terrainEvidenceAvailable, terrainGateHeight, ACTIVE_SEA_LEVEL);
+        boolean subpolarMountainTruth = isSubpolarMountainTruth(landBandIndex, rawMountainTruth, measuredUplandWitness);
         // Atlas/headless parity: when real terrain probes are absent, allow the noise signal to
         // satisfy the terrain gate as a substitute for the missing preview terrain inputs.
         // Double-gated: !hasPreviewTerrainInputs (only SOURCE/ATLAS_SAMPLER paths, per call-site audit)
@@ -4112,9 +4170,10 @@ public final class LatitudeBiomes {
                     oceanDistance,
                     mountainNoiseLike,
                     mountainLike,
-                    // Band-qualified here, not inside the gate, so the raw mountain read can never
-                    // reach any band but the windswept family's one legal home.
-                    landBandIndex == BAND_SUBPOLAR && rawMountainTruth);
+                    // Band-qualified by isSubpolarMountainTruth, not inside the gate, so neither
+                    // the raw read nor the measured witness can reach any band but the windswept
+                    // family's one legal home.
+                    subpolarMountainTruth);
         }
         String mangroveDecision = null;
         if (DEBUG_SPARSE_JUNGLE_AUDIT && chosen != null && isBiomeId(chosen, "minecraft:sparse_jungle")
@@ -4373,8 +4432,7 @@ public final class LatitudeBiomes {
         }
         out = applyVanillaCoverage(
                 biomeRegistry, base, out, blockX, blockZ, sampler,
-                terrainEvidenceAvailable
-                        && terrainGateHeight >= ACTIVE_SEA_LEVEL + TerrainBiomeCohesionPolicy.HIGH_ABOVE_SEA_BLOCKS);
+                measuredUplandWitness);
         // Atlas/headless parity: when terrain probes are absent, synthesize authority values
         // that satisfy polarMountainAuthority() for noise-confirmed mountain cells.
         // POLAR_AUTHORITY_PARITY_DELTA / _HEIGHT match the existing authority thresholds exactly.
@@ -4448,8 +4506,10 @@ public final class LatitudeBiomes {
         }
         out = quarantineUnknownCustomLandBiome(biomeRegistry, out, base, blockX, blockZ, landBandIndex, mountainLike);
         boolean mountainLikeAfterFinalTruth = isMountainLike(sampler, blockX, blockZ);
+        // The veto reads the gate's own subpolar truth (raw OR measured), so it can never delete a
+        // windswept pick the gate or a coverage anchor admitted on measured height.
         out = clampTemperateWindsweptMountainOwnership(
-                biomeRegistry, out, landBandIndex, mountainLikeAfterFinalTruth);
+                biomeRegistry, out, landBandIndex, mountainLikeAfterFinalTruth || subpolarMountainTruth);
         logWetlandAudit("pick-registry-late",
                 callerContext,
                 base,
@@ -4673,12 +4733,18 @@ public final class LatitudeBiomes {
         gateDappledForColumn(blockX, blockZ, effectiveRadius, landBandIndex, mountainLike, sampler);
         // Renamed from polarMountainNoiseLike (2026-08-18): this is the raw, ungated mountain-noise
         // read, and it is no longer polar-only. It still feeds the polar authority chain below, and
-        // it is now ALSO what tells the windswept gate whether a subpolar column is a real mountain
-        // — see the isWindsweptFamilyLegal call in rerollTerrainCompatibleCandidate. Sampled once
-        // per column and reused; isMountainLike costs a climate sample, so do not re-evaluate it.
+        // it is now ALSO one of the two terms (with the measured-height witness below) that tell
+        // the windswept gate whether a subpolar column is a real mountain — see the
+        // isWindsweptFamilyLegal call in rerollTerrainCompatibleCandidate. Sampled once per column
+        // and reused; isMountainLike costs a climate sample, so do not re-evaluate it.
         boolean rawMountainTruth = sampler != null && isMountainLike(sampler, blockX, blockZ);
         boolean terrainEvidenceAvailable = hasPreviewTerrainInputs
                 || (!hasPreviewTerrainInputs && isAtlasHeadlessContext(callerContext) && mountainNoiseLike);
+        // One measured witness for the coverage re-check and the subpolar mountain truth, so a
+        // province the plan reserved on this evidence is a column the gate and the veto both
+        // call mountain (maintainer ruling, 2026-09-12).
+        boolean measuredUplandWitness = isMeasuredUplandWitness(terrainEvidenceAvailable, terrainGateHeight, ACTIVE_SEA_LEVEL);
+        boolean subpolarMountainTruth = isSubpolarMountainTruth(landBandIndex, rawMountainTruth, measuredUplandWitness);
         // Atlas/headless parity: when real terrain probes are absent, allow the noise signal to
         // satisfy the terrain gate as a substitute for the missing preview terrain inputs.
         // Double-gated: !hasPreviewTerrainInputs (only SOURCE/ATLAS_SAMPLER paths, per call-site audit)
@@ -4911,9 +4977,10 @@ public final class LatitudeBiomes {
                     oceanDistance,
                     mountainNoiseLike,
                     mountainLike,
-                    // Band-qualified here, not inside the gate, so the raw mountain read can never
-                    // reach any band but the windswept family's one legal home.
-                    landBandIndex == BAND_SUBPOLAR && rawMountainTruth);
+                    // Band-qualified by isSubpolarMountainTruth, not inside the gate, so neither
+                    // the raw read nor the measured witness can reach any band but the windswept
+                    // family's one legal home.
+                    subpolarMountainTruth);
         }
         String mangroveDecision = null;
         Holder<Biome> sanitized = chosen;
@@ -5139,8 +5206,7 @@ public final class LatitudeBiomes {
         traceSubpolarJunglePick(blockX, blockZ, effectiveRadius, landBandIndex, base, out);
         out = applyVanillaCoverage(
                 biomePool, base, out, blockX, blockZ, sampler,
-                terrainEvidenceAvailable
-                        && terrainGateHeight >= ACTIVE_SEA_LEVEL + TerrainBiomeCohesionPolicy.HIGH_ABOVE_SEA_BLOCKS);
+                measuredUplandWitness);
         // Atlas/headless parity: when terrain probes are absent, synthesize authority values
         // that satisfy polarMountainAuthority() for noise-confirmed mountain cells.
         // POLAR_AUTHORITY_PARITY_DELTA / _HEIGHT match the existing authority thresholds exactly.
@@ -5214,8 +5280,10 @@ public final class LatitudeBiomes {
         }
         out = quarantineUnknownCustomLandBiome(biomePool, out, base, blockX, blockZ, landBandIndex, mountainLike);
         boolean mountainLikeAfterFinalTruth = isMountainLike(sampler, blockX, blockZ);
+        // The veto reads the gate's own subpolar truth (raw OR measured), so it can never delete a
+        // windswept pick the gate or a coverage anchor admitted on measured height.
         out = clampTemperateWindsweptMountainOwnership(
-                biomePool, out, landBandIndex, mountainLikeAfterFinalTruth);
+                biomePool, out, landBandIndex, mountainLikeAfterFinalTruth || subpolarMountainTruth);
         logWetlandAudit("pick-collection-late",
                 callerContext,
                 base,
@@ -8283,7 +8351,7 @@ public final class LatitudeBiomes {
                                                                       int oceanDistance,
                                                                       boolean mountainNoiseLike,
                                                                       boolean mountainLike,
-                                                                      boolean rawMountainTruth) {
+                                                                      boolean subpolarMountainTruth) {
         return rerollTerrainCompatibleCandidate(
                 chosen,
                 filteredAllowedLandPool(biomes, bandIndex, mountainLike),
@@ -8296,7 +8364,7 @@ public final class LatitudeBiomes {
                 oceanDistance,
                 mountainNoiseLike,
                 mountainLike,
-                rawMountainTruth);
+                subpolarMountainTruth);
     }
 
     /** Collection-source twin of the registry gate above; both must use the filtered pool. */
@@ -8311,7 +8379,7 @@ public final class LatitudeBiomes {
                                                                       int oceanDistance,
                                                                       boolean mountainNoiseLike,
                                                                       boolean mountainLike,
-                                                                      boolean rawMountainTruth) {
+                                                                      boolean subpolarMountainTruth) {
         return rerollTerrainCompatibleCandidate(
                 chosen,
                 filteredAllowedLandPool(biomes, bandIndex, mountainLike),
@@ -8324,7 +8392,7 @@ public final class LatitudeBiomes {
                 oceanDistance,
                 mountainNoiseLike,
                 mountainLike,
-                rawMountainTruth);
+                subpolarMountainTruth);
     }
 
     private static Holder<Biome> rerollTerrainCompatibleCandidate(Holder<Biome> chosen,
@@ -8338,15 +8406,15 @@ public final class LatitudeBiomes {
                                                                          int oceanDistance,
                                                                          boolean mountainNoiseLike,
                                                                          boolean mountainLike,
-                                                                         boolean rawMountainTruth) {
+                                                                         boolean subpolarMountainTruth) {
         if (chosen == null || pool.isEmpty()) {
             return chosen;
         }
         int terrainClass = terrainClassForSelection(centerHeight, robustDelta, seaLevel, oceanDistance, mountainNoiseLike, mountainLike);
-        // rawMountainTruth only widens the windswept legality test; it is deliberately NOT fed to
-        // terrainClassForSelection or isBiomeCompatibleWithTerrain, which keep their existing
-        // band-scoped inputs so this lever cannot move any non-windswept identity.
-        boolean windsweptLegalHere = isWindsweptFamilyLegal(bandIndex, mountainNoiseLike, mountainLike, rawMountainTruth);
+        // subpolarMountainTruth only widens the windswept legality test; it is deliberately NOT
+        // fed to terrainClassForSelection or isBiomeCompatibleWithTerrain, which keep their
+        // existing band-scoped inputs so this lever cannot move any non-windswept identity.
+        boolean windsweptLegalHere = isWindsweptFamilyLegal(bandIndex, mountainNoiseLike, mountainLike, subpolarMountainTruth);
         if (isBiomeCompatibleWithTerrain(chosen, bandIndex, terrainClass, mountainNoiseLike, mountainLike)
                 && (windsweptLegalHere || !isColdWindsweptFamilyBiome(chosen))) {
             return applyColdSiblingCoherence(chosen, pool, bandIndex, blockX, blockZ, terrainClass);
@@ -8424,30 +8492,34 @@ public final class LatitudeBiomes {
      * out of the polar band pool; this keeps it off flat subpolar ground, which the route alone
      * cannot do because substitution paths never re-evaluate a route's conditions.
      *
-     * <p>{@code rawMountainTruth} is why the gate can ever open (2026-08-18). The other two signals
-     * are both scoped to other bands and are structurally false here: {@code mountainNoiseLike} is
-     * computed as {@code landBandIndex == BAND_TEMPERATE && ...}, and {@code mountainLike} comes
-     * from {@code temperateMountainTerrainAuthority} and is only force-set true under
-     * {@code landBandIndex >= BAND_POLAR}. The subpolar band sits between the two and got neither,
-     * so this predicate returned false on EVERY subpolar column, mountain or not — the family's
-     * one legal home was locked shut, and the 5.2% of cold-upland terrain it still held was
-     * arriving through coverage anchors and the pool reroll rather than through this gate. Callers
-     * pass the raw {@code isMountainLike} read, already band-qualified to BAND_SUBPOLAR.
+     * <p>{@code subpolarMountainTruth} is why the gate can ever open (2026-08-18). The other two
+     * signals are both scoped to other bands and are structurally false here:
+     * {@code mountainNoiseLike} is computed as {@code landBandIndex == BAND_TEMPERATE && ...}, and
+     * {@code mountainLike} comes from {@code temperateMountainTerrainAuthority} and is only
+     * force-set true under {@code landBandIndex >= BAND_POLAR}. The subpolar band sits between the
+     * two and got neither, so this predicate answered false on EVERY subpolar column, mountain or
+     * not — the family's one legal home was locked shut, and the 5.2% of cold-upland terrain it
+     * still held was arriving through coverage anchors and the pool reroll rather than through
+     * this gate. Callers pass {@link #isSubpolarMountainTruth}: the raw {@code isMountainLike}
+     * read OR the measured-height witness, already band-qualified to BAND_SUBPOLAR. The witness
+     * was added 2026-09-12 because the raw read is only the vanilla erosion field, which a pack
+     * such as Terralith rewrites, leaving its mountains unrecognised here.
      *
-     * <p>Deliberately the SAME signal the ownership veto uses: {@code pick} hands
-     * {@code isMountainLike} to {@link #clampTemperateWindsweptMountainOwnership} as
-     * {@code mountainLikeAfterFinalTruth}, and that clamp deletes windswept wherever the signal is
-     * false. Gate and veto reading one predicate means every column this admits is a column the
-     * veto passes; if they disagreed, the gate would only be admitting picks for the veto to
-     * silently overwrite. Do not substitute a laxer terrain signal here — {@code terrainClass >=
-     * TERRAIN_CLASS_RAISED_SHOULDER} fires at {@code seaLevel + 4} or a 3-block relief delta, i.e.
-     * ordinary rolling ground, which is the bug the 2026-08-18 re-route closed.
+     * <p>Deliberately the SAME signal the ownership veto uses: {@code pick} hands that same
+     * subpolar truth (OR-ed onto {@code mountainLikeAfterFinalTruth}) to
+     * {@link #clampTemperateWindsweptMountainOwnership}, and that clamp deletes windswept wherever
+     * the signal is false. Gate and veto reading one predicate means every column this admits is
+     * a column the veto passes; if they disagreed, the gate would only be admitting picks for the
+     * veto to silently overwrite. Do not substitute a laxer terrain signal here — {@code
+     * terrainClass >= TERRAIN_CLASS_RAISED_SHOULDER} fires at {@code seaLevel + 4} or a 3-block
+     * relief delta, i.e. ordinary rolling ground, which is the bug the 2026-08-18 re-route
+     * closed; the measured witness demands HIGH_ABOVE_SEA_BLOCKS, forty blocks above the sea.
      */
     private static boolean isWindsweptFamilyLegal(int bandIndex,
                                                   boolean mountainNoiseLike,
                                                   boolean mountainLike,
-                                                  boolean rawMountainTruth) {
-        return bandIndex == BAND_SUBPOLAR && (mountainLike || mountainNoiseLike || rawMountainTruth);
+                                                  boolean subpolarMountainTruth) {
+        return bandIndex == BAND_SUBPOLAR && (mountainLike || mountainNoiseLike || subpolarMountainTruth);
     }
 
     /**
@@ -8465,8 +8537,8 @@ public final class LatitudeBiomes {
     static boolean windsweptFamilyLegalForPolicyTest(int bandIndex,
                                                      boolean mountainNoiseLike,
                                                      boolean mountainLike,
-                                                     boolean rawMountainTruth) {
-        return isWindsweptFamilyLegal(bandIndex, mountainNoiseLike, mountainLike, rawMountainTruth);
+                                                     boolean subpolarMountainTruth) {
+        return isWindsweptFamilyLegal(bandIndex, mountainNoiseLike, mountainLike, subpolarMountainTruth);
     }
 
     private static int continuousSelectionIndex(int size,

@@ -59,6 +59,7 @@ final class BiomeProviderSelectionPolicyTest {
         polarTaigaTransitionPreservesShouldersAndTreeLine();
         polarExtremeCapCatchesNameAlikeModdedBiomesConsistently();
         windsweptFamilyIsSubpolarMountainOnly();
+        subpolarMountainTruthAcceptsMeasuredHeight();
         desertIsTheStapleOfTheSubtropicalAridBelt();
         dryWarmIdentityGateUsesTheDesertFirstOrder();
         savannaIsACountryInsideTheWarmBelt();
@@ -3637,6 +3638,10 @@ final class BiomeProviderSelectionPolicyTest {
         // a band-only predicate cannot satisfy it. The behavioural half of the same claim, which
         // no source-text check can substitute for, is section 6b: flat subpolar columns must never
         // return a windswept id, swept across the band.
+        // Restated 2026-09-12: the third term is now subpolarMountainTruth — the raw read OR the
+        // measured-height witness, band-qualified at the call site — so the shape of the law is
+        // unchanged and only the name of the evidence term moved. The witness itself is proven in
+        // subpolarMountainTruthAcceptsMeasuredHeight.
         String legality = method(source,
                 "isWindsweptFamilyLegal(int bandIndex,");
         // Truncated at the first statement terminator on purpose. method() runs to the next
@@ -3648,13 +3653,13 @@ final class BiomeProviderSelectionPolicyTest {
         assertTrue(legalityReturn.startsWith("return bandIndex == BAND_SUBPOLAR && (")
                         && legalityReturn.contains("mountainLike")
                         && legalityReturn.contains("mountainNoiseLike")
-                        && legalityReturn.contains("rawMountainTruth"),
+                        && legalityReturn.contains("subpolarMountainTruth"),
                 "the reroll's legality predicate must demand BOTH the subpolar band and real "
                         + "mountain evidence — the band alone is what the old COLD_UPLAND route "
                         + "effectively enforced, and it is how flat polar shelves got windswept; "
-                        + "it must also still consult rawMountainTruth, the raw isMountainLike "
-                        + "read, which is the only one of the three terms that can ever be true in "
-                        + "this band: " + legalityReturn.trim());
+                        + "it must also still consult subpolarMountainTruth (the raw isMountainLike "
+                        + "read OR the measured-height witness), which is the only one of the three "
+                        + "terms that can ever be true in this band: " + legalityReturn.trim());
         String family = method(source, "isColdWindsweptFamilyBiome(Holder<Biome> candidate) {");
         assertFalse(family.contains("contains(\"windswept\")") || family.contains("getPath()"),
                 "the family predicate must match exact ids, never the substring \"windswept\" — "
@@ -3938,6 +3943,103 @@ final class BiomeProviderSelectionPolicyTest {
         } finally {
             LatitudeBiomes.clearWorldgenContext();
         }
+    }
+
+
+    /**
+     * The subpolar band's measured-terrain mountain witness (maintainer ruling, 2026-09-12).
+     *
+     * <p>The reported defect: with Terralith installed, the 50-66.5 degree band painted lowland
+     * identities (biomesoplenty:pumpkin_patch at 58 degrees north) across Terralith's spires and
+     * arches at y 200+. The windswept gate and its ownership veto read only the raw isMountainLike
+     * sample, and that sample is the vanilla erosion field, which Terralith rewrites: under it the
+     * raw read is almost never true, and the band had no measured-terrain path at all (temperate
+     * has temperateMountainTerrainAuthority, polar has polarTerrainMountainLike). It is the same
+     * defect the coverage plan closed on 2026-09-10 for its upland provinces, with a twist: the
+     * provinces the plan reserved on measured height were then vetoed on the very same columns,
+     * because the veto still read the raw sample.
+     *
+     * <p>Asserted on the predicates directly, for the reason section 6d of the windswept proof
+     * records: this harness calls pick() with a null chunk generator, so terrain evidence is
+     * absent and the witness cannot show through the picker. The source checks are the teeth
+     * that both overloads are threaded identically; the in-game half is the same-window headless
+     * comparison recorded with the ruling.
+     */
+    private static void subpolarMountainTruthAcceptsMeasuredHeight() throws Exception {
+        int sea = 63;
+        int high = sea + TerrainBiomeCohesionPolicy.HIGH_ABOVE_SEA_BLOCKS;
+        // 1. The witness is the coverage plan's clause: real evidence AND HIGH_ABOVE_SEA_BLOCKS,
+        //    with no relief term (live worldgen has no relief probe).
+        assertTrue(LatitudeBiomes.measuredUplandWitnessForPolicyTest(true, high, sea),
+                "a column measured HIGH_ABOVE_SEA_BLOCKS above the sea is the witness");
+        assertFalse(LatitudeBiomes.measuredUplandWitnessForPolicyTest(true, high - 1, sea),
+                "one block under the coverage plan's threshold is not — the witness must be "
+                        + "exactly as strict as the plan that reserves provinces on it");
+        assertFalse(LatitudeBiomes.measuredUplandWitnessForPolicyTest(false, high + 200, sea),
+                "no terrain evidence (atlas/headless callers) means no witness, whatever the "
+                        + "synthetic placeholder height says");
+        // 2. Truth table. 3 == BAND_SUBPOLAR, 2 == BAND_TEMPERATE, 4 == BAND_POLAR.
+        assertTrue(LatitudeBiomes.subpolarMountainTruthForPolicyTest(3, false, true),
+                "a subpolar column the measured witness calls high is a mountain even when the raw "
+                        + "erosion read says no — the Terralith case");
+        assertTrue(LatitudeBiomes.subpolarMountainTruthForPolicyTest(3, true, false),
+                "the raw read alone still opens it — vanilla behaviour where the sample already "
+                        + "says mountain is unchanged");
+        assertFalse(LatitudeBiomes.subpolarMountainTruthForPolicyTest(3, false, false),
+                "a subpolar column with neither witness stays flat ground");
+        assertFalse(LatitudeBiomes.subpolarMountainTruthForPolicyTest(2, true, true),
+                "the temperate band is not the family's home: the truth is band-qualified");
+        assertFalse(LatitudeBiomes.subpolarMountainTruthForPolicyTest(4, true, true),
+                "the polar band stays closed to the family on every terrain");
+        // 3. The witness opens the gate the raw read used to be the only key to.
+        assertTrue(LatitudeBiomes.windsweptFamilyLegalForPolicyTest(3, false, false,
+                        LatitudeBiomes.subpolarMountainTruthForPolicyTest(3, false, true)),
+                "the windswept family is legal on a measured subpolar mountain");
+        assertFalse(LatitudeBiomes.windsweptFamilyLegalForPolicyTest(3, false, false,
+                        LatitudeBiomes.subpolarMountainTruthForPolicyTest(3, false, false)),
+                "and stays illegal on a subpolar column with neither witness");
+        // 4. Both picker overloads compute one witness and one truth, hand the truth (never the
+        //    raw read alone) to the gate, hand the same witness to the coverage re-check, and
+        //    widen the veto with the same truth. Exact occurrences: every overload is protected.
+        String source = read("src/main/java/com/example/globe/world/LatitudeBiomes.java");
+        assertEquals(2, occurrences(source,
+                        "boolean measuredUplandWitness = isMeasuredUplandWitness("
+                                + "terrainEvidenceAvailable, terrainGateHeight, ACTIVE_SEA_LEVEL);"),
+                "both pick() overloads compute the measured witness from the real gate height "
+                        + "and the active sea level");
+        assertEquals(2, occurrences(source,
+                        "boolean subpolarMountainTruth = isSubpolarMountainTruth("
+                                + "landBandIndex, rawMountainTruth, measuredUplandWitness);"),
+                "both pick() overloads derive the subpolar truth from the raw read and the witness");
+        assertEquals(0, occurrences(source, "landBandIndex == BAND_SUBPOLAR && rawMountainTruth"),
+                "no call site may hand the gate the raw read alone any more");
+        int gateCalls = 0;
+        for (int at = source.indexOf("chosen = applyTerrainCompatibilityGate("); at >= 0;
+                at = source.indexOf("chosen = applyTerrainCompatibilityGate(", at + 1)) {
+            String call = source.substring(at, source.indexOf(");", at) + 2);
+            assertTrue(call.contains("subpolarMountainTruth);") && !call.contains("rawMountainTruth"),
+                    "each terrain-gate call must pass the subpolar truth, not the raw read: "
+                            + call.replaceAll("\\s+", " "));
+            gateCalls++;
+        }
+        assertEquals(2, gateCalls, "each picker path has exactly one terrain-gate call");
+        int coverageCalls = 0;
+        for (int at = source.indexOf("out = applyVanillaCoverage("); at >= 0;
+                at = source.indexOf("out = applyVanillaCoverage(", at + 1)) {
+            String call = source.substring(at, source.indexOf(");", at) + 2);
+            assertTrue(call.endsWith("measuredUplandWitness);"),
+                    "the coverage re-check must read the same hoisted witness the subpolar truth "
+                            + "reads: " + call.replaceAll("\\s+", " "));
+            coverageCalls++;
+        }
+        assertEquals(2, coverageCalls, "each picker path has exactly one coverage re-check");
+        assertEquals(2, occurrences(source, "mountainLikeAfterFinalTruth || subpolarMountainTruth);"),
+                "both ownership vetoes must read the gate's own subpolar truth, or the gate "
+                        + "admits picks the veto silently overwrites");
+        String truth = method(source, "isSubpolarMountainTruth(int landBandIndex,");
+        assertTrue(truth.contains(
+                        "landBandIndex == BAND_SUBPOLAR && (rawMountainTruth || measuredUplandWitness)"),
+                "the subpolar truth is the band AND (raw OR measured), nothing looser");
     }
 
     /**
