@@ -74,6 +74,10 @@ what was already generated. Your settings file carries over as it is.
   copy of Latitude's biome rules whether a column was land, so at coasts and on raised ground it
   could disagree with the world it was choosing a spawn in. It now asks the same painted biome view
   that world generation and structure placement use.
+- **Meadows, groves and peaks with biome packs installed.** Terralith reshapes the terrain noise
+  Latitude reads, which used to leave the planner unable to reserve a spot for meadow and its
+  mountain neighbours, with a red "coverage plan is incomplete" line in the log. The planner now
+  judges uplands by measured height, the same way the painter does.
 - **Frozen rivers** no longer sprout warm-climate plants.
 - **Mushroom islands** stopped appearing as thin slivers pressed against other terrain.
 - **Alpine surfaces** keep their snow and stone consistent with the height they are at.
