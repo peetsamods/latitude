@@ -17,14 +17,21 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * B-9 P2 JSON schema tripwires for the four glacial dressing feature pairs (configured + placed) --
- * a parse failure breaks world creation, so every field grammar here is verbatim-mirrored from real
- * 26.2 vanilla worldgen JSONs extracted from the loom merged jar: {@code cave_vine}/{@code sugar_cane}
- * for the block_column form, {@code cave_vines} (placed) for the environment-scan ceiling idiom,
- * {@code pile_snow}/{@code pile_ice} for block_pile, {@code ice_patch} for disk, and
+ * B-9 P2 JSON schema tripwires for the four glacial dressing feature pairs (feature + placed) -- a
+ * parse failure breaks world creation, so every field grammar here is verbatim-mirrored from real
+ * 26.3-rc-2 vanilla worldgen JSONs extracted from the loom merged jar: {@code cave_vine}/
+ * {@code sugar_cane} for the block_column form, {@code cave_vines} (placed) for the environment-scan
+ * ceiling idiom, {@code pile_snow}/{@code pile_ice} for block_pile, {@code ice_patch} for disk, and
  * {@code glow_lichen} for multiface_growth + the deep-only surface_relative filter. The grammar forms
  * that actually break parses are pinned explicitly: height-provider bounds are VerticalAnchor OBJECTS,
- * int/float-provider bounds are PLAIN NUMBERS.
+ * int/float-provider bounds are PLAIN NUMBERS. 26.3 rewrite (verified against 81132c17 and the
+ * 26.3-rc-2 jar): the {@code configured_feature/} directory and its {@code "config"} wrapper are gone
+ * -- feature bodies live flat under {@code feature/}; block-state keys are {@code "id"}/
+ * {@code "properties"} (was {@code "Name"}/{@code "Properties"}); state-provider types are
+ * {@code minecraft:simple}/{@code minecraft:weighted} (was {@code *_state_provider}); and placement's
+ * {@code minecraft:random_offset}({@code xz_spread}/{@code y_spread}) became
+ * {@code minecraft:offset}({@code x}/{@code y}/{@code z}), so every tripwire below reads the vertical
+ * step off {@code y} instead of {@code y_spread}.
  */
 class GlacialDressingJsonSchemaTest {
 
@@ -35,7 +42,7 @@ class GlacialDressingJsonSchemaTest {
     }
 
     private static JsonObject configured(String name) {
-        return load("/data/globe/worldgen/configured_feature/" + name + ".json");
+        return load("/data/globe/worldgen/feature/" + name + ".json");
     }
 
     private static JsonObject placed(String name) {
@@ -57,6 +64,14 @@ class GlacialDressingJsonSchemaTest {
         List<JsonObject> out = new ArrayList<>();
         chain.stream().filter(m -> type.equals(m.get("type").getAsString())).forEach(out::add);
         return out;
+    }
+
+    /** The 26.2 {@code minecraft:random_offset} step (xz_spread/y_spread) is {@code minecraft:offset}
+     *  on 26.3 (x/y/z, xz_spread duplicated into x and z); every glacial dressing file only ever
+     *  varied the vertical step, so this reads the {@code y} field where the old assertions read
+     *  {@code y_spread}. */
+    private static int offsetY(List<JsonObject> chain) {
+        return modifier(chain, "minecraft:offset").get("y").getAsInt();
     }
 
     /** Every dressing placement must end with the biome filter (so a feature never leaks outside its
@@ -101,13 +116,12 @@ class GlacialDressingJsonSchemaTest {
     void snowDriftsAreWeightedLayerPilesOnFloors() {
         JsonObject config = configured("glacial_snow_drift");
         assertEquals("minecraft:block_pile", config.get("type").getAsString());
-        JsonArray entries = config.getAsJsonObject("config").getAsJsonObject("state_provider")
-                .getAsJsonArray("entries");
+        JsonArray entries = config.getAsJsonObject("state_provider").getAsJsonArray("entries");
         assertTrue(entries.size() >= 2, "randomized layer heights need multiple weighted states");
         for (var e : entries) {
             JsonObject state = e.getAsJsonObject().getAsJsonObject("data");
-            assertEquals("minecraft:snow", state.get("Name").getAsString(), "drifts are snow layers");
-            int layers = Integer.parseInt(state.getAsJsonObject("Properties").get("layers").getAsString());
+            assertEquals("minecraft:snow", state.get("id").getAsString(), "drifts are snow layers");
+            int layers = Integer.parseInt(state.getAsJsonObject("properties").get("layers").getAsString());
             assertTrue(layers >= 1 && layers <= 3, "dusting stays shallow (layers 1-3)");
         }
 
@@ -119,24 +133,22 @@ class GlacialDressingJsonSchemaTest {
         assertEquals("down", scan.get("direction_of_search").getAsString(), "scan DOWN for the floor");
         assertEquals("up", scan.getAsJsonObject("target_condition").get("direction").getAsString(),
                 "the floor block is the one with a sturdy UP face");
-        assertEquals(1, modifier(chain, "minecraft:random_offset").get("y_spread").getAsInt(),
-                "step one above the matched floor block into the air cell");
+        assertEquals(1, offsetY(chain), "step one above the matched floor block into the air cell");
     }
 
     @Test
     void powderPocketsAreSparseFloorDisks() {
         JsonObject config = configured("glacial_powder_pocket");
         assertEquals("minecraft:disk", config.get("type").getAsString());
-        JsonObject c = config.getAsJsonObject("config");
         assertEquals("minecraft:powder_snow",
-                c.getAsJsonObject("state_provider").getAsJsonObject("state").get("Name").getAsString());
-        assertTrue(c.has("half_height"), "disk requires half_height");
-        JsonObject radius = c.getAsJsonObject("radius");
+                config.getAsJsonObject("state_provider").getAsJsonObject("state").get("id").getAsString());
+        assertTrue(config.has("half_height"), "disk requires half_height");
+        JsonObject radius = config.getAsJsonObject("radius");
         assertTrue(radius.get("max_inclusive").isJsonPrimitive(),
                 "int-provider bounds are plain numbers");
         assertTrue(radius.get("max_inclusive").getAsInt() <= 2,
                 "pockets stay small -- hidden traps, never a death carpet (the barrens surface law)");
-        String targets = c.getAsJsonObject("target").getAsJsonArray("blocks").toString();
+        String targets = config.getAsJsonObject("target").getAsJsonArray("blocks").toString();
         assertTrue(targets.contains("minecraft:packed_ice") && targets.contains("minecraft:blue_ice"),
                 "pockets must be placeable in the glacier body strata");
 
@@ -149,7 +161,7 @@ class GlacialDressingJsonSchemaTest {
         // S23/S24 ROOFED-ONLY: the powder trap must sit under an intact ROOF (tunnels), never on an open-top
         // crevasse floor where it reads as pre-fallen snow and muddies the future walk-triggered trap fiction.
         // The _WG heightmaps a surface_relative filter reads are FROZEN at the pre-carve surface (carvers use
-        // FINAL_HEIGHTMAPS -- verified against the 26.2 ChunkStatus), so they CANNOT tell an open crevasse
+        // FINAL_HEIGHTMAPS -- verified against the merged jar), so they CANNOT tell an open crevasse
         // floor from a roofed one. The sky-occlusion gate is instead an UP environment_scan that must find a
         // ceiling (sturdy DOWN face) within its reach: an open-top floor has only air above and is DROPPED;
         // a roofed floor finds the ceiling, steps one below it, then a DOWN scan lands the disk on the floor.
@@ -160,8 +172,7 @@ class GlacialDressingJsonSchemaTest {
         assertEquals("up", up.get("direction_of_search").getAsString(), "first scan requires a ceiling above");
         assertEquals("down", up.getAsJsonObject("target_condition").get("direction").getAsString(),
                 "the ceiling is the block with a sturdy DOWN face -- open-top floors have none and drop");
-        assertEquals(-1, modifier(chain, "minecraft:random_offset").get("y_spread").getAsInt(),
-                "step one below the ceiling into the air cell before scanning down to the floor");
+        assertEquals(-1, offsetY(chain), "step one below the ceiling into the air cell before scanning down to the floor");
         JsonObject down = scans.get(1);
         assertEquals("down", down.get("direction_of_search").getAsString(), "then find the floor below");
         assertEquals("up", down.getAsJsonObject("target_condition").get("direction").getAsString(),
@@ -172,7 +183,7 @@ class GlacialDressingJsonSchemaTest {
     void glowLichenIsSparseDeepAndIceAware() {
         JsonObject config = configured("glacial_glow_lichen");
         assertEquals("minecraft:multiface_growth", config.get("type").getAsString());
-        String canPlaceOn = config.getAsJsonObject("config").getAsJsonArray("can_be_placed_on").toString();
+        String canPlaceOn = config.getAsJsonArray("can_be_placed_on").toString();
         for (String host : new String[]{"minecraft:packed_ice", "minecraft:blue_ice", "minecraft:stone"}) {
             assertTrue(canPlaceOn.contains(host),
                     "aurora-green on blue ice: lichen must accept " + host);
@@ -209,8 +220,8 @@ class GlacialDressingJsonSchemaTest {
                         "biome lists " + featureId + " but the placed_feature JSON is missing "
                                 + "-- an unresolvable reference breaks world creation");
                 assertNotNull(GlacialDressingJsonSchemaTest.class.getResourceAsStream(
-                                "/data/globe/worldgen/configured_feature/" + name + ".json"),
-                        "placed feature " + featureId + " needs its configured_feature JSON");
+                                "/data/globe/worldgen/feature/" + name + ".json"),
+                        "placed feature " + featureId + " needs its feature JSON");
             }
         }
         assertEquals(8, globeFeatures, "eight globe features after S40 (owner removed pale moss + the "
@@ -222,22 +233,23 @@ class GlacialDressingJsonSchemaTest {
     /** S25 SLUSH FLOES (owner TEST 117, 2026-07-20: "very small ice blocks clustered together in the water
      *  to really show that it's cold"): a {@code simple_block} of plain {@code minecraft:ice} speckled onto
      *  cave-pool SURFACES. {@code SimpleBlockFeature} places only into an EMPTY (air) cell (verified via
-     *  javap on the 26.2 merged-deobf jar: it gates on {@code WorldGenLevel.isEmptyBlock}), so the floe
+     *  javap on the merged-deobf jar: it gates on {@code WorldGenLevel.isEmptyBlock}), so the floe
      *  cannot overwrite the pool water -- it rides the air cell directly above the surface, reached by an
      *  environment-scan DOWN to the water then a +1 offset, gated to "air here, water directly below". That
      *  keeps the pool fully liquid: the tick freeze hunter claims only LANDED water (fluid-below = not
      *  landed, so a pool surface is never claimed) and the spread-converter only claims SPREADING water
      *  (settled pool sources sit at equilibrium and never spread), so a floe cannot zip a pool shut.
-     *  Grammar verbatim-mirrored from vanilla 26.2: {@code simple_block} config from {@code bush}/
-     *  {@code dead_bush}; {@code all_of}+{@code offset} predicate from {@code bamboo_vegetation}; the
-     *  {@code matching_fluids} water form + {@code offset} from {@code disk_grass}. */
+     *  Grammar verbatim-mirrored from the 26.3-rc-2 vanilla jar: {@code simple_block} config from
+     *  {@code bush}/{@code dead_bush}; {@code all_of}+{@code offset} predicate from
+     *  {@code bamboo_vegetation}; the {@code matching_fluids} water form + {@code offset} from
+     *  {@code disk_grass}. */
     @Test
     void slushFloesSpeckleWaterSurfacesWithoutFreezingThePool() {
         JsonObject config = configured("glacial_slush_floe");
         assertEquals("minecraft:simple_block", config.get("type").getAsString(),
                 "the floe is a single-block placement, not a patch (small chunks in the water)");
-        assertEquals("minecraft:ice", config.getAsJsonObject("config").getAsJsonObject("to_place")
-                        .getAsJsonObject("state").get("Name").getAsString(),
+        assertEquals("minecraft:ice", config.getAsJsonObject("to_place")
+                        .getAsJsonObject("state").get("id").getAsString(),
                 "plain ice reads as a floe -- NOT packed/blue ice (those are the glacier body strata)");
 
         JsonObject placedJson = placed("glacial_slush_floe");
@@ -256,8 +268,7 @@ class GlacialDressingJsonSchemaTest {
         assertEquals("minecraft:matching_fluids", scan.getAsJsonObject("target_condition").get("type").getAsString(),
                 "the scan lands on the water surface");
         assertEquals("minecraft:water", scan.getAsJsonObject("target_condition").get("fluids").getAsString());
-        assertEquals(1, modifier(chain, "minecraft:random_offset").get("y_spread").getAsInt(),
-                "step +1 into the air cell above the water (SimpleBlockFeature places only into air)");
+        assertEquals(1, offsetY(chain), "step +1 into the air cell above the water (SimpleBlockFeature places only into air)");
         JsonObject predicate = modifier(chain, "minecraft:block_predicate_filter").getAsJsonObject("predicate");
         assertEquals("minecraft:all_of", predicate.get("type").getAsString());
         JsonArray preds = predicate.getAsJsonArray("predicates");
@@ -285,23 +296,22 @@ class GlacialDressingJsonSchemaTest {
     /** S24 GLACIAL ICE BLOBS: ore-type blobs of packed_ice (common, big) and blue_ice (rarer, small)
      *  attached across the whole glacial_caves Y band so even the deep noise caverns read glacial in every
      *  wall. Grammar verbatim-mirrored from vanilla {@code ore_granite}/{@code ore_gravel} (the loom merged
-     *  jar): {@code minecraft:ore} config with {@code size}, {@code discard_chance_on_air_exposure} and a
+     *  jar): {@code minecraft:ore} with {@code size}, {@code discard_chance_on_air_exposure} and a
      *  {@code targets} list of {state, tag_match target}. Ints are PLAIN NUMBERS. */
     @Test
     void iceBlobsAreOreTypeGlacierVeins() {
         for (String name : new String[]{"glacial_ice_blob", "glacial_blue_ice_blob"}) {
             JsonObject config = configured(name);
             assertEquals("minecraft:ore", config.get("type").getAsString(), name + " is an ore-type blob");
-            JsonObject c = config.getAsJsonObject("config");
-            assertTrue(c.has("discard_chance_on_air_exposure"),
+            assertTrue(config.has("discard_chance_on_air_exposure"),
                     name + ": ore config requires discard_chance_on_air_exposure");
-            assertEquals(0.0, c.get("discard_chance_on_air_exposure").getAsDouble(), 1e-9,
+            assertEquals(0.0, config.get("discard_chance_on_air_exposure").getAsDouble(), 1e-9,
                     name + ": keep blobs even when air-exposed so the ice shows in cave WALLS");
-            assertTrue(c.get("size").getAsInt() > 0, name + ": ore config requires a positive size");
-            JsonArray targets = c.getAsJsonArray("targets");
+            assertTrue(config.get("size").getAsInt() > 0, name + ": ore config requires a positive size");
+            JsonArray targets = config.getAsJsonArray("targets");
             assertEquals(1, targets.size(), name + ": one target (glacier ice replaces base stone)");
             JsonObject t0 = targets.get(0).getAsJsonObject();
-            String block = t0.getAsJsonObject("state").get("Name").getAsString();
+            String block = t0.getAsJsonObject("state").get("id").getAsString();
             assertEquals(name.contains("blue") ? "minecraft:blue_ice" : "minecraft:packed_ice", block,
                     name + ": the blob block");
             JsonObject target = t0.getAsJsonObject("target");
@@ -317,8 +327,8 @@ class GlacialDressingJsonSchemaTest {
                     name + ": count-based placement fills the band");
         }
         // Packed ice is the COMMON, larger vein; blue ice is the RARER, smaller one (compression banding).
-        assertTrue(configured("glacial_ice_blob").getAsJsonObject("config").get("size").getAsInt()
-                        > configured("glacial_blue_ice_blob").getAsJsonObject("config").get("size").getAsInt(),
+        assertTrue(configured("glacial_ice_blob").get("size").getAsInt()
+                        > configured("glacial_blue_ice_blob").get("size").getAsInt(),
                 "packed-ice blobs are larger than blue-ice blobs");
         assertTrue(modifier(placementChain(placed("glacial_ice_blob")), "minecraft:count").get("count").getAsInt()
                         > modifier(placementChain(placed("glacial_blue_ice_blob")), "minecraft:count").get("count").getAsInt(),
@@ -326,26 +336,25 @@ class GlacialDressingJsonSchemaTest {
     }
 
     /** S24 FROST FLOOR CARPET: dusts cave floors with randomized snow layers and OCCASIONAL ice patches,
-     *  floor-scanned underground placement (snow_drift idiom). block_pile weighted_state_provider. */
+     *  floor-scanned underground placement (snow_drift idiom). block_pile weighted state_provider. */
     @Test
     void frostCarpetDustsFloorsWithSnowAndOccasionalIce() {
         JsonObject config = configured("glacial_frost_carpet");
         assertEquals("minecraft:block_pile", config.get("type").getAsString());
-        JsonArray entries = config.getAsJsonObject("config").getAsJsonObject("state_provider")
-                .getAsJsonArray("entries");
+        JsonArray entries = config.getAsJsonObject("state_provider").getAsJsonArray("entries");
         boolean hasSnow = false;
         boolean hasIce = false;
         int snowWeight = 0;
         int iceWeight = 0;
         for (var e : entries) {
             JsonObject entry = e.getAsJsonObject();
-            String block = entry.getAsJsonObject("data").get("Name").getAsString();
+            String block = entry.getAsJsonObject("data").get("id").getAsString();
             int weight = entry.get("weight").getAsInt();
             if ("minecraft:snow".equals(block)) {
                 hasSnow = true;
                 snowWeight += weight;
                 int layers = Integer.parseInt(entry.getAsJsonObject("data")
-                        .getAsJsonObject("Properties").get("layers").getAsString());
+                        .getAsJsonObject("properties").get("layers").getAsString());
                 assertTrue(layers >= 1 && layers <= 3, "carpet snow stays shallow (layers 1-3)");
             } else if ("minecraft:ice".equals(block)) {
                 hasIce = true;
@@ -361,7 +370,6 @@ class GlacialDressingJsonSchemaTest {
         assertCaveBandPlacement("glacial_frost_carpet", chain);
         assertEquals("down", modifier(chain, "minecraft:environment_scan")
                 .get("direction_of_search").getAsString(), "carpet dusts the FLOOR (scan down)");
-        assertEquals(1, modifier(chain, "minecraft:random_offset").get("y_spread").getAsInt(),
-                "step one above the floor block into the air cell");
+        assertEquals(1, offsetY(chain), "step one above the floor block into the air cell");
     }
 }

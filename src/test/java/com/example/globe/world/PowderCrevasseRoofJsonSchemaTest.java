@@ -19,10 +19,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * S25b JSON schema tripwire for the powder-roof crevasse trap feature ({@code globe:powder_crevasse_roof}) --
  * a parse failure breaks world creation. Mirrors {@code GlacialDressingJsonSchemaTest}'s style: assert the
- * configured feature declares the mod's custom type (registered in code at mod-init), the placed feature
+ * feature declares the mod's custom type (registered in code at mod-init), the placed feature
  * points back at it and ends with the biome filter, and {@code polar_barrens.json} lists the placed feature
  * at the TOP_LAYER_MODIFICATION step AFTER {@code minecraft:freeze_top_layer} (so the roof lands last -- after
  * carving + glacier + freeze -- and nothing overwrites it). Full codec validation happens at boot.
+ *
+ * <p>26.3 rewrite: {@code configured_feature/} is gone (flat {@code feature/}, verified against the
+ * 26.3-rc-2 jar's {@code freeze_top_layer.json}/{@code void_start_platform.json} -- a
+ * NoneFeatureConfiguration feature is just {@code {"type": "..."}}, with no {@code "config": {}} wrapper
+ * at all).
  */
 class PowderCrevasseRoofJsonSchemaTest {
 
@@ -42,13 +47,15 @@ class PowderCrevasseRoofJsonSchemaTest {
     }
 
     @Test
-    void configuredFeatureDeclaresTheCustomTypeWithNoneConfig() {
-        JsonObject configured = load("/data/globe/worldgen/configured_feature/powder_crevasse_roof.json");
-        assertEquals(ID, configured.get("type").getAsString(),
+    void featureDeclaresTheCustomTypeWithNoConfigWrapper() {
+        JsonObject feature = load("/data/globe/worldgen/feature/powder_crevasse_roof.json");
+        assertEquals(ID, feature.get("type").getAsString(),
                 "must declare the mod's custom feature type (registered into BuiltInRegistries.FEATURE at init)");
-        assertTrue(configured.has("config"), "a NoneFeatureConfiguration feature still needs a (empty) config");
-        assertTrue(configured.getAsJsonObject("config").isEmpty(),
-                "config is empty -- NoneFeatureConfiguration.CODEC accepts {}");
+        assertFalse(feature.has("config"),
+                "26.3: a NoneFeatureConfiguration feature has no \"config\" wrapper at all -- verified "
+                        + "against the vanilla freeze_top_layer.json/void_start_platform.json shape");
+        assertEquals(1, feature.keySet().size(),
+                "the feature JSON is exactly {\"type\": ...}, nothing else");
     }
 
     @Test

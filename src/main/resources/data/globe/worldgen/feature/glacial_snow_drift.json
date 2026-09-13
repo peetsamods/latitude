@@ -1,0 +1,35 @@
+{
+  "type": "minecraft:block_pile",
+  "state_provider": {
+    "type": "minecraft:weighted",
+    "entries": [
+      {
+        "data": {
+          "id": "minecraft:snow",
+          "properties": {
+            "layers": "1"
+          }
+        },
+        "weight": 6
+      },
+      {
+        "data": {
+          "id": "minecraft:snow",
+          "properties": {
+            "layers": "2"
+          }
+        },
+        "weight": 3
+      },
+      {
+        "data": {
+          "id": "minecraft:snow",
+          "properties": {
+            "layers": "3"
+          }
+        },
+        "weight": 1
+      }
+    ]
+  }
+}

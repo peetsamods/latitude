@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:disk",
+  "half_height": 1,
+  "radius": {
+    "type": "minecraft:uniform",
+    "max_inclusive": 2,
+    "min_inclusive": 1
+  },
+  "state_provider": {
+    "type": "minecraft:simple",
+    "state": {
+      "id": "minecraft:powder_snow"
+    }
+  },
+  "target": {
+    "type": "minecraft:matching_blocks",
+    "blocks": [
+      "minecraft:stone",
+      "minecraft:deepslate",
+      "minecraft:packed_ice",
+      "minecraft:blue_ice",
+      "minecraft:snow_block",
+      "minecraft:dirt",
+      "minecraft:gravel",
+      "minecraft:tuff"
+    ]
+  }
+}

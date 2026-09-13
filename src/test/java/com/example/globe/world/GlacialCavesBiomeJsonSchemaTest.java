@@ -18,11 +18,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * B-9 P2 JSON schema tripwire for {@code data/globe/worldgen/biome/glacial_caves.json} (a parse
- * failure breaks world creation; grammar verbatim-mirrored from the 26.2 vanilla biome JSONs extracted
- * from the loom merged jar -- snowy_plains/dripstone_caves for the feature-step and spawner forms,
- * basalt_deltas for the {@code minecraft:audio/ambient_sounds} attribute form). Cheap tripwire like
- * {@code GlacialCarverJsonSchemaTest}: renamed/missing keys fail here in the unit suite; full codec
- * validation happens at boot (world creation IS the datapack parse gate).
+ * failure breaks world creation; grammar verbatim-mirrored from the 26.3-rc-2 vanilla biome JSONs
+ * extracted from the loom merged jar -- snowy_plains/dripstone_caves for the feature-step and spawner
+ * forms, basalt_deltas for the {@code minecraft:audio/ambient_sounds} attribute form). Cheap tripwire
+ * like {@code GlacialCarverJsonSchemaTest}: renamed/missing keys fail here in the unit suite; full
+ * codec validation happens at boot (world creation IS the datapack parse gate).
+ *
+ * <p>26.3 rewrite (verified against the 26.3-rc-2 jar's {@code snowy_plains.json}/
+ * {@code soul_sand_valley.json}): the top-level {@code "spawners"} + {@code "spawn_costs"} fields are
+ * gone -- they now live inside {@code attributes["minecraft:gameplay/natural_mob_spawns"]} as
+ * {@code {"argument": {"spawn_costs": {...}, "spawns_by_category": {...}}, "modifier": "overlay"}}.
+ * Each spawner entry's {@code minCount}/{@code maxCount} pair became a single {@code count} field (a
+ * plain int when min == max, otherwise a {@code minecraft:uniform} IntProvider with
+ * {@code min_inclusive}/{@code max_inclusive}) -- every count in these two biomes has min != max, so
+ * both files use the uniform object form throughout. Empty spawn categories are OMITTED entirely
+ * (vanilla convention: {@code frozen_ocean.json} lists only its non-empty categories), not kept as
+ * empty arrays.
  *
  * <h2>The owner laws this file must keep (pinned below)</h2>
  * <ul>
@@ -37,6 +48,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * </ul>
  */
 class GlacialCavesBiomeJsonSchemaTest {
+
+    private static final String NATURAL_MOB_SPAWNS = "minecraft:gameplay/natural_mob_spawns";
 
     private static JsonObject load(String resourcePath) {
         InputStream stream = GlacialCavesBiomeJsonSchemaTest.class.getResourceAsStream(resourcePath);
@@ -59,15 +72,38 @@ class GlacialCavesBiomeJsonSchemaTest {
         return ids;
     }
 
+    /** 26.3: spawners live under {@code attributes["minecraft:gameplay/natural_mob_spawns"].argument
+     *  .spawns_by_category}, not a top-level {@code "spawners"} field. */
+    private static JsonObject spawnsByCategory(JsonObject biome) {
+        return biome.getAsJsonObject("attributes").getAsJsonObject(NATURAL_MOB_SPAWNS)
+                .getAsJsonObject("argument").getAsJsonObject("spawns_by_category");
+    }
+
+    private static JsonArray category(JsonObject biome, String category) {
+        JsonObject byCategory = spawnsByCategory(biome);
+        return byCategory.has(category) ? byCategory.getAsJsonArray(category) : new JsonArray();
+    }
+
     @Test
     void requiredCodecFieldsArePresent() {
         JsonObject biome = glacialCaves();
         for (String key : new String[]{"temperature", "downfall", "has_precipitation", "effects",
-                "spawners", "spawn_costs", "features", "carvers", "attributes"}) {
+                "features", "carvers", "attributes"}) {
             assertTrue(biome.has(key), "required biome codec field missing: " + key);
         }
+        assertFalse(biome.has("spawners"),
+                "26.3: top-level \"spawners\" is gone -- must live in attributes[natural_mob_spawns]");
+        assertFalse(biome.has("spawn_costs"),
+                "26.3: top-level \"spawn_costs\" is gone -- must live in attributes[natural_mob_spawns].argument");
+        JsonObject naturalMobSpawns = biome.getAsJsonObject("attributes").getAsJsonObject(NATURAL_MOB_SPAWNS);
+        assertNotNull(naturalMobSpawns, "attributes must carry " + NATURAL_MOB_SPAWNS);
+        assertEquals("overlay", naturalMobSpawns.get("modifier").getAsString(),
+                "the spawn attribute modifier must be overlay (vanilla snowy_plains/frozen_ocean form)");
+        JsonObject argument = naturalMobSpawns.getAsJsonObject("argument");
+        assertTrue(argument.has("spawn_costs"), "argument must carry spawn_costs (even if empty)");
+        assertTrue(argument.has("spawns_by_category"), "argument must carry spawns_by_category");
         assertEquals(11, biome.getAsJsonArray("features").size(),
-                "the 26.2 decoration-step array is 11 entries (raw_generation .. top_layer_modification)");
+                "the decoration-step array is 11 entries (raw_generation .. top_layer_modification)");
         assertEquals(-0.5, biome.get("temperature").getAsDouble(), 1e-9,
                 "polar-cold temperature, matching polar_barrens");
     }
@@ -76,7 +112,7 @@ class GlacialCavesBiomeJsonSchemaTest {
     void undergroundFeatureStepsAreExactlyTheBarrensUndergroundSubset() {
         JsonObject caves = glacialCaves();
         JsonObject barrens = polarBarrens();
-        // Steps by 26.2 index: 1 lakes, 2 local_modifications (geode), 3 underground_structures
+        // Steps by index: 1 lakes, 2 local_modifications (geode), 3 underground_structures
         // (monster rooms), 8 fluid_springs. These carry the "underground stays alive" law and must match the
         // barrens (itself pinned as snowy_plains' underground subset) entry-for-entry, in order.
         for (int step : new int[]{1, 2, 3, 8}) {
@@ -125,7 +161,7 @@ class GlacialCavesBiomeJsonSchemaTest {
     @Test
     void monsterRosterIsTheFrozenDeadStraysAndSkeletonsOnly() {
         JsonObject caves = glacialCaves();
-        JsonArray monsters = caves.getAsJsonObject("spawners").getAsJsonArray("monster");
+        JsonArray monsters = category(caves, "monster");
         List<String> types = new ArrayList<>();
         int strayWeight = -1;
         int skeletonWeight = -1;
@@ -160,7 +196,7 @@ class GlacialCavesBiomeJsonSchemaTest {
     @Test
     void fishSwimTheSemiIceLakes() {
         JsonObject caves = glacialCaves();
-        JsonArray water = caves.getAsJsonObject("spawners").getAsJsonArray("water_creature");
+        JsonArray water = category(caves, "water_creature");
         int salmonWeight = -1;
         int codWeight = -1;
         for (var e : water) {
@@ -174,13 +210,13 @@ class GlacialCavesBiomeJsonSchemaTest {
         }
         assertTrue(salmonWeight > 0, "salmon must swim the semi-ice lakes (owner-locked idea)");
         assertTrue(codWeight > 0 && codWeight < salmonWeight, "cod joins at lower weight");
-        JsonArray underground = caves.getAsJsonObject("spawners").getAsJsonArray("underground_water_creature");
+        JsonArray underground = category(caves, "underground_water_creature");
         assertTrue(underground.toString().contains("minecraft:glow_squid"),
                 "glow squid stays -- the vanilla cave water baseline");
     }
 
     private static int creatureWeight(JsonObject biome, String type) {
-        for (var e : biome.getAsJsonObject("spawners").getAsJsonArray("creature")) {
+        for (var e : category(biome, "creature")) {
             JsonObject entry = e.getAsJsonObject();
             if (type.equals(entry.get("type").getAsString())) {
                 return entry.get("weight").getAsInt();
@@ -193,7 +229,7 @@ class GlacialCavesBiomeJsonSchemaTest {
      * S25 POLAR LIFE &amp; PERIL fauna (owner TEST 117, 2026-07-20: "I don't see any polar bears or Arctic
      * foxes in polar storm country"). Polar bears LURK at low weight (vanilla frozen_ocean uses weight 1);
      * foxes join at a modest weight and hunt the barrens' own rabbits (vanilla behavior, no code). The
-     * WHITE/snow fox variant is biome-tag-driven in 26.2 -- {@code Fox.Variant.byBiome} returns SNOW iff the
+     * WHITE/snow fox variant is biome-tag-driven -- {@code Fox.Variant.byBiome} returns SNOW iff the
      * biome is in {@code #minecraft:spawns_snow_foxes} (verified via javap on the merged-deobf jar:
      * {@code Holder.is(BiomeTags.SPAWNS_SNOW_FOXES)}) -- so both globe biomes must join that tag (the same
      * merge pattern as the repo's existing {@code spawns_white_rabbits.json}) or the foxes render red.
