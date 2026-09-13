@@ -15,7 +15,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -31,8 +30,10 @@ import net.minecraft.network.chat.Component;
 
 @Mixin(CreateWorldScreen.class)
 public abstract class CreateWorldScreenInitRedirectMixin {
+    @Unique
     private static final Logger LOGGER = LoggerFactory.getLogger("globe");
     // [LAT][CWPATH] fires on every ordinary create-screen open; opt-in only (maintainer ruling, 2026-08-18).
+    @Unique
     private static final boolean DEBUG_CWPATH = Boolean.getBoolean("latitude.debugCwPath");
 
     /**
@@ -278,10 +279,12 @@ public abstract class CreateWorldScreenInitRedirectMixin {
             return;
         }
 
-        Screen parent = globe$getParentSafe((Object) this);
-        // Named apart from the shadowed onClose field above: that one is vanilla's own callback
-        // and doubles as the handoff claim key, this one is where Latitude's screen goes on close.
-        Runnable returnToParent = () -> client.gui.setScreen(parent);
+        // 26.3's CreateWorldScreen carries no parent screen: vanilla's own go-back is the shadowed
+        // onClose Runnable (the world list hands in its return-to-screen), which is also the handoff
+        // claim key above. Latitude's screen goes back the same way vanilla's would.
+        Screen parent = null;
+        Runnable vanillaClose = this.onClose;
+        Runnable returnToParent = vanillaClose != null ? vanillaClose : () -> client.gui.setScreen(null);
 
         WorldCreationUiState initialState = self.getUiState();
         String recreatedPresetId = ((RecreatedWorldPresetCarrier) this).globe$getRecreatedWorldPresetId();
@@ -300,14 +303,4 @@ public abstract class CreateWorldScreenInitRedirectMixin {
         ci.cancel();
     }
 
-    private static Screen globe$getParentSafe(Object self) {
-        try {
-            Field parentField = self.getClass().getDeclaredField("parent");
-            parentField.setAccessible(true);
-            Object value = parentField.get(self);
-            return value instanceof Screen ? (Screen) value : null;
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
 }

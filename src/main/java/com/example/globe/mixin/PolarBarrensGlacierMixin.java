@@ -43,6 +43,9 @@ import java.util.Set;
  *       thick) tracking the existing wobble-warped blue line
  *       ({@link LatitudeBiomes#polarBarrensBlueIceStartDepthBlocks}, 12-18 blocks below the cap, riding the
  *       SAME depth-wobble field), so deep hearts still read blue as an accent while packed ice dominates.
+ *       <b>26.3 rule:</b> the positive carver allow-list tag is retired; carvers replace every non-air block
+ *       not in {@code #minecraft:uncarvable} (no ice on 26.3), so blue_ice is carvable now and the bounded
+ *       seam below is a visual law only. The pre-26.3 reasoning is kept for the record:
  *       The seam is bounded ON PURPOSE: {@code blue_ice} is NOT in {@code #overworld_carver_replaceables} but
  *       {@code packed_ice} IS, so an all-blue body would wall the crevasse/tunnel carvers out; the packed
  *       slab keeps them cutting. {@link LatitudeBiomes#polarBarrensGlacierIceBlocks} is retained as the

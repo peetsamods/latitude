@@ -87,6 +87,8 @@ public class LatitudeCreateWorldScreen extends Screen {
     // breathing room to *read well*. Without this, a mid GUI scale on a small screen (e.g. GUI 4 on a 13"
     // laptop, ~456px viewport) squeezes three columns into a cramped, heavily-wrapping mess. At ~530 GUI 3
     // (~616px) stays three-column while GUI 4 drops to the tabbed layout, and every column has comfortable room.
+    // GUI scale 3 and above is always tabbed regardless of width (hybrid rule, maintainer ruling 2026-09-12);
+    // this width term is the second, independent reason.
     private static final int COMFORTABLE_THREE_COL_W = 530;
     /** At or above this GUI scale the screen ALWAYS goes tabbed, whatever the viewport width says. */
     private static final int HIGH_GUI_SCALE = 3;
@@ -184,6 +186,11 @@ public class LatitudeCreateWorldScreen extends Screen {
     // all frozen under Reduce Motion. The drawing (and its TITLE_*/hash32 constants) now lives in the shared
     // LatitudeWordmark helper so the bespoke loading overlay renders the identical nameplate.
     private static final boolean DEBUG_UI_SWITCH_LAG = Boolean.getBoolean("latitude.debug.uiSwitchLag");
+    // [LAT][CWPATH] traces fire on every ordinary create-screen open/resize and interpolate the
+    // WorldCreationContext holder, whose toString() dumps the entire world-creation settings tree --
+    // that floods INFO on ordinary use (maintainer ruling, 2026-08-18). Opt-in only. Package-visible so
+    // LatitudeWorldLauncher (same package) can read it; the mixins keep their own private copies.
+    static final boolean DEBUG_CWPATH = Boolean.getBoolean("latitude.debugCwPath");
 
     private final Runnable onClose;
     @Nullable
@@ -345,7 +352,7 @@ public class LatitudeCreateWorldScreen extends Screen {
     private LatitudeCreateWorldScreen(Runnable onClose, @Nullable Screen parent,
                                       WorldCreationContext holder, boolean continueIntroFromPreparing) {
         super(Component.literal("New World"));
-        LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.<init> parent={} holder={}",
+        if (DEBUG_CWPATH) LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.<init> parent={} holder={}",
                 parent == null ? "null" : parent.getClass().getName(),
                 holder);
         this.onClose = onClose;
@@ -396,7 +403,7 @@ public class LatitudeCreateWorldScreen extends Screen {
                                   WorldCreationUiState initialState, boolean recreated,
                                   @Nullable String recreatedPresetId,
                                   @Nullable String recreatedGlobeShapeId) {
-        LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.openLoaded parent={} recreated={} seedSet={} holder={}",
+        if (DEBUG_CWPATH) LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.openLoaded parent={} recreated={} seedSet={} holder={}",
                 parent == null ? "null" : parent.getClass().getName(),
                 recreated,
                 initialState.getSeed() != null && !initialState.getSeed().isBlank(),
@@ -448,7 +455,7 @@ public class LatitudeCreateWorldScreen extends Screen {
                     break;
                 }
             }
-            hydrateWorldShape(recreatedGlobeShapeId);
+            hydrateWorldShape(recreated, recreatedGlobeShapeId);
         }
 
         LOGGER.info(
@@ -472,12 +479,18 @@ public class LatitudeCreateWorldScreen extends Screen {
      * back as Wide 2:1. The id is read off disk by the world-list entry (the only place that knows which
      * save is being recreated) and carried here through {@link RecreatedWorldPresetCarrier}.</p>
      *
-     * <p>An absent id means "never stamped", NOT "Mercator", and keeps this screen's own default. That
-     * asymmetry is deliberate and matches the save format's own rule: a world written before the shape
-     * axis existed must not be retroactively declared to be either shape.</p>
+     * <p>An absent id on a RE-CREATED world means "never stamped": the save format never retroactively
+     * declares such a world to be either shape, but the runtime reads an absent field as Square 1:1
+     * ({@link LatitudeBiomes#shapeFromString}), which is the geometry that world actually generated with
+     * (every 1.5 world, and every 2.0 world made before the shape axis existed). Re-Create therefore
+     * follows the runtime and selects Square, never this screen's Wide default. A fresh screen (nothing
+     * being re-created) keeps its own default.</p>
      */
-    private void hydrateWorldShape(@Nullable String recreatedGlobeShapeId) {
+    private void hydrateWorldShape(boolean recreated, @Nullable String recreatedGlobeShapeId) {
         if (recreatedGlobeShapeId == null || recreatedGlobeShapeId.isBlank()) {
+            if (recreated) {
+                this.worldShapeIdx = 1;
+            }
             return;
         }
         this.worldShapeIdx = LatitudeBiomes.shapeFromString(recreatedGlobeShapeId)
@@ -552,7 +565,7 @@ public class LatitudeCreateWorldScreen extends Screen {
      * Replicates CreateWorldScreen.show() lines 166-196.
      */
     public static void open(Minecraft client, Runnable onClose, @Nullable Screen parent) {
-        LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.open parent={}",
+        if (DEBUG_CWPATH) LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.open parent={}",
                 parent == null ? "null" : parent.getClass().getName());
         // Preparing screen, but Latitude's own: it starts the shared title clock so the fade CONTINUES
         // into the create screen instead of restarting there.
@@ -655,7 +668,7 @@ public class LatitudeCreateWorldScreen extends Screen {
         // Idempotent load-once. Already called at client init, but the explicit call is what guarantees
         // the Still preference is loaded before the first paint on EVERY entry path into this screen.
         LatitudeConfig.get();
-        LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.init screen={} holder={}",
+        if (DEBUG_CWPATH) LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.init screen={} holder={}",
                 this.getClass().getName(), this.holder);
         zoneRows.clear();
         tabHitboxes.clear();
@@ -798,7 +811,7 @@ public class LatitudeCreateWorldScreen extends Screen {
         this.seedField = new EditBox(this.font, inputX, seedFieldY, inputW - 2 * (seedBtnW + 2), fieldH, Component.literal("Seed"));
         this.seedField.setMaxLength(64);
         this.seedField.setHint(Component.literal("Leave blank for random"));
-        this.seedField.setValue(seedInput);
+        this.seedField.setValue(seedInput == null ? "" : seedInput);
         this.seedField.setResponder(text -> seedInput = text);
         this.addRenderableWidget(this.seedField);
 
@@ -1746,7 +1759,7 @@ public class LatitudeCreateWorldScreen extends Screen {
     }
 
     public void probeAutoConfirmWorldCreation() {
-        LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.probeAutoConfirmWorldCreation screen={}",
+        if (DEBUG_CWPATH) LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.probeAutoConfirmWorldCreation screen={}",
                 this.getClass().getName());
         this.beginExpedition();
     }
@@ -1764,7 +1777,7 @@ public class LatitudeCreateWorldScreen extends Screen {
         if (size != null) {
             this.selectedSize = size;
         }
-        LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.probeSetWorldInputs screen={} worldName={} seedSet={} size={}",
+        if (DEBUG_CWPATH) LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.probeSetWorldInputs screen={} worldName={} seedSet={} size={}",
                 this.getClass().getName(),
                 this.worldNameField != null ? this.worldNameField.getValue() : "<missing>",
                 seed != null && !seed.isBlank(),
@@ -1774,7 +1787,7 @@ public class LatitudeCreateWorldScreen extends Screen {
     public void probeSetCreativeMode() {
         this.selectedModeIdx = 2;
         this.allowCommands = true;
-        LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.probeSetCreativeMode screen={} mode={} allowCommands={}",
+        if (DEBUG_CWPATH) LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.probeSetCreativeMode screen={} mode={} allowCommands={}",
                 this.getClass().getName(), MODE_NAMES[this.selectedModeIdx], this.allowCommands);
     }
 

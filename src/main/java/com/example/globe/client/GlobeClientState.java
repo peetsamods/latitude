@@ -430,7 +430,7 @@ public final class GlobeClientState {
      * (a Latitude save stays a Latitude save while the player is in the Nether or the End), but every
      * presentation surface that asks this question -- fog, sky, snow, music, warnings, HUD, world border --
      * belongs to the Overworld only, so another dimension of a Latitude save is never treated as Latitude.
-     * {@link #isGlobeSave()} exposes the raw save-wide flag for the few callers that need it.
+     * {@link #isGlobeSave()} exposes the raw save-wide flag for any caller that needs identity without dimension.
      */
     public static boolean isGlobeWorld() {
         return globeWorld && isOverworld(Minecraft.getInstance().level);

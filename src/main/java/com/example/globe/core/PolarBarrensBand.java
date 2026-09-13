@@ -168,6 +168,13 @@ public final class PolarBarrensBand {
 
     /**
      * S37 blue-ice heart seam thickness (blocks). With the body now reaching Y0 the old "blue below the line,
+     * <p><b>26.3 rule (supersedes the {@code #minecraft:overworld_carver_replaceables} wording below):</b> the
+     * positive allow-list tag is retired. Vanilla carvers now replace every non-air block that is not in the
+     * inverse {@code #minecraft:uncarvable} tag, which on 26.3 contains no ice at all -- so {@code packed_ice}
+     * AND {@code blue_ice} are both carvable, and the bounded blue seam is kept as a visual law, not as a
+     * carvability constraint. {@code PowderCrevasseRoofFeature#isCarverReplaceableOrSnow} is the code-side
+     * statement of the same rule.</p>
+     *
      * open-ended" law would turn the whole deep body {@code blue_ice} -- which is NOT in
      * {@code #minecraft:overworld_carver_replaceables} and would wall the body off from the crevasse/tunnel
      * carvers. Instead the body is a UNIFORM {@code packed_ice} slab (carvable) with a bounded blue seam:

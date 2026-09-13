@@ -2,7 +2,8 @@
 
 ## Latitude 2.0-beta.2 (Minecraft 26.3)
 
-Latitude 2.0 catches up with everything shipped on the 1.5 line — 1.5.0 through 1.5.1-beta.5 — and moves
+Latitude 2.0 catches up with everything shipped on the 1.5 line — 1.5.0 through the 1.5.1-beta.5 fixes,
+whose Minecraft 26.3 port is recorded below as the 1.5.1-beta.4 (Minecraft 26.3) entry — and moves
 its canonical Minecraft target from 26.2 to 26.3 (maintainer ruling, 2026-09-12). Built against Minecraft
 26.3 Release Candidate 2; it will be refreshed for the final 26.3 release. **Beta:** the 2.0 overhaul
 systems that were off by default in 2.0-beta.1 stay off by default here.
@@ -23,6 +24,29 @@ systems that were off by default in 2.0-beta.1 stay off by default here.
   from the whole flow. The world list also gets a **Vanilla…** button beside Create New World that opens
   the plain vanilla screen directly. Worlds made there are ordinary Minecraft worlds; Latitude's own
   preset is removed from that screen so there is no half-in, half-out state.
+
+### New — the polar world, on by default
+
+This is the first public 2.0 build, so the polar systems built during the 2.0 work arrive here all at
+once. Each has its own switch, set as a Java system property on the game's launch arguments (for
+example `-Dlatitude.aurora.enabled=false`):
+
+- **A tilted sun and seasons** (`latitude.solarTiltV2.enabled`). The sun's path tilts with the time of
+  year, so the high latitudes get real polar night and midnight sun.
+- **Aurora** (`latitude.aurora.enabled`). Curtains in the polar-night sky; never drawn when the tilted
+  sun is off.
+- **Polar Barrens** (`latitude.polarBarrens.enabled`). Inland deep-cap snowy plains become the new
+  `globe:polar_barrens` biome, with a glacier body beneath the surface.
+- **Glacial caves** (`latitude.glacialCavesV1`). Crevasse and glacial-tunnel carvers and the
+  `globe:glacial_caves` biome under the deep cap.
+- **Hemisphere passage** (`latitude.passageV2.enabled`, `latitude.polePassageV2.enabled`). The approach
+  prompt and crossing curtain at the poles.
+- **Polar vegetation fade, water freeze and surface spawns** (`latitude.polarVegetationFade.enabled`,
+  `latitude.polarWaterFreeze.enabled`, `latitude.polarSurfaceSpawns.enabled`). Small vegetation thins
+  toward the pole, open water freezes past the frost line, and the polar surface gets its own spawn
+  rules.
+- **Edge structure veto** (`latitude.edgeStructureVeto.enabled`). Structures are not placed across the
+  east-west edge.
 
 ### Improved
 
@@ -115,6 +139,24 @@ Latitude 2.0 "Longitude" is a worldgen-quality and compatibility release. It mak
 
 ### Known limitations
 - **With several custom biome packs installed at once, not every biome will appear.** Each latitude band draws from a finite weighted pool, so the more biomes you add, the smaller each one's share — rarer/accent biomes from large stacks can fall below visible frequency. This is expected behavior, not a bug; you'll still get a coherent, climate-appropriate mix, just not 100% coverage of every biome in every installed pack. (Configurable per-pack representation weighting is on the roadmap.)
+
+## Latitude 1.5.1-beta.5 (Minecraft 26.2)
+
+On the Minecraft 26.2 line, Beta 5 was a small follow-up to Beta 4 that brought the create-world
+screen work (the Still tab, the tighter layout, keyboard-reachable tab headers, see-through panels)
+from the Minecraft 26.3 port back to 26.2, and fixed the Beta 4 sources jar carrying a
+development-only clipboard helper. On this line that screen work is already part of the Beta 4
+(Minecraft 26.3) entry below. Two terrain fixes landed on the 1.5 line after the Beta 5 builds went
+out and are carried here:
+
+### Improved
+
+- **Upland coverage is anchored by measured height.** Upland coverage provinces are anchored by the
+  terrain height that actually generates and by proportional topology, rather than by an estimate, so
+  highland cover matches the ground underfoot.
+- **Subpolar mountains are recognised by measured height beside the raw erosion read.** A subpolar
+  column that the terrain actually raises into mountains is treated as mountain even where the raw
+  erosion value alone would not say so, so alpine and windswept picks land on real relief.
 
 ## Latitude 1.5.1-beta.4 (Minecraft 26.3)
 

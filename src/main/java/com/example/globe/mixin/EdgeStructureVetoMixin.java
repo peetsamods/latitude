@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Phase 5 Slice B-5 (Hemisphere Passage polish, item 1): keep GENERATED STRUCTURES out of the E/W-edge band
- * (the maintainer saw one at the border, TEST 83). Same PROVEN chokepoint as {@link ExtremePolarVillageGuardMixin} and
+ * (the maintainer saw one at the border, TEST 83). Same PROVEN chokepoint as {@link ExtremePolarVillageStartGuardMixin} and
  * {@link StructureBiomeMatchGuardMixin} -- {@code StructureStart.placeInChunk} at HEAD, {@code cancellable}:
  * vetoing here runs BEFORE any block of the structure is written, so there are never half-built structures.
  *

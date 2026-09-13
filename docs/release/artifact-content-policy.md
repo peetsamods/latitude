@@ -53,7 +53,9 @@ A command may ship when **all** of the following hold:
 
 1. It runs synchronously and returns within the command call — no listener, job, or continuation.
 2. Its entire output is chat text. It creates no files and no directories.
-3. It requires operator permission (`Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)`).
+3. It requires operator permission (`Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)`), or, for an action
+   reached only from a click event on output an operator already produced, it is authorized by an
+   unguessable, player-bound, single-use, expiring token validated server-side.
 4. It cannot arm itself; it only runs when a player types it.
 
 ## Current classification
@@ -61,6 +63,7 @@ A command may ship when **all** of the following hold:
 | Class | Members | In release artifact |
 | --- | --- | --- |
 | Permitted operator queries | `help`, `here`, `explainHere` (chat-only variant), `probe`, `tpLat`, `tpBand`, `flyspeed` | **Yes** |
+| Permitted token-bound action | `latitude_locate_teleport <token>` (`LatitudeStructureLocateService.runPendingTeleport`; the click target of an operator's locate result, no permission gate of its own because the token is the gate) | **Yes** |
 | Recording | `DevTestSession` (`case`/`start`/`mark`/`capture`/`finish`), `DevPresentationTrace` (`presentationTrace`), `BiomePreviewExporter` (`biomePng`, `biomePngY`), `DevCaptureKeybind` + `ClipboardImageWriter`, `BiomePreviewHeadlessRunner`, `LatitudeDevCommand.writeExplainLog` | No |
 | Sentinel | `ChunkPregenerator` jobs (`transect`, `transectDeg`, `slicePoleNS`, `pause`, `resume`, `stop`, `status`, `budgetMs`, `budgetAuto`), `ChunkRegenerator` (`regen`, `regenChunk`), `SeamAuditCoordinator` (`seamAudit`), `audit/AutonomousSeamAuditJob` | No |
 | Auto-harness | `AutoCreateWorldProbe`, `client/SeamAuditClientBridge`, `client/audit/SeamAuditHarness` | No |
@@ -71,7 +74,8 @@ content as chat output and touches no filesystem path.
 
 ### Root verb
 
-The shipping surface is rooted at **`/latitude`**. `/latdev` remains development- and TEST-only.
+The shipping surface is rooted at **`/latitude`**, plus the single token-bound root
+`/latitude_locate_teleport` that an operator's locate output links to. `/latdev` remains development- and TEST-only.
 Separate roots are deliberate: the two trees never have to merge at runtime, and a public artifact
 does not advertise a development surface.
 

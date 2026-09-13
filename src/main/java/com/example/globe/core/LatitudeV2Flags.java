@@ -2,7 +2,8 @@ package com.example.globe.core;
 
 /**
  * Feature flags gating the Phase 2 (GeoAuthority), Phase 3 (ClimateAuthority), and Biome Consumer
- * slices of the Latitude 2.0 overhaul. All default to {@code false}.
+ * slices of the Latitude 2.0 overhaul. The Phase 2 / Phase 3 / Biome Consumer flags all default to
+ * {@code false}; the polar-experience flags further down carry their own documented ship defaults.
  *
  * <p>{@link #GEO_V2_ENABLED} / {@link #CLIMATE_V2_ENABLED} gate whether each authority is
  * constructed and sampled at all (Phase 2/3: computed-and-discarded). {@link #BIOME_CONSUMER_V2_ENABLED}
@@ -103,6 +104,11 @@ public final class LatitudeV2Flags {
             Boolean.parseBoolean(System.getProperty("latitude.terrainV2.floorSightedVeto", "false"));
 
     /**
+     * <p><b>Status on the 26.3 line:</b> the three consumers described below were NOT re-applied when the
+     * 2.0 pick pipeline was re-layered onto the 26.3 skeleton, so this flag currently parses, is forwarded by
+     * the run configurations, and gates nothing. Whether the carve-aware relabel returns (with terrainV2) or
+     * the flag is retired is an open maintainer question; until then treat it as dormant.</p>
+     *
      * Phase 5 carve-aware ocean labels (ocean-label investigation 2026-07-09). Default false.
      * <p>Replaces estimator-based "is this column carved to sea?" reads with the carve's OWN pure
      * analytic target ({@code GeoTerrainBiasFunction.carveTargetYOrMax(x,z)}): a column is labeled
@@ -285,7 +291,9 @@ public final class LatitudeV2Flags {
             Boolean.parseBoolean(System.getProperty("latitude.polarWaterFreeze.enabled", "true"));
 
     /**
-     * Phase 5 Slice B-8 (Polar Barrens). Default FALSE -- this CHANGES WORLDGEN (rewrites the deep-cap
+     * Phase 5 Slice B-8 (Polar Barrens). Default TRUE (ship default ON, maintainer ruling 2026-07-25; developed
+     * off-by-default and proven byte-identical flag-off, and {@code -Dlatitude.polarBarrens.enabled=false}
+     * remains the worldgen control run). This CHANGES WORLDGEN (rewrites the deep-cap
      * {@code snowy_plains} monoculture to the first-party {@code globe:polar_barrens} biome), the
      * highest-risk class, so it ships the disciplined way: off-by-default, proven byte-identical
      * flag-off, atlas-gated. When on (and the world is an armed globe world,
@@ -363,6 +371,13 @@ public final class LatitudeV2Flags {
      * Phase 5 B-9 P1 GLACIAL CAVES &amp; CREVASSES (the maintainer, TEST-110 flight: polar "caverns are giant
      * voids" -- the crevasses should be "narrow and winding ice labyrinths"; design
      * {@code docs/binder/phase5-b9-glacial-caves-design-20260719.md}, swept 2026-07-19). When on, the
+     * <p><b>26.3 rule (supersedes the {@code #minecraft:overworld_carver_replaceables} wording below):</b> the
+     * positive allow-list tag is retired. Vanilla carvers now replace every non-air block that is not in the
+     * inverse {@code #minecraft:uncarvable} tag, which on 26.3 contains no ice at all -- so {@code packed_ice}
+     * AND {@code blue_ice} are both carvable, and the bounded blue seam is kept as a visual law, not as a
+     * carvability constraint. {@code PowderCrevasseRoofFeature#isCarverReplaceableOrSnow} is the code-side
+     * statement of the same rule.</p>
+     *
      * carver-list filter in {@code NoiseChunkGeneratorCarveMixin} APPENDS two globe configured carvers
      * to every seed chunk that is barrens-band LAND (the exact shared
      * {@link com.example.globe.core.PolarBarrensBand#isBarrens} latitude+fray decision the barrens
@@ -388,7 +403,7 @@ public final class LatitudeV2Flags {
      *       envelope, bottoms ~26..92; bottoms below sea level 63 POND via aquifers = the fish-lake
      *       seed, wanted). All other shape fields verbatim vanilla canyon.</li>
      *   <li>{@code globe:glacial_tunnels} (cave type): the labyrinth. probability 0.12, y uniform
-     *       absolute 30..90 (glacier body under high terrain + upper stone under median terrain),
+     *       absolute -40..90 (glacier body under high terrain + upper stone under median terrain),
      *       lava_level absolute -56. Dev picks: horizontal_radius_multiplier 0.49..0.98 (exactly
      *       0.7x vanilla's 0.7..1.4) and vertical_radius_multiplier 0.4..0.65 (exactly 0.5x
      *       vanilla's 0.8..1.3) so cave-carver branching supplies the maze but the corridors stay

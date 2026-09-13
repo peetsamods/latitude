@@ -1,8 +1,11 @@
 # Latitude Porting Bootstrap Kit
 
 > **2026-07-02 update:** Use `docs/porting/PORTING.md` as the current porting front door. For the Latitude
-> 2.0 overhaul, read `docs/LATITUDE_2_0_OVERHAUL.md` first; the planned canonical target is Minecraft `26.2`
+> 2.0 overhaul, read `docs/LATITUDE_2_0_OVERHAUL.md` first; the planned canonical target was Minecraft `26.2`
 > after an isolated pivot/proof phase.
+>
+> **2026-09-12 update (maintainer ruling):** the canonical Latitude 2.0 target is Minecraft `26.3`; the 2.0
+> line absorbed the 1.5 baseline and its 26.3 port. `26.2` references below are historical.
 
 Purpose: make future Minecraft version ports faster by front-loading the known drift checks before any source edits.
 

@@ -16,8 +16,10 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(CreateWorldScreen.class)
 public abstract class CreateWorldScreenMixin implements RecreatedWorldPresetCarrier, VanillaCreateWorldUiStateCarrier {
+    @Unique
     private static final Logger LOGGER = LoggerFactory.getLogger("globe");
     // [LAT][CWPATH] fires on every ordinary create-screen open; opt-in only (maintainer ruling, 2026-08-18).
+    @Unique
     private static final boolean DEBUG_CWPATH = Boolean.getBoolean("latitude.debugCwPath");
 
     @Unique

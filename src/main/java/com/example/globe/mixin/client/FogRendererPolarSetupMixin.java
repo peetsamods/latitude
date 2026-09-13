@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.fog.FogRenderer;
 import net.minecraft.world.level.material.FogType;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -177,11 +178,13 @@ public class FogRendererPolarSetupMixin {
         }
     }
 
+    @Unique
     private static int lerp255i(int from, int to, float t) {
         return Math.round(from + (to - from) * t);
     }
 
     /** Clamp a 0..1 colour component to a packed 0-255 byte (defensive against float drift before packing). */
+    @Unique
     private static int to255(float v) {
         int i = Math.round(v * 255.0f);
         return i < 0 ? 0 : (i > 255 ? 255 : i);

@@ -50,6 +50,11 @@ public class FogRendererEwSetupMixin {
             float tickDelta,
             ClientLevel level,
             CallbackInfoReturnable<FogData> cir) {
+        // The same wholesale kill switches the polar and passage fog mixins honour: a "fog off" control
+        // frame must not keep the sand-haze colour blend either.
+        if (GlobeClientState.DEBUG_DISABLE_FOG || GlobeClientState.DEBUG_DISABLE_WARNINGS) {
+            return;
+        }
         Minecraft client = Minecraft.getInstance();
         if (client == null || client.level == null || client.player == null) {
             return;
