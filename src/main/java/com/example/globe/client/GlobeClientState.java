@@ -425,8 +425,24 @@ public final class GlobeClientState {
     private GlobeClientState() {
     }
 
+    /**
+     * Whether the CURRENT client level is Latitude's Overworld. The server sends save-wide identity on join
+     * (a Latitude save stays a Latitude save while the player is in the Nether or the End), but every
+     * presentation surface that asks this question -- fog, sky, snow, music, warnings, HUD, world border --
+     * belongs to the Overworld only, so another dimension of a Latitude save is never treated as Latitude.
+     * {@link #isGlobeSave()} exposes the raw save-wide flag for the few callers that need it.
+     */
     public static boolean isGlobeWorld() {
+        return globeWorld && isOverworld(Minecraft.getInstance().level);
+    }
+
+    /** The save-wide identity as sent by the server, independent of the player's current dimension. */
+    public static boolean isGlobeSave() {
         return globeWorld;
+    }
+
+    private static boolean isOverworld(ClientLevel level) {
+        return level != null && level.dimension().identifier().equals(Level.OVERWORLD.identifier());
     }
 
     public static void setGlobeWorld(boolean value) {
@@ -503,8 +519,10 @@ public final class GlobeClientState {
                     || Math.abs(half - 20000.0) < 1.0;
         }
 
-        // If server says it's a globe world, trust it explicitly and ignore client-side registry key quirks.
-        if (!globeWorld && !client.level.dimension().identifier().equals(Level.OVERWORLD.identifier())) {
+        // One current-dimension rule for every presentation surface: Latitude's Overworld only. The
+        // save-wide flag from the server is trusted for identity, never as permission to present in the
+        // Nether or the End of a Latitude save.
+        if (!isOverworld(client.level)) {
             active = false;
         }
 

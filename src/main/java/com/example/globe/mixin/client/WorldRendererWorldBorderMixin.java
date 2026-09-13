@@ -21,7 +21,9 @@ public class WorldRendererWorldBorderMixin {
                                                  Vec3 cameraPos,
                                                  double viewDistanceBlocks,
                                                  CallbackInfo ci) {
-        if (!GlobeClientState.DEBUG_EW_SUPPRESS_VANILLA_BORDER) return;
+        // Only a Latitude world replaces the vanilla border wall with its own edge presentation; a
+        // plain vanilla world (or any other mod's world) must keep its border visible.
+        if (!GlobeClientState.DEBUG_EW_SUPPRESS_VANILLA_BORDER || !GlobeClientState.isGlobeWorld()) return;
         ci.cancel();
     }
 }

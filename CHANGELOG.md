@@ -46,6 +46,10 @@ systems that were off by default in 2.0-beta.1 stay off by default here.
   erosion read. Each is described under its 1.5 entry below.
 - **The 1.5 proof harness** (policy suites, the mixin target verifier and the headless exit gate) now
   runs on the 2.0 line alongside its JUnit suite.
+- **Latitude's presentation stays in Latitude's Overworld.** A plain vanilla world, or another mod's
+  world, keeps its visible world border again (Latitude used to hide it everywhere), and the Nether or
+  the End of a Latitude save no longer shows Latitude's fog, sky, snow, warnings or HUD: one
+  current-dimension rule now gates every client surface.
 
 ### Known issues
 
