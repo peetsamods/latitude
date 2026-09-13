@@ -3,12 +3,14 @@ package com.example.globe.mixin;
 import com.example.globe.GlobeMod;
 import com.example.globe.util.LatitudeBands;
 import com.example.globe.world.LatitudeBiomes;
+import com.example.globe.world.LatitudeWorldgenScope;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.chunk.ProtoChunk;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -69,9 +71,33 @@ public class ProtoChunkSnowBlockGuardMixin {
                 || band == LatitudeBands.Band.TEMPERATE;
     }
 
+    /**
+     * True when this column legitimately keeps snow: either vanilla's own temperature gate says so,
+     * or Latitude's windswept snow line does. The single source of truth for BOTH the snow-layer
+     * strip and the SNOWY-property clear above — separate copies of this test are exactly how the
+     * orphaned white-topped grass got produced in the first place.
+     */
+    @Unique
+    private boolean globe$columnKeepsSnow(BlockPos pos) {
+        Holder<Biome> biome = ((ProtoChunk) (Object) this).getNoiseBiome(
+                pos.getX() >> 2, pos.getY() >> 2, pos.getZ() >> 2);
+        if (biome == null) {
+            return false;
+        }
+        if (biome.value().coldEnoughToSnow(pos, LatitudeBiomes.getActiveSeaLevel())) {
+            return true;
+        }
+        return com.example.globe.world.WindsweptSnowLinePolicy.appliesTo(
+                biome.unwrapKey().map(key -> key.identifier().toString()).orElse(null),
+                pos.getY(), LatitudeBiomes.getActiveSeaLevel(),
+                com.example.globe.world.WindsweptSnowLinePolicy.absoluteLatitudeDegrees(
+                        pos.getZ(), LatitudeBiomes.getActiveRadiusBlocks(), GlobeMod.BORDER_RADIUS));
+    }
+
     @Inject(method = "setBlockState", at = @At("HEAD"), cancellable = true)
     private void globe$blockSnowInWarmBands(BlockPos pos, BlockState state, int flags, CallbackInfoReturnable<BlockState> cir) {
         if (state == null) return;
+        if (!LatitudeWorldgenScope.isActive()) return;
 
         // Ocean-surface coherence: prevent grass_block in ocean-family biome cells.
         // Biome data is already populated (BIOMES phase) by the time surface rules
@@ -94,12 +120,61 @@ public class ProtoChunkSnowBlockGuardMixin {
 
         if (!globe$isWarmBand(pos.getZ())) return;
 
+        // Orphaned white-topped grass. grass_block carries BlockStateProperties.SNOWY, which paints
+        // the block's top edges white; vanilla keeps it in sync via neighbour updates, but worldgen
+        // writes states directly, so stripping the snow layer above leaves SNOWY=true with nothing
+        // on top. That is the "grey grass with snow-covered edges" defect (maintainer, 2026-08-10),
+        // and it is a state desync, not an aesthetic complaint — previously measured at 159 snowy
+        // grass blocks against 13 surviving snow layers in temperate windswept.
+        //
+        // Until now the only defence was never to strip where snow had been placed, which made the
+        // whole snow-line policy load-bearing for a RENDERING invariant. Clearing SNOWY on the same
+        // condition that strips the layer makes the two agree by construction, so a future snow-line
+        // change cannot resurrect the orphan.
+        //
+        // 26.2 owns this property on BlockStateProperties; the source line's SnowyDirtBlock does not
+        // exist here. Same BooleanProperty, different declaring type.
+        //
+        // Coordinate fix (maintainer, 2026-08-12): grass_block is written one row BELOW the snow
+        // layer it sits under, not at the same position. globe$columnKeepsSnow is height-dependent
+        // twice over -- Biome#coldEnoughToSnow's own temperature falls with Y, and the windswept
+        // ramp above is a strict Y>=threshold test -- so asking it about the grass block's OWN row
+        // can disagree with the answer at the snow layer's row directly above it. At the exact
+        // threshold row this keeps the snow (asked at Y) while clearing SNOWY on the grass beneath
+        // it (asked at Y-1), reproducing the orphan the whole guard exists to prevent. Ask about
+        // pos.above() -- the snow position -- so the SNOWY decision agrees with what is actually
+        // written one block up, regardless of write order between the two features.
+        if (state.is(Blocks.GRASS_BLOCK)
+                && state.hasProperty(BlockStateProperties.SNOWY)
+                && state.getValue(BlockStateProperties.SNOWY)
+                && !globe$columnKeepsSnow(pos.above())) {
+            cir.setReturnValue(state.setValue(
+                    BlockStateProperties.SNOWY, Boolean.FALSE));
+            return;
+        }
+
         boolean isSnowBlock = state.is(Blocks.SNOW_BLOCK);
         boolean isSnowLayer = state.is(Blocks.SNOW);
         boolean isPowder = state.is(Blocks.POWDER_SNOW);
         if (!(isSnowBlock || isSnowLayer || isPowder)) return;
         if (pos.getY() >= LatitudeBiomes.ALPINE_ROCK_Y) return;
 
+        // This guard exists to kill "snow at cave mouths in jungle" — not to de-snow genuinely cold
+        // columns. The latitude band alone cannot tell those apart: TEMPERATE is a warm band here,
+        // but vanilla legitimately snows a temperature-0.2 biome (windswept forest/hills) above
+        // roughly y=120, because height drops temperature past the snow threshold. Stripping on the
+        // band alone therefore erased every snow layer between ~y=120 and ALPINE_ROCK_Y at temperate
+        // latitudes, leaving the desaturated olive-grey grass those biomes are *supposed* to have —
+        // but with no snow on top to explain it, which is exactly what reads as broken.
+        //
+        // Ask the biome the same question vanilla asks. A column cold enough to snow keeps its snow;
+        // a warm column (the jungle cave mouth this guard was written for) still loses it. This also
+        // re-aligns the two snow write paths: SnowAndFreezeFeature applies vanilla's own
+        // cold-enough test and is unguarded since the 26.2 pivot, so band-only stripping made the
+        // two disagree and produced the patchy result rather than a clean one.
+        if (globe$columnKeepsSnow(pos)) {
+            return;
+        }
         BlockState replacement;
         if (isSnowBlock) {
             // Cosmetic: dirt on hillsides (above sea level), stone underground

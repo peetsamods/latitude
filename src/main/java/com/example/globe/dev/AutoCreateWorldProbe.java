@@ -9,12 +9,13 @@ import com.example.globe.util.LatitudeMath;
 import com.example.globe.world.GlobeWorldSizeRuntime;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
+import net.minecraft.client.gui.screens.worldselection.WorldCreationContext;
+import net.minecraft.client.gui.screens.worldselection.WorldCreationUiState;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -23,6 +24,7 @@ import net.minecraft.server.level.ChunkResult;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Relative;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.chunk.ChunkAccess;
@@ -64,6 +66,7 @@ public final class AutoCreateWorldProbe {
     private static final int DEFAULT_AUTO_CREATE_WORLD_PROBE_LATDEV_TARGET_SEARCH_PROGRESS_CHUNKS = 64;
 
     private static boolean autoCreateWorldProbeLatdevCommandsSent;
+    private static boolean autoCreateWorldProbeRecreateStateInjected;
     private static boolean autoCreateWorldProbeLatdevCustomTeleportAttempted;
     private static boolean autoCreateWorldProbeLatdevTargetVerified;
     private static boolean autoCreateWorldProbeLatdevTargetPendingLogged;
@@ -85,6 +88,7 @@ public final class AutoCreateWorldProbe {
         }
         long timeoutMs = getAutoCreateWorldProbeTimeoutMs();
         autoCreateWorldProbeLatdevCommandsSent = false;
+        autoCreateWorldProbeRecreateStateInjected = false;
         autoCreateWorldProbeLatdevCustomTeleportAttempted = false;
         autoCreateWorldProbeLatdevTargetVerified = false;
         autoCreateWorldProbeLatdevTargetPendingLogged = false;
@@ -98,7 +102,7 @@ public final class AutoCreateWorldProbe {
         autoCreateWorldProbeLatdevCustomTeleportGameTime = Long.MIN_VALUE;
         autoCreateWorldProbeLatdevCommandsSentWallTimeMs = Long.MIN_VALUE;
         autoCreateWorldProbeLatdevCustomTeleportWallTimeMs = Long.MIN_VALUE;
-        LatitudeClientState.resetAutoCreateWorldProbe(timeoutMs);
+        AutoCreateWorldProbeState.reset(timeoutMs);
         GlobeMod.LOGGER.info("[LAT][CWPATH] autoCreateWorldProbe enabled timeout={}s creative={}",
                 timeoutMs / 1000L, AUTO_CREATE_WORLD_PROBE_CREATIVE);
         ClientTickEvents.END_CLIENT_TICK.register(AutoCreateWorldProbe::autoCreateWorldProbeTick);
@@ -114,12 +118,12 @@ public final class AutoCreateWorldProbe {
             return;
         }
 
-        long timeoutMs = LatitudeClientState.getAutoCreateWorldProbeTimeoutMs();
-        long startMs = LatitudeClientState.getAutoCreateWorldProbeStartMs();
+        long timeoutMs = AutoCreateWorldProbeState.getTimeoutMs();
+        long startMs = AutoCreateWorldProbeState.getStartMs();
         if (startMs > 0L && System.currentTimeMillis() - startMs >= timeoutMs) {
-            if (!LatitudeClientState.isAutoCreateWorldProbeTimedOut()) {
+            if (!AutoCreateWorldProbeState.isTimedOut()) {
                 emitAutoCreateWorldProbeTimeoutDiagnostics(client, startMs, timeoutMs);
-                LatitudeClientState.markAutoCreateWorldProbeTimedOut();
+                AutoCreateWorldProbeState.markTimedOut();
                 client.stop();
             }
             return;
@@ -128,10 +132,10 @@ public final class AutoCreateWorldProbe {
         Screen screen = client.gui.screen();
 
         if (screen == null && client.level != null && client.player != null) {
-            if (!LatitudeClientState.isAutoCreateWorldProbeWorldEntered()) {
+            if (!AutoCreateWorldProbeState.isWorldEntered()) {
                 GlobeMod.LOGGER.info("[LAT][CWPATH] world entry detected: level={} screen=null",
                         client.level.getClass().getName());
-                LatitudeClientState.markAutoCreateWorldProbeWorldEntered(client.level.getGameTime());
+                AutoCreateWorldProbeState.markWorldEntered(client.level.getGameTime());
             }
         }
 
@@ -139,16 +143,19 @@ public final class AutoCreateWorldProbe {
             return;
         }
 
-        if (!LatitudeClientState.isAutoCreateWorldProbeOpened()) {
+        // Quick-play loads an existing world without ever visiting TitleScreen/create-world.
+        // Once that direct entry has been observed, continue to the normal post-entry capture
+        // instead of returning forever while the wall-clock timeout counts down.
+        if (!AutoCreateWorldProbeState.isOpened() && !AutoCreateWorldProbeState.isWorldEntered()) {
             if (screen instanceof TitleScreen) {
                 GlobeMod.LOGGER.info("[LAT][CWPATH] title screen detected: {}", screen.getClass().getName());
-                LatitudeClientState.markAutoCreateWorldProbeOpened();
+                AutoCreateWorldProbeState.markOpened();
                 client.execute(() -> {
-                    if (LatitudeClientState.isAutoCreateWorldProbeTimedOut()) {
+                    if (AutoCreateWorldProbeState.isTimedOut()) {
                         return;
                     }
                     GlobeMod.LOGGER.info("[LAT][CWPATH] opening create-world probe");
-                    CreateWorldScreen.openFresh(client, () -> client.setScreenAndShow(new TitleScreen()));
+                    CreateWorldScreen.openFresh(client, () -> client.gui.setScreen(new TitleScreen()));
                     Screen afterOpen = client.gui.screen();
                     GlobeMod.LOGGER.info("[LAT][CWPATH] current screen after open: {}",
                             afterOpen == null ? "null" : afterOpen.getClass().getName());
@@ -158,16 +165,22 @@ public final class AutoCreateWorldProbe {
         }
 
         if ((screen instanceof CreateWorldScreen || screen instanceof LatitudeCreateWorldScreen)
-                && !LatitudeClientState.isAutoCreateWorldProbeScreenDetectedLogged()) {
+                && !AutoCreateWorldProbeState.isScreenDetectedLogged()) {
             GlobeMod.LOGGER.info("[LAT][CWPATH] create-world screen detected: {}", screen.getClass().getName());
-            LatitudeClientState.markAutoCreateWorldProbeScreenDetectedLogged();
+            AutoCreateWorldProbeState.markScreenDetectedLogged();
         }
 
         if (screen instanceof LatitudeCreateWorldScreen latitudeCreateWorldScreen) {
-            if (!LatitudeClientState.isAutoCreateWorldProbeConfirmed()) {
-                LatitudeClientState.markAutoCreateWorldProbeConfirmed();
+            if (isAutoCreateWorldProbeRecreateHydrationEnabled()
+                    && !autoCreateWorldProbeRecreateStateInjected) {
+                autoCreateWorldProbeRecreateStateInjected = true;
+                client.execute(() -> injectAutoCreateWorldProbeRecreateState(client, latitudeCreateWorldScreen));
+                return;
+            }
+            if (!AutoCreateWorldProbeState.isConfirmed()) {
+                AutoCreateWorldProbeState.markConfirmed();
                 client.execute(() -> {
-                    if (LatitudeClientState.isAutoCreateWorldProbeTimedOut()) {
+                    if (AutoCreateWorldProbeState.isTimedOut()) {
                         return;
                     }
                     Screen active = client.gui.screen();
@@ -178,9 +191,9 @@ public final class AutoCreateWorldProbe {
                     }
 
                     applyAutoCreateWorldProbeInputs(currentLatitudeScreen);
-                    if (AUTO_CREATE_WORLD_PROBE_CREATIVE && !LatitudeClientState.isAutoCreateWorldProbeCreativeApplied()) {
+                    if (AUTO_CREATE_WORLD_PROBE_CREATIVE && !AutoCreateWorldProbeState.isCreativeApplied()) {
                         currentLatitudeScreen.probeSetCreativeMode();
-                        LatitudeClientState.markAutoCreateWorldProbeCreativeApplied();
+                        AutoCreateWorldProbeState.markCreativeApplied();
                     }
                     GlobeMod.LOGGER.info("[LAT][CWPATH] auto-confirming world creation");
                     currentLatitudeScreen.probeAutoConfirmWorldCreation();
@@ -191,32 +204,32 @@ public final class AutoCreateWorldProbe {
             }
         }
 
-        if (LatitudeClientState.isAutoCreateWorldProbeConfirmed()
-                && !LatitudeClientState.isAutoCreateWorldProbeWorldEntered()
+        if (AutoCreateWorldProbeState.isConfirmed()
+                && !AutoCreateWorldProbeState.isWorldEntered()
                 && client.level != null
                 && client.player != null) {
             GlobeMod.LOGGER.info("[LAT][CWPATH] world entry detected: level={} screen={}",
                     client.level.getClass().getName(),
                     client.gui.screen() == null ? "null" : client.gui.screen().getClass().getName());
-            LatitudeClientState.markAutoCreateWorldProbeWorldEntered(client.level.getGameTime());
+            AutoCreateWorldProbeState.markWorldEntered(client.level.getGameTime());
         }
 
         screen = clearAutoCreateWorldProbePauseScreen(client, screen);
 
-        if (LatitudeClientState.isAutoCreateWorldProbeWorldEntered()
+        if (AutoCreateWorldProbeState.isWorldEntered()
                 && LatitudeClientState.isLatitudeWorldLoading()) {
             return;
         }
 
-        if (LatitudeClientState.isAutoCreateWorldProbeWorldEntered()
-                && !LatitudeClientState.isAutoCreateWorldProbeDiagnosticsCaptured()
+        if (AutoCreateWorldProbeState.isWorldEntered()
+                && !AutoCreateWorldProbeState.isDiagnosticsCaptured()
                 && client.level != null
                 && client.player != null
-                && !LatitudeClientState.isAutoCreateWorldProbeTimedOut()) {
-            long enteredGameTime = LatitudeClientState.getAutoCreateWorldProbeWorldEnteredGameTime();
+                && !AutoCreateWorldProbeState.isTimedOut()) {
+            long enteredGameTime = AutoCreateWorldProbeState.getWorldEnteredGameTime();
             if (enteredGameTime < 0L) {
                 enteredGameTime = client.level.getGameTime();
-                LatitudeClientState.markAutoCreateWorldProbeWorldEntered(enteredGameTime);
+                AutoCreateWorldProbeState.markWorldEntered(enteredGameTime);
             }
 
             long waitTicks = getAutoCreateWorldProbePostEntryWaitTicks();
@@ -250,7 +263,7 @@ public final class AutoCreateWorldProbe {
                             if (!finalTargetVerifyAttempt) {
                                 return;
                             }
-                            LatitudeClientState.markAutoCreateWorldProbeDiagnosticsCaptured();
+                            AutoCreateWorldProbeState.markDiagnosticsCaptured();
                             client.stop();
                             return;
                         }
@@ -268,39 +281,39 @@ public final class AutoCreateWorldProbe {
                     }
                 }
                 captureSpawnProbeDiagnostics(client);
-                LatitudeClientState.markAutoCreateWorldProbeDiagnosticsCaptured();
+                AutoCreateWorldProbeState.markDiagnosticsCaptured();
                 GlobeMod.LOGGER.info("[LAT][CWPATH] spawn diagnostics captured; stopping client");
                 client.stop();
             }
         }
 
-        if (LatitudeClientState.isAutoCreateWorldProbeTimedOut()) {
+        if (AutoCreateWorldProbeState.isTimedOut()) {
             return;
         }
     }
 
     private static Screen clearAutoCreateWorldProbePauseScreen(Minecraft client, Screen screen) {
         if (!(screen instanceof PauseScreen)
-                || !LatitudeClientState.isAutoCreateWorldProbeWorldEntered()
-                || LatitudeClientState.isAutoCreateWorldProbeDiagnosticsCaptured()
-                || LatitudeClientState.isAutoCreateWorldProbeTimedOut()
+                || !AutoCreateWorldProbeState.isWorldEntered()
+                || AutoCreateWorldProbeState.isDiagnosticsCaptured()
+                || AutoCreateWorldProbeState.isTimedOut()
                 || client.level == null
                 || client.player == null) {
             return screen;
         }
 
         GlobeMod.LOGGER.info("[LAT][CWPATH] clearing pause screen during autoCreateWorldProbe phase={} worldTime={}",
-                LatitudeClientState.getAutoCreateWorldProbePhase(),
+                AutoCreateWorldProbeState.getPhase(),
                 client.level.getGameTime());
-        client.setScreenAndShow(null);
+        client.gui.setScreen(null);
         return client.gui.screen();
     }
 
     private static void emitAutoCreateWorldProbeTimeoutDiagnostics(Minecraft client, long startMs, long timeoutMs) {
         long now = System.currentTimeMillis();
         long elapsedMs = Math.max(0L, now - startMs);
-        long phaseTicks = LatitudeClientState.getAutoCreateWorldProbeWorldEnteredGameTime() >= 0L
-                ? Math.max(0L, client.level != null ? client.level.getGameTime() - LatitudeClientState.getAutoCreateWorldProbeWorldEnteredGameTime() : 0L)
+        long phaseTicks = AutoCreateWorldProbeState.getWorldEnteredGameTime() >= 0L
+                ? Math.max(0L, client.level != null ? client.level.getGameTime() - AutoCreateWorldProbeState.getWorldEnteredGameTime() : 0L)
                 : Math.max(0L, elapsedMs / 50L);
 
         Screen current = client.gui.screen();
@@ -309,7 +322,7 @@ public final class AutoCreateWorldProbe {
 
         GlobeMod.LOGGER.info(
                 "[LAT][CWPATH] timeout phase={} ticksInPhase={} elapsedMs={} timeoutMs={} screen={} world={} player={}",
-                LatitudeClientState.getAutoCreateWorldProbePhase(),
+                AutoCreateWorldProbeState.getPhase(),
                 phaseTicks,
                 elapsedMs,
                 timeoutMs,
@@ -329,16 +342,11 @@ public final class AutoCreateWorldProbe {
     }
 
     private static boolean isAutoCreateWorldProbeEnabled() {
-        if (!FabricLoader.getInstance().isDevelopmentEnvironment()) {
-            return false;
-        }
-
-        String explicit = System.getProperty("latitude.debug.autoCreateWorldProbe");
-        if (explicit != null) {
-            return Boolean.parseBoolean(explicit);
-        }
-
-        return !Boolean.getBoolean("latitude.debug.autoCreateWorldProbe.disable");
+        return DevToolPolicy.autoCreateWorldProbeEnabled(
+                LatitudeDevRuntime.isDevelopmentEnvironment(),
+                LatitudeDevRuntime.isPackagedTestArtifact(),
+                System.getProperty("latitude.debug.autoCreateWorldProbe"),
+                Boolean.getBoolean("latitude.debug.autoCreateWorldProbe.disable"));
     }
 
     private static long getAutoCreateWorldProbeTimeoutMs() {
@@ -380,6 +388,10 @@ public final class AutoCreateWorldProbe {
             return true;
         }
         return Boolean.parseBoolean(explicit);
+    }
+
+    private static boolean isAutoCreateWorldProbeRecreateHydrationEnabled() {
+        return Boolean.getBoolean("latitude.debug.autoCreateWorldProbe.recreateHydration");
     }
 
     private static boolean isAutoCreateWorldProbeLatdevHereProbeEnabled() {
@@ -531,6 +543,57 @@ public final class AutoCreateWorldProbe {
             return;
         }
         screen.probeSetWorldInputs(worldName, seed, size);
+    }
+
+    private static void injectAutoCreateWorldProbeRecreateState(Minecraft client,
+                                                                 LatitudeCreateWorldScreen currentScreen) {
+        try {
+            java.lang.reflect.Field holderField =
+                    LatitudeCreateWorldScreen.class.getDeclaredField("holder");
+            holderField.setAccessible(true);
+            WorldCreationContext holder = (WorldCreationContext) holderField.get(currentScreen);
+
+            GlobeWorldSize size = getAutoCreateWorldProbeWorldSize();
+            if (size == null) {
+                size = GlobeWorldSize.SMALL;
+            }
+            var presetKey = net.minecraft.resources.ResourceKey.create(
+                    net.minecraft.core.registries.Registries.WORLD_PRESET,
+                    size.worldPresetId);
+            long seed = Long.parseLong(getAutoCreateWorldProbeSeed());
+            String worldName = getAutoCreateWorldProbeWorldName();
+            if (worldName == null || worldName.isBlank()) {
+                worldName = "Phase3RecreateTruth";
+            }
+
+            WorldCreationUiState recreatedState = new WorldCreationUiState(
+                    client.getLevelSource().getBaseDir(),
+                    holder,
+                    java.util.Optional.of(presetKey),
+                    java.util.OptionalLong.of(seed));
+            recreatedState.setName(worldName);
+            recreatedState.setSeed(Long.toString(seed));
+            recreatedState.setGameMode(WorldCreationUiState.SelectedGameMode.CREATIVE);
+            recreatedState.setAllowCommands(true);
+            recreatedState.setDifficulty(Difficulty.PEACEFUL);
+            recreatedState.setBonusChest(true);
+            recreatedState.setGenerateStructures(false);
+            recreatedState.onChanged();
+
+            GlobeMod.LOGGER.info(
+                    "[LAT][CWPATH] injecting Re-create proof state name={} seed={} size={} mode=CREATIVE commands=true difficulty=PEACEFUL bonusChest=true structures=false",
+                    worldName, seed, size);
+            LatitudeCreateWorldScreen.openLoaded(
+                    client,
+                    () -> client.gui.setScreen(new TitleScreen()),
+                    null,
+                    recreatedState,
+                    true);
+        } catch (Exception e) {
+            GlobeMod.LOGGER.error("[LAT][CWPATH] failed to inject Re-create proof state", e);
+            AutoCreateWorldProbeState.markTimedOut();
+            client.stop();
+        }
     }
 
     private static String trimmedProperty(String name) {
@@ -1212,7 +1275,7 @@ public final class AutoCreateWorldProbe {
     private static boolean waitForAutoCreateWorldProbeServerTargetSetup(Minecraft client) {
         if (autoCreateWorldProbeLatdevServerTargetSetupFailed) {
             GlobeMod.LOGGER.error("[LAT][CWPATH][PROOF_FAIL] configured latdev proof target setup failed before biome verification");
-            LatitudeClientState.markAutoCreateWorldProbeDiagnosticsCaptured();
+            AutoCreateWorldProbeState.markDiagnosticsCaptured();
             client.stop();
             return true;
         }

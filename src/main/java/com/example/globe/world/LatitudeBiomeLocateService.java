@@ -1,0 +1,803 @@
+package com.example.globe.world;
+
+import com.example.globe.GlobeMod;
+import com.mojang.datafixers.util.Pair;
+import java.time.Duration;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.arguments.ResourceOrTagArgument;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.QuartPos;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.commands.LocateCommand;
+import net.minecraft.server.level.ServerBossEvent;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.BossEvent;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeSource;
+import net.minecraft.world.level.biome.Climate;
+import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
+import net.minecraft.world.level.levelgen.RandomState;
+import net.minecraft.world.level.levelgen.densityfunction.SamplerContext;
+
+/** Runs Latitude biome locate searches in bounded server-tick slices with player progress. */
+public final class LatitudeBiomeLocateService {
+    private static final int COMMAND_RADIUS = 6_400;
+    private static final int COMMAND_HORIZONTAL_STEP = 32;
+    private static final int COMMAND_VERTICAL_STEP = 64;
+    private static final long PROGRESS_UPDATE_NANOS = 250_000_000L;
+
+    private static final Map<MinecraftServer, BiomeLocateJob> ACTIVE_JOBS =
+            new IdentityHashMap<>();
+
+    static {
+        ServerTickEvents.END_SERVER_TICK.register(LatitudeBiomeLocateService::tick);
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> cancel(server, null));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
+                cancel(server, handler.player));
+    }
+
+    private LatitudeBiomeLocateService() {
+    }
+
+    /**
+     * Claims supported biome locate commands in Latitude worlds. The search covers the playable
+     * Latitude border from the command origin and distributes that finite work across ticks, so
+     * the requester sees a boss bar instead of a stalled client or intermittent chat acknowledgement.
+     */
+    public static boolean beginIfLatitudeBiome(
+            CommandSourceStack source,
+            ResourceOrTagArgument.Result<Biome> target) {
+        ServerLevel level = source.getLevel();
+        ChunkGenerator chunkGenerator = level.getChunkSource().getGenerator();
+        if (!(chunkGenerator instanceof NoiseBasedChunkGenerator generator)
+                || !GlobeMod.shouldApplyLatitudeWorldgen(generator)) {
+            return false;
+        }
+
+        BiomeSource rawSource = generator.getBiomeSource();
+        if (rawSource instanceof LatitudeBiomeSource latitudeSource) {
+            rawSource = latitudeSource.original();
+        }
+        Registry<Biome> registry = level.registryAccess().lookupOrThrow(Registries.BIOME);
+        int worldRadius = GlobeMod.borderRadiusForNoiseGenerator(generator);
+        RandomState randomState = level.getChunkSource().randomState();
+        Climate.Sampler sampler = randomState.createClimateSampler(SamplerContext.EMPTY_UNCACHED);
+        LatitudeBiomeSource latitudeSource = LatitudeBiomeSource.forLocate(
+                rawSource, registry, worldRadius, generator, randomState, level);
+        Set<Holder<Biome>> matching = latitudeSource.possibleBiomes().stream()
+                .filter(target)
+                .collect(Collectors.toUnmodifiableSet());
+        if (matching.isEmpty()) {
+            return false;
+        }
+
+        MinecraftServer server = source.getServer();
+        if (ACTIVE_JOBS.containsKey(server)) {
+            source.sendFailure(Component.literal(
+                    "A Latitude biome search is already running. Its result will appear in chat."));
+            return true;
+        }
+
+        BlockPos origin = BlockPos.containing(source.getPosition());
+        int searchRadius = Math.max(COMMAND_RADIUS,
+                LatitudeLocateBudgetPolicy.fullWorldSearchRadius(
+                        origin.getX(), origin.getZ(), worldRadius));
+        boolean includesSwamp = matching.stream().anyMatch(candidate ->
+                LatitudeBiomes.isBiomeIdPublic(candidate, "minecraft:swamp"));
+        boolean includesMangrove = matching.stream().anyMatch(candidate ->
+                LatitudeBiomes.isBiomeIdPublic(candidate, "minecraft:mangrove_swamp"));
+        boolean wetlandOnly = matching.stream().allMatch(candidate ->
+                LatitudeBiomes.isBiomeIdPublic(candidate, "minecraft:swamp")
+                        || LatitudeBiomes.isBiomeIdPublic(candidate, "minecraft:mangrove_swamp"));
+        boolean includesCave = matching.stream().anyMatch(LatitudeBiomeSource::isCaveBiome);
+
+        BiomeLocateJob job;
+        if (!includesCave && wetlandOnly && (includesSwamp || includesMangrove)) {
+            job = new WetlandLocateJob(source, target, origin, latitudeSource, worldRadius,
+                    searchRadius, sampler, includesSwamp, includesMangrove);
+        } else if (!includesCave) {
+            job = new SurfaceLocateJob(source, target, origin, latitudeSource, worldRadius,
+                    searchRadius, sampler, matching, includesMangrove);
+        } else {
+            job = new ThreeDimensionalLocateJob(source, target, origin, latitudeSource, worldRadius,
+                    searchRadius, sampler, level, matching);
+        }
+        ACTIVE_JOBS.put(server, job);
+        GlobeMod.LOGGER.info("[Latitude] started tick-sliced biome locate target={} route={} origin={} radius={} worldRadius={}",
+                target.asPrintable(), job.route(), origin.toShortString(), searchRadius, worldRadius);
+        return true;
+    }
+
+    private static void tick(MinecraftServer server) {
+        BiomeLocateJob job = ACTIVE_JOBS.get(server);
+        if (job == null) {
+            return;
+        }
+        try {
+            if (job.runTick()) {
+                ACTIVE_JOBS.remove(server);
+            }
+        } catch (Throwable failure) {
+            ACTIVE_JOBS.remove(server);
+            GlobeMod.LOGGER.error("[Latitude] tick-sliced biome locate failed", failure);
+            job.fail(failure);
+        }
+    }
+
+    private static void cancel(MinecraftServer server, ServerPlayer disconnectedPlayer) {
+        BiomeLocateJob job = ACTIVE_JOBS.get(server);
+        if (job == null || (disconnectedPlayer != null && !job.belongsTo(disconnectedPlayer))) {
+            return;
+        }
+        ACTIVE_JOBS.remove(server);
+        job.cancel();
+    }
+
+    private abstract static class BiomeLocateJob {
+        protected final CommandSourceStack source;
+        protected final ResourceOrTagArgument.Result<Biome> target;
+        protected final BlockPos origin;
+        protected final LatitudeBiomeSource latitudeSource;
+        protected final Climate.Sampler sampler;
+        protected final int worldRadius;
+        protected final int searchRadius;
+        private final ServerPlayer requester;
+        private final long startedNanos;
+        private final ServerBossEvent bossBar;
+        private long nextProgressNanos;
+        private boolean finished;
+        private Pair<BlockPos, Holder<Biome>> bestInterior;
+        private long bestInteriorDistanceSq = Long.MAX_VALUE;
+        private Pair<BlockPos, Holder<Biome>> bestSliver;
+        private long bestSliverDistanceSq = Long.MAX_VALUE;
+        private int completionRingLimit = Integer.MAX_VALUE;
+        private PendingConfirmation pendingConfirmation;
+
+        private BiomeLocateJob(
+                CommandSourceStack source,
+                ResourceOrTagArgument.Result<Biome> target,
+                BlockPos origin,
+                LatitudeBiomeSource latitudeSource,
+                int worldRadius,
+                int searchRadius,
+                Climate.Sampler sampler) {
+            this.source = source;
+            this.target = target;
+            this.origin = origin;
+            this.latitudeSource = latitudeSource;
+            this.worldRadius = worldRadius;
+            this.searchRadius = searchRadius;
+            this.sampler = sampler;
+            this.requester = source.getPlayer();
+            this.startedNanos = System.nanoTime();
+            this.nextProgressNanos = startedNanos;
+            this.bossBar = new ServerBossEvent(
+                    java.util.UUID.randomUUID(),
+                    Component.literal("Searching for " + target.asPrintable() + "..."),
+                    BossEvent.BossBarColor.BLUE,
+                    BossEvent.BossBarOverlay.PROGRESS);
+            this.bossBar.setProgress(0.0F);
+            if (requester != null) {
+                this.bossBar.addPlayer(requester);
+            }
+        }
+
+        abstract boolean runTick();
+
+        abstract String route();
+
+        final boolean belongsTo(ServerPlayer player) {
+            return requester == player;
+        }
+
+        final boolean deadlineExceeded(long tickStarted) {
+            return System.nanoTime() - tickStarted
+                    >= LatitudeLocateBudgetPolicy.MAX_BIOME_LOCATE_TICK_NANOS;
+        }
+
+        final boolean isWithinLatitudeWorld(int blockX, int blockZ) {
+            return Math.abs((long) blockX) <= worldRadius
+                    && Math.abs((long) blockZ) <= worldRadius;
+        }
+
+        /**
+         * Keeps the nearest match seen so far and narrows how far the spiral still has to run.
+         * Distance is horizontal because that is the distance the locate result reports.
+         *
+         * <p>An interior match — one whose full quart-cell neighbourhood also matched — always
+         * beats a sliver: a sliver answer strands the player on a razor-thin boundary cell whose
+         * surroundings are a different biome. A sliver is kept only as the fallback answer, and
+         * while it is the only match in hand the search bound stays widened so a real interior
+         * patch within the escape window can replace it.
+         */
+        private void recordCandidate(
+                Pair<BlockPos, Holder<Biome>> candidate, int stepBlocks, boolean interior) {
+            long distanceSq = horizontalDistanceSq(candidate.getFirst());
+            if (interior) {
+                if (bestInterior != null && distanceSq >= bestInteriorDistanceSq) {
+                    return;
+                }
+                bestInterior = candidate;
+                bestInteriorDistanceSq = distanceSq;
+                completionRingLimit = LatitudeLocateBudgetPolicy.nearestCompletionRingLimit(
+                        Math.sqrt((double) distanceSq), stepBlocks);
+                return;
+            }
+            if (bestInterior != null
+                    || (bestSliver != null && distanceSq >= bestSliverDistanceSq)) {
+                return;
+            }
+            bestSliver = candidate;
+            bestSliverDistanceSq = distanceSq;
+            completionRingLimit = LatitudeLocateBudgetPolicy.sliverEscapeRingLimit(
+                    Math.sqrt((double) distanceSq), stepBlocks);
+        }
+
+        private long horizontalDistanceSq(BlockPos found) {
+            long dx = (long) found.getX() - origin.getX();
+            long dz = (long) found.getZ() - origin.getZ();
+            return dx * dx + dz * dz;
+        }
+
+        final boolean hasCandidate() {
+            return bestInterior != null || bestSliver != null;
+        }
+
+        /** True once no unvisited ring can hold anything nearer than the match already found. */
+        final boolean ringExceedsCandidateBound(int ring) {
+            return hasCandidate() && ring > completionRingLimit;
+        }
+
+        final Pair<BlockPos, Holder<Biome>> bestCandidate() {
+            return bestInterior != null ? bestInterior : bestSliver;
+        }
+
+        /**
+         * The quart-cell ring a match must also hold at before it counts as interior: the four
+         * cardinal cells first because a thin boundary stripe fails there fastest, then the
+         * diagonals so a diagonal filament cannot pass either. All eight passing means the full
+         * 12-block square around the answer is the requested biome.
+         */
+        private static final int[][] NEIGHBOUR_QUART_OFFSETS = {
+                {1, 0}, {-1, 0}, {0, 1}, {0, -1},
+                {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+
+        private static final class PendingConfirmation {
+            final int quartX;
+            final int quartY;
+            final int quartZ;
+            final Pair<BlockPos, Holder<Biome>> candidate;
+            final int stepBlocks;
+            int nextNeighbour;
+
+            PendingConfirmation(int quartX, int quartY, int quartZ,
+                    Pair<BlockPos, Holder<Biome>> candidate, int stepBlocks) {
+                this.quartX = quartX;
+                this.quartY = quartY;
+                this.quartZ = quartZ;
+                this.candidate = candidate;
+                this.stepBlocks = stepBlocks;
+            }
+        }
+
+        final boolean confirmationPending() {
+            return pendingConfirmation != null;
+        }
+
+        /**
+         * Queues neighbourhood confirmation for a cell whose own classification matched. The
+         * probes run one per {@link #stepConfirmation()} call so each job can charge them to the
+         * same per-tick exact-probe budget as the match that started them; a match that cannot
+         * beat the interior answer already in hand is dropped without spending any.
+         */
+        final void beginConfirmation(int quartX, int quartY, int quartZ,
+                Pair<BlockPos, Holder<Biome>> candidate, int stepBlocks) {
+            if (bestInterior != null
+                    && horizontalDistanceSq(candidate.getFirst()) >= bestInteriorDistanceSq) {
+                return;
+            }
+            pendingConfirmation = new PendingConfirmation(
+                    quartX, quartY, quartZ, candidate, stepBlocks);
+        }
+
+        /** Probes one neighbour cell; the first miss settles the match as a sliver immediately. */
+        final void stepConfirmation() {
+            PendingConfirmation pending = pendingConfirmation;
+            if (pending == null) {
+                return;
+            }
+            int[] offset = NEIGHBOUR_QUART_OFFSETS[pending.nextNeighbour++];
+            int quartX = pending.quartX + offset[0];
+            int quartZ = pending.quartZ + offset[1];
+            // A neighbour outside the playable border does not count as matching: preferring a
+            // fully-inside patch is the point, and the sliver fallback still keeps a border patch
+            // findable when nothing better exists.
+            boolean matches = isWithinLatitudeWorld(
+                    QuartPos.toBlock(quartX) + 2, QuartPos.toBlock(quartZ) + 2)
+                    && target.test(latitudeSource.getNoiseBiome(
+                            quartX, pending.quartY, quartZ, sampler));
+            if (!matches) {
+                pendingConfirmation = null;
+                recordCandidate(pending.candidate, pending.stepBlocks, false);
+                return;
+            }
+            if (pending.nextNeighbour >= NEIGHBOUR_QUART_OFFSETS.length) {
+                pendingConfirmation = null;
+                recordCandidate(pending.candidate, pending.stepBlocks, true);
+            }
+        }
+
+        final void updateProgress(int completed, int total) {
+            long now = System.nanoTime();
+            if (now < nextProgressNanos) {
+                return;
+            }
+            int percent = total <= 0 ? 0 : Mth.clamp(
+                    (int) ((long) completed * 100L / total), 0, 99);
+            bossBar.setProgress(percent / 100.0F);
+            bossBar.setName(Component.literal(
+                    "Searching for " + target.asPrintable() + "... " + percent + "%"));
+            nextProgressNanos = now + PROGRESS_UPDATE_NANOS;
+        }
+
+        final void finish(Pair<BlockPos, Holder<Biome>> result) {
+            if (finished) {
+                return;
+            }
+            finished = true;
+            bossBar.removeAllPlayers();
+            Duration elapsed = Duration.ofNanos(System.nanoTime() - startedNanos);
+            if (result == null) {
+                source.sendFailure(Component.translatableEscape(
+                        "commands.locate.biome.not_found", target.asPrintable()));
+            } else {
+                LocateCommand.showLocateResult(source, target, origin, result,
+                        "commands.locate.biome.success", true, elapsed);
+            }
+        }
+
+        final void cancel() {
+            if (finished) {
+                return;
+            }
+            finished = true;
+            bossBar.removeAllPlayers();
+        }
+
+        final void fail(Throwable failure) {
+            if (finished) {
+                return;
+            }
+            finished = true;
+            bossBar.removeAllPlayers();
+            source.sendFailure(Component.literal(
+                    "Latitude biome search stopped safely: " + failure.getClass().getSimpleName()));
+        }
+    }
+
+    /** Preserves the exact wetland broad phase because terrain can promote source shorelines. */
+    private static final class WetlandLocateJob extends BiomeLocateJob {
+        private final boolean includesSwamp;
+        private final boolean includesMangrove;
+        private final Iterator<BlockPos.MutableBlockPos> offsets;
+        private final int surfaceY;
+        private int gridProbes;
+        private int exactProbes;
+
+        private WetlandLocateJob(
+                CommandSourceStack source,
+                ResourceOrTagArgument.Result<Biome> target,
+                BlockPos origin,
+                LatitudeBiomeSource latitudeSource,
+                int worldRadius,
+                int searchRadius,
+                Climate.Sampler sampler,
+                boolean includesSwamp,
+                boolean includesMangrove) {
+            super(source, target, origin, latitudeSource, worldRadius, searchRadius, sampler);
+            this.includesSwamp = includesSwamp;
+            this.includesMangrove = includesMangrove;
+            this.offsets = BlockPos.spiralAround(
+                    BlockPos.ZERO,
+                    searchRadius / COMMAND_HORIZONTAL_STEP,
+                    Direction.EAST,
+                    Direction.SOUTH).iterator();
+            this.surfaceY = Mth.clamp(
+                    LatitudeBiomes.SURFACE_CLASSIFY_Y + 4,
+                    source.getLevel().getMinY() + 1,
+                    source.getLevel().getMaxY());
+        }
+
+        @Override
+        String route() {
+            return "wetland";
+        }
+
+        @Override
+        boolean runTick() {
+            long tickStarted = System.nanoTime();
+            int tickGridProbes = 0;
+            int tickExactProbes = 0;
+            while (confirmationPending()
+                    && tickExactProbes < LatitudeLocateBudgetPolicy.MAX_WETLAND_EXACT_PROBES_PER_TICK
+                    && !deadlineExceeded(tickStarted)) {
+                tickExactProbes++;
+                exactProbes++;
+                stepConfirmation();
+            }
+            if (confirmationPending()) {
+                return false;
+            }
+            while (offsets.hasNext()
+                    && !confirmationPending()
+                    && tickGridProbes < LatitudeLocateBudgetPolicy.MAX_WETLAND_GRID_PROBES_PER_TICK
+                    && tickExactProbes < LatitudeLocateBudgetPolicy.MAX_WETLAND_EXACT_PROBES_PER_TICK
+                    && !deadlineExceeded(tickStarted)) {
+                BlockPos.MutableBlockPos offset = offsets.next();
+                if (ringExceedsCandidateBound(
+                        LatitudeLocateBudgetPolicy.spiralRing(offset.getX(), offset.getZ()))) {
+                    finish(bestCandidate());
+                    log(true);
+                    return true;
+                }
+                tickGridProbes++;
+                gridProbes++;
+
+                int sampleX = origin.getX() + offset.getX() * COMMAND_HORIZONTAL_STEP;
+                int sampleZ = origin.getZ() + offset.getZ() * COMMAND_HORIZONTAL_STEP;
+                int quartX = QuartPos.fromBlock(sampleX);
+                int quartZ = QuartPos.fromBlock(sampleZ);
+                int blockX = QuartPos.toBlock(quartX) + 2;
+                int blockZ = QuartPos.toBlock(quartZ) + 2;
+                if (!isWithinLatitudeWorld(blockX, blockZ)) {
+                    continue;
+                }
+                if (!LatitudeBiomes.isPotentialWetlandLocateCandidate(
+                        blockX, blockZ, worldRadius, sampler, includesSwamp, includesMangrove)) {
+                    continue;
+                }
+
+                boolean directMangroveCandidate = includesMangrove
+                        && LatitudeBiomes.isPotentialDirectMangroveLocateCandidate(
+                                blockX, blockZ, sampler);
+                if (!directMangroveCandidate
+                        && !latitudeSource.isPotentialWetlandLocateSourceCandidate(
+                                quartX, QuartPos.fromBlock(surfaceY), quartZ, sampler)) {
+                    continue;
+                }
+
+                tickExactProbes++;
+                exactProbes++;
+                Holder<Biome> exact;
+                exact = latitudeSource.getNoiseBiome(
+                        quartX, QuartPos.fromBlock(surfaceY), quartZ, sampler);
+                if (target.test(exact)) {
+                    // The neighbourhood probes own the exact budget from here; the grid resumes
+                    // once the match settles as interior or sliver.
+                    beginConfirmation(quartX, QuartPos.fromBlock(surfaceY), quartZ,
+                            Pair.of(LatitudeBiomeSource.centerQuartPosition(
+                                    new BlockPos(blockX, surfaceY, blockZ)), exact),
+                            COMMAND_HORIZONTAL_STEP);
+                }
+            }
+            updateProgress(gridProbes, LatitudeLocateBudgetPolicy.worstCaseSamples(
+                    searchRadius, COMMAND_HORIZONTAL_STEP, 1));
+            if (!offsets.hasNext() && !confirmationPending()) {
+                finish(bestCandidate());
+                log(hasCandidate());
+                return true;
+            }
+            return false;
+        }
+
+        private void log(boolean found) {
+            GlobeMod.LOGGER.info("[Latitude] finished tick-sliced biome locate target={} route={} gridProbes={} exactProbes={} found={}",
+                    target.asPrintable(), route(), gridProbes, exactProbes, found);
+        }
+    }
+
+    /** Uses the same finite preview and exact fallback budgets as LatitudeBiomeSource. */
+    private static final class SurfaceLocateJob extends BiomeLocateJob {
+        private final Set<Holder<Biome>> matching;
+        private final boolean targetIncludesMangrove;
+        private final int surfaceY;
+        private final int previewStep;
+        private final int fallbackStep;
+        private final Iterator<BlockPos.MutableBlockPos> previewOffsets;
+        private final Iterator<BlockPos.MutableBlockPos> fallbackOffsets;
+        private final int previewTotal;
+        private final int fallbackTotal;
+        private int previewProbes;
+        private int exactCandidateChecks;
+        private int fallbackChecks;
+        private boolean previewComplete;
+
+        private SurfaceLocateJob(
+                CommandSourceStack source,
+                ResourceOrTagArgument.Result<Biome> target,
+                BlockPos origin,
+                LatitudeBiomeSource latitudeSource,
+                int worldRadius,
+                int searchRadius,
+                Climate.Sampler sampler,
+                Set<Holder<Biome>> matching,
+                boolean targetIncludesMangrove) {
+            super(source, target, origin, latitudeSource, worldRadius, searchRadius, sampler);
+            this.matching = matching;
+            this.targetIncludesMangrove = targetIncludesMangrove;
+            this.surfaceY = Mth.clamp(
+                    LatitudeBiomes.SURFACE_CLASSIFY_Y + 4,
+                    source.getLevel().getMinY() + 1,
+                    source.getLevel().getMaxY());
+            this.previewStep = LatitudeLocateBudgetPolicy.surfaceHorizontalStep(
+                    searchRadius, COMMAND_HORIZONTAL_STEP);
+            this.fallbackStep = LatitudeLocateBudgetPolicy.surfaceExactFallbackHorizontalStep(
+                    searchRadius, COMMAND_HORIZONTAL_STEP);
+            this.previewTotal = LatitudeLocateBudgetPolicy.worstCaseSamples(
+                    searchRadius, previewStep, 1);
+            this.fallbackTotal = LatitudeLocateBudgetPolicy.worstCaseSamples(
+                    searchRadius, fallbackStep, 1);
+            this.previewOffsets = BlockPos.spiralAround(BlockPos.ZERO,
+                    searchRadius / previewStep, Direction.EAST, Direction.SOUTH).iterator();
+            this.fallbackOffsets = BlockPos.spiralAround(BlockPos.ZERO,
+                    searchRadius / fallbackStep, Direction.EAST, Direction.SOUTH).iterator();
+        }
+
+        @Override
+        String route() {
+            return "surface";
+        }
+
+        @Override
+        boolean runTick() {
+            long tickStarted = System.nanoTime();
+            if (confirmationPending()) {
+                // The neighbourhood probe is this tick's single terrain-aware classification —
+                // the same stall guard that limits the match probes themselves.
+                stepConfirmation();
+                return false;
+            }
+            if (!previewComplete) {
+                int tickPreviewProbes = 0;
+                while (previewOffsets.hasNext()
+                        && tickPreviewProbes < LatitudeLocateBudgetPolicy.MAX_SURFACE_PREVIEW_PROBES_PER_TICK
+                        && !deadlineExceeded(tickStarted)) {
+                    BlockPos.MutableBlockPos offset = previewOffsets.next();
+                    if (ringExceedsCandidateBound(
+                            LatitudeLocateBudgetPolicy.spiralRing(offset.getX(), offset.getZ()))) {
+                        finish(bestCandidate());
+                        log(true);
+                        return true;
+                    }
+                    tickPreviewProbes++;
+                    previewProbes++;
+                    int quartX = QuartPos.fromBlock(origin.getX() + offset.getX() * previewStep);
+                    int quartZ = QuartPos.fromBlock(origin.getZ() + offset.getZ() * previewStep);
+                    int blockX = QuartPos.toBlock(quartX) + 2;
+                    int blockZ = QuartPos.toBlock(quartZ) + 2;
+                    if (!isWithinLatitudeWorld(blockX, blockZ)) {
+                        continue;
+                    }
+                    Holder<Biome> preview = latitudeSource.getLocatePreviewNoiseBiome(
+                            quartX, QuartPos.fromBlock(surfaceY), quartZ, sampler);
+                    boolean plausible = target.test(preview)
+                            || (targetIncludesMangrove
+                            && LatitudeBiomes.isBiomeIdPublic(preview, "minecraft:swamp"));
+                    if (!plausible) {
+                        continue;
+                    }
+                    if (exactCandidateChecks >= LatitudeLocateBudgetPolicy.MAX_SURFACE_EXACT_VERIFICATIONS) {
+                        // Verification budget spent: return the nearest match already confirmed
+                        // rather than dropping it and restarting on the coarser fallback grid.
+                        if (hasCandidate()) {
+                            finish(bestCandidate());
+                            log(true);
+                            return true;
+                        }
+                        previewComplete = true;
+                        break;
+                    }
+                    exactCandidateChecks++;
+                    Holder<Biome> exact = latitudeSource.getNoiseBiome(
+                            quartX, QuartPos.fromBlock(surfaceY), quartZ, sampler);
+                    if (target.test(exact)) {
+                        beginConfirmation(quartX, QuartPos.fromBlock(surfaceY), quartZ,
+                                resultAt(quartX, quartZ, exact), previewStep);
+                    }
+                    // One terrain-aware classification per surface tick keeps a bad terrain sample
+                    // from recreating the old integrated-server stall.
+                    break;
+                }
+                if (!previewOffsets.hasNext() && !confirmationPending()) {
+                    // The preview grid is exhausted; a match found on it is already the nearest
+                    // preview candidate, so the coarser fallback sweep has nothing to add.
+                    if (hasCandidate()) {
+                        finish(bestCandidate());
+                        log(true);
+                        return true;
+                    }
+                    previewComplete = true;
+                }
+                updateProgress(previewProbes, previewTotal + fallbackTotal);
+                if (!previewComplete) {
+                    return false;
+                }
+            }
+
+            if (fallbackOffsets.hasNext()) {
+                BlockPos.MutableBlockPos offset = fallbackOffsets.next();
+                if (ringExceedsCandidateBound(
+                        LatitudeLocateBudgetPolicy.spiralRing(offset.getX(), offset.getZ()))) {
+                    finish(bestCandidate());
+                    log(true);
+                    return true;
+                }
+                fallbackChecks++;
+                int quartX = QuartPos.fromBlock(origin.getX() + offset.getX() * fallbackStep);
+                int quartZ = QuartPos.fromBlock(origin.getZ() + offset.getZ() * fallbackStep);
+                int blockX = QuartPos.toBlock(quartX) + 2;
+                int blockZ = QuartPos.toBlock(quartZ) + 2;
+                if (!isWithinLatitudeWorld(blockX, blockZ)) {
+                    updateProgress(previewTotal + fallbackChecks, previewTotal + fallbackTotal);
+                    return false;
+                }
+                Holder<Biome> exact = latitudeSource.getNoiseBiome(
+                        quartX, QuartPos.fromBlock(surfaceY), quartZ, sampler);
+                if (target.test(exact)) {
+                    beginConfirmation(quartX, QuartPos.fromBlock(surfaceY), quartZ,
+                            resultAt(quartX, quartZ, exact), fallbackStep);
+                }
+                updateProgress(previewTotal + fallbackChecks, previewTotal + fallbackTotal);
+                return false;
+            }
+
+            if (hasCandidate()) {
+                finish(bestCandidate());
+                log(true);
+                return true;
+            }
+
+            Pair<BlockPos, Holder<Biome>> planned = latitudeSource.findPlannedSurfaceCoverage(
+                    matching, new BlockPos(origin.getX(), surfaceY, origin.getZ()), target, sampler);
+            finish(planned);
+            log(planned != null);
+            return true;
+        }
+
+        private Pair<BlockPos, Holder<Biome>> resultAt(int quartX, int quartZ, Holder<Biome> exact) {
+            return Pair.of(LatitudeBiomeSource.centerQuartPosition(new BlockPos(
+                    QuartPos.toBlock(quartX) + 2, surfaceY, QuartPos.toBlock(quartZ) + 2)), exact);
+        }
+
+        private void log(boolean found) {
+            GlobeMod.LOGGER.info("[Latitude] finished tick-sliced biome locate target={} route={} previewProbes={} exactCandidateChecks={} fallbackChecks={} found={}",
+                    target.asPrintable(), route(), previewProbes, exactCandidateChecks, fallbackChecks, found);
+        }
+    }
+
+    /** Covers cave or mixed tags with the same bounded three-dimensional search as the source. */
+    private static final class ThreeDimensionalLocateJob extends BiomeLocateJob {
+        private final int[] verticalSamples;
+        private final int horizontalStep;
+        private final Iterator<BlockPos.MutableBlockPos> offsets;
+        private final int totalSamples;
+        private final Set<Holder<Biome>> matching;
+        private BlockPos currentOffset;
+        private int verticalIndex;
+        private int sampled;
+
+        private ThreeDimensionalLocateJob(
+                CommandSourceStack source,
+                ResourceOrTagArgument.Result<Biome> target,
+                BlockPos origin,
+                LatitudeBiomeSource latitudeSource,
+                int worldRadius,
+                int searchRadius,
+                Climate.Sampler sampler,
+                ServerLevel level,
+                Set<Holder<Biome>> matching) {
+            super(source, target, origin, latitudeSource, worldRadius, searchRadius, sampler);
+            this.verticalSamples = Mth.outFromOrigin(origin.getY(),
+                    level.getMinY() + 1, level.getMaxY() + 1, COMMAND_VERTICAL_STEP).toArray();
+            this.horizontalStep = LatitudeLocateBudgetPolicy.threeDimensionalHorizontalStep(
+                    searchRadius, COMMAND_HORIZONTAL_STEP, Math.max(1, verticalSamples.length));
+            this.offsets = BlockPos.spiralAround(BlockPos.ZERO,
+                    searchRadius / horizontalStep, Direction.EAST, Direction.SOUTH).iterator();
+            this.totalSamples = LatitudeLocateBudgetPolicy.worstCaseSamples(
+                    searchRadius, horizontalStep, Math.max(1, verticalSamples.length));
+            this.matching = matching;
+        }
+
+        @Override
+        String route() {
+            return "three-dimensional";
+        }
+
+        @Override
+        boolean runTick() {
+            long tickStarted = System.nanoTime();
+            int tickExactProbes = 0;
+            while (tickExactProbes < LatitudeLocateBudgetPolicy.MAX_THREE_DIMENSIONAL_EXACT_PROBES_PER_TICK
+                    && !deadlineExceeded(tickStarted)) {
+                if (confirmationPending()) {
+                    tickExactProbes++;
+                    stepConfirmation();
+                    continue;
+                }
+                if (currentOffset == null) {
+                    if (!offsets.hasNext()) {
+                        if (hasCandidate()) {
+                            finish(bestCandidate());
+                            log(true);
+                            return true;
+                        }
+                        Pair<BlockPos, Holder<Biome>> planned = latitudeSource.findPlannedCaveCoverage(
+                                matching, origin, searchRadius, target, sampler);
+                        finish(planned);
+                        log(planned != null);
+                        return true;
+                    }
+                    BlockPos.MutableBlockPos offset = offsets.next();
+                    if (ringExceedsCandidateBound(
+                            LatitudeLocateBudgetPolicy.spiralRing(offset.getX(), offset.getZ()))) {
+                        finish(bestCandidate());
+                        log(true);
+                        return true;
+                    }
+                    currentOffset = new BlockPos(offset.getX(), offset.getY(), offset.getZ());
+                    verticalIndex = 0;
+                }
+                int y = verticalSamples[verticalIndex++];
+                int quartX = QuartPos.fromBlock(origin.getX() + currentOffset.getX() * horizontalStep);
+                int quartY = QuartPos.fromBlock(y);
+                int quartZ = QuartPos.fromBlock(origin.getZ() + currentOffset.getZ() * horizontalStep);
+                sampled++;
+                tickExactProbes++;
+                if (!isWithinLatitudeWorld(
+                        QuartPos.toBlock(quartX) + 2, QuartPos.toBlock(quartZ) + 2)) {
+                    if (verticalIndex >= verticalSamples.length) {
+                        currentOffset = null;
+                    }
+                    continue;
+                }
+                Holder<Biome> exact = latitudeSource.getNoiseBiome(quartX, quartY, quartZ, sampler);
+                if (target.test(exact)) {
+                    beginConfirmation(quartX, quartY, quartZ,
+                            Pair.of(LatitudeBiomeSource.centerQuartPosition(new BlockPos(
+                                    QuartPos.toBlock(quartX) + 2, QuartPos.toBlock(quartY) + 2,
+                                    QuartPos.toBlock(quartZ) + 2)), exact), horizontalStep);
+                    // Remaining heights in this column share its horizontal distance, so they
+                    // cannot improve on the match just queued.
+                    currentOffset = null;
+                    continue;
+                }
+                if (verticalIndex >= verticalSamples.length) {
+                    currentOffset = null;
+                }
+            }
+            updateProgress(sampled, totalSamples);
+            return false;
+        }
+
+        private void log(boolean found) {
+            GlobeMod.LOGGER.info("[Latitude] finished tick-sliced biome locate target={} route={} samples={} found={}",
+                    target.asPrintable(), route(), sampled, found);
+        }
+    }
+}

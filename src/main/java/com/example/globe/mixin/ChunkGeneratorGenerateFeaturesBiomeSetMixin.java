@@ -1,32 +1,37 @@
 package com.example.globe.mixin;
 
 import com.example.globe.GlobeMod;
-import com.example.globe.core.LatitudeV2Flags;
+import com.example.globe.world.BiomeDescriptorLedger;
+import com.example.globe.world.LatitudeWorldgenScope;
+import com.example.globe.world.feature.LatitudeRiparianBanks;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeGenerationSettings;
 import net.minecraft.world.level.biome.BiomeSource;
+import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.biome.FeatureSorter;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -48,44 +53,16 @@ public class ChunkGeneratorGenerateFeaturesBiomeSetMixin {
                     Integer.getInteger("latitude.debugBopRetainAll.logLimit", 20));
     private static final String LATITUDE_CUSTOM_RETAINALL_CLASSIFICATION =
             "LATITUDE_TAGGED_CUSTOM_FEATURES_RETAINALL_GUARD";
-    private static final String[] LATITUDE_CUSTOM_POLICY_TAGS = {
-            "lat_tropics_primary",
-            "lat_tropics_secondary",
-            "lat_tropics_accent",
-            "lat_arid_primary",
-            "lat_arid_secondary",
-            "lat_arid_accent",
-            "lat_trans_arid_tropics_1_primary",
-            "lat_trans_arid_tropics_1_secondary",
-            "lat_trans_arid_tropics_1_accent",
-            "lat_trans_arid_tropics_2_primary",
-            "lat_trans_arid_tropics_2_secondary",
-            "lat_trans_arid_tropics_2_accent",
-            "lat_subtropical_humid_primary",
-            "lat_subtropical_humid_secondary",
-            "lat_subtropical_humid_accent",
-            "lat_temperate_primary",
-            "lat_temperate_secondary",
-            "lat_temperate_accent",
-            "lat_temperate_mountain",
-            "lat_subpolar_primary",
-            "lat_subpolar_secondary",
-            "lat_subpolar_accent",
-            "lat_polar_primary",
-            "lat_polar_secondary",
-            "lat_polar_accent",
-            "lat_ocean_tropical",
-            "lat_ocean_temperate",
-            "lat_ocean_subpolar",
-            "lat_ocean_polar"
-    };
-
     @Unique
     private static final AtomicInteger LATITUDE_DEBUG_CUSTOM_RETAINALL_LOGS =
             new AtomicInteger();
 
     @Unique
     private static final AtomicBoolean LATITUDE_DEBUG_CUSTOM_INDEX_AUDIT_DONE =
+            new AtomicBoolean();
+
+    @Unique
+    private static final AtomicBoolean LATITUDE_CUSTOM_INDEX_FAILURE_WARNED =
             new AtomicBoolean();
 
     @Shadow
@@ -119,12 +96,24 @@ public class ChunkGeneratorGenerateFeaturesBiomeSetMixin {
     @Unique
     private volatile Set<Identifier> globe$customBiomeRetainIds;
 
+    /**
+     * Lush desert riverbank features, in load order, or empty when they are switched off, missing,
+     * or could not be proven present in the scoped index. Empty means "append nothing anywhere",
+     * which is the only safe fallback: a placed feature offered to the decoration loop without an
+     * index entry maps to -1 and would fault the feature lookup.
+     */
+    @Unique
+    private volatile List<Holder<PlacedFeature>> globe$riparianBankFeatures = List.of();
+
     @Inject(
             method = "applyBiomeDecoration(Lnet/minecraft/world/level/WorldGenLevel;Lnet/minecraft/world/level/chunk/ChunkAccess;Lnet/minecraft/world/level/StructureManager;)V",
             at = @At("HEAD")
     )
     private void globe$indexLatitudeTaggedCustomBiomeFeatures(
             WorldGenLevel world, ChunkAccess chunk, StructureManager structureAccessor, CallbackInfo ci) {
+        if (!LatitudeWorldgenScope.isActive()) {
+            return;
+        }
         if (this.globe$customBiomeFeaturesIndexed) {
             return;
         }
@@ -136,49 +125,164 @@ public class ChunkGeneratorGenerateFeaturesBiomeSetMixin {
                 Registry<Biome> biomeRegistry = world.registryAccess().lookupOrThrow(Registries.BIOME);
                 List<Holder<Biome>> policyBiomes = latitude$taggedCustomPolicyBiomes(biomeRegistry);
                 this.globe$customBiomePolicyCount = policyBiomes.size();
-                if (policyBiomes.isEmpty()) {
-                    this.globe$customBiomeRetainIds = Set.of();
-                    latitude$logIndexResult("absent", 0, 0, 0, false, false);
-                    return;
-                }
-
-                List<FeatureSorter.StepFeatureData> currentIndex = this.featuresPerStep.get();
-                int[] currentCounts = latitude$countIndexedFeatures(policyBiomes, currentIndex);
-                this.globe$customBiomeFeatureCount = currentCounts[0];
-                this.globe$customBiomeIndexedCount = currentCounts[1];
-                if (currentCounts[0] == currentCounts[1]) {
-                    this.globe$customBiomeIndexSafe = true;
-                    this.globe$customBiomeRetainIds = latitude$biomeIds(policyBiomes);
-                    latitude$logIndexResult("already_safe", policyBiomes.size(), currentCounts[0], currentCounts[1], false, true);
-                    return;
-                }
-
                 List<Holder<Biome>> expandedBiomes = new ArrayList<>(this.biomeSource.possibleBiomes());
                 latitude$appendMissingPolicyBiomes(expandedBiomes, policyBiomes);
+                // Resolved before the index is built, because the scoped-index supplier below reads
+                // this field while appending the bank features to each arid biome's vegetal step.
+                this.globe$riparianBankFeatures =
+                        LatitudeRiparianBanks.resolvePlacedFeatures(world.registryAccess());
                 List<FeatureSorter.StepFeatureData> expandedIndex = FeatureSorter.buildFeaturesPerStep(
                         expandedBiomes,
-                        biome -> this.generationSettingsGetter.apply(biome).features(),
+                        this::latitude$featuresForScopedIndex,
                         true
                 );
+                if (!latitude$riparianFeaturesIndexed(expandedIndex)) {
+                    this.globe$riparianBankFeatures = List.of();
+                }
                 int[] expandedCounts = latitude$countIndexedFeatures(policyBiomes, expandedIndex);
                 this.globe$customBiomeFeatureCount = expandedCounts[0];
                 this.globe$customBiomeIndexedCount = expandedCounts[1];
                 this.globe$customBiomeIndexSafe = expandedCounts[0] == expandedCounts[1];
+                // Always install the scoped index: even when no custom biome expansion is needed,
+                // this preserves the pre-1.5 feature ordering after frozen-river vegetation is
+                // removed from Latitude only rather than from the global biome registry.
+                this.featuresPerStep = () -> expandedIndex;
                 if (this.globe$customBiomeIndexSafe) {
-                    this.featuresPerStep = () -> expandedIndex;
                     this.globe$customBiomeRetainIds = latitude$biomeIds(policyBiomes);
+                } else {
+                    this.globe$customBiomeRetainIds = Set.of();
                 }
-                latitude$logIndexResult("expanded_once", policyBiomes.size(), expandedCounts[0], expandedCounts[1], true, this.globe$customBiomeIndexSafe);
+                latitude$logIndexResult(
+                        "scoped_index_rebuilt",
+                        policyBiomes.size(),
+                        expandedCounts[0],
+                        expandedCounts[1],
+                        true,
+                        this.globe$customBiomeIndexSafe);
             } catch (Exception e) {
                 this.globe$customBiomeIndexSafe = false;
                 this.globe$customBiomeRetainIds = Set.of();
-                if (LATITUDE_DEBUG_CUSTOM_RETAINALL_GATES) {
-                    GlobeMod.LOGGER.warn("[LAT][CUSTOM_RETAINALL] indexExpansion result=blocked exception={}", e.getMessage());
+                // The scoped index was not installed, so the vanilla index is still in force and
+                // knows nothing about the bank features. Appending them now would be a fault.
+                this.globe$riparianBankFeatures = List.of();
+                if (LATITUDE_CUSTOM_INDEX_FAILURE_WARNED.compareAndSet(false, true)) {
+                    GlobeMod.LOGGER.warn(
+                            "[LAT][CUSTOM_RETAINALL] indexExpansion result=blocked exceptionType={} exception={} policyBiomes={} featureTotal={} featureInIndex={}",
+                            e.getClass().getName(),
+                            e.getMessage(),
+                            this.globe$customBiomePolicyCount,
+                            this.globe$customBiomeFeatureCount,
+                            this.globe$customBiomeIndexedCount);
                 }
             } finally {
                 this.globe$customBiomeFeaturesIndexed = true;
             }
         }
+    }
+
+    @WrapOperation(
+            method = "applyBiomeDecoration(Lnet/minecraft/world/level/WorldGenLevel;Lnet/minecraft/world/level/chunk/ChunkAccess;Lnet/minecraft/world/level/StructureManager;)V",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/core/HolderSet;stream()Ljava/util/stream/Stream;"))
+    private Stream<Holder<PlacedFeature>> globe$omitFrozenRiverVegetationContribution(
+            HolderSet<PlacedFeature> features,
+            Operation<Stream<Holder<PlacedFeature>>> original,
+            @Local(name = "biome") Holder<Biome> biome,
+            @Local(name = "stepIndex") int stepIndex) {
+        if (LatitudeWorldgenScope.isActive()
+                && stepIndex == GenerationStep.Decoration.VEGETAL_DECORATION.ordinal()) {
+            if (biome.is(Biomes.FROZEN_RIVER)) {
+                return Stream.empty();
+            }
+            // The decoration loop collects the indices to run from the biome's REAL generation
+            // settings, not from the scoped index, so an arid biome has to contribute its bank
+            // features here as well as in latitude$featuresForScopedIndex below.
+            List<Holder<PlacedFeature>> riparian = latitude$riparianBankFeaturesFor(biome);
+            if (!riparian.isEmpty()) {
+                return Stream.concat(original.call(features), riparian.stream());
+            }
+        }
+        return original.call(features);
+    }
+
+    @Unique
+    private List<HolderSet<PlacedFeature>> latitude$featuresForScopedIndex(Holder<Biome> biome) {
+        List<HolderSet<PlacedFeature>> features = this.generationSettingsGetter.apply(biome).features();
+        int vegetalStep = GenerationStep.Decoration.VEGETAL_DECORATION.ordinal();
+        if (vegetalStep >= features.size()) {
+            return features;
+        }
+        boolean frozenRiver = biome.is(Biomes.FROZEN_RIVER);
+        List<Holder<PlacedFeature>> riparian = latitude$riparianBankFeaturesFor(biome);
+        if (!frozenRiver && riparian.isEmpty()) {
+            return features;
+        }
+        List<HolderSet<PlacedFeature>> filtered = new ArrayList<>(features);
+        if (frozenRiver) {
+            filtered.set(vegetalStep, HolderSet.empty());
+            return filtered;
+        }
+        // Appended last, ground before plants, and in the same relative order for every arid
+        // biome - that is what keeps the feature sorter's cross-biome ordering acyclic.
+        List<Holder<PlacedFeature>> vegetal = new ArrayList<>();
+        for (Holder<PlacedFeature> existing : features.get(vegetalStep)) {
+            vegetal.add(existing);
+        }
+        for (Holder<PlacedFeature> bank : riparian) {
+            // Identity, not equals: the feature index is an identity lookup, and PlacedFeature is a
+            // record, so two distinct features with matching contents would compare equal and one
+            // of them would silently never be appended.
+            if (!latitude$containsFeatureValue(vegetal, bank)) {
+                vegetal.add(bank);
+            }
+        }
+        filtered.set(vegetalStep, HolderSet.direct(vegetal));
+        return filtered;
+    }
+
+    @Unique
+    private static boolean latitude$containsFeatureValue(
+            List<Holder<PlacedFeature>> features, Holder<PlacedFeature> candidate) {
+        for (Holder<PlacedFeature> existing : features) {
+            if (existing == candidate || existing.value() == candidate.value()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** The bank features this biome should carry, or empty for anything that is not arid land. */
+    @Unique
+    private List<Holder<PlacedFeature>> latitude$riparianBankFeaturesFor(Holder<Biome> biome) {
+        List<Holder<PlacedFeature>> riparian = this.globe$riparianBankFeatures;
+        if (riparian == null || riparian.isEmpty() || !LatitudeRiparianBanks.isAridLand(biome)) {
+            return List.of();
+        }
+        return riparian;
+    }
+
+    /**
+     * Proves every bank feature reached the rebuilt index. If no arid biome was in the expansion
+     * the features were never indexed, and offering them to the decoration loop would map to -1.
+     */
+    @Unique
+    private boolean latitude$riparianFeaturesIndexed(List<FeatureSorter.StepFeatureData> indexed) {
+        List<Holder<PlacedFeature>> riparian = this.globe$riparianBankFeatures;
+        if (riparian == null || riparian.isEmpty()) {
+            return false;
+        }
+        int vegetalStep = GenerationStep.Decoration.VEGETAL_DECORATION.ordinal();
+        if (vegetalStep >= indexed.size()) {
+            return false;
+        }
+        FeatureSorter.StepFeatureData stepData = indexed.get(vegetalStep);
+        for (Holder<PlacedFeature> bank : riparian) {
+            if (stepData.indexMapping().applyAsInt(bank.value()) < 0) {
+                return false;
+            }
+        }
+        return true;
     }
 
     @Redirect(
@@ -189,13 +293,18 @@ public class ChunkGeneratorGenerateFeaturesBiomeSetMixin {
             )
     )
     private boolean globe$logRetainAll(Set<?> biomes, Collection<?> retainSet) {
+        if (!LatitudeWorldgenScope.isActive()) {
+            return biomes.retainAll(retainSet);
+        }
+        boolean debugRetainAll = LATITUDE_DEBUG_CUSTOM_RETAINALL_GATES;
         Set<Identifier> retainIds = latitude$customBiomeRetainIds();
-        List<Holder<Biome>> beforePolicyHolders = latitude$policyCustomHoldersInSet(biomes, retainIds);
-        boolean before = !beforePolicyHolders.isEmpty();
-        int beforeSize = biomes.size();
-
-        List<Holder<Biome>> auditHolders = (before && !LATITUDE_DEBUG_CUSTOM_INDEX_AUDIT_DONE.get())
-                ? beforePolicyHolders : List.of();
+        int beforeSize = debugRetainAll ? biomes.size() : 0;
+        // Preserving a selected custom biome needs this snapshot. Ordinary release runs do not
+        // need the same traversal merely to assemble a debug report when preservation is inactive.
+        List<Holder<Biome>> beforePolicyHolders =
+                (this.globe$customBiomeIndexSafe || debugRetainAll)
+                        ? latitude$policyCustomHoldersInSet(biomes, retainIds)
+                        : List.of();
 
         boolean changed = biomes.retainAll(retainSet);
         int preservedCustom = 0;
@@ -211,21 +320,19 @@ public class ChunkGeneratorGenerateFeaturesBiomeSetMixin {
                 }
             }
         }
-        boolean after = latitude$hasPolicyCustomBiome(biomes, retainIds);
-
-        if (LATITUDE_DEBUG_CUSTOM_RETAINALL_GATES
-                && LATITUDE_DEBUG_CUSTOM_RETAINALL_LOGS.getAndIncrement() < LATITUDE_DEBUG_CUSTOM_RETAINALL_LOG_LIMIT
-                && (before || after)) {
-            GlobeMod.LOGGER.info("[LAT][CUSTOM_RETAINALL] classification={} beforeSize={} afterSize={} beforePolicyCustom={} afterPolicyCustom={} retainAllChanged={} preservedCustom={} indexSafe={} policyCustomBiomes={} featureTotal={} featureInIndex={}",
-                    LATITUDE_CUSTOM_RETAINALL_CLASSIFICATION, beforeSize, biomes.size(), before, after, changed,
-                    preservedCustom, this.globe$customBiomeIndexSafe, this.globe$customBiomePolicyCount,
-                    this.globe$customBiomeFeatureCount, this.globe$customBiomeIndexedCount);
-        }
-
-        if (LATITUDE_DEBUG_CUSTOM_RETAINALL_GATES
-                && !auditHolders.isEmpty()
-                && LATITUDE_DEBUG_CUSTOM_INDEX_AUDIT_DONE.compareAndSet(false, true)) {
-            latitude$auditCustomIndexedFeatures(auditHolders);
+        if (debugRetainAll) {
+            boolean before = !beforePolicyHolders.isEmpty();
+            boolean after = latitude$hasPolicyCustomBiome(biomes, retainIds);
+            if (LATITUDE_DEBUG_CUSTOM_RETAINALL_LOGS.getAndIncrement() < LATITUDE_DEBUG_CUSTOM_RETAINALL_LOG_LIMIT
+                    && (before || after)) {
+                GlobeMod.LOGGER.info("[LAT][CUSTOM_RETAINALL] classification={} beforeSize={} afterSize={} beforePolicyCustom={} afterPolicyCustom={} retainAllChanged={} preservedCustom={} indexSafe={} policyCustomBiomes={} featureTotal={} featureInIndex={}",
+                        LATITUDE_CUSTOM_RETAINALL_CLASSIFICATION, beforeSize, biomes.size(), before, after, changed,
+                        preservedCustom, this.globe$customBiomeIndexSafe, this.globe$customBiomePolicyCount,
+                        this.globe$customBiomeFeatureCount, this.globe$customBiomeIndexedCount);
+            }
+            if (before && LATITUDE_DEBUG_CUSTOM_INDEX_AUDIT_DONE.compareAndSet(false, true)) {
+                latitude$auditCustomIndexedFeatures(beforePolicyHolders);
+            }
         }
 
         return changed;
@@ -300,32 +407,9 @@ public class ChunkGeneratorGenerateFeaturesBiomeSetMixin {
 
     @Unique
     private static List<Holder<Biome>> latitude$taggedCustomPolicyBiomes(Registry<Biome> biomeRegistry) {
-        Map<Identifier, Holder<Biome>> out = new LinkedHashMap<>();
-        for (String tagPath : LATITUDE_CUSTOM_POLICY_TAGS) {
-            TagKey<Biome> tag = TagKey.create(Registries.BIOME, Identifier.fromNamespaceAndPath("globe", tagPath));
-            for (Holder<Biome> holder : biomeRegistry.getTagOrEmpty(tag)) {
-                Identifier id = latitude$biomeId(holder);
-                if (id != null && !"minecraft".equals(id.getNamespace())) {
-                    out.putIfAbsent(id, holder);
-                }
-            }
-        }
-        // Phase 5 Slice B-8 Polar Barrens: admit globe:polar_barrens to the retain/index policy set
-        // (flag-on only). It carries NO lat_* tag by design (A1: static tag membership would leak it
-        // equatorward via the flat-polar-shelf selector), so the tag sweep above never sees it -- but the
-        // consumer's final override places it in the deep cap, and without membership here the vanilla
-        // retainAll(possibleBiomes) would strip it from decoration entirely (no ores, no lakes, no snow
-        // carpet). Index safety: the barrens feature list is a STRICT SUBSET of snowy_plains' (surface
-        // vegetation dropped; every ore/lake/spring/geode/disk/underground entry kept in its exact step,
-        // plus freeze_top_layer), and snowy_plains is always a possible biome wherever the barrens can
-        // appear -- so every barrens feature is already in the FeatureSorter index at the same step
-        // (total == inIndex, the "already_safe" path: NO index rebuild, no new sort nodes or edges, no
-        // decoration-RNG shift). The redirect just needs the biome itself in the retain set.
-        if (LatitudeV2Flags.POLAR_BARRENS_ENABLED) {
-            Identifier barrensId = Identifier.fromNamespaceAndPath("globe", "polar_barrens");
-            biomeRegistry.get(barrensId).ifPresent(holder -> out.putIfAbsent(barrensId, holder));
-        }
-        return new ArrayList<>(out.values());
+        // Shared with LatitudeBiomeSource's /locate biome candidate pool — both need "everything
+        // Latitude could have placed here." See LatitudePaintableCustomBiomes.
+        return com.example.globe.world.LatitudePaintableCustomBiomes.allPaintableCustomBiomes(biomeRegistry);
     }
 
     @Unique

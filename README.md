@@ -6,13 +6,13 @@ A globe-style world + latitude-based biome bands with a customizable compass HUD
 
 The current planning front door is `docs/LATITUDE_2_0_OVERHAUL.md`.
 
-That document supersedes older "Mercator", E/W wrap, and ocean-seam design records for the Latitude 2.0 overhaul direction. The 2.0 plan keeps the 2:1 projected-planet foundation, pivots the planned canonical implementation to Minecraft `26.2`, and starts with portability plus Atlas geography measurement before any visible continent/climate behavior changes.
+That document supersedes older "Mercator", E/W wrap, and ocean-seam design records for the Latitude 2.0 overhaul direction. The 2.0 plan keeps the 2:1 projected-planet foundation and starts with portability plus Atlas geography measurement before any visible continent/climate behavior changes. Its canonical Minecraft target moved from `26.2` to `26.3` (maintainer ruling, 2026-09-12).
 
-## Current 1.4 candidate status
+## Status
 
-This checkout is the canonical Minecraft `26.1.2` Latitude 1.4 candidate root. Current release-readiness truth lives in `docs/release/history/1.4/checklist.md`; do not treat older published `1.4.0+26.1.2` or `1.21.11` records as the active candidate gate. The permanent live rerun checklist lives in `docs/release/history/1.4/scenic-drive-green-checklist.md`.
-
-_(origin/main also tracked a parallel 1.4 candidate worktree at `<home>/CascadeProjects/Latitude-custom-biome-expansion-26.1.2`, with this checkout serving as the main docs/history root; preserved here for reference.)_
+This checkout tracks the Latitude 2.0 line on Minecraft 26.3 (`2.0-beta.2+26.3-rc-2`, branch
+`port/2.0-26.3-fabric`). It absorbs every fix shipped on the 1.5 line through `1.5.1-beta.5` and the
+1.5 port to Minecraft 26.3. See `CHANGELOG.md` for what changed.
 
 ## Features
 
@@ -34,21 +34,16 @@ See:
 
 ## Dependencies
 
-- Fabric Loader (current local source line: Minecraft 26.1.2; planned 2.0 canonical pivot: Minecraft 26.2)
-- _(origin/main also referenced a separate Latitude 1.4 candidate worktree using Fabric Loader for Minecraft `26.1.2` at `<home>/CascadeProjects/Latitude-custom-biome-expansion-26.1.2`; this checkout's `gradle.properties` has since moved onto the 26.2 pivot line above.)_
+- Fabric Loader (Minecraft 26.3)
 - Fabric API
 
 ## Biome tag integration
 
-This mod selects biomes for latitude bands via biome tags:
+This mod selects biomes for latitude bands via a family of `globe:lat_*` biome tags — separate
+primary/secondary/accent tiers per latitude band, plus dedicated tags for rivers, beaches, oceans,
+and wetlands. See `src/main/resources/data/globe/tags/worldgen/biome/` for the current full set.
 
-- `globe:lat_equator`
-- `globe:lat_tropical`
-- `globe:lat_temperate`
-- `globe:lat_subpolar`
-- `globe:lat_polar`
-
-Biome mods can integrate by adding their biomes into these tags.
+Biome mods can integrate by adding their biomes into the relevant tags.
 
 ## Config
 
@@ -58,9 +53,11 @@ Compass HUD configuration is stored in:
 
 ## Building
 
-```powershell
-.\gradlew.bat clean build
+```bash
+./gradlew clean build
 ```
+
+(Windows: `gradlew.bat clean build`.)
 
 The release jar to upload is in:
 

@@ -1,12 +1,15 @@
 package com.example.globe.dev;
 
 import com.example.globe.GlobeMod;
+import com.example.globe.tools.RuggednessSensor;
 import com.example.globe.util.LatitudeBands;
 import com.example.globe.util.LatitudeMath;
+import com.example.globe.world.BiomeDescriptorLedger;
 import com.example.globe.world.LatitudeBiomeSource;
 import com.example.globe.world.LatitudeBiomes;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -17,6 +20,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -24,12 +29,17 @@ import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.Random;
+import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -59,6 +69,9 @@ public final class LatitudeDevCommand {
     private static final int WINDSWEPT_RUGGED_HYST = 2;
     private static final int SEAM_AUDIT_DEFAULT_SAMPLES = 300;
     private static final int SEAM_AUDIT_DEFAULT_WAIT_TICKS = 60;
+    private static final int SULFUR_SURFACE_REACH_BLOCKS = 32;
+    private static final int DEFAULT_SULFUR_CANDIDATE_RADIUS_BLOCKS = 256;
+    private static final int MAX_SULFUR_CANDIDATE_RADIUS_BLOCKS = 512;
 
     private LatitudeDevCommand() {
     }
@@ -66,8 +79,42 @@ public final class LatitudeDevCommand {
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(
                 Commands.literal("latdev")
+                        .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .executes(LatitudeDevCommand::help)
                         .then(Commands.literal("help").executes(LatitudeDevCommand::help))
+                        .then(Commands.literal("flyspeed")
+                                .then(Commands.argument("level", IntegerArgumentType.integer(1, 5))
+                                        .executes(LatitudeDevCommand::setFlySpeed)))
+                        .then(Commands.literal("tpLat")
+                                .then(Commands.argument("signedDegrees", DoubleArgumentType.doubleArg(-90.0, 90.0))
+                                        .executes(ctx -> tpLat(ctx, false))
+                                        .then(Commands.argument("x", DoubleArgumentType.doubleArg())
+                                                .executes(ctx -> tpLat(ctx, true)))))
+                        .then(Commands.literal("case")
+                                .then(Commands.literal("start")
+                                        .then(Commands.argument("name", StringArgumentType.word())
+                                                .executes(LatitudeDevCommand::caseStart)))
+                                .then(Commands.literal("mark")
+                                        .then(Commands.argument("label", StringArgumentType.greedyString())
+                                                .executes(LatitudeDevCommand::caseMark)))
+                                .then(Commands.literal("capture")
+                                        .executes(ctx -> caseCapture(ctx, "capture"))
+                                        .then(Commands.argument("label", StringArgumentType.word())
+                                                .executes(ctx -> caseCapture(
+                                                        ctx,
+                                                        StringArgumentType.getString(ctx, "label")))))
+                                .then(Commands.literal("finish")
+                                        .then(Commands.argument("result", StringArgumentType.word())
+                                                .suggests((context, builder) ->
+                                                        SharedSuggestionProvider.suggest(
+                                                                List.of("pass", "fail", "hold"),
+                                                                builder))
+                                                .executes(LatitudeDevCommand::caseFinish))))
+                        .then(Commands.literal("presentationTrace")
+                                .then(Commands.literal("start")
+                                        .executes(LatitudeDevCommand::presentationTraceStart))
+                                .then(Commands.literal("stop")
+                                        .executes(LatitudeDevCommand::presentationTraceStop)))
                         .then(Commands.literal("transect")
                                 .then(Commands.argument("zStart", IntegerArgumentType.integer())
                                         .then(Commands.argument("zEnd", IntegerArgumentType.integer())
@@ -100,6 +147,12 @@ public final class LatitudeDevCommand {
                                 .then(Commands.argument("radiusBlocks", IntegerArgumentType.integer())
                                         .then(Commands.argument("samples", IntegerArgumentType.integer())
                                                 .executes(LatitudeDevCommand::probe))))
+                        .then(Commands.literal("sulfurCandidate")
+                                .executes(ctx -> sulfurCandidate(ctx, DEFAULT_SULFUR_CANDIDATE_RADIUS_BLOCKS))
+                                .then(Commands.argument("radiusBlocks", IntegerArgumentType.integer(16,
+                                                MAX_SULFUR_CANDIDATE_RADIUS_BLOCKS))
+                                        .executes(ctx -> sulfurCandidate(ctx,
+                                                IntegerArgumentType.getInteger(ctx, "radiusBlocks")))))
                         .then(Commands.literal("seamAudit")
                                 .then(Commands.argument("bandA", StringArgumentType.word())
                                         .suggests((context, builder) -> SharedSuggestionProvider.suggest(TP_BAND_NAMES, builder))
@@ -140,13 +193,428 @@ public final class LatitudeDevCommand {
 
     private static int help(CommandContext<CommandSourceStack> ctx) {
         CommandSourceStack source = ctx.getSource();
-        source.sendSuccess(() -> Component.literal("[latdev] commands: here | explainHere | tpBand <tropical|subtropical|temperate|subpolar|polar> [center|low|high] | probe <radiusBlocks> <samples> | seamAudit <bandA> <bandB> [center|low|high] [samples] [waitTicks] | biomePng [stepBlocks] [y] | biomePngY [y] | regen|regenChunk [radiusChunks] [biomes] [seed] | transect | transectDeg | slicePoleNS | pause | resume | stop | status | budgetMs | budgetAuto <on|off>"), false);
+        source.sendSuccess(() -> Component.literal("[latdev] commands: flyspeed <1..5> | tpLat <signedDegrees> [x] | case start|mark|capture|finish | presentationTrace start|stop | here | explainHere | tpBand <tropical|subtropical|temperate|subpolar|polar> [center|low|high] | probe <radiusBlocks> <samples> | sulfurCandidate [radiusBlocks] | seamAudit <bandA> <bandB> [center|low|high] [samples] [waitTicks] | biomePng [stepBlocks] [y] | biomePngY [y] | regen|regenChunk [radiusChunks] [biomes] [seed] | transect | transectDeg | slicePoleNS | pause | resume | stop | status | budgetMs | budgetAuto <on|off>"), false);
         return 1;
     }
 
     private static void sendLatdevInfo(CommandSourceStack source, String message, boolean broadcast) {
         GlobeMod.LOGGER.info(message);
         source.sendSuccess(() -> Component.literal(message), broadcast);
+    }
+
+    private static int setFlySpeed(CommandContext<CommandSourceStack> ctx) {
+        try {
+            ServerPlayer player = ctx.getSource().getPlayerOrException();
+            int level = IntegerArgumentType.getInteger(ctx, "level");
+            player.getAbilities().setFlyingSpeed(0.05f * (float) level);
+            player.onUpdateAbilities();
+            ctx.getSource().sendSuccess(
+                    () -> Component.literal("[latdev] Fly speed set to " + level),
+                    false);
+            return 1;
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(Component.literal("[latdev] flyspeed error: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int tpLat(CommandContext<CommandSourceStack> ctx, boolean hasX) {
+        CommandSourceStack source = ctx.getSource();
+        try {
+            ServerPlayer player = source.getPlayerOrException();
+            ServerLevel world = source.getLevel();
+            WorldBorder border = world.getWorldBorder();
+            double radius = LatitudeMath.worldRadiusBlocks(border);
+            double requestedDegrees = DoubleArgumentType.getDouble(ctx, "signedDegrees");
+            double requestedX = hasX ? DoubleArgumentType.getDouble(ctx, "x") : player.getX();
+
+            DevToolPolicy.LatitudeTarget target = DevToolPolicy.latitudeTarget(
+                    requestedDegrees,
+                    border.getCenterZ(),
+                    radius,
+                    border.getMinZ(),
+                    border.getMaxZ(),
+                    1.0);
+            int targetX = DevToolPolicy.safeHorizontalBlock(
+                    requestedX,
+                    border.getMinX(),
+                    border.getMaxX(),
+                    1.0);
+            int targetZ = target.blockZ();
+
+            world.getChunkSource().getChunk(
+                    Math.floorDiv(targetX, 16),
+                    Math.floorDiv(targetZ, 16),
+                    ChunkStatus.FULL,
+                    true);
+            int topY = world.getHeight(
+                    Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                    targetX,
+                    targetZ);
+            int worldMaxY = world.getMinY() + world.getHeight() - 1;
+            int targetY = Mth.clamp(topY + 1, world.getMinY() + 1, worldMaxY);
+
+            player.teleportTo(
+                    world,
+                    targetX + 0.5,
+                    targetY,
+                    targetZ + 0.5,
+                    EnumSet.noneOf(Relative.class),
+                    player.getYRot(),
+                    player.getXRot(),
+                    true);
+
+            double achievedDegrees = DevToolPolicy.signedLatitudeDegrees(
+                    targetZ + 0.5,
+                    border.getCenterZ(),
+                    radius);
+            String biome = biomeId(world.getBiome(new BlockPos(targetX, targetY, targetZ)));
+            source.sendSuccess(() -> Component.literal(String.format(Locale.ROOT,
+                    "[latdev] tpLat requested=%+.6f\u00b0 achieved=%+.6f\u00b0 R=%.3f centerZ=%.3f -> x=%d y=%d z=%d biome=%s",
+                    requestedDegrees,
+                    achievedDegrees,
+                    radius,
+                    border.getCenterZ(),
+                    targetX,
+                    targetY,
+                    targetZ,
+                    biome)), false);
+            return 1;
+        } catch (IllegalArgumentException e) {
+            source.sendFailure(Component.literal("[latdev] tpLat rejected: " + e.getMessage()));
+            return 0;
+        } catch (Exception e) {
+            source.sendFailure(Component.literal("[latdev] tpLat error: " + e.getMessage()));
+            GlobeMod.LOGGER.warn("[latdev] tpLat failed", e);
+            return 0;
+        }
+    }
+
+    private static int caseStart(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        try {
+            String rawName = StringArgumentType.getString(ctx, "name");
+            long tick = source.getLevel().getGameTime();
+            Path casesRoot = source.getServer().getServerDirectory()
+                    .resolve("latdev")
+                    .resolve("cases");
+            RecorderLitePlan recorderPlan = RecorderLitePlan.configuredOrEmpty(rawName);
+            Map<String, String> eventContext = caseContext(source);
+            DevTestSession session = DevTestSession.startRecorderActive(
+                    casesRoot,
+                    rawName,
+                    tick,
+                    eventContext,
+                    recorderPlan,
+                    recorderPrivateIdentity(source, eventContext, recorderPlan));
+            source.sendSuccess(() -> Component.literal(
+                    "[latdev] case started id=" + session.sessionId()
+                            + " events=latdev/cases/" + session.sessionId() + "/events.jsonl"),
+                    false);
+            return 1;
+        } catch (Exception e) {
+            source.sendFailure(Component.literal("[latdev] case start error: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int caseMark(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        try {
+            String label = StringArgumentType.getString(ctx, "label");
+            long sequence = DevTestSession.markActive(
+                    label,
+                    source.getLevel().getGameTime(),
+                    caseContext(source));
+            source.sendSuccess(() -> Component.literal(
+                    "[latdev] case mark sequence=" + sequence
+                            + " label=" + DevToolPolicy.sanitizeToken(label, "mark")),
+                    false);
+            return 1;
+        } catch (Exception e) {
+            source.sendFailure(Component.literal("[latdev] case mark error: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int caseCapture(CommandContext<CommandSourceStack> ctx, String label) {
+        CommandSourceStack source = ctx.getSource();
+        long worldTick = source.getLevel().getGameTime();
+        boolean integratedClient = !source.getServer().isDedicatedServer();
+        boolean requestRecorded = false;
+        try {
+            if (!integratedClient) {
+                long markerSequence = DevTestSession.appendActive(
+                        "capture_marker",
+                        worldTick,
+                        mergeContext(
+                                caseContext(source),
+                                Map.of(
+                                        "capture_mode", "marker_only",
+                                        "image_status", "not_attempted",
+                                        "label", DevToolPolicy.sanitizeToken(label, "capture"),
+                                        "reason", "dedicated_server_has_no_integrated_client")));
+                source.sendSuccess(() -> Component.literal(
+                        "[latdev] case capture recorded marker only sequence="
+                                + markerSequence
+                                + " (dedicated server cannot capture a client image)"),
+                        false);
+                return 1;
+            }
+
+            long requestSequence = DevTestSession.requestCaptureActive(
+                    label,
+                    true,
+                    worldTick,
+                    caseContext(source));
+            requestRecorded = true;
+
+            invokeIntegratedClientMethod("requestCaseCapture", new Class<?>[0]);
+            source.sendSuccess(() -> Component.literal(
+                    "[latdev] case capture requested sequence=" + requestSequence
+                            + "; completion or failure will be appended after the frozen client snapshot"),
+                    false);
+            return 1;
+        } catch (Exception e) {
+            try {
+                if (requestRecorded && DevTestSession.active().isPresent()) {
+                    DevTestSession.recordCaptureFailedActive(
+                            e.getClass().getSimpleName() + ": " + e.getMessage(),
+                            worldTick,
+                            Map.of("capture_mode", integratedClient
+                                    ? "integrated_client_auto"
+                                    : "marker_only"));
+                }
+            } catch (Exception recordFailure) {
+                GlobeMod.LOGGER.warn("[latdev] could not record case capture failure", recordFailure);
+            }
+            source.sendFailure(Component.literal("[latdev] case capture error: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int caseFinish(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack source = ctx.getSource();
+        try {
+            DevToolPolicy.CloseState result = DevToolPolicy.CloseState.parse(
+                    StringArgumentType.getString(ctx, "result"));
+            DevTestSession session = DevTestSession.finishActive(
+                    result,
+                    source.getLevel().getGameTime(),
+                    caseContext(source));
+            source.sendSuccess(() -> Component.literal(
+                    "[latdev] case finished id=" + session.sessionId()
+                            + " result=" + result.id()
+                            + " events=" + session.sequence()),
+                    false);
+            return 1;
+        } catch (Exception e) {
+            source.sendFailure(Component.literal("[latdev] case finish error: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int presentationTraceStart(CommandContext<CommandSourceStack> ctx) {
+        return presentationTraceCommand(ctx, true);
+    }
+
+    private static int presentationTraceStop(CommandContext<CommandSourceStack> ctx) {
+        return presentationTraceCommand(ctx, false);
+    }
+
+    private static int presentationTraceCommand(
+            CommandContext<CommandSourceStack> ctx,
+            boolean start
+    ) {
+        CommandSourceStack source = ctx.getSource();
+        try {
+            if (source.getServer().isDedicatedServer()) {
+                if (DevTestSession.active().isPresent()) {
+                    DevTestSession.appendActive(
+                            "presentation_trace_unavailable",
+                            source.getLevel().getGameTime(),
+                            Map.of(
+                                    "mode", "coordinate_policy_only",
+                                    "reason", "dedicated_server_has_no_rendered_client_state"));
+                }
+                source.sendFailure(Component.literal(
+                        "[latdev] presentationTrace requires an integrated dev client; "
+                                + "dedicated-server coordinates are not rendered-presentation evidence"));
+                return 0;
+            }
+            ServerPlayer player = source.getPlayerOrException();
+            String method = start
+                    ? "startFromIntegratedCommand"
+                    : "stopFromIntegratedCommand";
+            String path;
+            if (start) {
+                path = (String) invokeIntegratedClientMethod(
+                        method,
+                        new Class<?>[]{Path.class, UUID.class, String.class, long.class},
+                        source.getServer().getServerDirectory(),
+                        player.getUUID(),
+                        player.getName().getString(),
+                        source.getLevel().getGameTime());
+            } else {
+                path = (String) invokeIntegratedClientMethod(
+                        method,
+                        new Class<?>[]{UUID.class},
+                        player.getUUID());
+            }
+            source.sendSuccess(() -> Component.literal(
+                    "[latdev] presentationTrace " + (start ? "started" : "stopped")
+                            + " file=" + path),
+                    false);
+            return 1;
+        } catch (Exception e) {
+            source.sendFailure(Component.literal(
+                    "[latdev] presentationTrace " + (start ? "start" : "stop")
+                            + " error: " + rootMessage(e)));
+            return 0;
+        }
+    }
+
+    private static Map<String, String> caseContext(CommandSourceStack source) {
+        LinkedHashMap<String, String> context = new LinkedHashMap<>();
+        ServerLevel world = source.getLevel();
+        WorldBorder border = world.getWorldBorder();
+        LatitudeDevRuntime.BuildIdentity identity = LatitudeDevRuntime.identity();
+        context.put("artifact_role", identity.role());
+        context.put("build_dirty", identity.dirty());
+        context.put("build_time", identity.time());
+        context.put("dimension", world.dimension().identifier().toString());
+        context.put("git_branch", identity.branch());
+        context.put("git_commit", identity.commit());
+        context.put("mod_version", identity.version());
+        context.put("run_mode", source.getServer().isDedicatedServer()
+                ? "dedicated_server"
+                : "integrated_client_server");
+        context.put("seed", Long.toString(world.getSeed()));
+        context.put("test_sequence", Integer.toString(identity.sequence()));
+        ServerPlayer player = source.getPlayer();
+        if (player != null) {
+            context.put("player", player.getName().getString());
+            context.put("x", String.format(Locale.ROOT, "%.3f", player.getX()));
+            context.put("y", String.format(Locale.ROOT, "%.3f", player.getY()));
+            context.put("z", String.format(Locale.ROOT, "%.3f", player.getZ()));
+            context.put("signed_latitude_degrees", String.format(
+                    Locale.ROOT,
+                    "%.6f",
+                    DevToolPolicy.signedLatitudeDegrees(
+                            player.getZ(),
+                            border.getCenterZ(),
+                            LatitudeMath.worldRadiusBlocks(border))));
+            context.put("zone", LatitudeMath.zoneKey(border, player.getZ()));
+        }
+        return context;
+    }
+
+    private static Map<String, String> recorderPrivateIdentity(
+            CommandSourceStack source,
+            Map<String, String> eventContext,
+            RecorderLitePlan recorderPlan
+    ) {
+        LinkedHashMap<String, String> identity = new LinkedHashMap<>();
+        if (eventContext != null) {
+            identity.putAll(eventContext);
+        }
+        FabricLoader loader = FabricLoader.getInstance();
+        identity.put("artifact_sha256", LatitudeDevRuntime.artifactSha256());
+        identity.put("minecraft_version", modVersion(loader, "minecraft"));
+        identity.put("loader_version", modVersion(loader, "fabricloader"));
+        identity.put("latitude_version", modVersion(loader, GlobeMod.MOD_ID));
+
+        List<String> providers = new ArrayList<>();
+        providers.add("minecraft");
+        for (String provider : List.of(
+                "terrablender", "biomesoplenty", "terralith", "clifftree")) {
+            if (loader.isModLoaded(provider)) {
+                providers.add(provider);
+            }
+        }
+        identity.put("provider_stack", String.join(",", providers));
+
+        TreeSet<String> loadedMods = new TreeSet<>();
+        loader.getAllMods().forEach(container -> loadedMods.add(container.getMetadata().getId()));
+        identity.put("loaded_mods", String.join(",", loadedMods));
+        identity.put("loaded_mods_fingerprint", sha256Text(String.join("\n", loadedMods)));
+
+        TreeSet<String> datapacks = new TreeSet<>(
+                source.getServer().getPackRepository().getSelectedIds());
+        identity.put("datapacks", String.join(",", datapacks));
+        identity.put("datapack_fingerprint", sha256Text(String.join("\n", datapacks)));
+
+        Path config = loader.getConfigDir().resolve("globe_compass_hud.json");
+        identity.put("config_fingerprint", sha256FileOrState(config));
+        identity.put("world_class", recorderPlan.worldClass());
+        identity.put("atlas_fingerprint", sha256Text(recorderPlan.atlasSettings().toString()));
+        return identity;
+    }
+
+    private static String modVersion(FabricLoader loader, String modId) {
+        return loader.getModContainer(modId)
+                .map(container -> container.getMetadata().getVersion().getFriendlyString())
+                .orElse("not-loaded");
+    }
+
+    private static String sha256FileOrState(Path path) {
+        if (!Files.isRegularFile(path)) {
+            return "absent";
+        }
+        try {
+            return HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)));
+        } catch (IOException | NoSuchAlgorithmException e) {
+            return "unavailable";
+        }
+    }
+
+    private static String sha256Text(String value) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new IllegalStateException("SHA-256 unavailable", impossible);
+        }
+    }
+
+    private static Map<String, String> mergeContext(
+            Map<String, String> base,
+            Map<String, String> additions
+    ) {
+        LinkedHashMap<String, String> merged = new LinkedHashMap<>(base);
+        merged.putAll(additions);
+        return merged;
+    }
+
+    private static Object invokeIntegratedClientMethod(
+            String methodName,
+            Class<?>[] parameterTypes,
+            Object... args
+    ) throws Exception {
+        Class<?> clazz = Class.forName("com.example.globe.dev.DevPresentationTrace");
+        if ("requestCaseCapture".equals(methodName)) {
+            clazz = Class.forName("com.example.globe.dev.DevCaptureKeybind");
+        }
+        try {
+            return clazz.getMethod(methodName, parameterTypes).invoke(null, args);
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof Exception exception) {
+                throw exception;
+            }
+            throw e;
+        }
+    }
+
+    private static String rootMessage(Exception error) {
+        Throwable current = error;
+        while (current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current.getMessage() == null
+                ? current.getClass().getSimpleName()
+                : current.getMessage();
     }
 
     private static int here(CommandContext<CommandSourceStack> ctx) {
@@ -159,7 +627,7 @@ public final class LatitudeDevCommand {
             double deg = LatitudeMath.absLatDegExact(world.getWorldBorder(), player.getZ());
             double t = Mth.clamp(Math.abs(player.getZ()) / (double) radius, 0.0, 1.0);
 
-            BandTarget band = BandTarget.fromZ(radius, player.getZ());
+            BandTarget band = BandTarget.fromZ(radius, pos.getZ());
             int authorityBandIndex = LatitudeBiomes.authoritativeLandBandIndex(pos.getX(), pos.getZ(), radius);
             LatitudeBands.Band authorityBand = LatitudeBiomes.bandFromIndex(authorityBandIndex);
             String biomeId = biomeId(world.getBiome(pos));
@@ -169,7 +637,8 @@ public final class LatitudeDevCommand {
             boolean savUplandActive = savUplandChance > 0.0;
             String savannaDebug = LatitudeBiomes.debugSavannaUplandDecision(pos.getX(), pos.getZ(), pos.getY());
             net.minecraft.world.level.levelgen.RandomState noiseConfig = world.getChunkSource().randomState();
-            net.minecraft.world.level.biome.Climate.Sampler sampler = noiseConfig.sampler();
+            net.minecraft.world.level.biome.Climate.Sampler sampler = noiseConfig.createClimateSampler(
+                    net.minecraft.world.level.levelgen.densityfunction.SamplerContext.EMPTY_UNCACHED);
             net.minecraft.world.level.chunk.ChunkGenerator cg = world.getChunkSource().getGenerator();
             net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator ng = cg instanceof net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator n ? n : null;
             String savannaRule = LatitudeBiomes.debugSavannaRule(sampler, ng, noiseConfig, world, pos.getX(), pos.getZ());
@@ -248,14 +717,17 @@ public final class LatitudeDevCommand {
             net.minecraft.world.level.biome.BiomeSource sourceSupplier = biomeSource instanceof LatitudeBiomeSource latitudeSource
                     ? latitudeSource.original()
                     : biomeSource;
+            net.minecraft.world.level.biome.BiomeResolver sourceResolver =
+                    sourceSupplier.createResolver(sampler);
             int noiseX = Math.floorDiv(pos.getX(), 4);
             int noiseY = Math.floorDiv(pos.getY(), 4);
             int noiseZ = Math.floorDiv(pos.getZ(), 4);
             int blockX = (noiseX << 2) + 2;
             int blockY = (noiseY << 2) + 2;
             int blockZ = (noiseZ << 2) + 2;
-            Holder<Biome> sourceBiome = sourceSupplier.getNoiseBiome(noiseX, noiseY, noiseZ, sampler);
-            Holder<Biome> baseBiome = sourceSupplier.getNoiseBiome(noiseX, LatitudeBiomes.SURFACE_CLASSIFY_Y >> 2, noiseZ, sampler);
+            Holder<Biome> sourceBiome = sourceResolver.getNoiseBiome(noiseX, noiseY, noiseZ);
+            Holder<Biome> baseBiome = sourceResolver.getNoiseBiome(
+                    noiseX, LatitudeBiomes.SURFACE_CLASSIFY_Y >> 2, noiseZ);
             net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator noiseGenerator =
                     generator instanceof net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator ng ? ng : null;
             net.minecraft.world.level.LevelHeightAccessor heightView = world;
@@ -310,7 +782,8 @@ public final class LatitudeDevCommand {
             BlockPos pos = player.blockPosition();
             int radius = authoritativeRadius(source);
             net.minecraft.world.level.levelgen.RandomState noiseConfig = world.getChunkSource().randomState();
-            net.minecraft.world.level.biome.Climate.Sampler sampler = noiseConfig.sampler();
+            net.minecraft.world.level.biome.Climate.Sampler sampler = noiseConfig.createClimateSampler(
+                    net.minecraft.world.level.levelgen.densityfunction.SamplerContext.EMPTY_UNCACHED);
             net.minecraft.world.level.chunk.ChunkGenerator cg = world.getChunkSource().getGenerator();
             net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator ng = cg instanceof net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator n ? n : null;
             String finalBiomeId = biomeId(world.getBiome(pos));
@@ -486,6 +959,78 @@ public final class LatitudeDevCommand {
         } catch (Exception e) {
             ctx.getSource().sendFailure(Component.literal("[latdev] probe error: " + e.getMessage()));
             e.printStackTrace();
+            return 0;
+        }
+    }
+
+    /**
+     * Finds a loaded column where a sulfur-caves cell lies within the vanilla pool's upward reach
+     * and Latitude's final surface biome is descriptor-approved for sulfur expression. This is a
+     * candidate finder only: placed features remain probabilistic and no chunks are generated.
+     */
+    private static int sulfurCandidate(CommandContext<CommandSourceStack> ctx, int requestedRadius) {
+        try {
+            CommandSourceStack source = ctx.getSource();
+            ServerPlayer player = source.getPlayerOrException();
+            ServerLevel world = source.getLevel();
+            int radius = Mth.clamp(requestedRadius, 16, MAX_SULFUR_CANDIDATE_RADIUS_BLOCKS);
+            int centerChunkX = Math.floorDiv(player.getBlockX(), 16);
+            int centerChunkZ = Math.floorDiv(player.getBlockZ(), 16);
+            int chunkRadius = Mth.ceil(radius / 16.0f);
+            int loadedSamples = 0;
+            BlockPos nearest = null;
+            String nearestSurface = null;
+            String nearestCave = null;
+            long nearestDistance = Long.MAX_VALUE;
+
+            for (int chunkZ = centerChunkZ - chunkRadius; chunkZ <= centerChunkZ + chunkRadius; chunkZ++) {
+                for (int chunkX = centerChunkX - chunkRadius; chunkX <= centerChunkX + chunkRadius; chunkX++) {
+                    if (world.getChunkSource().getChunk(chunkX, chunkZ, ChunkStatus.FULL, false) == null) {
+                        continue;
+                    }
+                    int blockX = (chunkX << 4) + 8;
+                    int blockZ = (chunkZ << 4) + 8;
+                    long dx = (long) blockX - player.getBlockX();
+                    long dz = (long) blockZ - player.getBlockZ();
+                    long distance = dx * dx + dz * dz;
+                    if (distance > (long) radius * radius) {
+                        continue;
+                    }
+                    loadedSamples++;
+                    int surfaceY = world.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, blockX, blockZ) - 1;
+                    int caveY = Math.max(world.getMinY() + 1, surfaceY - SULFUR_SURFACE_REACH_BLOCKS);
+                    String surfaceBiome = biomeId(world.getBiome(new BlockPos(blockX, surfaceY, blockZ)));
+                    String caveBiome = biomeId(world.getBiome(new BlockPos(blockX, caveY, blockZ)));
+                    if (!"minecraft:sulfur_caves".equals(caveBiome)
+                            || !BiomeDescriptorLedger.supportsSulfurSurfaceExpression(surfaceBiome)
+                            || distance >= nearestDistance) {
+                        continue;
+                    }
+                    nearestDistance = distance;
+                    nearest = new BlockPos(blockX, surfaceY + 1, blockZ);
+                    nearestSurface = surfaceBiome;
+                    nearestCave = caveBiome;
+                }
+            }
+
+            if (nearest == null) {
+                int sampled = loadedSamples;
+                source.sendFailure(Component.literal(String.format(Locale.ROOT,
+                        "[latdev] sulfurCandidate found none in %d loaded chunk centers within r=%d; this did not generate or search unloaded chunks.",
+                        sampled, radius)));
+                return 0;
+            }
+            BlockPos found = nearest;
+            String surface = nearestSurface;
+            String cave = nearestCave;
+            int sampled = loadedSamples;
+            source.sendSuccess(() -> Component.literal(String.format(Locale.ROOT,
+                    "[latdev] sulfurCandidate x=%d y=%d z=%d surface=%s cave=%s loadedChunkCenters=%d; candidate only, pool placement remains probabilistic.",
+                    found.getX(), found.getY(), found.getZ(), surface, cave, sampled)), false);
+            return 1;
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(Component.literal("[latdev] sulfurCandidate error: " + e.getMessage()));
+            GlobeMod.LOGGER.warn("[latdev] sulfurCandidate failed", e);
             return 0;
         }
     }
@@ -815,12 +1360,9 @@ public final class LatitudeDevCommand {
     }
 
     private static int authoritativeRadius(CommandSourceStack source) {
-        int borderRadius = maxAbsZFromBorder(source);
-        int activeRadius = LatitudeBiomes.getActiveRadiusBlocks();
-        if (activeRadius > 0) {
-            return Mth.clamp(activeRadius, 1, Math.max(1, borderRadius));
-        }
-        return Math.max(1, borderRadius);
+        return DevToolPolicy.productionLatitudeRadius(
+                LatitudeBiomes.getActiveRadiusBlocks(),
+                LatitudeMath.worldRadiusBlocks(source.getLevel().getWorldBorder()));
     }
 
     private static int maxAbsZFromBorder(CommandSourceStack source) {

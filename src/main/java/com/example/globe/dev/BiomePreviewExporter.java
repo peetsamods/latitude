@@ -18,11 +18,12 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeResolver;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.chunk.ChunkGenerator;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.RandomState;
+import net.minecraft.world.level.levelgen.densityfunction.SamplerContext;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -224,18 +225,11 @@ public final class BiomePreviewExporter {
                 ? collectBiomeAuditRows(biomeRegistry, baseSource)
                 : Map.of();
         RandomState noiseConfig = RandomState.create(
-                ((net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator) generator).generatorSettings().value(),
                 world.registryAccess().lookupOrThrow(Registries.NOISE),
-                atlasSeed);
-        // Phase 4 terrain-bias wrapper (docs/design/terrain-wrapper-design-20260705.md): this RandomState
-        // is constructed directly by dev/atlas tooling, bypassing ChunkMap's constructor (the mixin that
-        // installs the wrapper for real gameplay), so the atlas/proof-harness path must install it here too
-        // -- otherwise a flag-ON atlas run would silently never exercise the wrapper. No-op unless
-        // latitude.terrainV2.enabled AND latitude.geoV2.enabled AND this is a genuine globe world (checked
-        // via GlobeMod.isGlobeOverworld(world), which also covers this tooling's plain-minecraft:normal +
-        // persisted-LatitudeWorldState-radius way of marking a world as "globe").
-        com.example.globe.terrain.TerrainRouterWrapping.installIfArmed(noiseConfig, world);
-        Climate.Sampler sampler = noiseConfig.sampler();
+                atlasSeed,
+                ((net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator) generator).generatorSettings().value());
+        Climate.Sampler sampler = noiseConfig.createClimateSampler(SamplerContext.EMPTY_UNCACHED);
+        BiomeResolver baseResolver = baseSource.createResolver(sampler);
         net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator noiseGen =
                 generator instanceof net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator ng ? ng : null;
         // Lightweight surface stub for atlas mode: keep sea level from the generator, but skip expensive
@@ -257,7 +251,7 @@ public final class BiomePreviewExporter {
 
                 String sampledBiomeId = null;
                 if (needsBiomeSampling) {
-                    Holder<Biome> base = baseSource.getNoiseBiome(noiseX, noiseY, noiseZ, sampler);
+                    Holder<Biome> base = baseResolver.getNoiseBiome(noiseX, noiseY, noiseZ);
                     Holder<Biome> picked = LatitudeBiomes.pick(
                             biomeRegistry,
                             base,
@@ -430,7 +424,6 @@ public final class BiomePreviewExporter {
         Path inventoryPath = outputDir.resolve("world_biome_inventory.json");
         BiomeSamplerTools.writeInventoryJson(inventoryPath, inventoryReport);
 
-        writeRunFlagsSidecar(outputDir, seed, radiusBlocks, stepBlocks, y);
         Path summaryPath = outputDir.resolve("biomes.txt");
         long totalSamples = (long) width * height;
         long durationMs = (System.nanoTime() - startNanos) / 1_000_000L;
@@ -554,8 +547,6 @@ public final class BiomePreviewExporter {
         private BufferedImage biomeIndexImage;
         private BufferedImage chosenBandsImage;
         private BufferedImage landBandsImage;
-        private final BufferedImage heightImage;
-        private final int heightEncodeOffset;
 
         private final Map<String, Integer> biomeCounts = new HashMap<>();
         private final Map<String, Integer> biomeColors = new HashMap<>();
@@ -569,6 +560,7 @@ public final class BiomePreviewExporter {
 
         private final ChunkGenerator generator;
         private final BiomeSource baseSource;
+        private final BiomeResolver baseResolver;
         private final Registry<Biome> biomeRegistry;
         private final RandomState noiseConfig;
         private final Climate.Sampler sampler;
@@ -638,16 +630,9 @@ public final class BiomePreviewExporter {
                         0L));
             }
 
-            // Mercator-width render (dev-only, opt-in): -Dlatitude.atlasXAspect=2.0 widens the X sample extent
-            // to aspect*radius (the Mercator world's true E-W half-width) while Z stays at the latitude radius,
-            // so the atlas captures the full 2:1 horizontal extent instead of a square half-width sub-region.
-            // Default 1.0 = square, byte-identical to prior behavior. Bands are Z-derived, so wider X only
-            // samples MORE of each band (more representation) — exactly what this measures.
-            double xAspect = Double.parseDouble(System.getProperty("latitude.atlasXAspect", "1.0"));
-            int xExtent = (int) Math.round(radiusBlocks * Math.max(1.0, xAspect));
-            this.xMin = -xExtent;
+            this.xMin = -radiusBlocks;
             this.zMin = -radiusBlocks;
-            int xMax = xExtent;
+            int xMax = radiusBlocks;
             int zMax = radiusBlocks;
             long widthLong = Math.floorDiv((long) (xMax - xMin), stepBlocks) + 1L;
             long heightLong = Math.floorDiv((long) (zMax - zMin), stepBlocks) + 1L;
@@ -690,16 +675,13 @@ public final class BiomePreviewExporter {
                     ? collectBiomeAuditRows(this.biomeRegistry, this.baseSource)
                     : Map.of();
             this.noiseConfig = RandomState.create(
-                    ((net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator) this.generator).generatorSettings().value(),
                     world.registryAccess().lookupOrThrow(Registries.NOISE),
-                    atlasSeed);
-            // Phase 4 terrain-bias wrapper (docs/design/terrain-wrapper-design-20260705.md): see the
-            // matching comment at the other RandomState.create call site in this file (export()) for why
-            // this direct-construction path also needs the install call, not just the ChunkMap mixin.
-            com.example.globe.terrain.TerrainRouterWrapping.installIfArmed(this.noiseConfig, world);
-            this.sampler = noiseConfig.sampler();
+                    atlasSeed,
+                    ((net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator) this.generator).generatorSettings().value());
+            this.sampler = noiseConfig.createClimateSampler(SamplerContext.EMPTY_UNCACHED);
+            this.baseResolver = baseSource.createResolver(sampler);
             net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator noiseGen =
-                    this.generator instanceof net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator ng ? ng : null;
+                    generator instanceof net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator ng ? ng : null;
             // Opt-in terrain-aware atlas (-Dlatitude.atlasTerrainAware=true): feed real terrain so terrain
             // gates fire (map-proves plains-on-steep etc.). Default off → byte-identical normal runs.
             boolean terrainAware = Boolean.getBoolean("latitude.atlasTerrainAware");
@@ -719,10 +701,6 @@ public final class BiomePreviewExporter {
             for (BiomeMaskLayer maskLayer : maskTargets) {
                 maskImages.put(maskLayer, new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB));
             }
-            // The whole point of this processor (vs. the direct export() path) is emitHeight=true, so the
-            // height raster is unconditional here, not gated on an options flag.
-            this.heightImage = new BufferedImage(width, height, BufferedImage.TYPE_USHORT_GRAY);
-            this.heightEncodeOffset = -world.getMinY();
 
             this.startNanos = System.nanoTime();
         }
@@ -773,7 +751,7 @@ public final class BiomePreviewExporter {
 
                     String sampledBiomeId = null;
                     if (needsBiomeSampling()) {
-                        Holder<Biome> base = baseSource.getNoiseBiome(noiseX, noiseY, noiseZ, sampler);
+                        Holder<Biome> base = baseResolver.getNoiseBiome(noiseX, noiseY, noiseZ);
                         Holder<Biome> picked = LatitudeBiomes.pick(
                                 biomeRegistry,
                                 base,
@@ -877,15 +855,6 @@ public final class BiomePreviewExporter {
                                 gatedNoiseGen, gatedNoiseConfig, gatedHeightView, blockX, blockZ);
                         images.get(Layer.RUGGEDNESS).setRGB(imageX, imageZ, colorForRuggedness(delta));
                     }
-
-                    // Real per-column terrain height. This generator call is the expensive part this
-                    // processor's tick-budgeted stepping exists to spread out — not gated on
-                    // atlasTerrainAware, since getBaseHeight() only needs noiseConfig + a height view,
-                    // both already held unconditionally by this processor.
-                    int realHeight = generator.getBaseHeight(
-                            blockX, blockZ, Heightmap.Types.WORLD_SURFACE_WG, world, noiseConfig);
-                    int encodedHeight = Mth.clamp(realHeight + heightEncodeOffset, 0, 0xFFFF);
-                    heightImage.getRaster().setSample(imageX, imageZ, 0, encodedHeight);
 
                     advanceCursor();
                     if (imageX == 0 && imageZ > 0
@@ -1014,12 +983,6 @@ public final class BiomePreviewExporter {
             if (!ImageIO.write(landBandsImage, "png", landBandsPath.toFile())) {
                 throw new IOException("PNG writer unavailable for land_bands");
             }
-            Path heightPath = outputDir.resolve("height.png");
-            if (!ImageIO.write(heightImage, "png", heightPath.toFile())) {
-                throw new IOException("PNG writer unavailable for height");
-            }
-            writeHeightMeta(outputDir.resolve("height_meta.json"), heightEncodeOffset,
-                    world.getMinY(), world.getMaxY());
             writeSeamRowSummary(outputDir.resolve("seam_rows.txt"), seamRows);
             writeSeamCropArtifacts(
                     outputDir,
@@ -1063,7 +1026,6 @@ public final class BiomePreviewExporter {
                 Path inventoryPath = outputDir.resolve("world_biome_inventory.json");
                 BiomeSamplerTools.writeInventoryJson(inventoryPath, inventoryReport);
 
-                writeRunFlagsSidecar(outputDir, atlasSeed, radiusBlocks, stepBlocks, y);
                 summaryPath = outputDir.resolve("biomes.txt");
                 long totalSamples = (long) width * height;
                 long durationMs = (System.nanoTime() - startNanos) / 1_000_000L;
@@ -1190,20 +1152,6 @@ public final class BiomePreviewExporter {
         out.append("  ]\n");
         out.append("}\n");
         Files.writeString(palettePath, out.toString());
-    }
-
-    private static void writeHeightMeta(Path metaPath, int offsetY, int minY, int maxY)
-            throws IOException {
-        StringBuilder out = new StringBuilder();
-        out.append("{\n");
-        out.append("  \"format\": \"height.png is a single-channel 16-bit grayscale (TYPE_USHORT_GRAY) raster, one pixel per sampled column, same width/height/order as biomes.png\",\n");
-        out.append("  \"decode\": \"realY = pixelValue - offsetY\",\n");
-        out.append("  \"offsetY\": ").append(offsetY).append(",\n");
-        out.append("  \"minY\": ").append(minY).append(",\n");
-        out.append("  \"maxY\": ").append(maxY).append(",\n");
-        out.append("  \"heightmapType\": \"WORLD_SURFACE_WG\"\n");
-        out.append("}\n");
-        Files.writeString(metaPath, out.toString());
     }
 
     private static void writePaletteAuthority(Path outputDir) throws IOException {
@@ -1356,34 +1304,6 @@ public final class BiomePreviewExporter {
         } catch (Exception ignored) {
         }
         return "";
-    }
-
-    /**
-     * Slice D (Fable audit P1-5): every atlas bundle self-describes the flag configuration that produced
-     * it. Written as a SIDECAR next to biomes.txt rather than into biomes.txt itself, deliberately: the
-     * project's flag-off byte-identity proofs diff biomes.txt across runs whose flags DIFFER, and an
-     * in-file echo would make two map-identical runs diff on the echo line alone.
-     */
-    private static void writeRunFlagsSidecar(Path outputDir, long seed, int radiusBlocks, int stepBlocks, int y) {
-        try {
-            String json = "{\n"
-                    + "  \"seed\": " + seed + ",\n"
-                    + "  \"radiusBlocks\": " + radiusBlocks + ",\n"
-                    + "  \"stepBlocks\": " + stepBlocks + ",\n"
-                    + "  \"y\": " + y + ",\n"
-                    + "  \"shape\": \"" + LatitudeBiomes.shapeToString(LatitudeBiomes.getGlobeShape()) + "\",\n"
-                    + "  \"geoV2Enabled\": " + com.example.globe.core.LatitudeV2Flags.GEO_V2_ENABLED + ",\n"
-                    + "  \"climateV2Enabled\": " + com.example.globe.core.LatitudeV2Flags.CLIMATE_V2_ENABLED + ",\n"
-                    + "  \"biomeConsumerV2Enabled\": " + com.example.globe.core.LatitudeV2Flags.BIOME_CONSUMER_V2_ENABLED + ",\n"
-                    + "  \"biomeConsumerV2OceanAuthorityEnabled\": " + com.example.globe.core.LatitudeV2Flags.BIOME_CONSUMER_V2_OCEAN_AUTHORITY_ENABLED + ",\n"
-                    + "  \"terrainV2Enabled\": " + com.example.globe.core.LatitudeV2Flags.TERRAIN_V2_ENABLED + ",\n"
-                    + "  \"terrainV2Strength\": " + com.example.globe.core.LatitudeV2Flags.TERRAIN_V2_STRENGTH + ",\n"
-                    + "  \"terrainV2OceanStrengthRatio\": " + com.example.globe.core.LatitudeV2Flags.TERRAIN_V2_OCEAN_STRENGTH_RATIO + "\n"
-                    + "}\n";
-            Files.writeString(outputDir.resolve("run_flags.json"), json);
-        } catch (Throwable t) {
-            com.example.globe.GlobeMod.LOGGER.warn("[latdev][atlas] failed to write run_flags.json sidecar", t);
-        }
     }
 
     private static void writeSummary(Path txtPath,

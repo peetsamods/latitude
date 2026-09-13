@@ -1,382 +1,140 @@
 #!/usr/bin/env python3
+"""Expose this worktree's existing headless exporter to Latitude Atlas Viewer."""
 from __future__ import annotations
 
 import argparse
+import hashlib
+from datetime import datetime, timezone
 import json
 import os
-import re
-import shutil
-import subprocess
-import sys
-import time
-from datetime import datetime
 from pathlib import Path
-
+import shutil
+import struct
+import subprocess
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
-ATLAS_ROOT = ROOT / "run" / "latdev" / "atlas"
 RUNS_ROOT = ROOT / "run-headless" / "latdev" / "atlas-runs"
-DEFAULT_SEED = 2591890304012655616
-DEFAULT_SIZE = "small"
-DEFAULT_Y = 64
-SIZE_TO_RADIUS = {
-    "itty": 3750,
-    "ittybitty": 3750,
-    "itty_bitty": 3750,
-    "xsmall": 3750,
-    "tiny": 5000,
-    "small": 7500,
-    "medium": 7500,
-    "regular": 10000,
-    "large": 15000,
-    "ginormous": 20000,
-    "massive": 20000,
+SIZES = {
+    "itty": (3750, "globe_xsmall"), "ittybitty": (3750, "globe_xsmall"),
+    "itty_bitty": (3750, "globe_xsmall"), "xsmall": (3750, "globe_xsmall"),
+    "tiny": (5000, "globe_small"), "small": (7500, "globe_regular"),
+    "medium": (7500, "globe_regular"), "regular": (10000, "globe_large"),
+    "large": (15000, "globe"), "ginormous": (20000, "globe_massive"),
+    "massive": (20000, "globe_massive"),
 }
-REQUIRED_BUNDLE_FILES = (
-    "biomes.png",
-    "legend.json",
-    "world_biome_inventory.json",
-)
+REQUIRED = ("biomes.png", "biome_ids.png", "biome_palette.json", "legend.json",
+            "world_biome_inventory.json", "land_bands.png", "palette_authority.json")
+
+
+def git(*args: str) -> str:
+    return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
+
+
+def command_for(job: Path, *, seed: int, size: str, step: int,
+                sysprops: list[str]) -> list[str]:
+    radius, preset = SIZES[size]
+    recipe = (f"--seed={seed} --radius={radius} --step={step} --y=64 --bundle=true "
+              f"--emitbiomeindex=true --layers=biomes,bands,temperature,humidity,continentalness,stats "
+              f'--out="{job / "export"}"')
+    command = [str(ROOT / ("gradlew.bat" if os.name == "nt" else "gradlew")),
+               "--no-daemon", "--project-cache-dir", str(ROOT / ".gradle" / "lav"),
+               "-I", str(job / "build.init.gradle"), "runBiomePreview",
+               f"-Platdev.preview.runDir={job / 'runtime'}",
+               "-Platdev.preview.levelName=atlas-world", f"-Platdev.preview.levelSeed={seed}",
+               f"-Platdev.preview.levelType=globe:{preset}", f"--args={recipe}"]
+    for prop in sysprops:
+        key, sep, value = prop.partition("=")
+        if not sep or key not in {"latitude.emitHeight", "latitude.atlasTerrainAware"} or value not in {"true", "false"}:
+            raise ValueError("Unsupported preview property")
+        command.append(f"-D{key}={value}")
+    return command
+
+
+def validate_export(path: Path, *, seed: int, radius: int, step: int) -> dict:
+    for name in REQUIRED:
+        if not (path / name).is_file():
+            raise ValueError(f"Missing export file: {name}")
+    legend = json.loads((path / "legend.json").read_text())
+    if (legend.get("seed"), legend.get("radiusBlocks"), legend.get("stepBlocks")) != (seed, radius, step):
+        raise ValueError("Exporter recipe does not match the requested run")
+    expected = (2 * radius // step + 1,) * 2
+    for name in ("biomes.png", "biome_ids.png"):
+        header = (path / name).read_bytes()[:24]
+        if header[:8] != b"\x89PNG\r\n\x1a\n" or len(header) != 24 or struct.unpack(">II", header[16:24]) != expected:
+            raise ValueError(f"Invalid export image dimensions: {name}")
+    return legend
+
+
+def generate(*, seed: int, size: str, step: int, sysprops: list[str]) -> Path:
+    if size not in SIZES or not 1 <= step <= 4096 or not -(2**63) <= seed < 2**63:
+        raise ValueError("Invalid size, step, or seed")
+    jobs = ROOT / "run-headless" / "lav-jobs"
+    jobs.mkdir(parents=True, exist_ok=True)
+    lock = jobs / "generation.lock"
+    descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    os.close(descriptor)
+    try:
+        head, branch = git("rev-parse", "HEAD"), git("branch", "--show-current")
+        source_diff = git("diff", "HEAD")
+        runner_hash = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+        job = Path(tempfile.mkdtemp(prefix="preview-", dir=jobs))
+        runtime = job / "runtime"
+        runtime.mkdir()
+        # Keep empty preview servers ticking; leave the watchdog at Minecraft's default.
+        (runtime / "server.properties").write_text("online-mode=false\nmax-players=1\npause-when-empty-seconds=0\n")
+        (job / "build.init.gradle").write_text(
+            "gradle.beforeProject { p -> p.layout.buildDirectory.set(new File(p.rootDir, 'build/lav')) }\n")
+        command = command_for(job, seed=seed, size=size, step=step, sysprops=sysprops)
+        env = os.environ.copy()
+        if os.name != "nt" and not env.get("JAVA_HOME") and Path("/usr/libexec/java_home").exists():
+            env["JAVA_HOME"] = subprocess.check_output(["/usr/libexec/java_home", "-v", "25"], text=True).strip()
+        with (job / "generation.log").open("w") as log:
+            result = subprocess.run(command, cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+        if result.returncode:
+            raise RuntimeError(f"Preview failed; inspect {job / 'generation.log'}")
+        candidates = list((job / "export").glob(f"seed_{seed}/Run_*/R{SIZES[size][0]}/step{step}"))
+        if len(candidates) != 1:
+            raise ValueError("Expected exactly one export for this job")
+        source = candidates[0]
+        validate_export(source, seed=seed, radius=SIZES[size][0], step=step)
+        if (git("rev-parse", "HEAD") != head or git("branch", "--show-current") != branch
+                or git("diff", "HEAD") != source_diff
+                or hashlib.sha256(Path(__file__).read_bytes()).hexdigest() != runner_hash):
+            raise ValueError("Source identity changed during generation")
+        run_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S-%f")
+        RUNS_ROOT.mkdir(parents=True, exist_ok=True)
+        target = job / "viewer-run"
+        target.mkdir()
+        for path in source.iterdir():
+            if path.is_file() and not path.is_symlink():
+                shutil.copy2(path, target / f"step{step}_{path.name}")
+        manifest = {"ts": run_id, "branch": branch, "commit": head, "seed": str(seed),
+                    "size": size, "aspect": 1.0, "radiusBlocks": SIZES[size][0],
+                    "radius": SIZES[size][0], "diameter": 2 * SIZES[size][0], "step": step,
+                    "emitBiomeIndex": True, "emitHeight": "latitude.emitHeight=true" in sysprops,
+                    "sysprops": dict(item.split("=", 1) for item in sysprops)}
+        (target / "run_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        published = RUNS_ROOT / run_id
+        target.rename(published)
+        print(f"ATLAS_RUN_COMPLETE {run_id}", flush=True)
+        return published
+    finally:
+        lock.unlink()
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Cross-platform Latitude atlas runner.")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-
-    generate = subparsers.add_parser("generate", help="Generate a viewer run.")
-    generate.add_argument("--step", type=int, required=True)
-    generate.add_argument("--seed", type=int, default=DEFAULT_SEED)
-    generate.add_argument("--size", default=DEFAULT_SIZE)
-    generate.add_argument("--no-viewer-open", action="store_true")
-    # The shipping world shape is Mercator 2:1, so the canonical atlas renders the true E-W width
-    # (X extent = 2x the latitude radius). Pass --square for the legacy 1:1 half-width render (a
-    # regression/diff reference only; it understates cohesion and overstates biome starvation).
-    generate.add_argument("--aspect", type=float, default=2.0,
-                          help="X-axis aspect vs latitude radius (default 2.0 = Mercator 2:1).")
-    generate.add_argument("--square", action="store_true",
-                          help="Legacy square (1:1) render; equivalent to --aspect 1.0.")
-    generate.add_argument("--sysprop", action="append", default=[], metavar="KEY=VALUE",
-                          help="Extra -D system property for the spawned Gradle/JVM process "
-                               "(repeatable), e.g. --sysprop latitude.geoV2.enabled=true. "
-                               "Used to exercise flag-gated features (see LatitudeV2Flags).")
-
-    ruggedness = subparsers.add_parser("ruggedness", help="Generate ruggedness for an existing viewer run.")
-    ruggedness.add_argument("--run", required=True)
-    ruggedness.add_argument("--step", type=int, required=True)
-    ruggedness.add_argument("--no-viewer-open", action="store_true")
-
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+    preview = commands.add_parser("generate", help="Generate a saved Viewer run from this worktree")
+    preview.add_argument("--step", type=int, required=True)
+    preview.add_argument("--seed", type=int, default=1)
+    preview.add_argument("--size", choices=sorted(SIZES), default="regular")
+    preview.add_argument("--no-viewer-open", action="store_true")
+    preview.add_argument("--sysprop", action="append", default=[])
     args = parser.parse_args()
-    if args.command == "generate":
-        aspect = 1.0 if getattr(args, "square", False) else args.aspect
-        generate_run(step=args.step, seed=args.seed, size=args.size, aspect=aspect,
-                     sysprops=getattr(args, "sysprop", []))
-        return 0
-    if args.command == "ruggedness":
-        generate_ruggedness(run_id=args.run, step=args.step)
-        return 0
-    parser.error(f"Unknown command: {args.command}")
-    return 2
-
-
-def generate_run(*, step: int, seed: int, size: str, aspect: float = 2.0,
-                  sysprops: list[str] | None = None) -> None:
-    validate_step(step)
-    size_key = normalize_size(size)
-    preflight_no_concurrent_run()
-    run_id = allocate_run_id()
-    target_run_dir = RUNS_ROOT / run_id
-
-    ensure_clean_target(target_run_dir)
-    started_at = time.time()
-    run_gradle_preview(
-        seed=seed,
-        size=size_key,
-        step=step,
-        layers=None,
-        aspect=aspect,
-        sysprops=sysprops,
-    )
-    source_step_dir = find_fresh_step_dir(seed=seed, step=step, started_at=started_at)
-    if not source_step_dir.exists():
-        raise FileNotFoundError(f"Atlas step output not found: {source_step_dir}")
-    # The exporter's size->radius mapping is authoritative, so read the radius from
-    # the emitted R<radius> directory instead of guessing from UI size labels.
-    radius_match = re.search(r"[/\\]R(\d+)[/\\]", str(source_step_dir) + os.sep)
-    radius = int(radius_match.group(1)) if radius_match else radius_for_size(size_key)
-
-    RUNS_ROOT.mkdir(parents=True, exist_ok=True)
-    target_run_dir.mkdir(parents=True, exist_ok=False)
-    copy_step_bundle(source_step_dir, target_run_dir, step)
-    write_manifest(
-        target_run_dir / "run_manifest.json",
-        run_id=run_id,
-        seed=seed,
-        size=size_key,
-        radius=radius,
-        step=step,
-        aspect=aspect,
-        sysprops=sysprops,
-    )
-    validate_bundle(target_run_dir, step, radius)
-
-
-def generate_ruggedness(*, run_id: str, step: int) -> None:
-    validate_step(step)
-    run_dir = RUNS_ROOT / run_id
-    if not run_dir.exists():
-        raise FileNotFoundError(f"Run folder not found: {run_dir}")
-
-    manifest = read_json(run_dir / "run_manifest.json")
-    seed = int(manifest.get("seed", DEFAULT_SEED))
-    size = normalize_size(str(manifest.get("size", DEFAULT_SIZE)))
-    # Older run manifests predate the aspect field and recorded no sysprops. Their original aspect cannot
-    # be reconstructed, so use the canonical 2:1 shape while replaying complete newer manifests exactly.
-    aspect = float(manifest.get("aspect", 2.0))
-    manifest_sysprops = manifest.get("sysprops", {})
-    if not isinstance(manifest_sysprops, dict):
-        raise ValueError(f"Invalid sysprops in run manifest: expected object, got {type(manifest_sysprops).__name__}")
-    sysprops = [f"{key}={value}" for key, value in manifest_sysprops.items()]
-
-    started_at = time.time()
-    run_gradle_preview(
-        seed=seed,
-        size=size,
-        step=step,
-        layers="ruggedness",
-        aspect=aspect,
-        sysprops=sysprops,
-    )
-    source_step_dir = find_fresh_step_dir(seed=seed, step=step, started_at=started_at)
-    ruggedness_path = source_step_dir / "ruggedness.png"
-    if not ruggedness_path.exists():
-        raise FileNotFoundError(f"Ruggedness output not found: {ruggedness_path}")
-    shutil.copy2(ruggedness_path, run_dir / f"step{step}_ruggedness.png")
-
-
-def run_gradle_preview(*, seed: int, size: str, step: int, layers: str | None, aspect: float = 2.0,
-                        sysprops: list[str] | None = None) -> None:
-    gradlew = "gradlew.bat" if os.name == "nt" else "./gradlew"
-    args = [
-        f"--seed {seed}",
-        f"--size {size}",
-        f"--step {step}",
-        f"--y {DEFAULT_Y}",
-        "--bundle true",
-        "--emitBiomeIndex true",
-    ]
-    if layers:
-        args.append(f"--layers {layers}")
-
-    command = [gradlew, "--no-daemon", "runBiomePreview", f"--args={' '.join(args)}"]
-    subprocess.run(command, cwd=ROOT, env=gradle_env(aspect=aspect, sysprops=sysprops), check=True)
-
-
-def copy_step_bundle(source_step_dir: Path, target_run_dir: Path, step: int) -> None:
-    for child in sorted(source_step_dir.iterdir()):
-        if child.is_file():
-            shutil.copy2(child, target_run_dir / f"step{step}_{child.name}")
-
-
-def validate_bundle(target_run_dir: Path, step: int, expected_radius: int) -> None:
-    for name in REQUIRED_BUNDLE_FILES:
-        path = target_run_dir / f"step{step}_{name}"
-        if not path.exists():
-            raise FileNotFoundError(f"Missing required atlas bundle file: {path}")
-
-    legend = read_json(target_run_dir / f"step{step}_legend.json")
-    radius = int(legend.get("radiusBlocks", -1))
-    if radius != expected_radius:
-        raise RuntimeError(
-            f"Radius mismatch for run {target_run_dir.name}: expected {expected_radius}, legend reported {radius}"
-        )
-
-
-def ensure_clean_target(target_run_dir: Path) -> None:
-    if target_run_dir.exists():
-        raise FileExistsError(f"Run folder already exists: {target_run_dir}")
-
-
-def find_fresh_step_dir(*, seed: int, step: int, started_at: float) -> Path:
-    seed_root = ATLAS_ROOT / f"seed_{seed}"
-    if not seed_root.exists():
-        raise FileNotFoundError(f"Atlas seed output root not found: {seed_root}")
-
-    # Match any recent R*/step<step> folder because the exporter decides the final
-    # radius for a size label, and that mapping can drift from hardcoded guesses.
-    candidates: list[Path] = []
-    for step_dir in seed_root.glob(f"Run_*/R*/step{step}"):
-        if not step_dir.is_dir():
-            continue
-        try:
-            mtime = step_dir.stat().st_mtime
-        except FileNotFoundError:
-            continue
-        if mtime >= started_at - 1.0:
-            candidates.append(step_dir)
-
-    if not candidates:
-        raise FileNotFoundError(f"No fresh atlas step directory found under {seed_root} for step {step}")
-
-    candidates.sort(key=lambda path: path.stat().st_mtime)
-    return candidates[-1]
-
-
-def write_manifest(path: Path, *, run_id: str, seed: int, size: str, radius: int, step: int, aspect: float,
-                   sysprops: list[str] | None = None) -> None:
-    # Slice D (Fable audit P1-5): the manifest used to HARDCODE "emitHeight": False and record no -D
-    # config at all, so a bundle could not prove which flags produced it (a real run dir was found with
-    # height artifacts while its manifest said emitHeight:false). Record the actual sysprops verbatim and
-    # derive emitHeight from them instead of asserting a constant.
-    sysprop_map: dict[str, str] = {}
-    for kv in (sysprops or []):
-        if "=" in kv:
-            k, v = kv.split("=", 1)
-            sysprop_map[k.strip()] = v.strip()
-    payload = {
-        "ts": run_id,
-        "branch": git_text("branch", "--show-current"),
-        "commit": git_text("rev-parse", "--short", "HEAD"),
-        "seed": str(seed),
-        "size": size,
-        "aspect": aspect,
-        "radiusBlocks": radius,
-        "step": step,
-        "emitBiomeIndex": True,
-        "emitHeight": sysprop_map.get("latitude.emitHeight", "false").lower() == "true",
-        "sysprops": sysprop_map,
-        "legacyRun": f"Run_{run_id}",
-        "migratedFrom": "run/latdev/atlas",
-    }
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-
-
-def preflight_no_concurrent_run() -> None:
-    """Slice D (Fable audit P1-5): refuse to start when another headless worldgen run is alive.
-
-    Two concurrent runs against the same run-headless/world don't fail loudly -- they contend on
-    Minecraft's session.lock and both crawl, which reads as a hang (this burned a real session on
-    2026-07-06; see CLAUDE.md's shared-lockable-resources rule). Checks: (1) any live process whose
-    command line mentions runBiomePreview; (2) if run-headless/world/session.lock exists, probe whether
-    something actually HOLDS the lock (the file itself persists after clean shutdowns, so existence
-    alone proves nothing).
-    """
-    try:
-        proc = subprocess.run(["pgrep", "-f", "runBiomePreview"], capture_output=True, text=True)
-        live = [pid for pid in proc.stdout.split() if pid.strip() and int(pid) != os.getpid()]
-        if live:
-            raise SystemExit(
-                f"[atlas_runner] PREFLIGHT ABORT: a runBiomePreview process is already alive (pid(s) "
-                f"{', '.join(live)}). Two headless runs against the same run-headless/world contend on "
-                f"session.lock and both crawl. Wait for it (or kill it) before starting a new run.")
-    except FileNotFoundError:
-        pass  # no pgrep on this platform; fall through to the lock probe
-    lock_path = ROOT / "run-headless" / "world" / "session.lock"
-    if lock_path.exists():
-        try:
-            import fcntl
-            with open(lock_path, "r+b") as fh:
-                try:
-                    fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    fcntl.flock(fh, fcntl.LOCK_UN)
-                except OSError:
-                    raise SystemExit(
-                        "[atlas_runner] PREFLIGHT ABORT: run-headless/world/session.lock is HELD by a "
-                        "live process. Wait for the current run to finish before starting a new one.")
-        except SystemExit:
-            raise
-        except Exception:
-            pass  # probe is best-effort; the pgrep check above is the primary guard
-
-
-def git_text(*args: str) -> str:
-    try:
-        proc = subprocess.run(
-            ["git", *args],
-            cwd=ROOT,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        return proc.stdout.strip()
-    except Exception:
-        return ""
-
-
-def allocate_run_id() -> str:
-    base = datetime.now().strftime("%Y%m%d-%H%M%S")
-    candidate = base
-    suffix = 2
-    while (RUNS_ROOT / candidate).exists():
-        candidate = f"{base}.{suffix}"
-        suffix += 1
-    return candidate
-
-
-def radius_for_size(size: str) -> int:
-    try:
-        return SIZE_TO_RADIUS[size]
-    except KeyError as exc:
-        raise ValueError(f"Unknown atlas size '{size}'") from exc
-
-
-def normalize_size(raw: str) -> str:
-    value = (raw or "").strip().lower()
-    if not value:
-        return DEFAULT_SIZE
-    return value
-
-
-def validate_step(step: int) -> None:
-    if step <= 0 or step > 4096:
-        raise ValueError("step must be in range 1..4096")
-
-
-def gradle_env(*, aspect: float = 2.0, sysprops: list[str] | None = None) -> dict[str, str]:
-    env = os.environ.copy()
-    if os.name != "nt" and not env.get("JAVA_HOME"):
-        java_home = detect_java_home_25()
-        if java_home:
-            env["JAVA_HOME"] = java_home
-            env["PATH"] = f"{Path(java_home) / 'bin'}:{env.get('PATH', '')}"
-    # The forked server JVM picks up JAVA_TOOL_OPTIONS automatically; this is how the exporter's
-    # Mercator-width knob (-Dlatitude.atlasXAspect) and any --sysprop overrides reach it. Preserve
-    # any caller-set options.
-    extra_opts = []
-    if abs(aspect - 1.0) > 1e-9:
-        extra_opts.append(f"-Dlatitude.atlasXAspect={aspect}")
-    for kv in (sysprops or []):
-        if "=" not in kv:
-            raise ValueError(f"--sysprop must be KEY=VALUE, got: {kv!r}")
-        key, value = kv.split("=", 1)
-        extra_opts.append(f"-D{key}={value}")
-    if extra_opts:
-        prior = env.get("JAVA_TOOL_OPTIONS", "").strip()
-        joined = " ".join(extra_opts)
-        env["JAVA_TOOL_OPTIONS"] = f"{prior} {joined}".strip() if prior else joined
-    return env
-
-
-def detect_java_home_25() -> str | None:
-    if sys.platform != "darwin":
-        return None
-    try:
-        proc = subprocess.run(
-            ["/usr/libexec/java_home", "-v", "25"],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except Exception:
-        return None
-    value = proc.stdout.strip()
-    return value or None
-
-
-def read_json(path: Path) -> dict:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict):
-        raise ValueError(f"Expected JSON object in {path}")
-    return data
+    generate(seed=args.seed, size=args.size, step=args.step, sysprops=args.sysprop)
+    return 0
 
 
 if __name__ == "__main__":

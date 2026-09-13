@@ -1,9 +1,15 @@
 package com.example.globe.mixin;
 
+import com.example.globe.GlobeMod;
+import com.example.globe.world.LatitudeWorldgenScope;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.LargeDripstoneFeature;
 import net.minecraft.world.level.levelgen.feature.SpeleothemClusterFeature;
 import net.minecraft.world.level.levelgen.feature.SpeleothemFeature;
@@ -15,10 +21,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-// 26.2 renamed the dripstone worldgen feature classes: DripstoneClusterFeature -> SpeleothemClusterFeature
-// (type minecraft:speleothem_cluster) and PointedDripstoneFeature -> SpeleothemFeature (type minecraft:speleothem).
-// LargeDripstoneFeature is unchanged. All three still extend Feature and override place(FeaturePlaceContext),
-// so the HEAD inject below still targets the same generation entrypoint and the surface-mow behavior is preserved.
 @Mixin({LargeDripstoneFeature.class, SpeleothemClusterFeature.class, SpeleothemFeature.class})
 public class SurfaceDripstoneLawnmowerMixin {
 
@@ -45,25 +47,47 @@ public class SurfaceDripstoneLawnmowerMixin {
         LOGGED_CHUNKS.defaultReturnValue(Long.MIN_VALUE);
     }
 
-    @Inject(method = "place(Lnet/minecraft/world/level/levelgen/feature/FeaturePlaceContext;)Z", at = @At("HEAD"), cancellable = true)
-    private void latitude$cancelSurfaceDripstone(FeaturePlaceContext<?> context, CallbackInfoReturnable<Boolean> cir) {
+    @Inject(method = "place(Lnet/minecraft/world/level/WorldGenLevel;Lnet/minecraft/world/level/chunk/ChunkGenerator;Lnet/minecraft/util/RandomSource;Lnet/minecraft/core/BlockPos;)Z", at = @At("HEAD"), cancellable = true)
+    private void latitude$cancelSurfaceDripstone(WorldGenLevel level,
+                                                  ChunkGenerator generator,
+                                                  RandomSource random,
+                                                  BlockPos origin,
+                                                  CallbackInfoReturnable<Boolean> cir) {
         if (!LATITUDE_FIX_SURFACE_DRIPSTONE) {
             return;
         }
+        if (!LatitudeWorldgenScope.isActive()
+                || !(generator instanceof NoiseBasedChunkGenerator noise)
+                || !GlobeMod.shouldApplyLatitudeWorldgen(noise)) {
+            return;
+        }
+        if (latitude$isSulfurSpeleothem(this)) {
+            return;
+        }
 
-        BlockPos origin = context.origin();
-        int seaLevel = context.level().getSeaLevel();
-        int surfaceY = context.level().getHeight(Heightmap.Types.WORLD_SURFACE_WG, origin.getX(), origin.getZ());
+        int seaLevel = level.getSeaLevel();
+        int surfaceY = level.getHeight(Heightmap.Types.WORLD_SURFACE_WG, origin.getX(), origin.getZ());
         boolean nearSurfaceByHeightmap = origin.getY() >= surfaceY - DRIPSTONE_SURFACE_BUFFER;
         boolean skyVisible = origin.getY() > seaLevel
-                && (context.level().canSeeSky(origin)
-                || context.level().canSeeSky(origin.above(2)));
+                && (level.canSeeSky(origin)
+                || level.canSeeSky(origin.above(2)));
         if (nearSurfaceByHeightmap || skyVisible) {
             if (DEBUG_DRIPSTONE_MOW) {
                 logOncePerChunk(origin);
             }
             cir.setReturnValue(false);
         }
+    }
+
+    @Unique
+    private static boolean latitude$isSulfurSpeleothem(Object config) {
+        if (config instanceof SpeleothemFeature speleothem) {
+            return speleothem.pointedBlock().is(Blocks.SULFUR_SPIKE);
+        }
+        if (config instanceof SpeleothemClusterFeature cluster) {
+            return cluster.pointedBlock().is(Blocks.SULFUR_SPIKE);
+        }
+        return false;
     }
 
     @Unique

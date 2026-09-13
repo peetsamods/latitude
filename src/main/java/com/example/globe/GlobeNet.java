@@ -34,7 +34,11 @@ public final class GlobeNet {
         PayloadTypeRegistry.clientboundPlay().register(PassageArrivalPayload.ID, PassageArrivalPayload.CODEC);
     }
 
-    public record GlobeStatePayload(boolean isGlobe, int latitudeZRadius, int intendedXRadius) implements CustomPacketPayload {
+    // Union of the 2.0 (radii) and 1.5 (loadingBandId) payload shapes. Same wire id on both lines, so
+    // client and server MUST always be built from the same record -- a half-applied change decodes garbage
+    // instead of failing registration. loadingBandId feeds the loading-screen band overlay; the two radii
+    // feed the Mercator HUD math (LatitudeMath.setLatitudeZRadius / setIntendedXRadius).
+    public record GlobeStatePayload(boolean isGlobe, int latitudeZRadius, int intendedXRadius, String loadingBandId) implements CustomPacketPayload {
         public static final Type<GlobeStatePayload> ID = new Type<>(Identifier.fromNamespaceAndPath("globe", "s2c_globe_state"));
         // latitudeZRadius is the Z (latitude) radius in blocks. For Mercator worlds this differs from the
         // (X-sized) WorldBorder half, so the client needs it to render correct latitude/zone/pole HUD.
@@ -49,6 +53,8 @@ public final class GlobeNet {
                 GlobeStatePayload::latitudeZRadius,
                 ByteBufCodecs.VAR_INT,
                 GlobeStatePayload::intendedXRadius,
+                ByteBufCodecs.STRING_UTF8,
+                GlobeStatePayload::loadingBandId,
                 GlobeStatePayload::new
         );
 

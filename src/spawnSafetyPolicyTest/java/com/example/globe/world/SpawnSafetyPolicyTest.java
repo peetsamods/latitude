@@ -1,0 +1,384 @@
+package com.example.globe.world;
+
+import com.example.globe.util.LatitudeBands;
+import com.example.globe.util.LatitudeMath;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+public final class SpawnSafetyPolicyTest {
+    private static final int TERRAIN_MARGIN = 320;
+    private static final int WARNING_DISTANCE = 500;
+    private static final int WARNING_PADDING = 64;
+
+    public static void main(String[] args) throws Exception {
+        searchBoundsStayInsideTerrainAndWarningMargins();
+        spawnLatitudesSitAtTheMidpointOfTheirOwnBand();
+        initialSpawnStaysInRequestedLatitudeWithBoundedFallback();
+        fallbackCandidatesAreDeterministicBoundedAndValidated();
+        hazardousSurfacesAreRejected();
+        heightmapPositionIsTheSpawnSpaceAboveGround();
+        productionUsesTheValidatedCoordinateAndSurfacePolicy();
+        spawnSearchJudgesThePaintedBiome();
+        System.out.println("SPAWN_SAFETY_POLICY_TEST_PASS");
+    }
+
+    /**
+     * Every canonical zone must spawn a player inside the zone they asked for. The retired
+     * hand-picked fractions did not: SUBTROPICAL's 0.40 put the target at 36 degrees, a degree
+     * past its own 35-degree upper boundary, so a Subtropical request landed in Temperate.
+     */
+    private static void spawnLatitudesSitAtTheMidpointOfTheirOwnBand() {
+        for (LatitudeBands.Band band : LatitudeBands.Band.values()) {
+            String zoneKey = band.name();
+            double targetDeg = LatitudeMath.spawnFracForZoneKey(zoneKey) * 90.0;
+            double midpointDeg = (band.lowDeg() + band.highDeg()) * 0.5;
+            assertEquals(
+                    midpointDeg,
+                    targetDeg,
+                    "the " + zoneKey + " spawn target is the midpoint of its own canonical band");
+            assertTrue(
+                    targetDeg > band.lowDeg() && targetDeg < band.highDeg(),
+                    "the " + zoneKey + " spawn target stays strictly inside its own band");
+            assertEquals(
+                    band,
+                    LatitudeBands.fromAbsoluteLatitudeDeg(targetDeg),
+                    "the " + zoneKey + " spawn target classifies back as " + zoneKey);
+        }
+
+        assertEquals(
+                LatitudeBands.Band.TEMPERATE,
+                LatitudeBands.fromAbsoluteLatitudeDeg(0.40 * 90.0),
+                "the retired SUBTROPICAL fraction really did land a Subtropical request in Temperate");
+
+        double equatorDeg = LatitudeMath.spawnFracForZoneKey("EQUATOR") * 90.0;
+        assertEquals(
+                LatitudeMath.LatitudeZone.EQUATOR,
+                LatitudeMath.zoneForDeg((int) Math.round(equatorDeg)),
+                "EQUATOR keeps its own display-only sub-zone fraction");
+        assertEquals(
+                LatitudeBands.Band.TROPICAL,
+                LatitudeBands.fromAbsoluteLatitudeDeg(equatorDeg),
+                "the EQUATOR sub-zone still sits inside the canonical Tropical band");
+
+        for (int radius : new int[] {3_750, 5_000, 7_500, 10_000, 15_000, 20_000}) {
+            for (LatitudeBands.Band band : LatitudeBands.Band.values()) {
+                String zoneKey = band.name();
+                int targetZ = (int) Math.round(radius * LatitudeMath.spawnFracForZoneKey(zoneKey));
+                for (int hemisphereSign : new int[] {-1, 1}) {
+                    assertEquals(
+                            zoneKey,
+                            LatitudeMath.zoneForRadius(radius, targetZ * hemisphereSign).name(),
+                            "a " + zoneKey + " request lands in " + zoneKey
+                                    + " at radius " + radius + " in both hemispheres");
+                }
+            }
+        }
+    }
+
+    private static void initialSpawnStaysInRequestedLatitudeWithBoundedFallback() throws IOException {
+        assertEquals(
+                0,
+                SpawnSafetyPolicy.INITIAL_SPAWN_TERRAIN_VALIDATION_BUDGET,
+                "initial creation performs no speculative FULL-chunk terrain validation");
+        assertEquals(
+                0,
+                SpawnSafetyPolicy.maximumInitialSpawnChunkLoadCalls(
+                        SpawnSafetyPolicy.INITIAL_SPAWN_TERRAIN_VALIDATION_BUDGET),
+                "the initial biome-targeted choice cannot synchronously generate a remote chunk");
+
+        List<SpawnSafetyPolicy.FallbackCandidate> initialFallback =
+                SpawnSafetyPolicy.safeFallbackCandidates(
+                        10_000,
+                        4_720,
+                        TERRAIN_MARGIN,
+                        WARNING_DISTANCE,
+                        WARNING_PADDING,
+                        SpawnSafetyPolicy.FALLBACK_STEP_BLOCKS,
+                        SpawnSafetyPolicy.FALLBACK_MAX_RINGS);
+        assertEquals(9, initialFallback.size(),
+                "initial fallback remains the bounded center plus one eight-point ring");
+        assertEquals(9, SpawnSafetyPolicy.INITIAL_SPAWN_TERRAIN_VALIDATION_BUDGET
+                        + initialFallback.size(),
+                "initial creation generates only the bounded fallback destination candidates");
+        for (SpawnSafetyPolicy.FallbackCandidate candidate : initialFallback) {
+            double degrees = Math.abs(candidate.z()) * 90.0 / 10_000.0;
+            assertTrue(degrees >= 35.0 && degrees < 50.0,
+                    "Temperate fallback stays in Temperate latitude rather than returning vanilla to 0 degrees");
+        }
+
+        String source = normalize(Files.readString(
+                Path.of("src/main/java/com/example/globe/GlobeMod.java")));
+        assertTrue(
+                source.contains("resolveInitialSpawnChoice(world, pendingZone)"),
+                "initial creation uses the dedicated bounded spawn resolver");
+        assertTrue(
+                source.contains(
+                        "SpawnSafetyPolicy.INITIAL_SPAWN_TERRAIN_VALIDATION_BUDGET, false, true"),
+                "initial creation retains the selected latitude through its bounded safe fallback without teleport-neighbor preload");
+        int initialBudgetGuard = source.indexOf(
+                "if (terrainValidationBudget <= 0) { // This is a biome-correct suggestion");
+        int speculativeTerrainLoad = source.indexOf(
+                "BlockPos candidate = placeSafeY(world, x, z, prepareTeleportNeighbors);");
+        assertTrue(
+                initialBudgetGuard >= 0
+                        && speculativeTerrainLoad >= 0
+                        && initialBudgetGuard < speculativeTerrainLoad,
+                "the zero initial budget returns a biome-correct suggestion before the first FULL-chunk terrain validation");
+        assertTrue(
+                source.contains(
+                        "return new ResolvedSpawn( new BlockPos(x, world.getSeaLevel() + 1, z), false);"),
+                "initial creation hands Minecraft a target-band suggestion without claiming that its surface was validated");
+        assertTrue(
+                source.contains(
+                        "spawnChoice.radius(), spawnChoice.terrainValidated(), generateBonusChest, pendingInitialBonusChest"),
+                "initial-spawn logs distinguish a suggestion from a terrain-validated coordinate");
+        assertTrue(
+                source.contains(
+                        "placeLatitudeBonusChest(overworld, handler.player.blockPosition())"),
+                "an optional bonus chest is placed only after Minecraft has resolved and loaded the final player position");
+        assertTrue(
+                source.contains(
+                        "if (isGlobe && pendingInitialBonusChest)"),
+                "the zero-load initial path defers bonus-chest placement to the already-loaded JOIN position");
+        assertTrue(
+                source.contains("findSafeFallbackSpawn(world, radius, targetZ, prepareTeleportNeighbors)"),
+                "an exhausted initial candidate uses only the terrain-validated fallback at the requested latitude");
+        assertFalse(
+                source.contains("applySpawnChoice(handler.player, zoneToApply)"),
+                "first join must not retry the synchronous globe scan after vanilla takes over");
+    }
+
+    private static void fallbackCandidatesAreDeterministicBoundedAndValidated() throws IOException {
+        int radius = 3_750;
+        int safeMaxX = SpawnSafetyPolicy.safeSearchMaxAbsX(
+                radius,
+                TERRAIN_MARGIN,
+                WARNING_DISTANCE,
+                WARNING_PADDING);
+        int safeMaxZ = radius - TERRAIN_MARGIN;
+        List<SpawnSafetyPolicy.FallbackCandidate> productionCandidates =
+                SpawnSafetyPolicy.safeFallbackCandidates(
+                        radius,
+                        1_900,
+                        TERRAIN_MARGIN,
+                        WARNING_DISTANCE,
+                        WARNING_PADDING,
+                        SpawnSafetyPolicy.FALLBACK_STEP_BLOCKS,
+                        SpawnSafetyPolicy.FALLBACK_MAX_RINGS);
+        assertEquals(
+                9,
+                productionCandidates.size(),
+                "production fallback is limited to the center plus one eight-point ring");
+        assertEquals(
+                17,
+                SpawnSafetyPolicy.maximumFallbackChunkLoadCalls(
+                        productionCandidates.size(),
+                        SpawnSafetyPolicy.SPAWN_PREPARATION_NEIGHBOR_RADIUS_CHUNKS),
+                "production fallback makes at most nine validation loads plus eight final preparation loads");
+
+        List<SpawnSafetyPolicy.FallbackCandidate> candidates =
+                SpawnSafetyPolicy.safeFallbackCandidates(
+                        radius,
+                        1_900,
+                        TERRAIN_MARGIN,
+                        WARNING_DISTANCE,
+                        WARNING_PADDING,
+                        192,
+                        8);
+
+        assertTrue(!candidates.isEmpty(), "fallback search must have bounded candidates");
+        assertEquals(0, candidates.get(0).x(), "fallback search starts at the central X");
+        assertEquals(1_900, candidates.get(0).z(), "fallback search starts at the requested latitude");
+        assertEquals(
+                candidates,
+                SpawnSafetyPolicy.safeFallbackCandidates(
+                        radius,
+                        1_900,
+                        TERRAIN_MARGIN,
+                        WARNING_DISTANCE,
+                        WARNING_PADDING,
+                        192,
+                        8),
+                "fallback candidate order is deterministic");
+        for (SpawnSafetyPolicy.FallbackCandidate candidate : candidates) {
+            assertTrue(
+                    Math.abs(candidate.x()) <= safeMaxX,
+                    "fallback X remains outside the east/west warning zone");
+            assertTrue(
+                    Math.abs(candidate.z()) <= safeMaxZ,
+                    "fallback Z remains inside the terrain margin");
+        }
+
+        String source = normalize(Files.readString(
+                Path.of("src/main/java/com/example/globe/GlobeMod.java")));
+        assertFalse(
+                source.contains("new BlockPos(0, world.getSeaLevel() + 2, targetZ)"),
+                "an unchecked sea-level coordinate must never be returned as Latitude's spawn");
+        assertTrue(
+                source.contains("findSafeFallbackSpawn(world, radius, targetZ, prepareTeleportNeighbors)"),
+                "no-candidate and biome-probe failures use the bounded safe fallback search");
+        assertTrue(
+                source.contains("placeSafeY( world, candidate.x(), candidate.z(), prepareTeleportNeighbors)"),
+                "every deterministic fallback coordinate is terrain-validated");
+        assertTrue(
+                source.contains(
+                        "SpawnSafetyPolicy.FALLBACK_STEP_BLOCKS, SpawnSafetyPolicy.FALLBACK_MAX_RINGS"),
+                "production uses the tested nine-candidate fallback bound");
+        assertTrue(
+                source.indexOf("loadSpawnTargetChunk(world, x, z)")
+                        < source.indexOf("loadSpawnTargetNeighborRing(world, x, z)"),
+                "neighbor chunks are prepared only after the candidate column passes validation");
+        assertTrue(
+                source.contains("throw new IllegalStateException("),
+                "Latitude declines to return a spawn when no terrain-validated coordinate exists");
+    }
+
+    private static void searchBoundsStayInsideTerrainAndWarningMargins() {
+        int[] radii = {3_750, 5_000, 7_500, 10_000, 15_000, 20_000};
+        for (int radius : radii) {
+            int actual = SpawnSafetyPolicy.safeSearchMaxAbsX(
+                    radius,
+                    TERRAIN_MARGIN,
+                    WARNING_DISTANCE,
+                    WARNING_PADDING);
+            int terrainLimit = Math.max(0, radius - TERRAIN_MARGIN);
+            int warningLimit = Math.max(0, radius - WARNING_DISTANCE - WARNING_PADDING);
+            assertEquals(
+                    Math.min(terrainLimit, warningLimit),
+                    actual,
+                    "search bound uses the stricter safety margin at radius " + radius);
+            assertTrue(
+                    actual <= warningLimit,
+                    "every sampled X remains outside the east/west warning zone at radius " + radius);
+        }
+    }
+
+    private static void hazardousSurfacesAreRejected() {
+        for (String id : new String[]{
+                "minecraft:magma_block",
+                "minecraft:cactus",
+                "minecraft:powder_snow",
+                "minecraft:campfire",
+                "minecraft:soul_campfire",
+                "minecraft:pointed_dripstone",
+                "minecraft:fire",
+                "minecraft:soul_fire",
+                "minecraft:wither_rose",
+                "minecraft:sweet_berry_bush"}) {
+            assertTrue(
+                    SpawnSafetyPolicy.isDangerousSurfaceId(id),
+                    id + " must not be accepted beneath a new player");
+        }
+        for (String id : new String[]{
+                "minecraft:grass_block",
+                "minecraft:sand",
+                "minecraft:stone"}) {
+            assertFalse(
+                    SpawnSafetyPolicy.isDangerousSurfaceId(id),
+                    id + " is not intrinsically hazardous");
+        }
+        assertFalse(
+                SpawnSafetyPolicy.isDangerousSurfaceId("example:unknown"),
+                "unknown provider blocks remain fail-open after the sturdy-surface check");
+    }
+
+    private static void heightmapPositionIsTheSpawnSpaceAboveGround() throws IOException {
+        String source = normalize(Files.readString(
+                Path.of("src/main/java/com/example/globe/GlobeMod.java")));
+        assertTrue(
+                source.contains(
+                        "BlockPos spawn = world.getHeightmapPos( Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, world.getMinY(), z)); BlockPos ground = spawn.below();"),
+                "Minecraft's heightmap result is the first open spawn block, so ground is one block below it");
+        assertFalse(
+                source.contains(
+                        "BlockPos ground = world.getHeightmapPos( Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, new BlockPos(x, world.getMinY(), z)); BlockPos spawn = ground.above();"),
+                "the first open heightmap block must never be tested as if it were sturdy ground");
+    }
+
+    private static void productionUsesTheValidatedCoordinateAndSurfacePolicy() throws IOException {
+        String source = normalize(Files.readString(
+                Path.of("src/main/java/com/example/globe/GlobeMod.java")));
+        assertTrue(
+                source.contains(
+                        "SpawnSafetyPolicy.safeSearchMaxAbsX( borderHalf, margin, EW_WARNING_DISTANCE_BLOCKS, EW_SPAWN_PADDING_BLOCKS)"),
+                "spawn search samples only already-safe east/west coordinates");
+        assertFalse(
+                source.contains("clampSpawnAwayFromEwWarning(spawnPos, radius)"),
+                "validated coordinates are not shifted to a different unvalidated terrain column");
+        assertTrue(
+                source.contains("SpawnSafetyPolicy.isDangerousSurfaceId(groundBlockId.toString())"),
+                "ground hazards are checked by the tested policy");
+        assertTrue(
+                source.contains("groundState.isFaceSturdy(world, ground, Direction.UP)"),
+                "spawn ground must support the player");
+    }
+
+    /**
+     * The first-spawn search must judge candidates through the painted biome view (registry,
+     * terrain generator, noise state and height view all supplied), never through a bare pick
+     * that lacks terrain evidence: that blind copy disagreed with the painter at coasts and on
+     * raised ground, so the search could accept a column that generates as water.
+     */
+    private static void spawnSearchJudgesThePaintedBiome() throws IOException {
+        String source = normalize(Files.readString(
+                Path.of("src/main/java/com/example/globe/GlobeMod.java")));
+        assertTrue(
+                source.contains(
+                        "return LatitudeBiomeSource.forLocate( template.baseSource(), template.biomeRegistry(), radiusBlocks, terrainGenerator, noiseConfig, world);"),
+                "the spawn view is the same painted, terrain-aware source that locate and structure siting use");
+        int probeStart = source.indexOf("private static boolean isLandBiome(");
+        assertTrue(probeStart >= 0, "the spawn search keeps its land probe");
+        int probeEnd = source.indexOf("private static BlockPos placeSafeY(", probeStart);
+        assertTrue(probeEnd > probeStart, "the land probe precedes the terrain validator");
+        String probe = source.substring(probeStart, probeEnd);
+        assertTrue(
+                probe.contains("Holder<Biome> resolved = painted.getNoiseBiome("),
+                "the land probe asks the painted view for the biome");
+        assertFalse(
+                probe.contains("LatitudeBiomes.pick("),
+                "the land probe never re-derives the biome through a bare pick");
+        assertFalse(
+                source.contains("\"SPAWN_PROBE\""),
+                "no terrain-blind spawn-probe pick context remains");
+        assertTrue(
+                source.contains("isLandBiome(painted, sampler, x, z, classifyY)"),
+                "every spawn candidate is judged through the painted view");
+        assertFalse(
+                source.contains("isLandBiome(template,"),
+                "no spawn candidate is judged through the bare template");
+    }
+
+    private static String normalize(String value) {
+        return value.replaceAll("\\s+", " ").trim();
+    }
+
+    private static void assertTrue(boolean condition, String message) {
+        if (!condition) {
+            throw new AssertionError(message);
+        }
+    }
+
+    private static void assertFalse(boolean condition, String message) {
+        assertTrue(!condition, message);
+    }
+
+    private static void assertEquals(int expected, int actual, String message) {
+        if (expected != actual) {
+            throw new AssertionError(message + ": expected=" + expected + " actual=" + actual);
+        }
+    }
+
+    private static void assertEquals(double expected, double actual, String message) {
+        if (Math.abs(expected - actual) > 1.0e-9) {
+            throw new AssertionError(message + ": expected=" + expected + " actual=" + actual);
+        }
+    }
+
+    private static void assertEquals(Object expected, Object actual, String message) {
+        if (!expected.equals(actual)) {
+            throw new AssertionError(message + ": expected=" + expected + " actual=" + actual);
+        }
+    }
+}

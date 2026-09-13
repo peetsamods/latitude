@@ -12,6 +12,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -19,18 +22,17 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.LevelHeightAccessor;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeResolver;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.RandomState;
+import net.minecraft.world.level.levelgen.densityfunction.SamplerContext;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -59,17 +61,13 @@ public final class BiomePreviewHeadlessRunner {
     private static final String AUDIT_ARG_FLAG = "latdevBandAudit";
     private static final String AUDIT_PROP_KEY = "latdev.bandAudit";
     private static final String LOCATE_BOUNDARY_PROP_KEY = "latdev.locateBoundary";
-    private static final String ALPINE_AUDIT_PROP_KEY = "latdev.alpineAudit";
     private static final String EMIT_HEIGHT_PROP_KEY = "latitude.emitHeight";
-    private static final String PROBE_PROP_KEY = "latdev.probe";
-    private static final String PROBE_TARGET_PROP = "latdev.probe.target";
-    private static final String PROBE_TYPES_PROP = "latdev.probe.types";
-    private static final String PROBE_NAMES_PROP = "latdev.probe.names";
-    private static final String PROBE_GRID_PROP = "latdev.probe.grid";
-    private static final String PROBE_OUT_PROP = "latdev.probe.out";
-    private static final String PROBE_RADIUS_PROP = "latdev.probe.radius";
-    private static final String PROBE_MAX_COMBOS_PROP = "latdev.probe.maxCombos";
-    private static final int PROBE_DEFAULT_MAX_COMBOS = 200_000;
+    private static final String SULFUR_SCAN_PROP_KEY = "latdev.sulfurScan";
+    private static final String BADLANDS_SCAN_PROP_KEY = "latdev.badlandsScan";
+    private static final String SULFUR_CAVES_ID = "minecraft:sulfur_caves";
+    private static final List<String> SULFUR_SUBSTRATE_BLOCKS =
+            List.of("minecraft:sulfur", "minecraft:cinnabar", "minecraft:potent_sulfur");
+    private static final List<String> SULFUR_DECORATION_BLOCKS = List.of("minecraft:sulfur_spike");
     private static final Pattern PROP_PAIR = Pattern.compile(
             "(?i)([a-z][a-z0-9_]*)\\s*=\\s*([^;]+?)(?=(?:\\s*[;,]\\s*[a-z][a-z0-9_]*\\s*=)|$)");
     private static final DateTimeFormatter SEARCH_TIMESTAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
@@ -97,21 +95,6 @@ public final class BiomePreviewHeadlessRunner {
             return;
         }
 
-        if (TerrainProofHarness.isTriggered()) {
-            server.execute(() -> TerrainProofHarness.runAndStop(server));
-            return;
-        }
-
-        if (parseBoolean(System.getProperty(PROBE_PROP_KEY, ""))) {
-            server.execute(() -> runFunctionProbeAndStop(server));
-            return;
-        }
-
-        if (parseBoolean(System.getProperty(ALPINE_AUDIT_PROP_KEY, ""))) {
-            server.execute(() -> runAlpineAuditAndStop(server));
-            return;
-        }
-
         LocateBoundaryConfig locateBoundaryConfig = parseLocateBoundaryConfig();
         if (locateBoundaryConfig.enabled) {
             server.execute(() -> runLocateBoundaryAndStop(server, locateBoundaryConfig));
@@ -130,12 +113,377 @@ public final class BiomePreviewHeadlessRunner {
             return;
         }
 
+        SulfurScanConfig sulfurScanConfig = parseSulfurScanConfig();
+        if (sulfurScanConfig.enabled) {
+            server.execute(() -> runSulfurScanAndStop(server, sulfurScanConfig));
+            return;
+        }
+
+        SulfurScanConfig badlandsScanConfig = parseScanConfig(BADLANDS_SCAN_PROP_KEY);
+        if (badlandsScanConfig.enabled) {
+            server.execute(() -> runBadlandsScanAndStop(server, badlandsScanConfig));
+            return;
+        }
+
         Config config = parseConfig();
         if (!config.enabled) {
             return;
         }
 
         server.execute(() -> runExportAndStop(server, config));
+    }
+
+    private record SulfurScanConfig(boolean enabled, int radius, int step, int maxChunks, int centerX, int centerZ) {
+    }
+
+    private static SulfurScanConfig parseSulfurScanConfig() {
+        return parseScanConfig(SULFUR_SCAN_PROP_KEY);
+    }
+
+    private static SulfurScanConfig parseScanConfig(String propKey) {
+        Map<String, String> kv = new HashMap<>();
+        String prop = System.getProperty(propKey, "");
+        boolean enabled = !prop.isBlank();
+        if (enabled) {
+            parsePropertyOptions(prop, kv);
+        }
+        return new SulfurScanConfig(
+                enabled,
+                Math.max(64, parseInt(kv.get("radius"), 2500)),
+                Math.max(16, parseInt(kv.get("step"), 64)),
+                Math.max(1, parseInt(kv.get("maxchunks"), 9)),
+                parseInt(kv.get("cx"), 0),
+                parseInt(kv.get("cz"), 0));
+    }
+
+    private static final List<String> BADLANDS_BAND_BLOCKS = List.of(
+            "minecraft:terracotta", "minecraft:white_terracotta", "minecraft:yellow_terracotta",
+            "minecraft:brown_terracotta", "minecraft:red_terracotta", "minecraft:light_gray_terracotta");
+
+    /**
+     * Measures whether Latitude's badlands tuning is actually reaching the world. Latitude's
+     * shipped rule starts terracotta banding at y>=84 (vanilla and TerraBlender's bundled copy
+     * use 74), so badlands columns whose surface sits in 74..83 are the discriminator: under
+     * Latitude's rule they carry no band terracotta, under an override they band. Columns at
+     * 90..110 are the control - they band under both rules, proving banding works at all.
+     * Only the TOP FLOOR BLOCK decides: the clause's second, anchor-free bandlands paints the
+     * subsurface from y=63 either way, so deeper blocks cannot discriminate. At the floor the
+     * stone depth is zero, making the anchor check exact: Latitude paints red sand below 84,
+     * the vanilla-era rule paints band terracotta from 74. Orange terracotta stays uncounted
+     * on both sides (reachable through other badlands rules and through bandlands alike).
+     */
+    private static void runBadlandsScanAndStop(MinecraftServer server, SulfurScanConfig config) {
+        ServerLevel world = server.overworld();
+        try {
+            if (world == null) {
+                GlobeMod.LOGGER.error("[latdev][badlands-scan] no overworld available");
+                return;
+            }
+            ChunkGenerator generator = world.getChunkSource().getGenerator();
+            if (!(generator instanceof NoiseBasedChunkGenerator noiseGen)) {
+                GlobeMod.LOGGER.error("[latdev][badlands-scan] generator is not noise based: {}",
+                        generator.getClass().getName());
+                return;
+            }
+            String settingsId = noiseGen.generatorSettings().unwrapKey()
+                    .map(key -> key.identifier().toString())
+                    .orElse("<inline>");
+            BiomeSource activeSource = generator.getBiomeSource();
+            GlobeMod.LOGGER.info("[latdev][badlands-scan] seed={} noise_settings={} center={},{} "
+                            + "radius={} step={} latitude_worldgen={} biome_source={}",
+                    world.getSeed(), settingsId, config.centerX(), config.centerZ(),
+                    config.radius(), config.step(),
+                    GlobeMod.shouldApplyLatitudeWorldgen(noiseGen),
+                    activeSource instanceof LatitudeBiomeSource ? "LatitudeBiomeSource"
+                            : activeSource.getClass().getSimpleName());
+
+            try {
+                net.minecraft.world.level.levelgen.material.rule.MaterialRule active =
+                        noiseGen.generatorSettings().value().materialRule().value();
+                Path dump = server.getServerDirectory().resolve("latdev").resolve("surface-rule-active.txt");
+                Files.createDirectories(dump.getParent());
+                StringBuilder text = new StringBuilder();
+                text.append("class=").append(active.getClass().getName()).append('\n');
+                for (java.lang.reflect.Field field : active.getClass().getDeclaredFields()) {
+                    if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                        continue;
+                    }
+                    field.setAccessible(true);
+                    text.append("FIELD ").append(field.getName()).append(" = ")
+                            .append(field.get(active)).append('\n');
+                }
+                text.append("TOSTRING ").append(active).append('\n');
+                Files.writeString(dump, text.toString(), StandardCharsets.UTF_8);
+                GlobeMod.LOGGER.info("[latdev][badlands-scan] active rule dumped to {}", dump);
+            } catch (Exception e) {
+                GlobeMod.LOGGER.warn("[latdev][badlands-scan] rule dump failed", e);
+            }
+
+            Registry<Biome> biomeRegistry = world.registryAccess().lookupOrThrow(Registries.BIOME);
+            int generated = 0;
+            long badlandsColumns = 0;
+            long windowColumns = 0;
+            long windowBanded = 0;
+            long windowBandBlocks = 0;
+            long controlColumns = 0;
+            long controlBanded = 0;
+            Map<Integer, int[]> perHeight = new HashMap<>();
+            int hMin = Integer.MAX_VALUE;
+            int hMax = Integer.MIN_VALUE;
+            long below74 = 0;
+            long h84to89 = 0;
+            long above110 = 0;
+            LinkedHashSet<Long> visited = new LinkedHashSet<>();
+            BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+
+            outer:
+            for (int z = config.centerZ() - config.radius(); z <= config.centerZ() + config.radius(); z += config.step()) {
+                for (int x = config.centerX() - config.radius(); x <= config.centerX() + config.radius(); x += config.step()) {
+                    ChunkPos chunkPos = new ChunkPos(x >> 4, z >> 4);
+                    if (!visited.add(chunkPos.pack())) {
+                        continue;
+                    }
+                    ChunkAccess chunk = world.getChunkSource().getChunk(chunkPos.x(), chunkPos.z(), ChunkStatus.FULL, true);
+                    if (chunk == null) {
+                        continue;
+                    }
+                    generated++;
+                    for (int localX = 0; localX < 16; localX++) {
+                        for (int localZ = 0; localZ < 16; localZ++) {
+                            int worldX = chunkPos.getMinBlockX() + localX;
+                            int worldZ = chunkPos.getMinBlockZ() + localZ;
+                            int h = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, localX, localZ) - 1;
+                            String biome = biomeId(biomeRegistry,
+                                    world.getBiome(cursor.set(worldX, h, worldZ)));
+                            if (!biome.endsWith("badlands")) {
+                                continue;
+                            }
+                            badlandsColumns++;
+                            hMin = Math.min(hMin, h);
+                            hMax = Math.max(hMax, h);
+                            if (h < 74) {
+                                below74++;
+                            } else if (h >= 84 && h <= 89) {
+                                h84to89++;
+                            } else if (h > 110) {
+                                above110++;
+                            }
+                            boolean window = h >= 74 && h <= 83;
+                            boolean control = h >= 90 && h <= 110;
+                            if (!window && !control) {
+                                continue;
+                            }
+                            String floorBlock = BuiltInRegistries.BLOCK
+                                    .getKey(chunk.getBlockState(cursor.set(worldX, h, worldZ)).getBlock())
+                                    .toString();
+                            boolean floorBanded = BADLANDS_BAND_BLOCKS.contains(floorBlock);
+                            int[] tally = perHeight.computeIfAbsent(h, unused -> new int[2]);
+                            tally[1]++;
+                            if (floorBanded) {
+                                tally[0]++;
+                            }
+                            if (window) {
+                                windowColumns++;
+                                if (floorBanded) {
+                                    windowBanded++;
+                                } else if ("minecraft:red_sand".equals(floorBlock)) {
+                                    windowBandBlocks++;
+                                }
+                            } else {
+                                controlColumns++;
+                                if (floorBanded) {
+                                    controlBanded++;
+                                }
+                            }
+                        }
+                    }
+                    if (generated >= config.maxChunks()) {
+                        break outer;
+                    }
+                }
+            }
+
+            GlobeMod.LOGGER.info("[latdev][badlands-scan] RESULT settings={} chunks={} "
+                            + "badlands_columns={} window74_83_columns={} window74_83_banded={} "
+                            + "window74_83_red_sand={} control90_110_columns={} control90_110_banded={}",
+                    settingsId, generated, badlandsColumns, windowColumns, windowBanded,
+                    windowBandBlocks, controlColumns, controlBanded);
+            GlobeMod.LOGGER.info("[latdev][badlands-scan] HEIGHTS min={} max={} below74={} "
+                            + "window74_83={} h84_89={} control90_110={} above110={}",
+                    badlandsColumns == 0 ? "n/a" : hMin, badlandsColumns == 0 ? "n/a" : hMax,
+                    below74, windowColumns, h84to89, controlColumns, above110);
+            StringBuilder heights = new StringBuilder();
+            perHeight.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .forEach(e -> heights.append(e.getKey()).append(':').append(e.getValue()[0])
+                            .append('/').append(e.getValue()[1]).append(' '));
+            GlobeMod.LOGGER.info("[latdev][badlands-scan] FLOOR_BANDED_BY_HEIGHT {}", heights);
+            GlobeMod.LOGGER.info("[latdev][badlands-scan] VERDICT {}",
+                    windowColumns == 0 ? "NO_WINDOW_COLUMNS_WIDEN_SEARCH"
+                            : windowBanded == 0 ? "LATITUDE_ANCHOR_RESPECTED"
+                                    : "BANDING_BELOW_LATITUDE_ANCHOR");
+        } catch (Exception e) {
+            GlobeMod.LOGGER.error("[latdev][badlands-scan] failed", e);
+        } finally {
+            server.halt(false);
+        }
+    }
+
+    /**
+     * Generates real chunks in sulfur-cave cells and counts the blocks that actually landed.
+     * Substrate painting comes from the active noise settings' surface rules, so this is the only
+     * evidence that separates "the biome was admitted" from "the biome was furnished" — the exact
+     * distinction that made the empty-caves defect survive two code-level fixes. Also counts how
+     * much sulfur reaches the visible surface, which is the input to the leakage-policy decision.
+     */
+    private static void runSulfurScanAndStop(MinecraftServer server, SulfurScanConfig config) {
+        ServerLevel world = server.overworld();
+        try {
+            if (world == null) {
+                GlobeMod.LOGGER.error("[latdev][sulfur-scan] no overworld available");
+                return;
+            }
+            ChunkGenerator generator = world.getChunkSource().getGenerator();
+            if (!(generator instanceof NoiseBasedChunkGenerator noiseGen)) {
+                GlobeMod.LOGGER.error("[latdev][sulfur-scan] generator is not noise based: {}",
+                        generator.getClass().getName());
+                return;
+            }
+
+            String settingsId = noiseGen.generatorSettings().unwrapKey()
+                    .map(key -> key.identifier().toString())
+                    .orElse("<inline>");
+            BiomeSource activeSource = generator.getBiomeSource();
+            GlobeMod.LOGGER.info("[latdev][sulfur-scan] seed={} noise_settings={} radius={} step={} center={},{} "
+                            + "latitude_worldgen={} biome_source={}",
+                    world.getSeed(), settingsId, config.radius, config.step,
+                    config.centerX, config.centerZ,
+                    GlobeMod.shouldApplyLatitudeWorldgen(noiseGen),
+                    activeSource instanceof LatitudeBiomeSource ? "LatitudeBiomeSource"
+                            : activeSource.getClass().getSimpleName());
+
+            String activeRule = String.valueOf(noiseGen.generatorSettings().value().materialRule().value());
+            int sulfurMentions = activeRule.split("sulfur", -1).length - 1;
+            GlobeMod.LOGGER.info("[latdev][sulfur-scan] active surface rule class={} length={} sulfur_mentions={}",
+                    noiseGen.generatorSettings().value().materialRule().value().getClass().getName(),
+                    activeRule.length(), sulfurMentions);
+
+            Registry<Biome> biomeRegistry = world.registryAccess().lookupOrThrow(Registries.BIOME);
+            RandomState noiseConfig = RandomState.create(
+                    world.registryAccess().lookupOrThrow(Registries.NOISE),
+                    world.getSeed(),
+                    noiseGen.generatorSettings().value());
+            Climate.Sampler sampler = noiseConfig.createClimateSampler(SamplerContext.EMPTY_UNCACHED);
+            BiomeResolver activeResolver = activeSource.createResolver(sampler);
+
+            List<int[]> probes = new ArrayList<>();
+            LinkedHashSet<Long> chunkKeys = new LinkedHashSet<>();
+            int sampled = 0;
+            search:
+            for (int z = config.centerZ - config.radius; z <= config.centerZ + config.radius; z += config.step) {
+                for (int x = config.centerX - config.radius; x <= config.centerX + config.radius; x += config.step) {
+                    for (int y = -48; y <= 64; y += 16) {
+                        sampled++;
+                        Holder<Biome> holder = activeResolver.getNoiseBiome(x >> 2, y >> 2, z >> 2);
+                        if (!SULFUR_CAVES_ID.equals(biomeId(biomeRegistry, holder))) {
+                            continue;
+                        }
+                        if (chunkKeys.add(new ChunkPos(x >> 4, z >> 4).pack())) {
+                            probes.add(new int[] {x, y, z});
+                        }
+                        if (chunkKeys.size() >= config.maxChunks) {
+                            break search;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            GlobeMod.LOGGER.info("[latdev][sulfur-scan] sampled={} sulfur_chunks={}", sampled, chunkKeys.size());
+            if (chunkKeys.isEmpty()) {
+                GlobeMod.LOGGER.warn("[latdev][sulfur-scan] RESULT no sulfur cave cell found within "
+                        + "radius; widen radius or lower step before reading anything into this");
+                return;
+            }
+
+            Map<String, Integer> totals = new HashMap<>();
+            Map<String, Integer> surfaceExposed = new HashMap<>();
+            Map<String, Integer> skyVisible = new HashMap<>();
+            int belowY0 = 0;
+            int aboveY8 = 0;
+            BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+            int generated = 0;
+            for (int[] probe : probes) {
+                ChunkPos chunkPos = new ChunkPos(probe[0] >> 4, probe[2] >> 4);
+                ChunkAccess chunk = world.getChunkSource().getChunk(chunkPos.x(), chunkPos.z(), ChunkStatus.FULL, true);
+                if (chunk == null) {
+                    continue;
+                }
+                generated++;
+                String storedBiome = biomeId(biomeRegistry,
+                        world.getBiome(new BlockPos(probe[0], probe[1], probe[2])));
+                int chunkSubstrateBefore = totals.values().stream().mapToInt(Integer::intValue).sum();
+                int minY = chunk.getMinY();
+                int maxY = minY + chunk.getHeight() - 1;
+                for (int localX = 0; localX < 16; localX++) {
+                    for (int localZ = 0; localZ < 16; localZ++) {
+                        int worldX = chunkPos.getMinBlockX() + localX;
+                        int worldZ = chunkPos.getMinBlockZ() + localZ;
+                        int topSolidY = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, localX, localZ) - 1;
+                        for (int y = minY; y <= maxY; y++) {
+                            String blockId = BuiltInRegistries.BLOCK
+                                    .getKey(chunk.getBlockState(new BlockPos(worldX, y, worldZ)).getBlock())
+                                    .toString();
+                            if (!SULFUR_SUBSTRATE_BLOCKS.contains(blockId)
+                                    && !SULFUR_DECORATION_BLOCKS.contains(blockId)) {
+                                continue;
+                            }
+                            totals.merge(blockId, 1, Integer::sum);
+                            if (y < 0) {
+                                belowY0++;
+                            } else if (y > 8) {
+                                aboveY8++;
+                            }
+                            if (y >= topSolidY) {
+                                surfaceExposed.merge(blockId, 1, Integer::sum);
+                            }
+                            boolean openToSky = true;
+                            for (int above = y + 1; above <= maxY; above++) {
+                                cursor.set(worldX, above, worldZ);
+                                if (!chunk.getBlockState(cursor).isAir()) {
+                                    openToSky = false;
+                                    break;
+                                }
+                            }
+                            if (openToSky) {
+                                skyVisible.merge(blockId, 1, Integer::sum);
+                            }
+                        }
+                    }
+                }
+                int chunkBlocks = totals.values().stream().mapToInt(Integer::intValue).sum() - chunkSubstrateBefore;
+                GlobeMod.LOGGER.info("[latdev][sulfur-scan] chunk {},{} probe={},{},{} stored_biome={} "
+                                + "fresh={} sulfur_blocks={}",
+                        chunkPos.x(), chunkPos.z(), probe[0], probe[1], probe[2], storedBiome,
+                        chunk.isUnsaved(), chunkBlocks);
+            }
+
+            int substrate = SULFUR_SUBSTRATE_BLOCKS.stream().mapToInt(id -> totals.getOrDefault(id, 0)).sum();
+            int decoration = SULFUR_DECORATION_BLOCKS.stream().mapToInt(id -> totals.getOrDefault(id, 0)).sum();
+            int exposed = surfaceExposed.values().stream().mapToInt(Integer::intValue).sum();
+            int sky = skyVisible.values().stream().mapToInt(Integer::intValue).sum();
+            GlobeMod.LOGGER.info("[latdev][sulfur-scan] RESULT settings={} chunks={} substrate={} "
+                            + "decoration={} below_y0={} above_y8={} surface_exposed={} sky_visible={} per_block={} "
+                            + "exposed_per_block={} sky_per_block={}",
+                    settingsId, generated, substrate, decoration, belowY0, aboveY8, exposed, sky, totals,
+                    surfaceExposed, skyVisible);
+            GlobeMod.LOGGER.info("[latdev][sulfur-scan] VERDICT {}",
+                    substrate > 0 ? "SUBSTRATE_PRESENT" : "SUBSTRATE_ABSENT");
+        } catch (Exception e) {
+            GlobeMod.LOGGER.error("[latdev][sulfur-scan] failed", e);
+        } finally {
+            server.halt(false);
+        }
     }
 
     private static void runExportAndStop(MinecraftServer server, Config config) {
@@ -329,636 +677,6 @@ public final class BiomePreviewHeadlessRunner {
         }
     }
 
-    // ------------------------------------------------------------------------------------------
-    // Alpine snow-line audit (dev-only). Evaluates the ACTUAL compiled, deterministic
-    // LatitudeBiomes.alpineSurfaceKind(x,y,z,radius) across a latitude x altitude grid against a
-    // really-booted globe world, to prove the per-band snow onset behaves as designed (closes the
-    // "live-eyeball-only" gap). Reads NOTHING but the public static function + the world seed/radius;
-    // changes NO shipped worldgen logic.
-    // ------------------------------------------------------------------------------------------
-
-    private static final int ALPINE_AUDIT_KIND_SNOW = 2;
-    private static final int[] ALPINE_AUDIT_REPORT_YS = {166, 170, 174, 178, 182, 186, 190};
-    // (bandLabel, midLatDeg)
-    private static final Object[][] ALPINE_AUDIT_BANDS = {
-            {"TROPICAL", 10},
-            {"SUBTROPICAL", 29},
-            {"TEMPERATE", 42},
-            {"SUBPOLAR", 58},
-            {"POLAR", 78},
-    };
-
-    // --- Generic function probe ---------------------------------------------------------------
-    // Reflectively sweeps ANY deterministic static method across a parameter grid and dumps a CSV.
-    // This is the turnkey, no-new-Java-needed version of "call the actual compiled logic instead
-    // of flying around looking at it" — see docs/binder/headless-verification-playbook.md. Boots a
-    // real globe world so any FQCN#method reachable from this mod's classpath can be probed; if the
-    // target class exposes static setWorldSeed(long)/setActiveRadiusBlocks(int) (as LatitudeBiomes
-    // does), those are called first with the booted world's real seed so the probe matches a real
-    // world rather than whatever static default the class boots with.
-    //
-    // Trigger: -Dlatdev.probe=true (checked before every other mode; paired with -Dlatdev.biomePng=disabled
-    // to skip the atlas export on the same boot).
-    // Config (all via -D system properties):
-    //   latdev.probe.target = FQCN#methodName            e.g. com.example.globe.world.LatitudeBiomes#alpineSurfaceKind
-    //   latdev.probe.types  = comma list, declared param order  (int|long|double|float|boolean)
-    //                          e.g. int,int,int,int
-    //   latdev.probe.names  = comma list, same length as types — cosmetic, used as grid keys + CSV columns
-    //                          e.g. x,y,z,radius
-    //   latdev.probe.grid   = ';'-separated "name=spec" entries, one per name in `names`. spec is one of:
-    //                          - a single value:      556
-    //                          - a comma list:         0,30,60,90
-    //                          - an inclusive range:   150..200        (step 1)
-    //                          - a stepped range:      0..3000:30
-    //                          e.g. x=0..3000:30;y=150..200;z=556;radius=5000
-    //   latdev.probe.out    = output CSV path (default run-headless/latdev/probe-report.csv)
-    //   latdev.probe.radius = radius fed to setActiveRadiusBlocks() during init, if that method exists
-    //                          on the target class (default 10000; independent of any grid dim named "radius")
-    //   latdev.probe.maxCombos = safety cap on total grid combinations (default 200000)
-    private static void runFunctionProbeAndStop(MinecraftServer server) {
-        ServerLevel world = server.overworld();
-        Path outPath = null;
-        int rowCount = 0;
-        try {
-            if (world == null) {
-                GlobeMod.LOGGER.error("[latdev][probe] no overworld available; stopping server");
-                return;
-            }
-            String target = System.getProperty(PROBE_TARGET_PROP, "").trim();
-            int hash = target.indexOf('#');
-            if (hash <= 0 || hash == target.length() - 1) {
-                GlobeMod.LOGGER.error("[latdev][probe] {} must be 'FQCN#methodName', got '{}'", PROBE_TARGET_PROP, target);
-                return;
-            }
-            String className = target.substring(0, hash);
-            String methodName = target.substring(hash + 1);
-
-            String[] typeTokens = splitCsv(System.getProperty(PROBE_TYPES_PROP, ""));
-            String[] names = splitCsv(System.getProperty(PROBE_NAMES_PROP, ""));
-            if (typeTokens.length == 0 || typeTokens.length != names.length) {
-                GlobeMod.LOGGER.error("[latdev][probe] {} and {} must be non-empty, equal-length comma lists (got types={}, names={})",
-                        PROBE_TYPES_PROP, PROBE_NAMES_PROP, typeTokens.length, names.length);
-                return;
-            }
-            Class<?>[] paramClasses = new Class<?>[typeTokens.length];
-            for (int i = 0; i < typeTokens.length; i++) {
-                paramClasses[i] = probeTypeClass(typeTokens[i]);
-                if (paramClasses[i] == null) {
-                    GlobeMod.LOGGER.error("[latdev][probe] unsupported type token '{}' (supported: int,long,double,float,boolean)", typeTokens[i]);
-                    return;
-                }
-            }
-
-            Class<?> targetClass;
-            Method method;
-            try {
-                targetClass = Class.forName(className);
-                method = targetClass.getDeclaredMethod(methodName, paramClasses);
-                method.setAccessible(true);
-            } catch (ClassNotFoundException | NoSuchMethodException e) {
-                StringBuilder overloads = new StringBuilder();
-                try {
-                    Class<?> probedClass = Class.forName(className);
-                    for (Method m : probedClass.getDeclaredMethods()) {
-                        if (m.getName().equals(methodName)) {
-                            overloads.append("\n  ").append(m);
-                        }
-                    }
-                } catch (ClassNotFoundException ignored) {
-                    overloads.append(" (class not found)");
-                }
-                GlobeMod.LOGGER.error("[latdev][probe] could not resolve {}#{}({}): {}. Candidates on that class:{}",
-                        className, methodName, String.join(",", typeTokens), e.getMessage(), overloads);
-                return;
-            }
-            if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())) {
-                GlobeMod.LOGGER.error("[latdev][probe] {}#{} is not static — the probe only invokes static methods", className, methodName);
-                return;
-            }
-
-            // Best-effort init: if the target class carries the usual LatitudeBiomes-style world
-            // state setters, prime them with the REAL booted world so the probe reflects a real
-            // world's seed/radius rather than a static default. No-op if absent.
-            int initRadius = parseIntProperty(PROBE_RADIUS_PROP, 10000);
-            try {
-                Method seedSetter = targetClass.getDeclaredMethod("setWorldSeed", long.class);
-                seedSetter.setAccessible(true);
-                seedSetter.invoke(null, world.getSeed());
-                GlobeMod.LOGGER.info("[latdev][probe] init: {}.setWorldSeed({})", className, world.getSeed());
-            } catch (NoSuchMethodException ignored) {
-                // target class has no such setter — fine, not every probe target needs world state.
-            }
-            try {
-                Method radiusSetter = targetClass.getDeclaredMethod("setActiveRadiusBlocks", int.class);
-                radiusSetter.setAccessible(true);
-                radiusSetter.invoke(null, initRadius);
-                GlobeMod.LOGGER.info("[latdev][probe] init: {}.setActiveRadiusBlocks({})", className, initRadius);
-            } catch (NoSuchMethodException ignored) {
-                // ditto.
-            }
-
-            Map<String, List<Object>> grid = parseProbeGrid(System.getProperty(PROBE_GRID_PROP, ""), names, paramClasses);
-            if (grid == null) {
-                return; // parseProbeGrid already logged the specific failure
-            }
-
-            long totalCombos = 1;
-            for (String n : names) {
-                totalCombos *= grid.get(n).size();
-            }
-            int maxCombos = parseIntProperty(PROBE_MAX_COMBOS_PROP, PROBE_DEFAULT_MAX_COMBOS);
-            if (totalCombos > maxCombos) {
-                GlobeMod.LOGGER.error("[latdev][probe] grid has {} combinations, exceeds {} (set {} to raise the cap)",
-                        totalCombos, maxCombos, PROBE_MAX_COMBOS_PROP);
-                return;
-            }
-
-            String outProp = System.getProperty(PROBE_OUT_PROP, "").trim();
-            outPath = outProp.isEmpty()
-                    ? server.getServerDirectory().resolve("latdev").resolve("probe-report.csv")
-                    : Path.of(outProp);
-            Files.createDirectories(outPath.getParent());
-
-            GlobeMod.LOGGER.info("[latdev][probe] sweeping {}#{} over {} combination(s), writing {}",
-                    className, methodName, totalCombos, outPath);
-
-            StringBuilder csv = new StringBuilder();
-            csv.append(String.join(",", names)).append(",result\n");
-            int[] indices = new int[names.length];
-            Object[] args = new Object[names.length];
-            boolean done = totalCombos == 0;
-            while (!done) {
-                for (int i = 0; i < names.length; i++) {
-                    args[i] = grid.get(names[i]).get(indices[i]);
-                }
-                Object result;
-                try {
-                    result = method.invoke(null, args);
-                } catch (Exception invokeEx) {
-                    result = "ERROR:" + invokeEx.getCause();
-                }
-                for (Object a : args) {
-                    csv.append(a).append(',');
-                }
-                csv.append(result).append('\n');
-                rowCount++;
-
-                int dim = names.length - 1;
-                while (dim >= 0) {
-                    indices[dim]++;
-                    if (indices[dim] < grid.get(names[dim]).size()) {
-                        break;
-                    }
-                    indices[dim] = 0;
-                    dim--;
-                }
-                if (dim < 0) {
-                    done = true;
-                }
-            }
-            Files.write(outPath, csv.toString().getBytes(StandardCharsets.UTF_8));
-            GlobeMod.LOGGER.info("[latdev][probe] wrote {} row(s) to {}", rowCount, outPath);
-        } catch (Throwable t) {
-            GlobeMod.LOGGER.error("[latdev][probe] failed", t);
-        } finally {
-            server.halt(false);
-        }
-    }
-
-    private static Class<?> probeTypeClass(String token) {
-        return switch (token.trim().toLowerCase(Locale.ROOT)) {
-            case "int" -> int.class;
-            case "long" -> long.class;
-            case "double" -> double.class;
-            case "float" -> float.class;
-            case "boolean" -> boolean.class;
-            default -> null;
-        };
-    }
-
-    private static String[] splitCsv(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return new String[0];
-        }
-        String[] parts = raw.split(",");
-        for (int i = 0; i < parts.length; i++) {
-            parts[i] = parts[i].trim();
-        }
-        return parts;
-    }
-
-    private static int parseIntProperty(String key, int fallback) {
-        String raw = System.getProperty(key, "").trim();
-        if (raw.isEmpty()) {
-            return fallback;
-        }
-        try {
-            return Integer.parseInt(raw);
-        } catch (NumberFormatException e) {
-            return fallback;
-        }
-    }
-
-    /** Parses {@code latdev.probe.grid} into {@code name -> boxed values matching that param's declared type}. */
-    private static Map<String, List<Object>> parseProbeGrid(String raw, String[] names, Class<?>[] paramClasses) {
-        Map<String, String> specByName = new HashMap<>();
-        for (String entry : raw.split(";")) {
-            entry = entry.trim();
-            if (entry.isEmpty()) {
-                continue;
-            }
-            int eq = entry.indexOf('=');
-            if (eq <= 0) {
-                GlobeMod.LOGGER.error("[latdev][probe] bad grid entry '{}' (expected name=spec)", entry);
-                return null;
-            }
-            specByName.put(entry.substring(0, eq).trim(), entry.substring(eq + 1).trim());
-        }
-        Map<String, List<Object>> grid = new HashMap<>();
-        for (int i = 0; i < names.length; i++) {
-            String name = names[i];
-            String spec = specByName.get(name);
-            if (spec == null) {
-                GlobeMod.LOGGER.error("[latdev][probe] grid spec missing an entry for param '{}'", name);
-                return null;
-            }
-            List<Double> raws = new ArrayList<>();
-            if (spec.contains("..")) {
-                int dotdot = spec.indexOf("..");
-                double start = Double.parseDouble(spec.substring(0, dotdot));
-                String rest = spec.substring(dotdot + 2);
-                double step = 1.0;
-                double end;
-                int colon = rest.indexOf(':');
-                if (colon >= 0) {
-                    end = Double.parseDouble(rest.substring(0, colon));
-                    step = Double.parseDouble(rest.substring(colon + 1));
-                } else {
-                    end = Double.parseDouble(rest);
-                }
-                if (step <= 0) {
-                    GlobeMod.LOGGER.error("[latdev][probe] grid range for '{}' has non-positive step", name);
-                    return null;
-                }
-                for (double v = start; v <= end + 1e-9; v += step) {
-                    raws.add(v);
-                }
-            } else if (spec.contains(",")) {
-                for (String tok : spec.split(",")) {
-                    raws.add(Double.parseDouble(tok.trim()));
-                }
-            } else if (paramClasses[i] == boolean.class) {
-                grid.put(name, List.of((Object) Boolean.parseBoolean(spec)));
-                continue;
-            } else {
-                raws.add(Double.parseDouble(spec));
-            }
-            List<Object> boxed = new ArrayList<>(raws.size());
-            for (double v : raws) {
-                boxed.add(probeBox(paramClasses[i], v));
-            }
-            grid.put(name, boxed);
-        }
-        return grid;
-    }
-
-    private static Object probeBox(Class<?> paramClass, double v) {
-        if (paramClass == int.class) {
-            return (int) Math.round(v);
-        }
-        if (paramClass == long.class) {
-            return Math.round(v);
-        }
-        if (paramClass == float.class) {
-            return (float) v;
-        }
-        if (paramClass == boolean.class) {
-            return v != 0.0;
-        }
-        return v; // double
-    }
-
-    private static void runAlpineAuditAndStop(MinecraftServer server) {
-        ServerLevel world = server.overworld();
-        if (world == null) {
-            GlobeMod.LOGGER.error("[latdev][alpine-audit] no overworld available; stopping server");
-            server.halt(false);
-            return;
-        }
-
-        long worldSeed = world.getSeed();
-        try {
-            int activeRadius = LatitudeBiomes.getActiveRadiusBlocks();
-            int radius = activeRadius > 0 ? activeRadius : 10000;
-            LatitudeBiomes.setWorldSeed(worldSeed);
-            LatitudeBiomes.setActiveRadiusBlocks(radius);
-
-            Path outputDir = server.getServerDirectory().toAbsolutePath().normalize()
-                    .resolve("latdev");
-            Files.createDirectories(outputDir);
-            Path reportFile = outputDir.resolve("alpine-snow-audit.txt");
-
-            int minY = 150;
-            int maxY = 200;
-            int xStart = 0;
-            int xStop = 3000;
-            int xStep = 30;
-            int floorY = LatitudeBiomes.ALPINE_ROCK_Y; // 168
-
-            List<String> lines = new ArrayList<>();
-            lines.add("# Latitude alpine snow-line audit");
-            lines.add("# Evaluates compiled LatitudeBiomes.alpineSurfaceKind(x,y,z,radius) (0=unchanged,1=stone,2=snow)");
-            lines.add("seed=" + worldSeed);
-            lines.add("radius=" + radius + " (active=" + activeRadius + ")");
-            lines.add("alpine_rock_floor_y=" + floorY);
-            lines.add("x_sweep=" + xStart + ".." + xStop + " step " + xStep
-                    + " (" + (((xStop - xStart) / xStep) + 1) + " samples per Y)");
-            lines.add("y_sweep=" + minY + ".." + maxY);
-            lines.add("");
-
-            String header = String.format(Locale.ROOT,
-                    "%-12s %8s %10s | %s | below168",
-                    "band", "repZ", "onsetY50", reportYHeader());
-            lines.add(header);
-            lines.add("-".repeat(header.length()));
-
-            List<String> assertionResults = new ArrayList<>();
-            boolean allPass = true;
-
-            // per-band collected onset / below-168 facts for assertions
-            for (Object[] bandSpec : ALPINE_AUDIT_BANDS) {
-                String band = (String) bandSpec[0];
-                int midLatDeg = (Integer) bandSpec[1];
-                int repZ = (int) Math.round(midLatDeg / 90.0 * radius);
-
-                // snow% at each Y in the full sweep
-                int[] snowPctByY = new int[maxY - minY + 1];
-                int onsetY50 = -1;
-                boolean below168AnySnow = false;
-                for (int y = minY; y <= maxY; y++) {
-                    int samples = 0;
-                    int snow = 0;
-                    for (int x = xStart; x <= xStop; x += xStep) {
-                        int kind = LatitudeBiomes.alpineSurfaceKind(x, y, repZ, radius);
-                        samples++;
-                        if (kind == ALPINE_AUDIT_KIND_SNOW) {
-                            snow++;
-                        }
-                    }
-                    int pct = samples == 0 ? 0 : (int) Math.round(100.0 * snow / samples);
-                    snowPctByY[y - minY] = pct;
-                    if (y < floorY && snow > 0) {
-                        below168AnySnow = true;
-                    }
-                    if (onsetY50 < 0 && pct >= 50) {
-                        onsetY50 = y;
-                    }
-                }
-
-                StringBuilder reportYCols = new StringBuilder();
-                for (int i = 0; i < ALPINE_AUDIT_REPORT_YS.length; i++) {
-                    int ry = ALPINE_AUDIT_REPORT_YS[i];
-                    int pct = (ry >= minY && ry <= maxY) ? snowPctByY[ry - minY] : -1;
-                    reportYCols.append(String.format(Locale.ROOT, "%4d", pct));
-                }
-
-                lines.add(String.format(Locale.ROOT,
-                        "%-12s %8d %10s | %s | %s",
-                        band,
-                        repZ,
-                        onsetY50 < 0 ? "none" : Integer.toString(onsetY50),
-                        reportYCols.toString(),
-                        below168AnySnow ? "SNOW(!)" : "clean"));
-
-                // ---- assertions ----
-                int pctAt166 = snowPctByY[166 - minY];
-                int pctAt170 = snowPctByY[170 - minY];
-                int pctAt174 = snowPctByY[174 - minY];
-                int pctAt178 = snowPctByY[178 - minY];
-                int pctAt182 = snowPctByY[182 - minY];
-                int pctAt186 = snowPctByY[186 - minY];
-                int pctAt200 = snowPctByY[200 - minY];
-
-                switch (band) {
-                    case "TROPICAL" -> {
-                        boolean ok = true;
-                        for (int y = minY; y <= maxY; y++) {
-                            if (snowPctByY[y - minY] != 0) {
-                                ok = false;
-                                break;
-                            }
-                        }
-                        allPass &= ok;
-                        assertionResults.add(assertLine("TROPICAL: snow% == 0 at ALL Y (warm-creep safety)",
-                                ok, "maxSnow%=" + maxPct(snowPctByY) + " pctAtY200=" + pctAt200));
-                    }
-                    case "SUBTROPICAL" -> {
-                        boolean ok = pctAt178 <= 5 && (pctAt182 >= 50 || pctAt186 >= 50);
-                        allPass &= ok;
-                        assertionResults.add(assertLine(
-                                "SUBTROPICAL: ~0 below Y=178, majority by Y182-186",
-                                ok, "pct@178=" + pctAt178 + " pct@182=" + pctAt182 + " pct@186=" + pctAt186));
-                    }
-                    case "TEMPERATE" -> {
-                        boolean ok = pctAt170 <= 5 && (pctAt174 >= 50 || pctAt178 >= 50);
-                        allPass &= ok;
-                        assertionResults.add(assertLine(
-                                "TEMPERATE (THE FIX): ~0 below Y=170, majority by Y174-178",
-                                ok, "pct@170=" + pctAt170 + " pct@174=" + pctAt174 + " pct@178=" + pctAt178));
-                    }
-                    case "SUBPOLAR" -> {
-                        boolean ok = pctAt170 >= 50 || pctAt174 >= 50;
-                        allPass &= ok;
-                        assertionResults.add(assertLine(
-                                "SUBPOLAR: majority snow by Y170-174",
-                                ok, "pct@170=" + pctAt170 + " pct@174=" + pctAt174));
-                    }
-                    case "POLAR" -> {
-                        boolean okMajority = (snowPctByY[168 - minY] >= 50) || pctAt170 >= 50 || (snowPctByY[172 - minY] >= 50);
-                        allPass &= okMajority;
-                        assertionResults.add(assertLine(
-                                "POLAR: majority snow by Y168-172",
-                                okMajority,
-                                "pct@168=" + snowPctByY[168 - minY] + " pct@170=" + pctAt170
-                                        + " pct@172=" + snowPctByY[172 - minY]));
-                    }
-                    default -> { /* unreachable */ }
-                }
-
-                // floor assertion (per band): snow% == 0 for every Y < 168
-                boolean floorOk = !below168AnySnow;
-                allPass &= floorOk;
-                assertionResults.add(assertLine(
-                        band + ": snow% == 0 for every Y < 168 (ALPINE_ROCK_Y floor)",
-                        floorOk, "pct@166=" + pctAt166));
-            }
-
-            lines.add("");
-            lines.add("# Assertions");
-            lines.addAll(assertionResults);
-            lines.add("");
-            lines.add("verdict=" + (allPass ? "PASS" : "FAIL"));
-
-            // ---- SECONDARY: real generated-surface spot check (cheap, best-effort) ----
-            List<String> surfaceLines = runAlpineRealSurfaceCheck(world, radius);
-            lines.add("");
-            lines.add("# Secondary: real generated-surface spot check");
-            lines.addAll(surfaceLines);
-
-            String body = String.join(System.lineSeparator(), lines) + System.lineSeparator();
-            Files.writeString(reportFile, body, StandardCharsets.UTF_8);
-
-            for (String l : lines) {
-                GlobeMod.LOGGER.info("[latdev][alpine-audit] {}", l);
-            }
-            GlobeMod.LOGGER.info("[latdev][alpine-audit] report written: {} verdict={}",
-                    reportFile, allPass ? "PASS" : "FAIL");
-        } catch (Throwable t) {
-            GlobeMod.LOGGER.error("[latdev][alpine-audit] audit failed", t);
-        } finally {
-            LatitudeBiomes.setWorldSeed(worldSeed);
-            GlobeMod.LOGGER.info("[latdev][alpine-audit] stopping server");
-            server.halt(false);
-        }
-    }
-
-    private static String reportYHeader() {
-        StringBuilder sb = new StringBuilder();
-        for (int ry : ALPINE_AUDIT_REPORT_YS) {
-            sb.append(String.format(Locale.ROOT, "%4d", ry));
-        }
-        return "snow% @Y[" + sb.toString().trim() + "]";
-    }
-
-    private static int maxPct(int[] pcts) {
-        int m = 0;
-        for (int p : pcts) {
-            if (p > m) {
-                m = p;
-            }
-        }
-        return m;
-    }
-
-    private static String assertLine(String label, boolean pass, String detail) {
-        return String.format(Locale.ROOT, "[%s] %s (%s)", pass ? "PASS" : "FAIL", label, detail);
-    }
-
-    /**
-     * Best-effort confirmation that snow ACTUALLY paints on real generated terrain at a temperate
-     * column and never at a tropical column. Forces a small number of chunks and reads the surface
-     * heightmap + top block. Wrapped so a generation hiccup degrades to "deferred" rather than
-     * hanging or aborting the primary result.
-     */
-    private static List<String> runAlpineRealSurfaceCheck(ServerLevel world, int radius) {
-        List<String> out = new ArrayList<>();
-        try {
-            // Scan a band of real columns at the temperate and tropical representative latitudes,
-            // find the HIGHEST generated surface in each, and report what alpineSurfaceKind() would
-            // paint there. The temperate scan looks for genuine alpine terrain (>= ALPINE_ROCK_Y) so
-            // it can confirm snow actually lands on a peak; the tropical scan confirms snow never does.
-            // Capped to a handful of chunks so it never risks hanging.
-            int temperateZ = (int) Math.round(42.0 / 90.0 * radius);
-            int tropicalZ = (int) Math.round(10.0 / 90.0 * radius);
-            out.add(scanRealBand(world, "TEMPERATE", temperateZ, radius));
-            out.add(scanRealBand(world, "TROPICAL", tropicalZ, radius));
-            out.add("note=spot check is a sanity cross-reference; the per-band table above is the authoritative proof");
-        } catch (Throwable t) {
-            out.clear();
-            out.add("status=deferred (real-surface sampling raised " + t.getClass().getSimpleName()
-                    + ": " + String.valueOf(t.getMessage()).replace('\n', ' ') + ")");
-        }
-        return out;
-    }
-
-    /**
-     * Forces a small band of chunks at the given representative Z, finds the highest generated
-     * surface column, and reports what alpineSurfaceKind() returns at that real surface Y. Bounded
-     * to {@code chunkSpan} chunks so it cannot hang.
-     */
-    private static String scanRealBand(ServerLevel world, String label, int repZ, int radius) {
-        int chunkSpan = 24; // up to 24 chunks (~384 blocks) of X scanned at this latitude
-        int bestSurfaceY = Integer.MIN_VALUE;
-        int bestX = 0;
-        int bestZ = repZ;
-        int firstSnowSurfaceY = Integer.MIN_VALUE;
-        int firstSnowX = 0;
-        boolean anyAlpine = false;
-        int columnsScanned = 0;
-
-        int baseChunkX = 0;
-        int chunkZ = Math.floorDiv(repZ, 16);
-        for (int cx = 0; cx < chunkSpan; cx++) {
-            int chunkX = baseChunkX + cx;
-            ChunkAccess chunk;
-            try {
-                chunk = world.getChunk(chunkX, chunkZ, ChunkStatus.SURFACE, true);
-            } catch (Throwable t) {
-                continue;
-            }
-            if (chunk == null) {
-                continue;
-            }
-            for (int lx = 0; lx < 16; lx += 4) {
-                int blockX = (chunkX << 4) + lx;
-                int localZ = repZ - (chunkZ << 4);
-                int surfaceY = chunk.getHeight(Heightmap.Types.WORLD_SURFACE_WG, lx, localZ);
-                columnsScanned++;
-                if (surfaceY > bestSurfaceY) {
-                    bestSurfaceY = surfaceY;
-                    bestX = blockX;
-                    bestZ = repZ;
-                }
-                int kind = LatitudeBiomes.alpineSurfaceKind(blockX, surfaceY, repZ, radius);
-                if (surfaceY >= LatitudeBiomes.ALPINE_ROCK_Y) {
-                    anyAlpine = true;
-                }
-                if (kind == ALPINE_AUDIT_KIND_SNOW && firstSnowSurfaceY == Integer.MIN_VALUE) {
-                    firstSnowSurfaceY = surfaceY;
-                    firstSnowX = blockX;
-                }
-            }
-        }
-
-        double absLat = Math.abs((double) repZ) * 90.0 / Math.max(1, radius);
-        String topId = "n/a";
-        int bestKind = 0;
-        if (bestSurfaceY != Integer.MIN_VALUE) {
-            bestKind = LatitudeBiomes.alpineSurfaceKind(bestX, bestSurfaceY, repZ, radius);
-            try {
-                ChunkAccess bc = world.getChunk(Math.floorDiv(bestX, 16), chunkZ, ChunkStatus.SURFACE, true);
-                if (bc != null) {
-                    BlockState top = bc.getBlockState(new BlockPos(bestX, bestSurfaceY, repZ));
-                    Identifier id = world.registryAccess().lookupOrThrow(Registries.BLOCK).getKey(top.getBlock());
-                    if (id != null) {
-                        topId = id.toString();
-                    }
-                }
-            } catch (Throwable ignored) {
-                // best-effort block id only
-            }
-        }
-
-        return String.format(Locale.ROOT,
-                "%s: repZ=%d absLat=%.1f columns=%d highestSurfaceY=%d topBlock=%s alpineKind@peak=%d(%s) "
-                        + "anyAlpineTerrain=%s firstSnowPaintedAt=%s",
-                label, repZ, absLat, columnsScanned,
-                bestSurfaceY == Integer.MIN_VALUE ? -1 : bestSurfaceY,
-                topId, bestKind, kindName(bestKind),
-                anyAlpine,
-                firstSnowSurfaceY == Integer.MIN_VALUE
-                        ? "none"
-                        : ("x=" + firstSnowX + ",surfaceY=" + firstSnowSurfaceY));
-    }
-
-    private static String kindName(int kind) {
-        return switch (kind) {
-            case 1 -> "stone";
-            case 2 -> "snow";
-            default -> "unchanged";
-        };
-    }
-
     private static void runLocateBoundaryAndStop(MinecraftServer server, LocateBoundaryConfig config) {
         ServerLevel world = server.overworld();
         if (world == null) {
@@ -1018,10 +736,11 @@ public final class BiomePreviewHeadlessRunner {
             Registry<Biome> biomes = world.registryAccess().lookupOrThrow(Registries.BIOME);
             LatitudeBiomes.rememberSourcePolicyBiomeRegistry(biomes);
             RandomState noiseConfig = RandomState.create(
-                    noiseGen.generatorSettings().value(),
                     world.registryAccess().lookupOrThrow(Registries.NOISE),
-                    effectiveSeed);
-            Climate.Sampler sampler = noiseConfig.sampler();
+                    effectiveSeed,
+                    noiseGen.generatorSettings().value());
+            Climate.Sampler sampler = noiseConfig.createClimateSampler(SamplerContext.EMPTY_UNCACHED);
+            BiomeResolver baseResolver = baseSource.createResolver(sampler);
 
             int noiseX = Math.floorDiv(config.x, 4);
             int noiseY = Math.floorDiv(y, 4);
@@ -1033,17 +752,14 @@ public final class BiomePreviewHeadlessRunner {
             int populateBlockY = sourceBlockY + 2;
             int populateBlockZ = sourceBlockZ + 2;
 
-            Holder<Biome> rawSource = baseSource.getNoiseBiome(noiseX, noiseY, noiseZ, sampler);
-            Holder<Biome> base = baseSource.getNoiseBiome(noiseX, LatitudeBiomes.SURFACE_CLASSIFY_Y >> 2, noiseZ, sampler);
-            // Phase 5 Slice B-8: expand the source pool AT THE SOURCE so the atlas pool == live registry
-            // reach (globe:polar_barrens included flag-on) -- the wrapped source, the pick candidate pool,
-            // and possibleBiomes all agree. Byte-identical flag-off (expandSourceCandidatePool returns the
-            // same possibleBiomes reference).
-            Collection<Holder<Biome>> sourcePool = LatitudeBiomes.expandSourceCandidatePool(baseSource.possibleBiomes());
+            Holder<Biome> rawSource = baseResolver.getNoiseBiome(noiseX, noiseY, noiseZ);
+            Holder<Biome> base = baseResolver.getNoiseBiome(
+                    noiseX, LatitudeBiomes.SURFACE_CLASSIFY_Y >> 2, noiseZ);
+            Collection<Holder<Biome>> sourcePool = baseSource.possibleBiomes();
             Holder<Biome> wrappedSource = new LatitudeBiomeSource(baseSource, sourcePool, radius)
                     .getNoiseBiome(noiseX, noiseY, noiseZ, sampler);
             Holder<Biome> sourceEquivalent = LatitudeBiomes.pick(
-                    sourcePool,
+                    LatitudeBiomes.expandSourceCandidatePool(sourcePool),
                     base,
                     sourceBlockX,
                     sourceBlockZ,
@@ -1213,12 +929,11 @@ public final class BiomePreviewHeadlessRunner {
         int populateBlockY = sourceBlockY + 2;
         int populateBlockZ = sourceBlockZ + 2;
 
-        Holder<Biome> rawSource = baseSource.getNoiseBiome(noiseX, noiseY, noiseZ, sampler);
-        Holder<Biome> base = baseSource.getNoiseBiome(noiseX, LatitudeBiomes.SURFACE_CLASSIFY_Y >> 2, noiseZ, sampler);
-        // Phase 5 Slice B-8: remember the registry + expand the source pool here too (locate-proof path)
-        // so the wrapped source can emit globe:polar_barrens flag-on. Byte-identical flag-off.
-        LatitudeBiomes.rememberSourcePolicyBiomeRegistry(biomes);
-        Collection<Holder<Biome>> sourcePool = LatitudeBiomes.expandSourceCandidatePool(baseSource.possibleBiomes());
+        BiomeResolver baseResolver = baseSource.createResolver(sampler);
+        Holder<Biome> rawSource = baseResolver.getNoiseBiome(noiseX, noiseY, noiseZ);
+        Holder<Biome> base = baseResolver.getNoiseBiome(
+                noiseX, LatitudeBiomes.SURFACE_CLASSIFY_Y >> 2, noiseZ);
+        Collection<Holder<Biome>> sourcePool = baseSource.possibleBiomes();
         Holder<Biome> wrappedSource = new LatitudeBiomeSource(baseSource, sourcePool, radius)
                 .getNoiseBiome(noiseX, noiseY, noiseZ, sampler);
         int chunkX = Math.floorDiv(pos.getX(), 16);

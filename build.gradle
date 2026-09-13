@@ -1,5 +1,5 @@
 plugins {
-    id 'net.fabricmc.fabric-loom' version '1.17.13'
+    id 'net.fabricmc.fabric-loom' version '1.17.20'
     id 'maven-publish'
 }
 
@@ -27,12 +27,45 @@ def latitudeBuildTimeUtc = {
 
 def latitudeGitCommit = latitudeGitOutput('rev-parse', 'HEAD')
 def latitudeGitBranch = latitudeGitOutput('branch', '--show-current')
-def latitudeGitDirty = latitudeGitOutput('status', '--porcelain') == '' ? 'false' : 'true'
+def latitudeGitDirty = latitudeGitOutput('status', '--porcelain', '--untracked-files=no') == '' ? 'false' : 'true'
 def latitudeBuildTime = latitudeBuildTimeUtc()
+
+def latitudeTestSequenceValue = {
+    def raw = findProperty('latitudeTestSequence')
+    if (raw == null || raw.toString().isBlank()) {
+        throw new GradleException('latitudeTestSequence is required for TEST artifact tasks')
+    }
+    try {
+        int parsed = Integer.parseInt(raw.toString())
+        if (parsed <= 0) {
+            throw new GradleException('latitudeTestSequence must be a positive integer')
+        }
+        return parsed
+    } catch (NumberFormatException ignored) {
+        throw new GradleException('latitudeTestSequence must be a positive integer')
+    }
+}
+
+def latitudeTestVersionValue = { int sequence ->
+    "${project.version}-test.${sequence}"
+}
+
+def latitudeTestSequenceOrZero = {
+    def raw = findProperty('latitudeTestSequence')
+    if (raw == null || raw.toString().isBlank()) {
+        return 0
+    }
+    try {
+        return Integer.parseInt(raw.toString())
+    } catch (NumberFormatException ignored) {
+        return 0
+    }
+}
 
 def latitudeClientXms = (findProperty('latitudeClientXms') ?: System.getProperty('latitudeClientXms') ?: '1G').toString()
 def latitudeClientXmx = (findProperty('latitudeClientXmx') ?: System.getProperty('latitudeClientXmx') ?: '2G').toString()
-def latitudeSkipSystemDetailsHardware = (findProperty('latitudeSkipSystemDetailsHardware') ?: 'true').toString()
+def latitudeRunDir = (findProperty('latitude.runDir') ?: 'run').toString()
+def latitudePreviewRunDir = (findProperty('latdev.preview.runDir') ?: 'run-headless').toString()
 
 base {
     archivesName = project.archives_base_name
@@ -42,12 +75,19 @@ loom {
 
     runs {
         client {
+            runDir latitudeRunDir
             vmArg "-Xms${latitudeClientXms}"
             vmArg "-Xmx${latitudeClientXmx}"
-            vmArg "-Dlatitude.skipSystemDetailsHardware=${latitudeSkipSystemDetailsHardware}"
+            vmArg "-Dlatitude.dev.gitCommit=${latitudeGitCommit}"
+            vmArg "-Dlatitude.dev.gitBranch=${latitudeGitBranch}"
+            vmArg "-Dlatitude.dev.buildDirty=${latitudeGitDirty}"
+            vmArg "-Dlatitude.dev.buildTime=${latitudeBuildTime}"
             vmArg "-Dlatitude.fixSurfaceDripstone=true"
             vmArg "-Dlatitude.fogClampIndex=${System.getProperty('latitude.fogClampIndex', '-1')}"
             vmArg "-Dlatitude.fogClampValue=${System.getProperty('latitude.fogClampValue', '16.0')}"
+            // AutoCreateWorldProbe defaults ON in a dev environment; forward this so a plain
+            // manual-testing launch can suppress it without touching the default for anyone else.
+            vmArg "-Dlatitude.debug.autoCreateWorldProbe.disable=${System.getProperty('latitude.debug.autoCreateWorldProbe.disable', 'false')}"
             // Solar Tilt + Seasons (P1). The shipping defaults are ON / 60°, with four live-tuning dials.
             // Forwarded on the CLIENT run (not just biomePreview) because P2's sky visuals and P1's mob rules
             // run here too. Explicit -D values still provide the opt-out and tuning path.
@@ -56,16 +96,20 @@ loom {
             vmArg "-Dlatitude.solarTilt.yearLengthDays=${System.getProperty('latitude.solarTilt.yearLengthDays', '360.0')}"
             vmArg "-Dlatitude.solarTilt.functionalMinDeg=${System.getProperty('latitude.solarTilt.functionalMinDeg', '60.0')}"
             vmArg "-Dlatitude.solarTilt.frozenPhaseDeg=${System.getProperty('latitude.solarTilt.frozenPhaseDeg', '0.0')}"
-            // S13(a) AURORA BOREALIS (default TRUE, rides inside solarTiltV2). Born WITH its forwarding line in
-            // the SAME pass as the flag (L17 discipline) so a dev client agrees with a shipped jar the moment the
-            // aurora is toggled for a P2/P3 flight -- byte-identical when solar tilt OR this is off.
+            // S13(a) AURORA BOREALIS (default TRUE, rides inside solarTiltV2). Forwarded in the same pass as
+            // the flag (L17 discipline) so a dev client agrees with a shipped jar.
             vmArg "-Dlatitude.aurora.enabled=${System.getProperty('latitude.aurora.enabled', 'true')}"
-            // S13(e) POLAR SURFACE ALLOWLIST (default TRUE). A server-side per-tick spawn rule that rides the
-            // integrated server in a dev client (like the solar mob rules), so forwarded on the CLIENT run in
-            // the SAME pass as the flag (L17 discipline) -- a dev can `-Dlatitude.polarSurfaceSpawns.enabled=false`
-            // to A/B it. onsetDeg mirrors PolarHazardWindow.AMBIENT_ONSET_DEG (the 80-deg storm onset).
+            // S13(e) POLAR SURFACE ALLOWLIST (default TRUE). Server-side per-tick spawn rule that rides the
+            // integrated server in a dev client; onsetDeg mirrors PolarHazardWindow.AMBIENT_ONSET_DEG.
             vmArg "-Dlatitude.polarSurfaceSpawns.enabled=${System.getProperty('latitude.polarSurfaceSpawns.enabled', 'true')}"
             vmArg "-Dlatitude.polarSurfaceSpawns.onsetDeg=${System.getProperty('latitude.polarSurfaceSpawns.onsetDeg', '80.0')}"
+        }
+        server {
+            runDir latitudeRunDir
+            vmArg "-Dlatitude.dev.gitCommit=${latitudeGitCommit}"
+            vmArg "-Dlatitude.dev.gitBranch=${latitudeGitBranch}"
+            vmArg "-Dlatitude.dev.buildDirty=${latitudeGitDirty}"
+            vmArg "-Dlatitude.dev.buildTime=${latitudeBuildTime}"
         }
         clientNoSurfaceDripstoneFix {
             inherit client
@@ -89,11 +133,17 @@ loom {
         biomePreview {
             server()
             name "Biome Preview (Headless)"
-            runDir "run-headless"
+            runDir latitudePreviewRunDir
             vmArg "-Xms2G"
             vmArg "-Xmx8G"
-            vmArg "-Dlatdev.biomePng=${System.getProperty('latdev.biomePng', 'enabled')}"
             vmArg "-Dlatdev.locateBoundary=${System.getProperty('latdev.locateBoundary', '')}"
+            vmArg "-Dlatitude.debugWorldgenPath=${System.getProperty('latitude.debugWorldgenPath', 'false')}"
+            // Terrain-aware atlas was reachable in code but not from the command line: BiomePreviewExporter
+            // reads this system property, and without forwarding it the preview JVM never saw it. A
+            // non-terrain-aware run nulls noiseConfig/heightView, so every column classifies flat and any
+            // terrain-gated rule is invisible to the map -- a census that silently cannot see what it claims
+            // to measure. Defaults false, so ordinary runs stay byte-identical.
+            vmArg "-Dlatitude.atlasTerrainAware=${System.getProperty('latitude.atlasTerrainAware', 'false')}"
             vmArg "-Dlatdev.alpineAudit=${System.getProperty('latdev.alpineAudit', '')}"
             vmArg "-Dlatdev.probe=${System.getProperty('latdev.probe', '')}"
             vmArg "-Dlatdev.probe.target=${System.getProperty('latdev.probe.target', '')}"
@@ -103,9 +153,7 @@ loom {
             vmArg "-Dlatdev.probe.out=${System.getProperty('latdev.probe.out', '')}"
             vmArg "-Dlatdev.probe.radius=${System.getProperty('latdev.probe.radius', '')}"
             vmArg "-Dlatdev.probe.maxCombos=${System.getProperty('latdev.probe.maxCombos', '')}"
-            vmArg "-Dlatitude.debugWorldgenPath=${System.getProperty('latitude.debugWorldgenPath', 'false')}"
             // Phase 4 terrain-wrapper mechanical proof harness (com.example.globe.dev.TerrainProofHarness).
-            // See docs/design/terrain-wrapper-design-20260705.md §6/§8 items 7-9.
             vmArg "-Dlatdev.terrainProof=${System.getProperty('latdev.terrainProof', 'false')}"
             vmArg "-Dlatdev.terrainProof.seed=${System.getProperty('latdev.terrainProof.seed', '')}"
             vmArg "-Dlatdev.terrainProof.radius=${System.getProperty('latdev.terrainProof.radius', '')}"
@@ -116,18 +164,14 @@ loom {
             vmArg "-Dlatdev.terrainProof.probes=${System.getProperty('latdev.terrainProof.probes', '')}"
             vmArg "-Dlatdev.terrainProof.coherence=${System.getProperty('latdev.terrainProof.coherence', 'false')}"
             // LatitudeV2Flags -- static final, read once at class-init, so these MUST reach the forked JVM
-            // as real -D launch args (see LatitudeV2Flags's own "Testing note" javadoc).
+            // as real -D launch args (see LatitudeV2Flags's own "Testing note" javadoc). Every enable is
+            // forwarded so a headless flag-on claim can actually be true (the L17 forwarding class).
             vmArg "-Dlatitude.terrainV2.enabled=${System.getProperty('latitude.terrainV2.enabled', 'false')}"
             vmArg "-Dlatitude.terrainV2.strength=${System.getProperty('latitude.terrainV2.strength', '0.0')}"
             vmArg "-Dlatitude.terrainV2.oceanStrengthRatio=${System.getProperty('latitude.terrainV2.oceanStrengthRatio', '1.0')}"
             vmArg "-Dlatitude.terrainV2.gripWidth=${System.getProperty('latitude.terrainV2.gripWidth', '0.8')}"
-            // Phase 5 Slice B-2: Fix 2 floor-sighted live veto sub-flag + Fix 1 edge-ocean gate. Both
-            // default false (byte-identical flag-off); forwarded so a headless flag-on atlas is honest.
             vmArg "-Dlatitude.terrainV2.floorSightedVeto=${System.getProperty('latitude.terrainV2.floorSightedVeto', 'false')}"
-            // Phase 5 carve-aware ocean labels (default false, byte-identical off).
             vmArg "-Dlatitude.terrainV2.carveAwareLabels=${System.getProperty('latitude.terrainV2.carveAwareLabels', 'false')}"
-            // S36 void taming (born with its forwarding lines, L17 discipline). Default OFF/0.0 = never
-            // installed; the owner's tuning session passes these as real launch args.
             vmArg "-Dlatitude.voidTaming.enabled=${System.getProperty('latitude.voidTaming.enabled', 'false')}"
             vmArg "-Dlatitude.voidTaming.strength=${System.getProperty('latitude.voidTaming.strength', '0.0')}"
             vmArg "-Dlatitude.voidTaming.onsetDeg=${System.getProperty('latitude.voidTaming.onsetDeg', '82.0')}"
@@ -135,75 +179,37 @@ loom {
             vmArg "-Dlatitude.voidTaming.protectFloorY=${System.getProperty('latitude.voidTaming.protectFloorY', '48')}"
             vmArg "-Dlatitude.voidTaming.floorFeatherBlocks=${System.getProperty('latitude.voidTaming.floorFeatherBlocks', '10')}"
             vmArg "-Dlatitude.boundaryV2.enabled=${System.getProperty('latitude.boundaryV2.enabled', 'false')}"
-            // Phase 5 B-5 Hemisphere Passage — DEFAULT ON since 2026-07-12 (Peetsa's post-P3 decision,
-            // matching LatitudeV2Flags; the flag is the kill switch, crossing is prompt-consensual).
             vmArg "-Dlatitude.passageV2.enabled=${System.getProperty('latitude.passageV2.enabled', 'true')}"
-            // Phase 5 B-7 Pole Passage ships ON, matching LatitudeV2Flags. Explicit -D false remains the
-            // byte-identical opt-out for a control run.
             vmArg "-Dlatitude.polePassageV2.enabled=${System.getProperty('latitude.polePassageV2.enabled', 'true')}"
-            // Phase 5 B-5 edge structure veto (default TRUE, matching LatitudeV2Flags; byte-identical when
-            // explicitly set off). Born WITH its forwarding line in the SAME PASS as the flag (L17 discipline).
             vmArg "-Dlatitude.edgeStructureVeto.enabled=${System.getProperty('latitude.edgeStructureVeto.enabled', 'true')}"
-            // Phase 5 B-10 Polar Outfitting master flag (default OFF, matching LatitudeV2Flags; legacy leather
-            // path when off = no protection gap). Born WITH its forwarding line in the SAME PASS (L17 discipline)
-            // so a dev client agrees with a shipped jar the moment the flag is flipped for the P2 flight.
             vmArg "-Dlatitude.polarOutfitting.enabled=${System.getProperty('latitude.polarOutfitting.enabled', 'false')}"
-            // Polar small-vegetation fade (default TRUE since 2026-07-12, matching LatitudeV2Flags after
-            // the TEST 75 live look; byte-identical when explicitly set off). Forwarded so dev runs agree
-            // with shipped jars.
             vmArg "-Dlatitude.polarVegetationFade.enabled=${System.getProperty('latitude.polarVegetationFade.enabled', 'true')}"
-            // The fade's ramp KNOBS (docs pass 2026-07-12 caught the THIRD instance of the L17
-            // forwarding gap: the javadoc advertises these as live-tunable, but only the enable flag
-            // was forwarded -- the degree dials silently never reached a gradle dev client).
             vmArg "-Dlatitude.polarVegetationFade.onsetDeg=${System.getProperty('latitude.polarVegetationFade.onsetDeg', '72.0')}"
             vmArg "-Dlatitude.polarVegetationFade.fullDeg=${System.getProperty('latitude.polarVegetationFade.fullDeg', '80.0')}"
-            // S11(c) firefly-specific ban dial (default 50 = the SUBPOLAR onset) -- forwarded in the SAME
-            // pass as the constant (L17 discipline), beside its veg-fade dial family.
             vmArg "-Dlatitude.polarVegetationFade.fireflyBanDeg=${System.getProperty('latitude.polarVegetationFade.fireflyBanDeg', '50.0')}"
-            // Phase 5 B-8 Polar Barrens ships ON. Forwarded here so the ordinary headless atlas and the
-            // shipping jar agree; explicit -D false remains the byte-identical control.
-            // The onset/full degree dials are advertised as live-tunable, so forward them too.
             vmArg "-Dlatitude.polarBarrens.enabled=${System.getProperty('latitude.polarBarrens.enabled', 'true')}"
-            // S21c 2026-07-19: the veg-fade/Barrens COUPLING IS BROKEN (deliberately). The onset default used
-            // to NEST the veg-fade fullDeg sysprop (barrens began exactly where the grass died); the owner moved
-            // the veg fade's finish down to 80 ("veg to 80") but wants the Barrens BIOME to stay at 82, so the
-            // nested fallback is now a LITERAL 82.0, matching the decoupled Java default
-            // (LatitudeV2Flags.POLAR_BARRENS_ONSET_DEG). The 80-82 band is bare tundra before the barrens claim.
-            // An explicit -Dlatitude.polarBarrens.onsetDeg still wins; .fullDeg 84 holds the fray at +2 (82->84).
+            // S21c 2026-07-19: the Barrens onset is a LITERAL 82.0 (decoupled from the veg-fade fullDeg of 80);
+            // the 80-82 band is bare tundra before the barrens claim. .fullDeg 84 holds the fray at +2.
             vmArg "-Dlatitude.polarBarrens.onsetDeg=${System.getProperty('latitude.polarBarrens.onsetDeg', '82.0')}"
             vmArg "-Dlatitude.polarBarrens.fullDeg=${System.getProperty('latitude.polarBarrens.fullDeg', '84.0')}"
-            // Phase 5 B-9 Glacial Caves & Crevasses ships ON. The atlas does not exercise carvers, but its
-            // JVM configuration still mirrors shipping; explicit -D false remains the control.
             vmArg "-Dlatitude.glacialCavesV1=${System.getProperty('latitude.glacialCavesV1', 'true')}"
-            // Polar water freeze (default TRUE, matching LatitudeV2Flags; byte-identical when explicitly
-            // set off). Forwarded on sight this round -- the L17 forwarding class has bitten this repo
-            // twice before (climateV2/biomeConsumerV2 2026-07-07); don't let a third flag go unforwarded.
             vmArg "-Dlatitude.polarWaterFreeze.enabled=${System.getProperty('latitude.polarWaterFreeze.enabled', 'true')}"
             vmArg "-Dlatitude.geoV2.enabled=${System.getProperty('latitude.geoV2.enabled', 'false')}"
-            // Slice C follow-up (the L17 forwarding class, caught a SECOND time 2026-07-07): climateV2 and
-            // biomeConsumerV2 were never forwarded, so a headless "consumer-on" atlas silently ran with the
-            // consumer OFF and produced a byte-identical map (0.00% diff was the tell). Forward every
-            // LatitudeV2Flags enable so a headless config claim can actually be true.
             vmArg "-Dlatitude.climateV2.enabled=${System.getProperty('latitude.climateV2.enabled', 'false')}"
             vmArg "-Dlatitude.biomeConsumerV2.enabled=${System.getProperty('latitude.biomeConsumerV2.enabled', 'false')}"
             vmArg "-Dlatitude.biomeConsumerV2.oceanAuthority.enabled=${System.getProperty('latitude.biomeConsumerV2.oceanAuthority.enabled', 'false')}"
-            // Solar Tilt + Seasons (P1) — forwarded here too for configuration parity with the client and
-            // shipping jar, even though its real flight is on the client run above.
             vmArg "-Dlatitude.solarTiltV2.enabled=${System.getProperty('latitude.solarTiltV2.enabled', 'true')}"
             vmArg "-Dlatitude.solarTilt.deltaMaxDeg=${System.getProperty('latitude.solarTilt.deltaMaxDeg', '30.0')}"
             vmArg "-Dlatitude.solarTilt.yearLengthDays=${System.getProperty('latitude.solarTilt.yearLengthDays', '360.0')}"
             vmArg "-Dlatitude.solarTilt.functionalMinDeg=${System.getProperty('latitude.solarTilt.functionalMinDeg', '60.0')}"
             vmArg "-Dlatitude.solarTilt.frozenPhaseDeg=${System.getProperty('latitude.solarTilt.frozenPhaseDeg', '0.0')}"
-            // S13(e) POLAR SURFACE ALLOWLIST — forwarded here too for sibling parity with every other
-            // LatitudeV2Flags enable (a headless "flag-on" claim stays honest), even though this spawn rule
-            // does NOT touch worldgen and the real exercise is the client run above. Default TRUE; L17 same-pass.
             vmArg "-Dlatitude.polarSurfaceSpawns.enabled=${System.getProperty('latitude.polarSurfaceSpawns.enabled', 'true')}"
             vmArg "-Dlatitude.polarSurfaceSpawns.onsetDeg=${System.getProperty('latitude.polarSurfaceSpawns.onsetDeg', '80.0')}"
         }
         biomeSeedSearch {
             server()
             name "Biome Seed Search (Headless)"
-            runDir "run-headless"
+            runDir latitudePreviewRunDir
             vmArg "-Xms2G"
             vmArg "-Xmx8G"
             vmArg "-Dlatdev.biomeSearch=${System.getProperty('latdev.biomeSearch', 'enabled')}"
@@ -211,7 +217,7 @@ loom {
         bandAudit {
             server()
             name "Band Audit (Headless)"
-            runDir "run-headless"
+            runDir latitudePreviewRunDir
             vmArg "-Xms2G"
             vmArg "-Xmx8G"
             vmArg "-Dlatdev.bandAudit=${System.getProperty('latdev.bandAudit', 'enabled')}"
@@ -220,13 +226,23 @@ loom {
 }
 
 repositories {
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url = "https://api.modrinth.com/maven"
+            }
+        }
+        filter {
+            includeGroup "maven.modrinth"
+        }
+    }
     maven { url 'https://maven.fabricmc.net/' }
     maven { url 'https://maven.terraformersmc.com/releases/' }
     maven { url 'https://maven.blamejared.com/' }
     maven { url 'https://maven.shedaniel.me/' }
     maven { url 'https://maven.ladysnake.org/releases' }
     mavenCentral()
-    maven { url 'https://api.modrinth.com/maven' }
     maven { url 'https://cursemaven.com' }
     maven { url 'https://jitpack.io' }
 }
@@ -256,6 +272,23 @@ dependencies {
     testImplementation 'com.google.code.gson:gson:2.11.0'
 }
 
+sourceSets {
+    latitudeTest {
+        java.srcDir 'src/latitudeTest/java'
+        resources.setSrcDirs([])
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+
+configurations {
+    latitudeTestImplementation.extendsFrom implementation
+    latitudeTestRuntimeOnly.extendsFrom runtimeOnly
+    latitudeSodiumFogVerifier
+}
+
+dependencies {
+
 test {
     useJUnitPlatform()
     reports.junitXml.required = false
@@ -266,12 +299,57 @@ test {
         }
     }
 }
+    latitudeSodiumFogVerifier "maven.modrinth:AANobbMI:2Yom1N68"
+}
 
 processResources {
     inputs.property "version", project.version
 
     filesMatching("fabric.mod.json") {
         expand "version": project.version
+    }
+}
+
+def latitudeTestGeneratedResources = layout.buildDirectory.dir('generated/latitudeTest/resources')
+def latitudeTestSequenceInput = providers.gradleProperty('latitudeTestSequence').orElse('missing')
+def latitudeTestVersionInput = latitudeTestSequenceInput.map { raw ->
+    "${project.version}-test.${raw}"
+}
+
+tasks.register('generateLatitudeTestMetadata') {
+    group = 'latitude test artifact'
+    description = 'Generate isolated TEST-only Fabric metadata; requires -PlatitudeTestSequence=N'
+    dependsOn tasks.named('jar')
+    inputs.file(tasks.named('jar', Jar).flatMap { it.archiveFile })
+    inputs.property('latitudeTestSequence', latitudeTestSequenceInput)
+    inputs.property('latitudeTestVersion', latitudeTestVersionInput)
+    outputs.file(latitudeTestGeneratedResources.map { it.file('fabric.mod.json') })
+    doLast {
+        int sequence = latitudeTestSequenceValue()
+        String testVersion = latitudeTestVersionValue(sequence)
+        def publicJar = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        def zip = new java.util.zip.ZipFile(publicJar)
+        def metadata
+        try {
+            def metadataEntry = zip.getEntry('fabric.mod.json')
+            if (metadataEntry == null) {
+                throw new GradleException("Public jar is missing fabric.mod.json: ${publicJar}")
+            }
+            metadata = new groovy.json.JsonSlurper().parse(zip.getInputStream(metadataEntry))
+        } finally {
+            zip.close()
+        }
+        metadata.version = testVersion
+        metadata.entrypoints = new LinkedHashMap(metadata.entrypoints as Map)
+        metadata.entrypoints.main = new ArrayList(metadata.entrypoints.main as List)
+        metadata.entrypoints.main.add('com.example.globe.dev.LatitudeDevTestEntrypoint')
+        metadata.entrypoints.client = new ArrayList(metadata.entrypoints.client as List)
+        metadata.entrypoints.client.add('com.example.globe.dev.LatitudeDevTestClientEntrypoint')
+        metadata.custom = ['latitude:test_artifact': true]
+
+        def outputFile = latitudeTestGeneratedResources.get().file('fabric.mod.json').asFile
+        outputFile.parentFile.mkdirs()
+        outputFile.text = groovy.json.JsonOutput.toJson(metadata)
     }
 }
 
@@ -324,7 +402,10 @@ def releaseArtifactExcludeSpec = { details ->
         return true
     }
 
+    // The dev-only clipboard helper must not ship in any release artifact: the compiled class
+    // (and its inner classes) in the jar, and the source twin in the sources jar.
     if (path == 'com/example/globe/client/ClipboardImageWriter.class'
+            || path == 'com/example/globe/client/ClipboardImageWriter.java'
             || path.startsWith('com/example/globe/client/ClipboardImageWriter$')) {
         return true
     }
@@ -359,6 +440,93 @@ tasks.named('sourcesJar', Jar).configure {
 tasks.matching { it.name == 'remapJar' }.configureEach {
     exclude(releaseArtifactExcludeSpec)
     exclude(releaseArtifactPatternExcludes)
+}
+
+tasks.named(sourceSets.latitudeTest.compileJavaTaskName, JavaCompile).configure {
+    dependsOn tasks.named('classes')
+}
+
+tasks.register('latitudeTestJar', Jar) {
+    group = 'latitude test artifact'
+    description = 'Build the isolated official-namespace dev-enabled TEST jar; requires -PlatitudeTestSequence=N'
+
+    int sequence = latitudeTestSequenceOrZero()
+    String testVersion = latitudeTestVersionValue(sequence)
+    archiveFileName.set("latitude-${testVersion}.jar")
+    destinationDirectory.set(layout.buildDirectory.dir('latitude-test-libs'))
+    inputs.property('latitudeTestSequence', latitudeTestSequenceInput)
+    inputs.property('latitudeTestVersion', latitudeTestVersionInput)
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+
+    dependsOn tasks.named('jar')
+    dependsOn tasks.named(sourceSets.latitudeTest.classesTaskName)
+    dependsOn tasks.named('generateLatitudeTestMetadata')
+    doFirst {
+        int validatedSequence = latitudeTestSequenceValue()
+        String validatedVersion = latitudeTestVersionValue(validatedSequence)
+        def publicJar = tasks.named('jar', Jar).get().archiveFile.get().asFile
+        def zip = new java.util.zip.ZipFile(publicJar)
+        def publicManifest
+        try {
+            def manifestEntry = zip.getEntry('META-INF/MANIFEST.MF')
+            if (manifestEntry == null) {
+                throw new GradleException("Public jar is missing META-INF/MANIFEST.MF: ${publicJar}")
+            }
+            publicManifest = new java.util.jar.Manifest(zip.getInputStream(manifestEntry))
+        } finally {
+            zip.close()
+        }
+        def publicAttributes = publicManifest.mainAttributes
+        manifest.attributes(
+                'Implementation-Title': publicAttributes.getValue('Implementation-Title'),
+                'Implementation-Version': validatedVersion,
+                'Minecraft-Version': publicAttributes.getValue('Minecraft-Version'),
+                'Git-Commit': publicAttributes.getValue('Git-Commit'),
+                'Git-Branch': publicAttributes.getValue('Git-Branch'),
+                'Build-Time': publicAttributes.getValue('Build-Time'),
+                'Build-Dirty': publicAttributes.getValue('Build-Dirty'),
+                'Latitude-Artifact-Role': 'TEST',
+                'Latitude-Test-Sequence': Integer.toString(validatedSequence),
+                'Latitude-Artifact-Version': validatedVersion,
+                'Fabric-Mapping-Namespace': 'official'
+        )
+    }
+
+    from({
+        zipTree(tasks.named('jar', Jar).get().archiveFile.get().asFile)
+    }) {
+        exclude 'META-INF/MANIFEST.MF'
+        exclude 'fabric.mod.json'
+    }
+
+    from(sourceSets.main.output) {
+        include 'com/example/globe/dev/**'
+        include 'com/example/globe/debug/**'
+        include 'com/example/globe/client/ClipboardImageWriter.class'
+        include 'com/example/globe/client/ClipboardImageWriter$*.class'
+    }
+    from(sourceSets.latitudeTest.output)
+    from(latitudeTestGeneratedResources) {
+        include 'fabric.mod.json'
+    }
+
+    manifest {
+        attributes(
+                'Implementation-Title': project.base.archivesName.get(),
+                'Implementation-Version': testVersion,
+                'Minecraft-Version': project.minecraft_version,
+                'Git-Commit': latitudeGitCommit,
+                'Git-Branch': latitudeGitBranch,
+                'Build-Time': latitudeBuildTime,
+                'Build-Dirty': latitudeGitDirty,
+                'Latitude-Artifact-Role': 'TEST',
+                'Latitude-Test-Sequence': Integer.toString(sequence),
+                'Latitude-Artifact-Version': testVersion,
+                'Fabric-Mapping-Namespace': 'official'
+        )
+    }
 }
 
 publishing {
@@ -407,9 +575,350 @@ tasks.named('check').configure {
     }
 }
 
+def latitudeCreateScreenClipPolicyTestClasses = layout.buildDirectory.dir('classes/java/latitudeCreateScreenClipPolicyTest')
+
+tasks.register('compileLatitudeCreateScreenClipPolicyTest', JavaCompile) {
+    group = 'verification'
+    description = 'Compile the dependency-free create-world clipped-widget input regression'
+    source = fileTree('src/clipPolicyTest/java') {
+        include '**/*.java'
+    }
+    classpath = sourceSets.main.output
+    destinationDirectory.set(latitudeCreateScreenClipPolicyTestClasses)
+    options.release = 25
+    dependsOn classes
+}
+
+tasks.register('latitudeCreateScreenClipPolicyTest', JavaExec) {
+    group = 'verification'
+    description = 'Exercise the create-world clipped-widget input policy without launching Minecraft'
+    classpath = files(latitudeCreateScreenClipPolicyTestClasses) + sourceSets.main.output
+    mainClass = 'com.example.globe.client.create.ViewportClipPolicyTest'
+    dependsOn tasks.named('compileLatitudeCreateScreenClipPolicyTest')
+}
+
+tasks.named('check').configure {
+    dependsOn tasks.named('latitudeCreateScreenClipPolicyTest')
+}
+
+def latitudePolarPresentationPolicyTestClasses = layout.buildDirectory.dir('classes/java/latitudePolarPresentationPolicyTest')
+
+tasks.register('compileLatitudePolarPresentationPolicyTest', JavaCompile) {
+    group = 'verification'
+    description = 'Compile the dependency-free polar presentation regression'
+    source = fileTree('src/polarPolicyTest/java') {
+        include '**/*.java'
+    }
+    classpath = sourceSets.main.output
+    destinationDirectory.set(latitudePolarPresentationPolicyTestClasses)
+    options.release = 25
+    dependsOn classes
+}
+
+tasks.register('latitudePolarPresentationPolicyTest', JavaExec) {
+    group = 'verification'
+    description = 'Exercise polar fog and warning presentation policy without launching Minecraft'
+    classpath = files(latitudePolarPresentationPolicyTestClasses) + sourceSets.main.output
+    mainClass = 'com.example.globe.client.PolarPresentationPolicyTest'
+    dependsOn tasks.named('compileLatitudePolarPresentationPolicyTest')
+}
+
+tasks.named('check').configure {
+    dependsOn tasks.named('latitudePolarPresentationPolicyTest')
+}
+
+tasks.register('latitudeSodiumFogReachabilityTest', Exec) {
+    group = 'verification'
+    description = 'Verify the exact Sodium 0.9.1 FogData-to-culling bytecode chain and Latitude mixin order'
+    inputs.file('tools/verify_sodium_fog_reachability.py')
+    inputs.file('src/main/java/com/example/globe/mixin/client/FogRendererEwMixin.java')
+    inputs.file('src/main/resources/globe.mixins.json')
+    inputs.files(configurations.latitudeSodiumFogVerifier)
+
+    doFirst {
+        File sodiumJar = configurations.latitudeSodiumFogVerifier.singleFile
+        commandLine(
+                'python3',
+                file('tools/verify_sodium_fog_reachability.py'),
+                '--sodium-jar', sodiumJar,
+                '--source-root', rootDir)
+    }
+}
+
+tasks.named('check').configure {
+    dependsOn tasks.named('latitudeSodiumFogReachabilityTest')
+}
+
+// A green build does not prove a mixin applies: Mixin resolves targets at class-load time, so a
+// renamed or moved target is invisible to javac. This resolves every @Mixin target and every
+// injector's method / @At descriptor against the remapped Minecraft jar before anything boots.
+tasks.register('latitudeMixinTargetVerify', Exec) {
+    group = 'verification'
+    description = 'Resolve every registered mixin target against the remapped Minecraft jar'
+    inputs.file('tools/verify_mixin_targets.py')
+    inputs.file('src/main/resources/globe.mixins.json')
+    inputs.dir('src/main/java/com/example/globe/mixin')
+
+    doFirst {
+        commandLine(
+                'python3',
+                file('tools/verify_mixin_targets.py'),
+                '--classpath', configurations.compileClasspath.asPath,
+                '--source-root', rootDir)
+    }
+}
+
+tasks.named('check').configure {
+    dependsOn tasks.named('latitudeMixinTargetVerify')
+}
+
+// The verifiers under tools/ are gates, and a gate with no tests of its own is trusted rather
+// than checked. This runs their unit tests (tools/tests) through a runner that refuses to call
+// zero discovered tests a pass.
+tasks.register('latitudeToolsUnitTest', Exec) {
+    group = 'verification'
+    description = 'Run the unit tests of the Python verifiers under tools/'
+    inputs.dir('tools/tests')
+    inputs.file('tools/run_tool_tests.py')
+    inputs.file('tools/verify_mixin_targets.py')
+    inputs.file('tools/verify_headless_run.py')
+    commandLine('python3', file('tools/run_tool_tests.py'))
+}
+
+tasks.named('check').configure {
+    dependsOn tasks.named('latitudeToolsUnitTest')
+}
+
+def latitudeLocationDetailPolicyTestClasses = layout.buildDirectory.dir('classes/java/latitudeLocationDetailPolicyTest')
+
+tasks.register('compileLatitudeLocationDetailPolicyTest', JavaCompile) {
+    group = 'verification'
+    description = 'Compile the dependency-free HUD location-detail regression'
+    source = fileTree('src/locationDetailPolicyTest/java') {
+        include '**/*.java'
+    }
+    classpath = sourceSets.main.output
+    destinationDirectory.set(latitudeLocationDetailPolicyTestClasses)
+    options.release = 25
+    dependsOn classes
+}
+
+tasks.register('latitudeLocationDetailPolicyTest', JavaExec) {
+    group = 'verification'
+    description = 'Exercise HUD location-detail composition and structural integration without launching Minecraft'
+    classpath = files(latitudeLocationDetailPolicyTestClasses) + sourceSets.main.output
+    mainClass = 'com.example.globe.client.LocationDetailPolicyTest'
+    dependsOn tasks.named('compileLatitudeLocationDetailPolicyTest')
+}
+
+tasks.named('check').configure {
+    dependsOn tasks.named('latitudeLocationDetailPolicyTest')
+}
+
+def latitudeVillageLatitudePolicyTestClasses = layout.buildDirectory.dir('classes/java/latitudeVillageLatitudePolicyTest')
+
+tasks.register('compileLatitudeVillageLatitudePolicyTest', JavaCompile) {
+    group = 'verification'
+    description = 'Compile the village latitude and climate-start regression'
+    source = fileTree('src/villageLatitudePolicyTest/java') {
+        include '**/*.java'
+    }
+    classpath = sourceSets.main.runtimeClasspath
+    destinationDirectory.set(latitudeVillageLatitudePolicyTestClasses)
+    options.release = 25
+    dependsOn classes
+}
+
+tasks.register('latitudeVillageLatitudePolicyTest', JavaExec) {
+    group = 'verification'
+    description = 'Exercise village latitude boundary and structural isolation without launching Minecraft'
+    classpath = files(latitudeVillageLatitudePolicyTestClasses) + sourceSets.main.runtimeClasspath
+    mainClass = 'com.example.globe.world.VillageLatitudePolicyTest'
+    dependsOn tasks.named('compileLatitudeVillageLatitudePolicyTest')
+}
+
+tasks.named('check').configure {
+    dependsOn tasks.named('latitudeVillageLatitudePolicyTest')
+}
+
+def latitudePolarFoliagePolicyTestClasses = layout.buildDirectory.dir('classes/java/latitudePolarFoliagePolicyTest')
+
+tasks.register('compileLatitudePolarFoliagePolicyTest', JavaCompile) {
+    group = 'verification'
+    description = 'Compile the dependency-free strict-80 polar foliage boundary regression'
+    source = fileTree('src/polarFoliagePolicyTest/java') {
+        include '**/*.java'
+    }
+    classpath = sourceSets.main.output
+    destinationDirectory.set(latitudePolarFoliagePolicyTestClasses)
+    options.release = 25
+    dependsOn classes
+}
+
+tasks.register('latitudePolarFoliagePolicyTest', JavaExec) {
+    group = 'verification'
+    description = 'Exercise the strict-80 foliage boundary and berry exemption without launching Minecraft'
+    classpath = files(latitudePolarFoliagePolicyTestClasses) + sourceSets.main.output
+    mainClass = 'com.example.globe.world.PolarFoliagePolicyTest'
+    dependsOn tasks.named('compileLatitudePolarFoliagePolicyTest')
+}
+
+tasks.named('check').configure {
+    dependsOn tasks.named('latitudePolarFoliagePolicyTest')
+}
+
+def latitudeWorldgenAuthorityPolicyTestClasses = layout.buildDirectory.dir('classes/java/latitudeWorldgenAuthorityPolicyTest')
+
+tasks.register('compileLatitudeWorldgenAuthorityPolicyTest', JavaCompile) {
+    group = 'verification'
+    description = 'Compile the dependency-free worldgen authority lifecycle regression'
+    source = fileTree('src/worldgenAuthorityPolicyTest/java') {
+        include '**/*.java'
+    }
+    classpath = sourceSets.main.runtimeClasspath
+    destinationDirectory.set(latitudeWorldgenAuthorityPolicyTestClasses)
+    options.release = 25
+    dependsOn classes
+}
+
+tasks.register('latitudeWorldgenAuthorityPolicyTest', JavaExec) {
+    group = 'verification'
+    description = 'Prove ordinary worlds fail open and Globe worldgen context clears across servers'
+    classpath = files(latitudeWorldgenAuthorityPolicyTestClasses) + sourceSets.main.runtimeClasspath
+    mainClass = 'com.example.globe.world.WorldgenAuthorityPolicyTest'
+    dependsOn tasks.named('compileLatitudeWorldgenAuthorityPolicyTest')
+}
+
+tasks.register('latitudeWorldgenFeatureDataTest', JavaExec) {
+    group = 'verification'
+    description = 'Prove Latitude feature resources use the current registry and inline grammar'
+    classpath = files(latitudeWorldgenAuthorityPolicyTestClasses) + sourceSets.main.runtimeClasspath
+    mainClass = 'com.example.globe.world.WorldgenAuthorityPolicyTest'
+    args 'feature-data'
+    dependsOn tasks.named('compileLatitudeWorldgenAuthorityPolicyTest')
+}
+
+tasks.register('latitudeWorldgenTerrainDataTest', JavaExec) {
+    group = 'verification'
+    description = 'Prove Latitude terrain resources use the current density, noise, and settings grammar'
+    classpath = files(latitudeWorldgenAuthorityPolicyTestClasses) + sourceSets.main.runtimeClasspath
+    mainClass = 'com.example.globe.world.WorldgenAuthorityPolicyTest'
+    args 'terrain-data'
+    dependsOn tasks.named('compileLatitudeWorldgenAuthorityPolicyTest')
+}
+
+tasks.named('check').configure {
+    dependsOn tasks.named('latitudeWorldgenAuthorityPolicyTest')
+    dependsOn tasks.named('latitudeWorldgenFeatureDataTest')
+    dependsOn tasks.named('latitudeWorldgenTerrainDataTest')
+}
+
+def latitudeDevToolPolicyTestClasses = layout.buildDirectory.dir('classes/java/latitudeDevToolPolicyTest')
+
+tasks.register('compileLatitudeDevToolPolicyTest', JavaCompile) {
+    group = 'verification'
+    description = 'Compile the dependency-free Phase 6 development-tool policy regression'
+    source = fileTree('src/devToolPolicyTest/java') {
+        include '**/*.java'
+    }
+    classpath = sourceSets.main.output
+    destinationDirectory.set(latitudeDevToolPolicyTestClasses)
+    options.release = 25
+    dependsOn classes
+}
+
+tasks.register('latitudeDevToolPolicyTest', JavaExec) {
+    group = 'verification'
+    description = 'Exercise Phase 6 sanitization, latitude, transition, and evidence-session policy'
+    classpath = files(latitudeDevToolPolicyTestClasses) + sourceSets.main.output
+    mainClass = 'com.example.globe.dev.DevToolPolicyTest'
+    dependsOn tasks.named('compileLatitudeDevToolPolicyTest')
+}
+
+tasks.named('check').configure {
+    dependsOn tasks.named('latitudeDevToolPolicyTest')
+}
+
+tasks.register('latitudeRecorderLiteAtlasTest', Exec) {
+    group = 'verification'
+    description = 'Exercise Recorder Lite atlas comparison and negative fixtures'
+    commandLine('python3', '-m', 'unittest', 'discover',
+            '-s', 'tools/tests', '-p', 'test*atlas*.py', '-v')
+}
+
+tasks.named('check').configure {
+    dependsOn tasks.named('latitudeRecorderLiteAtlasTest')
+}
+
+def latitudeSpawnSafetyPolicyTestClasses = layout.buildDirectory.dir('classes/java/latitudeSpawnSafetyPolicyTest')
+
+tasks.register('compileLatitudeSpawnSafetyPolicyTest', JavaCompile) {
+    group = 'verification'
+    description = 'Compile the dependency-free initial-spawn safety regression'
+    source = fileTree('src/spawnSafetyPolicyTest/java') {
+        include '**/*.java'
+    }
+    classpath = sourceSets.main.runtimeClasspath
+    destinationDirectory.set(latitudeSpawnSafetyPolicyTestClasses)
+    options.release = 25
+    dependsOn classes
+}
+
+tasks.register('latitudeSpawnSafetyPolicyTest', JavaExec) {
+    group = 'verification'
+    description = 'Exercise warning-zone bounds and hazardous spawn-surface policy without launching Minecraft'
+    classpath = files(latitudeSpawnSafetyPolicyTestClasses) + sourceSets.main.runtimeClasspath
+    mainClass = 'com.example.globe.world.SpawnSafetyPolicyTest'
+    dependsOn tasks.named('compileLatitudeSpawnSafetyPolicyTest')
+}
+
+tasks.named('check').configure {
+    dependsOn tasks.named('latitudeSpawnSafetyPolicyTest')
+}
+
+def latitudeShippingToolsPolicyTestClasses = layout.buildDirectory.dir('classes/java/latitudeShippingToolsPolicyTest')
+
+tasks.register('compileLatitudeShippingToolsPolicyTest', JavaCompile) {
+    group = 'verification'
+    description = 'Compile the shipping operator-command policy regression'
+    source = fileTree('src/toolsPolicyTest/java') {
+        include '**/*.java'
+    }
+    classpath = sourceSets.main.runtimeClasspath
+    destinationDirectory.set(latitudeShippingToolsPolicyTestClasses)
+    options.release = 25
+    dependsOn classes
+}
+
+tasks.register('latitudeShippingToolsPolicyTest', JavaExec) {
+    group = 'verification'
+    description = 'Prove the shipping tools command tree is exactly the permitted operator set'
+    classpath = files(latitudeShippingToolsPolicyTestClasses) + sourceSets.main.runtimeClasspath
+    mainClass = 'com.example.globe.tools.ShippingToolsPolicyTest'
+    dependsOn tasks.named('compileLatitudeShippingToolsPolicyTest')
+}
+
+// The dev packaging boundary is enforced by build.gradle itself. The shipping tools boundary must
+// be enforced just as mechanically, or the artifact content policy degrades into an intention that
+// nothing checks. There is no CI in this repository, so `check` is the only place this can live.
+tasks.register('latitudeArtifactPolicySourceScan', Exec) {
+    group = 'verification'
+    description = 'Assert the shipping tools surface and dev packaging law at source level'
+    inputs.file('tools/verify_phase6_dev_tooling.py')
+    inputs.dir('src/main/java/com/example/globe/tools')
+    inputs.file('src/main/java/com/example/globe/GlobeMod.java')
+    inputs.file('src/main/java/com/example/globe/dev/LatitudeDevCommand.java')
+    commandLine('python3', file('tools/verify_phase6_dev_tooling.py'))
+}
+
+tasks.named('check').configure {
+    dependsOn tasks.named('latitudeShippingToolsPolicyTest')
+    dependsOn tasks.named('latitudeArtifactPolicySourceScan')
+}
+
 tasks.register('prepareBiomePreviewRunDir') {
     doLast {
-        def dir = file('run-headless')
+        def dir = file(latitudePreviewRunDir)
         if (!dir.exists()) {
             dir.mkdirs()
         }
@@ -449,20 +958,84 @@ enable-command-block=false
 tasks.register('syncBiomePreviewMods', Copy) {
     outputs.upToDateWhen { false }
     doFirst {
-        delete file('run-headless/mods')
+        delete file("${latitudePreviewRunDir}/mods")
     }
-    from(file('run/mods')) {
+    from(file("${latitudeRunDir}/mods")) {
         include '*.jar'
     }
-    into file('run-headless/mods')
+    into file("${latitudePreviewRunDir}/mods")
 }
 
+// The dedicated server swallows start-up failures: net.minecraft.server.Main catches Throwable
+// around the whole boot, logs "Failed to start the minecraft server" and returns normally, so
+// the JVM -- and with it these tasks -- exited 0 after a boot that never loaded a world. The
+// mod cannot fix that (no mod code runs after that line, and a shutdown hook cannot set the
+// exit status), so the run task tees the server console into build/latitude-headless/ and
+// tools/verify_headless_run.py decides PASS / FAIL / INVALID from what the run actually logged.
+// Only PASS keeps the task green; a run without completion evidence is INVALID, not a pass.
+def latitudeHeadlessCaptureDir = layout.buildDirectory.dir('latitude-headless')
+
+def latitudeTeeStream = { OutputStream primary, OutputStream capture ->
+    new OutputStream() {
+        @Override
+        void write(int b) { primary.write(b); capture.write(b) }
+
+        @Override
+        void write(byte[] b, int off, int len) { primary.write(b, off, len); capture.write(b, off, len) }
+
+        @Override
+        void flush() { primary.flush(); capture.flush() }
+    }
+}
+
+def latitudeGuardHeadlessRun = { String taskName ->
+    tasks.named(taskName).configure { task ->
+        def captureFile = latitudeHeadlessCaptureDir.get().file("${taskName}.log").asFile
+        doFirst {
+            captureFile.parentFile.mkdirs()
+            def capture = new FileOutputStream(captureFile)
+            task.ext.latitudeCapture = capture
+            task.standardOutput = latitudeTeeStream(System.out, capture)
+            task.errorOutput = latitudeTeeStream(System.err, capture)
+        }
+        doLast {
+            task.standardOutput.flush()
+            task.errorOutput.flush()
+            task.ext.latitudeCapture.close()
+            def proc = new ProcessBuilder('python3', project.file('tools/verify_headless_run.py').path,
+                    '--log', captureFile.path, '--task', taskName)
+                    .directory(project.projectDir).redirectErrorStream(true).start()
+            def out = proc.inputStream.text
+            logger.lifecycle(out.trim())
+            if (proc.waitFor() != 0) {
+                throw new GradleException("${taskName}: the headless run did not complete -- see ${captureFile}")
+            }
+        }
+    }
+}
+['runBiomePreview', 'runBiomeSeedSearch', 'runBandAudit'].each { latitudeGuardHeadlessRun(it) }
+
 tasks.named('runBiomePreview').configure {
+    workingDir file(latitudePreviewRunDir)
     dependsOn tasks.named('prepareBiomePreviewRunDir')
     if (project.hasProperty('latdev.syncPreviewMods') && project.property('latdev.syncPreviewMods').toString().toBoolean()) {
         dependsOn tasks.named('syncBiomePreviewMods')
     }
     doFirst {
+        def sulfurScan = (findProperty('latdev.sulfurScan') ?: System.getProperty('latdev.sulfurScan') ?: '').toString()
+        if (sulfurScan) {
+            jvmArgs "-Dlatdev.sulfurScan=${sulfurScan}"
+            logger.lifecycle("[runBiomePreview] forwarding latdev.sulfurScan to the preview JVM: {}", sulfurScan)
+        }
+
+        def badlandsScan = (findProperty('latdev.badlandsScan') ?: System.getProperty('latdev.badlandsScan') ?: '').toString()
+        if (badlandsScan) {
+            jvmArgs "-Dlatdev.badlandsScan=${badlandsScan}"
+            logger.lifecycle("[runBiomePreview] forwarding latdev.badlandsScan to the preview JVM: {}", badlandsScan)
+        }
+
+        // Keep the recipe out of Loom's later JVM argument provider.
+        def previewRecipe = System.getProperty('latdev.biomePng', '').trim() ?: 'enabled'
         def rawArgs = new ArrayList(args ?: [])
         def latdevOptions = [:]
         def passthrough = []
@@ -539,16 +1112,27 @@ tasks.named('runBiomePreview').configure {
             }
             def propValue = propParts.join(';')
 
-            jvmArgs "-Dlatdev.biomePng=${propValue}"
+            previewRecipe = propValue
             setArgs(passthrough)
             logger.lifecycle("[runBiomePreview] translated latdev --args to JVM property: {}", propValue)
         } else {
             setArgs(rawArgs)
         }
+
+        systemProperty 'latdev.biomePng', previewRecipe
+        // allJvmArgs includes Loom's provider arguments; jvmArgs alone does not.
+        def launchJvmArgs = allJvmArgs
+        def expectedRecipeArg = "-Dlatdev.biomePng=${previewRecipe}".toString()
+        if (launchJvmArgs.any {
+            it.startsWith('-Dlatdev.biomePng=') && it != expectedRecipeArg
+        }) {
+            throw new GradleException('Biome preview recipe is shadowed by another JVM argument')
+        }
     }
 }
 
 tasks.named('runBiomeSeedSearch').configure {
+    workingDir file(latitudePreviewRunDir)
     dependsOn tasks.named('prepareBiomePreviewRunDir')
     doFirst {
         def rawArgs = new ArrayList(args ?: [])
@@ -626,6 +1210,7 @@ tasks.named('runBiomeSeedSearch').configure {
 }
 
 tasks.named('runBandAudit').configure {
+    workingDir file(latitudePreviewRunDir)
     dependsOn tasks.named('prepareBiomePreviewRunDir')
     doFirst {
         def rawArgs = new ArrayList(args ?: [])
