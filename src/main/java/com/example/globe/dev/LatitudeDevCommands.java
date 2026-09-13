@@ -1,5 +1,6 @@
-package com.example.globe;
+package com.example.globe.dev;
 
+import com.example.globe.GlobeMod;
 import com.example.globe.adapter.geo.GeoAuthorityProvider;
 import com.example.globe.adapter.geo.GeoSummaryProvider;
 import com.example.globe.core.CrevasseLocator;
@@ -60,7 +61,10 @@ import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
-import net.minecraft.world.level.levelgen.carver.ConfiguredWorldCarver;
+import net.minecraft.world.level.levelgen.carver.CanyonWorldCarver;
+import net.minecraft.world.level.levelgen.carver.CaveWorldCarver;
+import net.minecraft.world.level.levelgen.carver.WorldCarver;
+import net.minecraft.world.level.levelgen.densityfunction.SamplerContext;
 
 /**
  * Shippable subset of the dev `/latdev` command — band/edge teleport + here/probe readouts, so testers can jump
@@ -81,18 +85,24 @@ import net.minecraft.world.level.levelgen.carver.ConfiguredWorldCarver;
 public final class LatitudeDevCommands {
     private LatitudeDevCommands() {}
 
+    /**
+     * Reflective entry used by {@code GlobeMod.registerDevOnlyCommand} and the TEST-artifact entrypoint.
+     * This class lives in the release-excluded {@code dev} package (artifact content policy, maintainer
+     * ruling 2026-08-04): a public jar never carries it, a TEST jar and a dev environment do.
+     */
+    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+        registerIfEnabled(dispatcher);
+    }
+
     public static void registerIfEnabled(CommandDispatcher<CommandSourceStack> dispatcher) {
-        if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
-            // S31 (dev/shippable split fix, logged S27 finding (c)): the full dev.LatitudeDevCommand owns
-            // /latdev in dev, but the shippable tree carries tools the dev tree lacks (locateCrevasse,
-            // markGlacial, tpxz...) that dev-lane/headless diagnosis needs. Register it under /latdev2.
-            register(dispatcher, "latdev2");
+        // The 1.5-line dev tree (dev.LatitudeDevCommand) owns /latdev wherever this class can load (dev
+        // environment and TEST artifacts alike), and this tree carries tools it lacks (locateCrevasse,
+        // markGlacial, tpxz, survey, terrainHere...). It therefore always registers under /latdev2 so the two
+        // trees never merge into one root with colliding subcommand names.
+        if (!FabricLoader.getInstance().isDevelopmentEnvironment() && !devCommandsEnabled()) {
             return;
         }
-        if (!devCommandsEnabled()) {
-            return;
-        }
-        register(dispatcher, "latdev");
+        register(dispatcher, "latdev2");
     }
 
     private static boolean devCommandsEnabled() {
@@ -516,7 +526,7 @@ public final class LatitudeDevCommands {
         }
     }
 
-    // --- S25(A) /latdev locateCrevasse | locateTunnel (Peetsa 2026-07-20, TEST 117: "I still can't find any
+    // --- S25(A) /latdev locateCrevasse | locateTunnel (the maintainer 2026-07-20, TEST 117: "I still can't find any
     // --- crevasses. Can we add a lat dev locate command?") ------------------------------------------------
 
     /** The legacy globe settings key ({@code stable(globe:overworld)} = the pre-2.0 15000-radius line); on it
@@ -526,11 +536,13 @@ public final class LatitudeDevCommands {
     private static final ResourceKey<NoiseGeneratorSettings> GLOBE_LEGACY_SETTINGS_KEY = ResourceKey.create(
             Registries.NOISE_SETTINGS, Identifier.fromNamespaceAndPath("globe", "overworld"));
 
-    /** The B-9 carver keys, mirroring {@code NoiseChunkGeneratorCarveMixin}. */
-    private static final ResourceKey<ConfiguredWorldCarver<?>> GLOBE_CREVASSE_KEY = ResourceKey.create(
-            Registries.CONFIGURED_CARVER, Identifier.fromNamespaceAndPath("globe", "crevasse"));
-    private static final ResourceKey<ConfiguredWorldCarver<?>> GLOBE_GLACIAL_TUNNELS_KEY = ResourceKey.create(
-            Registries.CONFIGURED_CARVER, Identifier.fromNamespaceAndPath("globe", "glacial_tunnels"));
+    /** The B-9 carver keys, mirroring {@code NoiseChunkGeneratorCarveMixin}. 26.3 folded
+     *  {@code ConfiguredWorldCarver<C>} into {@link WorldCarver} itself (carvers now carry their own config
+     *  as record components) and renamed the registry {@code configured_carver} -> {@code carver}. */
+    private static final ResourceKey<WorldCarver> GLOBE_CREVASSE_KEY = ResourceKey.create(
+            Registries.CARVER, Identifier.fromNamespaceAndPath("globe", "crevasse"));
+    private static final ResourceKey<WorldCarver> GLOBE_GLACIAL_TUNNELS_KEY = ResourceKey.create(
+            Registries.CARVER, Identifier.fromNamespaceAndPath("globe", "glacial_tunnels"));
 
     /** The carve seam's sea-level probe height, mirrored from {@code NoiseChunkGeneratorCarveMixin}. */
     private static final int GLOBE_SEA_LEVEL_PROBE_Y = 63;
@@ -574,8 +586,8 @@ public final class LatitudeDevCommands {
                         "[latdev] this dimension is not the globe overworld — glacial carvers only append there."));
                 return 0;
             }
-            var carvers = world.registryAccess().lookupOrThrow(Registries.CONFIGURED_CARVER);
-            Optional<Holder.Reference<ConfiguredWorldCarver<?>>> holder =
+            var carvers = world.registryAccess().lookupOrThrow(Registries.CARVER);
+            Optional<Holder.Reference<WorldCarver>> holder =
                     carvers.get(tunnels ? GLOBE_GLACIAL_TUNNELS_KEY : GLOBE_CREVASSE_KEY);
             if (holder.isEmpty()) {
                 src.sendFailure(Component.literal("[latdev] the globe:" + (tunnels ? "glacial_tunnels" : "crevasse")
@@ -584,11 +596,29 @@ public final class LatitudeDevCommands {
             }
             // Runtime probability read — the same value isStartChunk compares (0.14 crevasse / 0.12 tunnels
             // from the JSON today, but read live so a data retune can never silently split from prediction).
-            final float probability = holder.get().value().config().probability;
+            // 26.3: the config record is gone; probability is a component of the concrete carver record, and
+            // only the two vanilla types this locator predicts expose it. Anything else means the datapack
+            // retyped the carver out from under the locator, so REFUSE rather than predict from a guess.
+            final WorldCarver carver = holder.get().value();
+            final float probability;
+            if (carver instanceof CanyonWorldCarver canyon) {
+                probability = canyon.probability();
+            } else if (carver instanceof CaveWorldCarver cave) {
+                probability = cave.probability();
+            } else {
+                src.sendFailure(Component.literal("[latdev] globe:" + (tunnels ? "glacial_tunnels" : "crevasse")
+                        + " is a " + carver.getClass().getSimpleName() + ", not a canyon/cave carver — this "
+                        + "locator replays the vanilla canyon/cave start roll and cannot predict that type."));
+                return 0;
+            }
             final long worldSeed = world.getSeed();
             final boolean legacy = gen.stable(GLOBE_LEGACY_SETTINGS_KEY);
             final BiomeSource rawSource = ((ChunkGeneratorAccessor) (Object) gen).globe$getRawBiomeSource();
-            final Climate.Sampler sampler = world.getChunkSource().randomState().sampler();
+            // 26.3: RandomState.sampler() became createClimateSampler(SamplerContext), and BiomeSource's
+            // point query moved onto a BiomeResolver built once from that sampler.
+            final Climate.Sampler sampler = world.getChunkSource().randomState()
+                    .createClimateSampler(SamplerContext.EMPTY_UNCACHED);
+            final net.minecraft.world.level.biome.BiomeResolver rawResolver = rawSource.createResolver(sampler);
             final int indexOffset = tunnels ? 1 : 0;
 
             CrevasseLocator.StartChunkPredicate predicate = (cx, cz) -> {
@@ -599,7 +629,7 @@ public final class LatitudeDevCommands {
                 // the biome swap and carver append ride, one 640-block region field), then the seeded roll,
                 // and the (priciest) raw-source sea probe only for roll-winning chunks. AND-chain,
                 // order-independent. Swapped OFF the old 64-block surface barrens fray so the locator agrees
-                // with the seam the crevasses actually append on (Peetsa 2026-07-20 "a transition").
+                // with the seam the crevasses actually append on (the maintainer 2026-07-20 "a transition").
                 double absLatDeg = Math.abs((double) minBlockZ) * 90.0 / radius;
                 if (absLatDeg <= GlacialBlend.BLEND_ONSET_DEG) {
                     return false;
@@ -608,10 +638,10 @@ public final class LatitudeDevCommands {
                     return false;
                 }
                 // The carver-biome lambda's exact sample: raw source field, min-corner quart, quart-Y 0.
-                Holder<Biome> carverBiome = rawSource.getNoiseBiome(
-                        QuartPos.fromBlock(minBlockX), 0, QuartPos.fromBlock(minBlockZ), sampler);
+                Holder<Biome> carverBiome = rawResolver.getNoiseBiome(
+                        QuartPos.fromBlock(minBlockX), 0, QuartPos.fromBlock(minBlockZ));
                 int rawCount = 0;
-                for (@SuppressWarnings("unused") Holder<ConfiguredWorldCarver<?>> ignored
+                for (@SuppressWarnings("unused") Holder<WorldCarver> ignored
                         : gen.getBiomeGenerationSettings(carverBiome).getCarvers()) {
                     rawCount++;
                 }
@@ -632,9 +662,9 @@ public final class LatitudeDevCommands {
                 if (!CrevasseLocator.carverStartsAt(worldSeed, baseIndex + indexOffset, cx, cz, probability)) {
                     return false;
                 }
-                Holder<Biome> seaProbe = rawSource.getNoiseBiome(
+                Holder<Biome> seaProbe = rawResolver.getNoiseBiome(
                         QuartPos.fromBlock(minBlockX), QuartPos.fromBlock(GLOBE_SEA_LEVEL_PROBE_Y),
-                        QuartPos.fromBlock(minBlockZ), sampler);
+                        QuartPos.fromBlock(minBlockZ));
                 return !seaProbe.is(BiomeTags.IS_OCEAN);
             };
 
@@ -695,7 +725,7 @@ public final class LatitudeDevCommands {
         return world.getBiome(pos).unwrapKey().map(k -> k.identifier().toString()).orElse("?");
     }
 
-    // --- S29 /latdev markGlacial (Peetsa 2026-07-20, verbatim: "None of this is working. Locate crevasse and
+    // --- S29 /latdev markGlacial (the maintainer 2026-07-20, verbatim: "None of this is working. Locate crevasse and
     // --- teleport just puts me in the same spot... there is no falling through the snow... To make it easier
     // --- just for dev, can you turn on a simple color filter for the trap crevasses -- maybe typing a command
     // --- causes them to glow green?") -------------------------------------------------------------------------
@@ -1177,7 +1207,7 @@ public final class LatitudeDevCommands {
 
     /**
      * Spawns a short vertical stack of bright-green {@code ParticleTypes.HAPPY_VILLAGER} particles (at the low,
-     * mid, and high Y) centred on a column -- the "glow green" marker the owner asked for (Peetsa 2026-07-20).
+     * mid, and high Y) centred on a column -- the "glow green" marker the owner asked for (the maintainer 2026-07-20).
      * {@link ServerLevel#sendParticles} (the {@code <T extends ParticleOptions> int sendParticles(T, double,
      * double, double, int, double, double, double, double)} overload, javap-verified on the 26.2 merged jar)
      * broadcasts to every player tracking the position; {@code HAPPY_VILLAGER} is a {@code SimpleParticleType}
@@ -1203,7 +1233,7 @@ public final class LatitudeDevCommands {
     private static void greenBeacon(ServerLevel world, int x, int yLo, int yHi, int z) {
         int lo = Math.min(yLo, yHi);
         int hi = Math.max(yLo, yHi);
-        // S32 (Peetsa 2026-07-21, TEST 122: markGlacial "located" roofs but "not showing on the world"): a
+        // S32 (the maintainer 2026-07-21, TEST 122: markGlacial "located" roofs but "not showing on the world"): a
         // one-shot particle burst fades in ~1 s -- gone before the chat is even closed. Enqueue the column
         // instead; tickGreenMarkers re-emits it every MARKER_REEMIT_TICKS for MARKER_LIFETIME_TICKS, so the
         // green glow LINGERS long enough to walk toward. Emit once immediately for instant feedback.
@@ -1264,7 +1294,7 @@ public final class LatitudeDevCommands {
     private static void emitMark(ServerLevel world, int x, int lo, int hi, int z, int kind) {
         double cx = x + 0.5;
         double cz = z + 0.5;
-        // S34 (Peetsa 2026-07-21, TEST 124: "I'm not seeing any green sparkles" while the scan CHAT listed 66
+        // S34 (the maintainer 2026-07-21, TEST 124: "I'm not seeing any green sparkles" while the scan CHAT listed 66
         // roofs): the plain sendParticles overload only renders to players within ~32 blocks, but an r=8 scan
         // finds traps up to ~136 blocks out — so the rare green pillars were real and invisible. The
         // (overrideLimiter=true, alwaysVisible=true) overload broadcasts at long range like vanilla's

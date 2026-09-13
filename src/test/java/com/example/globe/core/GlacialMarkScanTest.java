@@ -514,8 +514,10 @@ class GlacialMarkScanTest {
     @Test
     void realPhysicalComponentAdapterInvokesTheTestedInclusiveUpperBoundHelper() {
         byte[] bytes;
+        // The command adapter lives in the release-excluded dev package (artifact content policy,
+        // maintainer ruling 2026-08-04); the test classpath still carries it.
         try (var input = GlacialMarkScanTest.class.getClassLoader().getResourceAsStream(
-                "com/example/globe/LatitudeDevCommands.class")) {
+                "com/example/globe/dev/LatitudeDevCommands.class")) {
             assertNotNull(input, "compiled Latitude command adapter is available for wiring proof");
             bytes = input.readAllBytes();
         } catch (java.io.IOException exception) {

@@ -1,6 +1,7 @@
 package com.example.globe.dev;
 
 import com.example.globe.GlobeMod;
+import com.example.globe.dev.client.LatitudeClientDevCommands;
 import com.example.globe.dev.client.SeamAuditClientBridge;
 import com.example.globe.dev.client.audit.SeamAuditHarness;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -28,6 +29,7 @@ public final class LatitudeDevTestClientEntrypoint implements ClientModInitializ
         SeamAuditClientBridge.init();
         SeamAuditHarness.init();
         AutoCreateWorldProbe.maybeRegister();
+        LatitudeClientDevCommands.registerIfEnabled();
         GlobeMod.LOGGER.info("[latdev] packaged TEST client tooling initialized sequence={}",
                 LatitudeDevRuntime.identity().sequence());
     }

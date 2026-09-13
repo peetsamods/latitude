@@ -1,5 +1,8 @@
-package com.example.globe.client;
+package com.example.globe.dev.client;
 
+import com.example.globe.client.GlobeClientState;
+import com.example.globe.client.GlobeWarningOverlay;
+import com.example.globe.client.ZoneEnterTitleOverlay;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import java.util.Locale;
@@ -44,7 +47,7 @@ import net.minecraft.network.protocol.game.ServerboundChatCommandPacket;
  *
  * <p>Registration is only ever wired from {@code GlobeModClient} (a {@code ClientModInitializer}), so this is
  * unreachable on a dedicated server. The gating policy mirrors
- * {@link com.example.globe.LatitudeDevCommands#registerIfEnabled} exactly: skip in a dev environment (the full
+ * {@link com.example.globe.dev.LatitudeDevCommands#registerIfEnabled} exactly: skip in a dev environment (the full
  * dev command tree owns {@code /latdev} there), otherwise on for pre-release builds / when
  * {@code -Dlatitude.devCommands=true}, off for stable / when {@code -Dlatitude.devCommands=false}.
  */

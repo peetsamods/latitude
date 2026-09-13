@@ -25,7 +25,10 @@ public final class LatitudeDevTestEntrypoint implements ModInitializer {
         }
         CommandRegistrationCallback.EVENT.register(
                 (dispatcher, registryAccess, environment) ->
-                        LatitudeDevCommand.register(dispatcher));
+                        {
+                            LatitudeDevCommand.register(dispatcher);
+                            LatitudeDevCommands.register(dispatcher);
+                        });
         BiomePreviewHeadlessRunner.register();
         GlobeMod.LOGGER.info("[latdev] packaged TEST common tooling initialized sequence={}",
                 LatitudeDevRuntime.identity().sequence());
