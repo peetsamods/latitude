@@ -1,9 +1,10 @@
 # Changelog
 
-## Latitude 1.5.1-beta.4 (Minecraft 26.3)
+## Latitude 1.5.1-beta.5 (Minecraft 26.3)
 
 First Latitude release for Minecraft 26.3, built against 26.3 Pre-Release 2. It carries everything
-from Beta 4 on Minecraft 26.2 and adds Minecraft's new Dappled Forest to Latitude's climate map.
+from Beta 4 and Beta 5 on Minecraft 26.2 and adds Minecraft's new Dappled Forest to Latitude's
+climate map.
 **Beta:** shipped for testing before the 1.5.1 stable tag.
 
 ### New
@@ -34,7 +35,10 @@ from Beta 4 on Minecraft 26.2 and adds Minecraft's new Dappled Forest to Latitud
 - **A still background for the create-world screen.** A **Still** tab hangs under the bottom-left
   corner of Latitude's create-world panel, styled like the World and Settings tabs above it. Switch
   it on to swap the moving panorama for a flat dark backdrop; the choice is remembered between
-  sessions.
+  sessions. (Also in Beta 5 for 26.2, 26.1, 1.21.11 and 1.21.1.)
+- **Loading-screen phrases for 26.3.** Eleven new phrases about the Dappled Forest and the abandoned
+  camps join the rotating loading-screen text, and they show three times as often as the older
+  ones.
 
 ### Improved
 
