@@ -40,6 +40,23 @@ import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.example.globe.adapter.climate.ClimateAuthorityProvider;
+import com.example.globe.adapter.climate.ClimateSummaryProvider;
+import com.example.globe.adapter.climate.NoOpClimateSummaryProvider;
+import com.example.globe.adapter.geo.GeoAuthorityProvider;
+import com.example.globe.adapter.geo.GeoSummaryProvider;
+import com.example.globe.adapter.geo.NoOpGeoSummaryProvider;
+import com.example.globe.core.GlacialBlend;
+import com.example.globe.core.LatitudeV2Flags;
+import com.example.globe.core.PolarBarrensBand;
+import com.example.globe.core.PolarVegetationFade;
+import com.example.globe.core.climate.ClimateAuthority;
+import com.example.globe.core.climate.ClimateAuthorityParams;
+import com.example.globe.core.climate.ClimateClass;
+import com.example.globe.core.climate.ClimateSummary;
+import com.example.globe.core.geo.EdgeOceanRamp;
+import com.example.globe.core.geo.GeoAuthority;
+import com.example.globe.core.geo.GeoSummary;
 import com.example.globe.util.LatitudeBands;
 import com.example.globe.util.LatitudeMath;
 import com.example.globe.util.ValueNoise2D;
@@ -479,6 +496,8 @@ public final class LatitudeBiomes {
     private static volatile Climate.Sampler ACTIVE_CLIMATE_SAMPLER = null;
     private static volatile BiomeResolver ACTIVE_DONOR_RESOLVER = null;
     public static volatile int ACTIVE_RADIUS_BLOCKS = 0;
+    /** 2.0 P1: world shape (CLASSIC square globe / MERCATOR 2:1 face). Never affects latitude math. */
+    private static volatile GlobeShape ACTIVE_GLOBE_SHAPE = GlobeShape.CLASSIC;
     /** Sea level of the active generator; needed to ask a biome whether a column is cold enough to snow. */
     public static volatile int ACTIVE_SEA_LEVEL = 63;
     private static volatile boolean ACTIVE_WORLDGEN_AUTHORITY = false;
@@ -704,12 +723,88 @@ public final class LatitudeBiomes {
         return hasBiomeIdentifier(entry, Identifier.parse(id));
     }
 
+    // Phase 5 Slice B-8: the live biome registry, stashed so expandSourceCandidatePool (which only
+    // receives a Holder collection) can resolve globe:polar_barrens. volatile -- read from worldgen
+    // threads, written from the populate/dev/headless entry points before the pool is queried.
+    private static volatile Registry<Biome> SOURCE_POLICY_BIOME_REGISTRY;
+
+    /**
+     * Phase 5 Slice B-8 Polar Barrens: flag-on, append {@code globe:polar_barrens} to the biome-source
+     * candidate pool so the source's {@code possibleBiomes()} (hence vanilla's feature
+     * {@code retainAll(possibleBiomes)} and the headless SOURCE candidate pool) can carry/resolve it --
+     * otherwise the barrens would be stripped from decoration ({@code freeze_top_layer} never runs) and
+     * the Collection-twin final override could not resolve it (a structural atlas false-green). Idempotent
+     * (skips if already present or if no registry has been remembered yet) and byte-identical flag-off
+     * (returns the exact {@code basePool} reference unchanged).
+     */
     public static Collection<Holder<Biome>> expandSourceCandidatePool(Collection<Holder<Biome>> basePool) {
-        return basePool;
+        return expandSourceCandidatePool(basePool,
+                LatitudeV2Flags.POLAR_BARRENS_ENABLED, LatitudeV2Flags.GLACIAL_CAVES_V1_ENABLED);
     }
 
+    /**
+     * Flag-parameterized twin of {@link #expandSourceCandidatePool(Collection)} (house pattern: the
+     * static-final flags cannot be flipped inside the suite JVM, so tests pin every combo through the
+     * same single implementation the production overload folds the real flags into).
+     *
+     * <p><b>B-9 P2 amendment (Crew C):</b> {@code latitude.glacialCavesV1} additionally appends
+     * {@code globe:glacial_caves} -- same mechanism, same idempotence, same missing-entry degrade --
+     * so the underground biome's dressing features (icicles/drifts/pockets/lichen) enter the
+     * FeatureSorter graph and actually decorate. HONESTY NOTE: unlike the barrens append (a
+     * feature-list strict SUBSET, zero decoration-RNG shift by construction), glacial_caves carries
+     * NEW placed features, so flipping {@code glacialCavesV1} ON changes the sorted feature index
+     * (decoration salts) for newly generated chunks -- declared, accepted, NEW CHUNKS ONLY, and the
+     * flag's whole point. Every flag combo NOT involving glacialCavesV1-on is bitwise-unchanged from
+     * the pre-P2 behavior: barrens-off+glacial-off returns the exact {@code basePool} reference;
+     * barrens-on+glacial-off appends exactly the barrens as before.
+     */
+    static Collection<Holder<Biome>> expandSourceCandidatePool(Collection<Holder<Biome>> basePool,
+                                                               boolean barrensEnabled,
+                                                               boolean glacialCavesEnabled) {
+        if (!barrensEnabled && !glacialCavesEnabled) {
+            return basePool;
+        }
+        Registry<Biome> registry = SOURCE_POLICY_BIOME_REGISTRY;
+        if (registry == null) {
+            return basePool;
+        }
+        Collection<Holder<Biome>> pool = basePool;
+        if (barrensEnabled) {
+            pool = appendCandidateIfAbsent(pool, registry, POLAR_BARRENS_ID);
+        }
+        if (glacialCavesEnabled) {
+            pool = appendCandidateIfAbsent(pool, registry, GLACIAL_CAVES_ID);
+        }
+        return pool;
+    }
+
+    /** Append the registry's holder for {@code id} to the pool unless it is already present (idempotent
+     *  -- safe to wrap twice) or the registry lacks it (degrade to the unchanged pool, never throw --
+     *  the JSON schema tests + the boot-time datapack parse gate own that failure class). Returns the
+     *  SAME collection reference when nothing is appended, preserving the byte-identity contract. */
+    private static Collection<Holder<Biome>> appendCandidateIfAbsent(Collection<Holder<Biome>> pool,
+                                                                     Registry<Biome> registry, String id) {
+        Holder<Biome> holder = biomeOrNull(registry, id);
+        if (holder == null) {
+            return pool;
+        }
+        for (Holder<Biome> entry : pool) {
+            if (id.equals(biomeId(entry))) {
+                return pool;
+            }
+        }
+        List<Holder<Biome>> expanded = new ArrayList<>(pool);
+        expanded.add(holder);
+        return expanded;
+    }
+
+    /**
+     * Phase 5 Slice B-8: stash the live biome registry for {@link #expandSourceCandidatePool}. Called
+     * from the populate mixin, the dev command, and the headless runner before the source pool is
+     * queried. Harmless flag-off (only read by the flag-gated expansion).
+     */
     public static void rememberSourcePolicyBiomeRegistry(Registry<Biome> biomes) {
-        // no-op: compile gate only
+        SOURCE_POLICY_BIOME_REGISTRY = biomes;
     }
 
     public static Registry<Biome> activeBiomeRegistryOrNull() {
@@ -776,6 +871,20 @@ public final class LatitudeBiomes {
         OCEAN_DISTANCE_FIELD = new OceanDistanceField(seed);
         PALE_GARDEN_ANCHOR_CACHE = null;
         rebuildProvinceAuthority();
+        rebuildGeoAuthority();
+        rebuildClimateAuthority();
+        // Slice B (audit P1-2 / Lane 1 F6): the seed is the LAST setter in the world-load sequence
+        // (GlobeMod.initLatitudeBiomesForWorld: shape, then radius, then seed), so this is the one place
+        // where "the V2 authorities ended up inert for this world" is a FINAL state rather than the normal
+        // mid-load transient the rebuilds pass through. A literal typed seed of 0 is the classic trigger.
+        if ((LatitudeV2Flags.GEO_V2_ENABLED || LatitudeV2Flags.CLIMATE_V2_ENABLED)
+                && seed == 0L && ACTIVE_RADIUS_BLOCKS > 0
+                && !V2_INERT_WARNED.get() && V2_INERT_WARNED.compareAndSet(false, true)) {
+            LOGGER.warn("[Latitude] geoV2/climateV2 enabled but the authorities are INERT for this world "
+                    + "(seed=0, zRadius={}): a literal seed-0 world never arms geography, so terrainV2 and "
+                    + "V2 biome features silently no-op for this world's whole life. Type a nonzero seed "
+                    + "(or leave the seed field blank for a random one) to arm them.", ACTIVE_RADIUS_BLOCKS);
+        }
     }
 
     /**
@@ -897,6 +1006,8 @@ public final class LatitudeBiomes {
         PALE_GARDEN_ANCHOR_CACHE = null;
         PROVINCE_AUTHORITY = null;
         rebuildProvinceAuthority();
+        rebuildGeoAuthority();
+        rebuildClimateAuthority();
         boolean exactV2 = ACTIVE_WORLDGEN_POLICY == WorldgenPolicyVersion.PROVIDER_TICKET_V2_COVERAGE;
         boolean sizeAwareV3 = (ACTIVE_WORLDGEN_POLICY
                 == WorldgenPolicyVersion.PROVIDER_TICKET_V3_SIZE_AWARE_COVERAGE
@@ -997,6 +1108,8 @@ public final class LatitudeBiomes {
         ACTIVE_RANDOM_STATE = null;
         ACTIVE_CLIMATE_SAMPLER = null;
         ACTIVE_DONOR_RESOLVER = null;
+        rebuildGeoAuthority();
+        rebuildClimateAuthority();
     }
 
     public static boolean hasActiveWorldgenAuthority() {
@@ -1497,12 +1610,16 @@ public final class LatitudeBiomes {
         ACTIVE_RADIUS_BLOCKS = radius;
         PALE_GARDEN_ANCHOR_CACHE = null;
         rebuildProvinceAuthority();
+        rebuildGeoAuthority();
+        rebuildClimateAuthority();
     }
 
     public static void setActiveRadiusBlocks(int radiusBlocks) {
         ACTIVE_RADIUS_BLOCKS = Math.max(0, radiusBlocks);
         PALE_GARDEN_ANCHOR_CACHE = null;
         rebuildProvinceAuthority();
+        rebuildGeoAuthority();
+        rebuildClimateAuthority();
     }
 
     public static int getActiveRadiusBlocks() {
@@ -1511,6 +1628,1112 @@ public final class LatitudeBiomes {
 
     public static int getActiveSeaLevel() {
         return ACTIVE_SEA_LEVEL;
+    }
+
+    // ==============================================================================================
+    // 2.0 worldgen surface re-applied onto the 26.3 (1.5-line) pick pipeline.
+    // Plan: 2.0-26.3 slice 3, patches P1-P8 (maintainer ruling, 2026-09-12). Every member below is
+    // lifted verbatim from the 2.0 line unless a comment says otherwise; the pipeline call sites live
+    // in BOTH pick() overloads (registry-backed and collection-backed).
+    // ==============================================================================================
+
+
+    // ---- [2.0 re-apply] P1 Mercator world shape ----
+
+    // --- Mercator world shape (Phase 1: wider world, more biomes per band) ---
+    // CLASSIC = square globe (X radius == Z radius). MERCATOR = 2:1 face: the playable X extent is
+    // ASPECT * the Z radius, so each latitude band is twice as long E-W. We deliberately do NOT stretch
+    // the biome map (no coordinate transform): the band is twice as wide and biome regions stay normal
+    // size, so each band holds ~2x more distinct biomes (the maintainer 2026-06-23: "more biome representation by
+    // widening the world"). pick() is therefore UNCHANGED — a Mercator world produces the same biome at
+    // any (X,Z) as Classic would; it is simply a bigger world. Only the border + spawn X extent widen and
+    // the pole hazard is re-denominated to the Z radius. Latitude stays |Z|/Z_RADIUS. Classic is byte-identical.
+    public enum GlobeShape { CLASSIC, MERCATOR }
+
+    /** Phase 1 fixed aspect: Mercator worlds are 2:1 (X half-extent = 2x the Z radius). */
+    public static final double MERCATOR_ASPECT = 2.0;
+
+    public static void setGlobeShape(GlobeShape shape) {
+        ACTIVE_GLOBE_SHAPE = (shape == null) ? GlobeShape.CLASSIC : shape;
+        rebuildGeoAuthority(); // xRadius depends on shape (Mercator = 2x zRadius)
+        rebuildClimateAuthority();
+    }
+
+    public static GlobeShape getGlobeShape() {
+        return ACTIVE_GLOBE_SHAPE;
+    }
+
+    public static boolean isMercator() {
+        return ACTIVE_GLOBE_SHAPE == GlobeShape.MERCATOR;
+    }
+
+    /** Null/blank-safe parse; unknown values fall back to CLASSIC (mirrors worldgen-policy handling). */
+    public static GlobeShape shapeFromString(String s) {
+        if (s == null || s.isBlank()) return GlobeShape.CLASSIC;
+        try {
+            return GlobeShape.valueOf(s.trim().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return GlobeShape.CLASSIC;
+        }
+    }
+
+    public static String shapeToString(GlobeShape s) {
+        return (s == null ? GlobeShape.CLASSIC : s).name().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    /**
+     * X authority for the world border, spawn search, and E-W warning. In Mercator the playable X extent
+     * is ASPECT * the Z radius; in Classic it equals the Z radius. Latitude/pole math must NOT use this —
+     * it uses {@link #getActiveRadiusBlocks()} (the Z radius) so poles stay at the geographic pole.
+     */
+    public static int getActiveXRadiusBlocks() {
+        int z = ACTIVE_RADIUS_BLOCKS;
+        return isMercator() ? (int) Math.round(z * MERCATOR_ASPECT) : z;
+    }
+
+    // ---- [2.0 re-apply] P2 GeoAuthority / ClimateAuthority providers ----
+
+    // Phase 2 GeoAuthority (opt-in via latitude.geoV2.enabled). Rebuilt on seed/radius/shape change,
+    // but ONLY when the flag is on; otherwise it stays the no-op provider so flag-off is inert.
+    private static volatile GeoSummaryProvider GEO_V2_PROVIDER = NoOpGeoSummaryProvider.INSTANCE;
+    private static volatile ClimateSummaryProvider CLIMATE_V2_PROVIDER = NoOpClimateSummaryProvider.INSTANCE;
+
+    private static void rebuildGeoAuthority() {
+        if (!LatitudeV2Flags.GEO_V2_ENABLED) {
+            GEO_V2_PROVIDER = NoOpGeoSummaryProvider.INSTANCE;
+            return;
+        }
+        long seed = WORLD_SEED;
+        int zRadius = ACTIVE_RADIUS_BLOCKS;
+        if (seed != 0L && zRadius > 0) {
+            int xRadius = getActiveXRadiusBlocks();
+            GEO_V2_PROVIDER = new GeoAuthorityProvider(new GeoAuthority(seed, zRadius, xRadius));
+        } else {
+            // Slice B (audit P1-1, refutation-confirmed stale-provider leak): the old silent fall-through
+            // KEPT whatever provider was already here, so a seed-0/zero-radius world loaded after a
+            // real-seed world in the same JVM silently served the earlier world's geography (world B's own
+            // load even re-seeds the provider with world A's seed via the shape/radius setters before
+            // setWorldSeed(0) lands on this branch). Reset explicitly: an inert world must read NEUTRAL,
+            // never a stale world's field. The warn for the FINAL inert state lives in setWorldSeed(), not
+            // here -- this branch is hit transiently mid-sequence on every normal world load (shape and
+            // radius are set before the seed).
+            GEO_V2_PROVIDER = NoOpGeoSummaryProvider.INSTANCE;
+        }
+    }
+
+    private static void rebuildClimateAuthority() {
+        if (!LatitudeV2Flags.CLIMATE_V2_ENABLED) {
+            CLIMATE_V2_PROVIDER = NoOpClimateSummaryProvider.INSTANCE;
+            return;
+        }
+        long seed = WORLD_SEED;
+        int zRadius = ACTIVE_RADIUS_BLOCKS;
+        if (seed != 0L && zRadius > 0) {
+            int xRadius = getActiveXRadiusBlocks();
+            // ClimateAuthority consumes a GeoAuthority; build a dedicated one (independent of the geoV2 flag).
+            CLIMATE_V2_PROVIDER = new ClimateAuthorityProvider(
+                    new ClimateAuthority(new GeoAuthority(seed, zRadius, xRadius)));
+        } else {
+            // Slice B: same stale-provider reset as rebuildGeoAuthority (see its comment).
+            CLIMATE_V2_PROVIDER = NoOpClimateSummaryProvider.INSTANCE;
+        }
+    }
+
+    // ---- [2.0 re-apply] P2 world-teardown reset + inert-warn latch ----
+
+    /**
+     * Slice B (audit P1-1): world-teardown reset for the V2 provider statics and the seed/radius they key
+     * on. Before this, NOTHING reset these on unload -- safety rested entirely on the next world's load
+     * overwriting them, which the seed-0/zero-radius decline path historically never did (see
+     * rebuildGeoAuthority). Called from GlobeMod's SERVER_STOPPED handler. Scoped deliberately to the V2
+     * statics: the pre-2.0 statics (province authority, ocean field, shape cache) are unconditionally
+     * overwritten by every world's own load sequence and have no decline path, so they keep the existing
+     * next-load-overwrite behavior.
+     */
+    public static void resetWorldgenStateForServerStop() {
+        WORLD_SEED = 0L;
+        ACTIVE_RADIUS_BLOCKS = 0;
+        GEO_V2_PROVIDER = NoOpGeoSummaryProvider.INSTANCE;
+        CLIMATE_V2_PROVIDER = NoOpClimateSummaryProvider.INSTANCE;
+        LOGGER.info("[Latitude] V2 worldgen statics reset on server stop (providers -> NoOp, seed/radius cleared).");
+    }
+
+    // Slice B (audit P1-2): one-shot latch for the "authorities inert for this world" warn above. Re-armed
+    // per world via resetV2InertWarnLatchForNewWorld(), chained from
+    // TerrainRouterWrapping.resetLogLatchesForNewWorld() (which GlobeMod calls on each overworld load,
+    // BEFORE the shape/radius/seed setters run -- so the warn can fire freshly for each world).
+    private static final java.util.concurrent.atomic.AtomicBoolean V2_INERT_WARNED =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    public static void resetV2InertWarnLatchForNewWorld() {
+        V2_INERT_WARNED.set(false);
+    }
+
+    // ---- [2.0 re-apply] P2 terrain-bias liveness ----
+
+    /**
+     * Slice C (audit P2-1 / Lane 6 "drowned land"): true only when the Phase 4 terrain bias is actually
+     * moving terrain RIGHT NOW -- terrainV2 + geoV2 armed, strength nonzero, and the provider genuinely
+     * real (not the NoOp placeholder). Gates the sunk-land mirror veto in pick() so that flag-off runs AND
+     * armed-but-strength-0 runs stay byte-identical to pre-Phase-4 biome behavior (the S=0 identity gate).
+     * Public since Slice C-2: GlobeMod's spawn search also consults it to exclude the projection edge band
+     * (TEST 27 finding 1b).
+     */
+    public static boolean terrainBiasActivelyBiasing() {
+        return LatitudeV2Flags.TERRAIN_V2_ENABLED
+                && LatitudeV2Flags.GEO_V2_ENABLED
+                && LatitudeV2Flags.TERRAIN_V2_STRENGTH != 0.0
+                && GEO_V2_PROVIDER instanceof GeoAuthorityProvider;
+    }
+
+    // ---- [2.0 re-apply] P2 terrain-wrapper provider accessor ----
+
+    /**
+     * Read-only view of the current GeoAuthority-backed provider for the Phase 4 terrain-bias wrapper
+     * ({@code com.example.globe.terrain.GeoTerrainBiasFunction}). Kept as a narrow accessor so the
+     * {@code GEO_V2_PROVIDER} field stays {@code private static volatile}; the wrapper must read it
+     * lazily per {@code compute()} call (NOT capture it once), because this volatile static may not hold
+     * its final per-world value at the instant a {@code RandomState} is constructed early in world load
+     * (see design {@code docs/design/terrain-wrapper-design-20260705.md} §1.1). While
+     * {@code latitude.geoV2.enabled} is false this returns {@link com.example.globe.adapter.geo.NoOpGeoSummaryProvider}
+     * (land01 == 0.0 for every column) -- the terrain wrapper's own {@code GEO_V2_ENABLED} gate is what
+     * keeps that NEUTRAL/all-ocean trap from ever biasing terrain.
+     */
+    public static GeoSummaryProvider geoProviderForTerrain() {
+        return GEO_V2_PROVIDER;
+    }
+
+    // ---- [2.0 re-apply] P5 polar small-vegetation fade ----
+
+    // --- Polar small-vegetation fade (the maintainer 2026-07-10; latitude.polarVegetationFade.enabled) ---
+    // Coherent province-scale noise so the thinning frays in blobs (Art VI -- no hard ring), keyed on
+    // a dedicated salt so it doesn't correlate with any other keep-noise field.
+    private static final long POLAR_VEG_FADE_SALT = 0x706F6C766567L; // "polveg"
+    private static final int POLAR_VEG_FADE_SCALE_BLOCKS = 48;
+
+    /**
+     * Should a small-vegetation feature placement at (blockX, blockZ) be stripped by the polar fade?
+     * World-side wiring for {@link com.example.globe.mixin.PolarVegetationFadeGuardMixin}: derives
+     * {@code |lat|} from Z (world-size-safe degree threshold, both hemispheres, both world shapes since
+     * latitude is always {@code |Z|/zRadius}), asks the pure {@link PolarVegetationFade} for the keep
+     * chance, and -- only in the fading band -- frays the decision on a coherent {@link ValueNoise2D}
+     * field. Returns {@code false} (keep, byte-identical) whenever the world is not an armed globe world
+     * or the column is below the fade onset; {@code true} (strip) at/above the pole cap.
+     */
+    public static boolean polarVegetationFadeStrips(int blockX, int blockZ) {
+        int radius = getActiveRadiusBlocks();
+        if (radius <= 0) {
+            return false;
+        }
+        double absLatDeg = Math.abs((double) blockZ) * 90.0 / radius; // radius >= 1 here (guarded above)
+        double keep = PolarVegetationFade.keepChance01(absLatDeg);
+        if (keep >= 1.0) {
+            return false; // below onset: bitwise-untouched
+        }
+        if (keep <= 0.0) {
+            return true;  // pole cap: fully stripped
+        }
+        double noise = ValueNoise2D.sampleBlocks(WORLD_SEED ^ POLAR_VEG_FADE_SALT,
+                blockX, blockZ, POLAR_VEG_FADE_SCALE_BLOCKS);
+        return PolarVegetationFade.stripByNoise(keep, noise);
+    }
+
+    /**
+     * S11(c) FIREFLY BUSH BAN world-side wiring (same guard mixin, same veg-fade flag family): true iff a
+     * {@code firefly_bush} placement at (blockX, blockZ) is banned -- armed globe world AND
+     * {@code |lat| >= }{@link PolarVegetationFade#FIREFLY_BAN_DEG} (50 deg, SUBPOLAR onset). Deliberately
+     * un-frayed (a scattered decorative plant has no contiguous seam to soften) and firefly-SPECIFIC: the
+     * caller only consults this for the firefly block, so every other placement keeps the ordinary 76/82
+     * fade. Non-globe worlds return false (vanilla untouched).
+     */
+    public static boolean fireflyBanApplies(int blockX, int blockZ) {
+        int radius = getActiveRadiusBlocks();
+        if (radius <= 0) {
+            return false;
+        }
+        return PolarVegetationFade.bansFirefly(Math.abs((double) blockZ) * 90.0 / radius);
+    }
+
+    // ---- [2.0 re-apply] P6/P7 polar barrens + glacial-caves world-side wiring ----
+
+    // --- Phase 5 Slice B-8 Polar Barrens world-side wiring (latitude.polarBarrens.enabled) ---------
+
+    /**
+     * Coherent barrens-vs-snowy_plains fray sample in {@code [0,1)} at (blockX, blockZ). Shared by the
+     * placement final override ({@code pick()} twins) and the surface mixin so the ground and the biome
+     * agree on where the barrens are. Dedicated salt (Art VI, no cell-hash) at province scale.
+     */
+    public static double polarBarrensFrayNoise(int blockX, int blockZ) {
+        return ValueNoise2D.sampleBlocks(WORLD_SEED ^ POLAR_BARRENS_FRAY_SALT,
+                blockX, blockZ, POLAR_BARRENS_FRAY_SCALE_BLOCKS);
+    }
+
+    /**
+     * Surface-block substitution kind for {@link com.example.globe.mixin.PolarBarrensSurfaceMixin} at
+     * (blockX, blockZ) in an armed globe world of Z radius {@code radius}:
+     * {@link PolarBarrensBand#SURFACE_KIND_NONE} (0, leave unchanged -- flag off, not an armed world, or
+     * not a barrens column), {@code SURFACE_KIND_SNOW_BLOCK} (1), {@code SURFACE_KIND_POWDER_SNOW} (2),
+     * or {@code SURFACE_KIND_ICE} (3). Gated identically to placement (same flag, same latitude+fray
+     * decision) so the ground matches the biome; the powder pockets and ice patches ride independent
+     * coherent fields. Flag-off / below-onset / off-fray all return 0 (byte-identical).
+     *
+     * <p>NB (design A6): this keys on latitude+fray, NOT on the resolved biome, so on the fray it also
+     * whitens the incidental dirt of the rare ice_spikes accent and mountain columns that stayed
+     * non-barrens -- cosmetically harmless (those surfaces are snow/ice/stone anyway) and consistent with
+     * the AlpineSurfaceMixin latitude/height idiom this clones.
+     *
+     * <p>This decision is COLUMN-level (x,z). The VERTICAL confinement -- surface skin only, never the
+     * living underground (ore_dirt/ore_gravel veins) or underwater floors, now that the barrens biome
+     * carries snowy_plains' full underground feature subset -- is the caller's job via
+     * {@link PolarBarrensBand#isSurfaceSkin(int, int, int)} on the chunk's WG heightmaps (see
+     * {@code PolarBarrensSurfaceMixin}).
+     */
+    public static int polarBarrensSurfaceKind(int blockX, int blockZ, int radius) {
+        if (!LatitudeV2Flags.POLAR_BARRENS_ENABLED || radius <= 0) {
+            return PolarBarrensBand.SURFACE_KIND_NONE;
+        }
+        double absLatDeg = Math.abs((double) blockZ) * 90.0 / radius;
+        if (!PolarBarrensBand.isBarrens(absLatDeg, polarBarrensFrayNoise(blockX, blockZ))) {
+            return PolarBarrensBand.SURFACE_KIND_NONE;
+        }
+        double powder = ValueNoise2D.sampleBlocks(WORLD_SEED ^ POLAR_BARRENS_POWDER_SALT,
+                blockX, blockZ, POLAR_BARRENS_POWDER_SCALE_BLOCKS);
+        double ice = ValueNoise2D.sampleBlocks(WORLD_SEED ^ POLAR_BARRENS_ICE_SALT,
+                blockX, blockZ, POLAR_BARRENS_ICE_SCALE_BLOCKS);
+        return PolarBarrensBand.surfaceKind(powder, ice);
+    }
+
+    /**
+     * B-9a GLACIER BODY: the packed-ice body thickness (blocks, below the 10-block snow cap) for the column
+     * at (blockX, blockZ), or 0 when the column gets no glacier -- flag off, unarmed world, or not a barrens
+     * column (the SAME latitude+fray decision as {@link #polarBarrensSurfaceKind}, so the glacier never
+     * outruns the barrens ground/biome). The thickness rides {@code PolarBarrensBand.glacierIceBodyBlocks}
+     * (band-fraction ramp 86-&gt;88, "the glacier thickens in") wobbled on a dedicated coherent depth field
+     * (Art VI, no cell-hash). Consumed by {@code PolarBarrensGlacierMixin} at the end of the surface stage.
+     */
+    public static int polarBarrensGlacierIceBlocks(int blockX, int blockZ, int radius) {
+        if (!LatitudeV2Flags.POLAR_BARRENS_ENABLED || radius <= 0) {
+            return 0;
+        }
+        double absLatDeg = Math.abs((double) blockZ) * 90.0 / radius;
+        if (!PolarBarrensBand.isBarrens(absLatDeg, polarBarrensFrayNoise(blockX, blockZ))) {
+            return 0;
+        }
+        double depthNoise = ValueNoise2D.sampleBlocks(WORLD_SEED ^ POLAR_BARRENS_GLACIER_SALT,
+                blockX, blockZ, POLAR_BARRENS_GLACIER_SCALE_BLOCKS);
+        return PolarBarrensBand.glacierIceBodyBlocks(absLatDeg, depthNoise);
+    }
+
+    /** S38 (the maintainer 2026-07-23, TEST 128: "notice how uniform everything looks"): per-BLOCK speckle hash for
+     *  the ice body's material variety -- deterministic in (seed, x, y, z), Art VI (reuses the world seed +
+     *  a dedicated salt through the existing hash01; no new noise field). The mixin maps the unit value to
+     *  packed_ice majority / snow_block pockets / blue_ice flecks. */
+    public static double polarBarrensBodySpeckle01(int blockX, int blockY, int blockZ) {
+        return com.example.globe.util.LatitudeMath.hash01(
+                WORLD_SEED ^ POLAR_BARRENS_BODY_SPECKLE_SALT, blockX, blockZ, blockY);
+    }
+
+    private static final long POLAR_BARRENS_BODY_SPECKLE_SALT = 0x53_38_5350_45434BL; // "S8SPECK"
+
+    /**
+     * S37 SUB-Y0 ICE DIFFUSION (the maintainer 2026-07-23, TEST 127: "caverns almost all ice until sub-Y0, where
+     * there should be about a 10 block diffusion of the ice into stone/deepslate") -- the S24 permafrost
+     * stratum RELOCATED below Y0 now that the body carries solid ice down to {@link PolarBarrensBand#ICE_BODY_FLOOR_Y}:
+     * how many blocks BELOW Y0 this column's packed-ice fingering reaches
+     * (0..{@link PolarBarrensBand#PERMAFROST_BAND_BLOCKS}). REUSES the exact glacier depth-wobble field
+     * ({@code POLAR_BARRENS_GLACIER_SALT} -- the same sample that undulates the body sole and warps the
+     * blue-ice line, per Art VI's no-new-noise discipline), so the diffusion fingers plunge deepest precisely
+     * where the glacier body is thickest, reading as one coherent ice mass. Consumed flag-gated by
+     * {@code PolarBarrensGlacierMixin} at the end of the surface stage, immediately below the body loop;
+     * worldgen-stage, deterministic, NEW CHUNKS ONLY. The caller ANDs the barrens-column decision (this is
+     * only invoked once {@link #polarBarrensGlacierIceBlocks} has confirmed the column is barrens), so a
+     * non-barrens column is never given diffusion. (S37 rename: was {@code polarBarrensPermafrostDepthBelowSole}.)
+     */
+    public static int polarBarrensPermafrostDepthBelowY0(int blockX, int blockZ) {
+        double depthNoise = ValueNoise2D.sampleBlocks(WORLD_SEED ^ POLAR_BARRENS_GLACIER_SALT,
+                blockX, blockZ, POLAR_BARRENS_GLACIER_SCALE_BLOCKS);
+        // Sweep-carried fix: the curve's reach is non-increasing in its input while the glacier BODY is
+        // thickest at HIGH noise -- passing the raw sample would make fingers plunge deepest under the
+        // THINNEST glacier. Inverting the sample at this seam keeps the two coherent: thick body (high noise)
+        // -> deep diffusion. Same field, same determinism; NaN still degrades inside the pure curve.
+        return PolarBarrensBand.permafrostIceDepthBelowY0(1.0 - depthNoise);
+    }
+
+    /**
+     * B-9a SEA-FREEZE FRAY: coherent fray sample in {@code [0,1)} for the 85-deg polar water-freeze line
+     * (dedicated salt, coastline-front scale) -- consumed flag-gated by {@code BiomePolarWaterFreezeMixin}
+     * through {@code PolarWaterFreezeRule.freezesWaterFrayed}, so the razor seam the owner screenshotted
+     * (JourneyMap + in-world) becomes a wandering +-1-deg front. Art VI clean (ValueNoise2D, never
+     * floorDiv/cell-hash).
+     */
+    public static double polarSeaFreezeFrayNoise(int blockX, int blockZ) {
+        return ValueNoise2D.sampleBlocks(WORLD_SEED ^ POLAR_SEA_FREEZE_FRAY_SALT,
+                blockX, blockZ, POLAR_SEA_FREEZE_FRAY_SCALE_BLOCKS);
+    }
+
+    // --- B-9 P2 GLACIAL CAVES KEYSTONE (Crew C, owner flight TEST 113, 2026-07-19: caves "a little
+    // --- underwhelming" -- the reserved underground slot gets its identity) ---------------------------
+
+    /**
+     * B-9 P2: the {@code globe:glacial_caves} underground biome id -- the datapack biome at
+     * {@code data/globe/worldgen/biome/glacial_caves.json}, placed EXCLUSIVELY by the depth-conditioned
+     * per-quart swap in {@code ChunkGeneratorPopulateBiomesMixin} (never by {@code pick()}, never by the
+     * atlas samplers -- the atlas is depth-blind by design, so this biome is invisible to gate-1/gate-2
+     * maps; the flight is its proof surface). Registers UNCONDITIONALLY like {@link #POLAR_BARRENS_ID}
+     * (a flag-on-then-off world must never reference a missing biome).
+     */
+    public static final String GLACIAL_CAVES_ID = "globe:glacial_caves";
+
+    /**
+     * B-9 P2: the fixed absolute-Y ceiling (EXCLUSIVE) of the glacial-caves depth band. Quart cells whose
+     * center block-Y sits BELOW this line on a barrens-band land column resolve to
+     * {@code globe:glacial_caves}; everything at/above it keeps today's surface pick order bitwise
+     * (the surface-quart identity pin). 48 is the design-duo pick: below the barrens glacier's snow cap
+     * everywhere (cap bottom = surface-10, median polar land surface Y 71-78 per the B-9 atlas ground
+     * truth) and quart-aligned (48 = quart 12, so a quart cell -- center Y = (q&lt;&lt;2)+2 -- is wholly on one
+     * side and the biome boundary never dithers inside a quart). Populate runs PRE-NOISE, so this line is
+     * deliberately pure lat/Y math -- NO heightmaps, NO block reads (the same constraint the carver seam
+     * documents); the rare land column whose surface dips below 48 (none observed in the 82-90 deg atlas
+     * distribution; sea columns are excluded by the ocean gate) would show the cave biome at its floor,
+     * accepted as the price of determinism.
+     */
+    public static final int GLACIAL_CAVES_CEILING_Y = 48;
+
+    /**
+     * B-9 P2: the pure per-cell Y prefilter of the glacial-caves swap -- true iff the quart cell's block-Y
+     * lies below {@link #GLACIAL_CAVES_CEILING_Y}. Split out (rather than inlined in the mixin) so the
+     * unit suite can PIN the surface-quart identity law: any cell at/above the ceiling can NEVER swap,
+     * whatever the flag/band/noise say, so the surface pick order is untouched by construction.
+     *
+     * <p><b>S25 (owner TEST 117, 2026-07-20: caves "should extend down further into the sub y zero zone...
+     * it still seems like it ends pretty abruptly"):</b> this prefilter has <b>NO lower bound</b> -- the
+     * swap already reaches the WORLD BOTTOM ({@code isBelowGlacialCaveCeiling(-64) == true}), so under a
+     * true barrens-band land column EVERY quart below Y48 (deepslate zone included) resolves to
+     * {@code globe:glacial_caves}, with only the mixin's {@code deep_dark} quart exemption carved out (and
+     * {@code dripstone_caves}/{@code lush_caves} quarts ARE swapped, not merely stone-biome quarts -- the
+     * swap runs BEFORE the lush veto and its sole exemption is {@code !isDeepDark(current)}). The owner's
+     * "abrupt end" is therefore NOT a swap floor (the biome identity is full-depth already) but the ice
+     * DRESSING thinning out. S37 (owner TEST 127) closes this differently: the glacier body
+     * ({@code PolarBarrensGlacierMixin}, glacier scope -- not this pass) now carries SOLID ICE all the way
+     * down to Y0 ({@code PolarBarrensBand.ICE_BODY_FLOOR_Y}), and a ~10-block diffusion band
+     * ({@code PolarBarrensBand.PERMAFROST_BAND_BLOCKS}) fingers ice into the stone below Y0 -- so the deep
+     * caverns read glacial in their walls by construction; the swap itself still needs no change.
+     */
+    public static boolean isBelowGlacialCaveCeiling(int blockY) {
+        return blockY < GLACIAL_CAVES_CEILING_Y;
+    }
+
+    // --- S28 UNDERGROUND GLACIAL BLEND world-side wiring (the maintainer 2026-07-20: "a transition, not a hard
+    // --- switch") -- the ONE shared seam the glacial-caves biome swap, the crevasse/tunnel carver append
+    // --- and the /latdev locator all ride, so none outruns another and the underground blends coherently.
+
+    /**
+     * S28: coherent glacial-blend REGION sample in {@code [0,1)} at (blockX, blockZ) -- a NEW dedicated
+     * salted field at REGION scale (640-block cells), NOT the 64-block surface barrens fray. The wide cells
+     * make the underground-glacial transition read as long natural stretches of geography rather than
+     * chunk-confetti (the S27 fray diagnosis). Follows the salted-field idiom exactly
+     * ({@link #polarBarrensFrayNoise} precedent); Art VI clean (ValueNoise2D, no floorDiv/cell-hash).
+     */
+    public static double glacialBlendRegionNoise(int blockX, int blockZ) {
+        return ValueNoise2D.sampleBlocks(WORLD_SEED ^ GLACIAL_BLEND_REGION_SALT,
+                blockX, blockZ, GLACIAL_BLEND_REGION_SCALE_BLOCKS);
+    }
+
+    /**
+     * S28: the SHARED underground-glacial column decision (latitude + blend region field), independent of
+     * flag and ocean-family. This is THE law the three underground consumers ride identically:
+     * <ul>
+     *   <li>the {@code globe:glacial_caves} biome swap (via {@link #glacialCaveColumnApplies}, which ANDs
+     *       the flag + ocean gate in front),</li>
+     *   <li>the {@code globe:crevasse}/{@code globe:glacial_tunnels} carver append
+     *       ({@code NoiseChunkGeneratorCarveMixin}), and</li>
+     *   <li>the {@code /latdev locateCrevasse|locateTunnel} predicate ({@code LatitudeDevCommands}).</li>
+     * </ul>
+     * so biome, crevasses and locator agree on the exact same seam (the {@code GlacialCavesBiomeLawTest}
+     * cross-pin asserts this equivalence). True iff armed radius AND
+     * {@link GlacialBlend#undergroundGlacial} says the column is glacial for its {@code |lat|} and the
+     * region-noise sample. Cheap-out: at/below {@link GlacialBlend#BLEND_ONSET_DEG} the threshold is 0, so
+     * the whole non-polar world exits on pure math with NO noise sample (mirrors the old barrens-band
+     * pure-math exit that this replaces). Radius {@code <= 0} (unarmed JVM) returns false.
+     */
+    public static boolean glacialBlendColumnApplies(int blockX, int blockZ, int radius) {
+        if (radius <= 0) {
+            return false;
+        }
+        double absLatDeg = Math.abs((double) blockZ) * 90.0 / radius;
+        if (absLatDeg <= GlacialBlend.BLEND_ONSET_DEG) {
+            return false; // below the blend onset: pure-math exit, no region sample.
+        }
+        return GlacialBlend.undergroundGlacial(absLatDeg, glacialBlendRegionNoise(blockX, blockZ));
+    }
+
+    /**
+     * B-9 P2: the COLUMN half of the glacial-caves swap decision -- the production entry (reads the
+     * static {@code latitude.glacialCavesV1} flag; {@code ChunkGeneratorPopulateBiomesMixin} calls this
+     * once per quart column and memoizes). The full cell decision is
+     * {@code isBelowGlacialCaveCeiling(blockY) && glacialCaveColumnApplies(...)} minus the mixin's
+     * deep-dark exemption (deep_dark cells pass through untouched -- ancient-city/sculk placement is
+     * biome-tied and the "underground stays alive" law forbids stripping a vanilla underground landmark
+     * from the pole; documented deviation from the flat prescription).
+     */
+    public static boolean glacialCaveColumnApplies(int blockX, int blockZ, int radius,
+                                                   boolean columnIsOceanFamily) {
+        return glacialCaveColumnApplies(blockX, blockZ, radius, columnIsOceanFamily,
+                LatitudeV2Flags.GLACIAL_CAVES_V1_ENABLED);
+    }
+
+    /**
+     * B-9 P2: flag-parameterized twin of {@link #glacialCaveColumnApplies(int, int, int, boolean)} (the
+     * house pattern -- {@code applyPolarBarrensOverride} precedent: the static-final flag cannot be
+     * flipped inside the suite JVM, so tests pin BOTH halves through the same single implementation).
+     * True iff: enabled, armed radius, NOT an ocean-family column (the sacred sea keeps its vanilla
+     * underground -- the caller answers ocean-ness from the SAME per-column source sample
+     * ({@code base} at {@link #SURFACE_CLASSIFY_Y}) the resolver already caches, the populate seam's
+     * established column-identity idiom; the carver seam's probe reads Y63 instead, both accepted forms
+     * of one shared question), and the column lands glacial-side of the EXACT shared underground blend
+     * decision the crevasses and locator ride ({@link #glacialBlendColumnApplies} ->
+     * {@link GlacialBlend#undergroundGlacial} on the 640-block region field, wide 78-86 deg band).
+     *
+     * <p><b>S28 SWAP (the maintainer 2026-07-20, "a transition, not a hard switch"):</b> the underground family
+     * moved OFF the 64-block surface barrens fray ({@link PolarBarrensBand#isBarrens}, chunk-scale coin
+     * flips at the 82-84 test latitudes -- the S27 fray diagnosis) and ONTO the wide, coherent-region
+     * blend. The SURFACE barrens (biome id, glacier body, veg fade, water freeze) is deliberately NOT
+     * swapped -- it keeps its 82-84 fray. So a column can be glacial UNDERGROUND (78-86 blend) while its
+     * SURFACE is still {@code snowy_plains} in the 78-82 lead-in; the underground identity onsets first and
+     * blends in, exactly the owner's gradual transition.
+     */
+    public static boolean glacialCaveColumnApplies(int blockX, int blockZ, int radius,
+                                                   boolean columnIsOceanFamily, boolean enabled) {
+        if (!enabled || radius <= 0 || columnIsOceanFamily) {
+            return false;
+        }
+        return glacialBlendColumnApplies(blockX, blockZ, radius);
+    }
+
+    // --- B-9 P2 BLUE-ICE DEPTH STRATA (Crew C: the glacier body gets real depth reading) ---------------
+
+    /** Shallowest depth (blocks INTO the packed-ice body, 0-based below the snow cap) at which the
+     *  blue-ice stratum can begin. */
+    public static final int GLACIER_BLUE_ICE_MIN_DEPTH_BLOCKS = 12;
+    /** Deepest depth (blocks into the body) at which the blue-ice stratum begins. Because the body is
+     *  only {@code 6 + wobble} thick at the frayed band edge, depths 12-18 mean blue ice appears ONLY
+     *  inside thick glacier hearts (full-band bodies, 24-36 blocks) -- the marginal glacier stays all
+     *  packed ice, which is real glaciology (compression banding needs overburden). */
+    public static final int GLACIER_BLUE_ICE_MAX_DEPTH_BLOCKS = 18;
+
+    /**
+     * B-9 P2: the noise-warped blue-ice depth line for the column at (blockX, blockZ) -- how many blocks
+     * INTO the packed-ice body the {@code blue_ice} stratum starts (12..18). REUSES the existing B-9a
+     * glacier depth-wobble field ({@code POLAR_BARRENS_GLACIER_SALT} -- the same sample that already
+     * undulates the glacier sole), per Art VI's no-new-noise discipline: the sole and the blue line warp
+     * together, so the strata read as one body. Consumed flag-gated by
+     * {@code PolarBarrensGlacierMixin}; worldgen-stage, deterministic, NEW CHUNKS ONLY.
+     */
+    public static int polarBarrensBlueIceStartDepthBlocks(int blockX, int blockZ) {
+        return blueIceStartDepthFromNoise(ValueNoise2D.sampleBlocks(WORLD_SEED ^ POLAR_BARRENS_GLACIER_SALT,
+                blockX, blockZ, POLAR_BARRENS_GLACIER_SCALE_BLOCKS));
+    }
+
+    /**
+     * Pure mapping of a depth-noise sample in {@code [0,1)} onto the blue-ice start depth
+     * {@code [}{@link #GLACIER_BLUE_ICE_MIN_DEPTH_BLOCKS}{@code ..}{@link #GLACIER_BLUE_ICE_MAX_DEPTH_BLOCKS}{@code ]}
+     * (monotone non-decreasing; out-of-range input clamps; NaN reads as 0.5 -- mid-line, never
+     * no-stratum on bad data, mirroring {@code glacierIceBodyBlocks}' NaN law).
+     */
+    public static int blueIceStartDepthFromNoise(double depthNoise01) {
+        double n = Double.isNaN(depthNoise01) ? 0.5 : Math.max(0.0, Math.min(depthNoise01, 1.0));
+        int span = GLACIER_BLUE_ICE_MAX_DEPTH_BLOCKS - GLACIER_BLUE_ICE_MIN_DEPTH_BLOCKS;
+        return Math.min(GLACIER_BLUE_ICE_MAX_DEPTH_BLOCKS,
+                GLACIER_BLUE_ICE_MIN_DEPTH_BLOCKS + (int) Math.floor(n * (span + 1)));
+    }
+
+    // ---- [2.0 re-apply] P4 edge-ocean moat constants ----
+
+    // Phase 5 Slice B-2 (Fix 1): coherent fray field for the edge-ocean moat. Own salt (independent of
+    // every other keep field) + province-scale noise so the moat's coast is jagged, not a straight ring
+    // (Art VI). Scale tracks world radius: max(256, ~0.12*radius) -> ~900 blocks at R7500.
+    private static final long EDGE_OCEAN_KEEP_SALT = 0x6564_6765_5F6F_636EL; // "edge_ocn"
+    private static final int EDGE_OCEAN_FRAY_MIN_SCALE_BLOCKS = 256;
+    private static final double EDGE_OCEAN_FRAY_SCALE_FACTOR = 0.12;
+
+    // ---- [2.0 re-apply] P6/P7 barrens + glacial-blend constants ----
+
+    // --- Phase 5 Slice B-8 Polar Barrens (latitude.polarBarrens.enabled) ---------------------------
+    // Coherent province-scale frays (Art VI -- no floorDiv/cell-hash, no hard ring), each on a dedicated
+    // salt so the barrens edge, the powder pockets, and the ice patches decorrelate. The barrens id is
+    // resolved by string against the live registry (the consumer already resolves any id this way).
+    public static final String POLAR_BARRENS_ID = "globe:polar_barrens";
+    // Traversal counters for the pick-twin final override (gate-2 diagnosis 2026-07-14: the atlas proof
+    // once concluded "zero barrens" from a top-20-truncated biomes.txt while the map had 11k barrens
+    // pixels -- these make override traversal provable from the LOG alone, and from a unit test via the
+    // package-private getters). Counted UNCONDITIONALLY (LongAdder, contention-free, ~free next to a
+    // pick() call) so the entry-point test can pin traversal without any flag; the periodic log line is
+    // gated on -Dlatitude.debugBarrens.
+    private static final boolean DEBUG_BARRENS = Boolean.getBoolean("latitude.debugBarrens");
+    private static final java.util.concurrent.atomic.LongAdder POLAR_BARRENS_OVERRIDE_CALLS =
+            new java.util.concurrent.atomic.LongAdder();
+    private static final java.util.concurrent.atomic.LongAdder POLAR_BARRENS_OVERRIDE_REWRITES =
+            new java.util.concurrent.atomic.LongAdder();
+    private static final long POLAR_BARRENS_FRAY_SALT = 0x706F6C62726E6672L;   // "polbrnfr"
+    private static final int POLAR_BARRENS_FRAY_SCALE_BLOCKS = 64;             // chunky barrens blobs
+    private static final long POLAR_BARRENS_POWDER_SALT = 0x706F6C6270776472L; // "polbpwdr"
+    private static final int POLAR_BARRENS_POWDER_SCALE_BLOCKS = 40;           // small hidden pockets
+    private static final long POLAR_BARRENS_ICE_SALT = 0x706F6C6272696365L;    // "polbrice"
+    private static final int POLAR_BARRENS_ICE_SCALE_BLOCKS = 160;             // larger ice sheets
+    // B-9a glacier-body depth wobble: glacier-scale undulation so the packed-ice sole reads like a real
+    // glacier bed, not a flat slab (dedicated salt, Art VI).
+    private static final long POLAR_BARRENS_GLACIER_SALT = 0x706F6C62676C6372L; // "polbglcr"
+    private static final int POLAR_BARRENS_GLACIER_SCALE_BLOCKS = 96;
+    // B-9a sea-freeze fray: the 85-deg freeze line wanders +-1 deg on a coastline-front-scale coherent field
+    // (dedicated salt, Art VI) instead of the razor seam the owner screenshotted.
+    private static final long POLAR_SEA_FREEZE_FRAY_SALT = 0x7365616672657A65L; // "seafreze"
+    private static final int POLAR_SEA_FREEZE_FRAY_SCALE_BLOCKS = 128;
+    // S28 UNDERGROUND GLACIAL BLEND (the maintainer 2026-07-20: "a transition, not a hard switch"): a NEW dedicated
+    // salted field at REGION scale (640-block cells) drives the wide 78-86 deg underground-glacial blend
+    // (GlacialBlend). Deliberately its OWN field, NOT the 64-block barrens fray -- the fray is chunk-scale by
+    // design and stays for the SURFACE; large cells make the underground transition read as geography, not
+    // noise. Art VI clean (ValueNoise2D, no floorDiv/cell-hash).
+    private static final long GLACIAL_BLEND_REGION_SALT = 0x676C626C6E647267L; // "glblndrg"
+    private static final int GLACIAL_BLEND_REGION_SCALE_BLOCKS = 640;
+
+    // ---- [2.0 re-apply] P8 polar climate ruggedness proxy constants ----
+
+    // Ring radius (in noise-coord cells, each 4 blocks) used to sample Climate.Sampler weirdness
+    // around a polar column for polarClimateRuggednessProxy(). Sampler queries never touch the
+    // chunk generator, unlike previewHeight()/previewTerrain() (see the 2026-06-20 spawn-prep
+    // worldgen stall from generator re-entry, fixed in 4ae1bec5).
+    private static final int POLAR_CLIMATE_RUGGED_RING_NOISE_CELLS = 2;
+    // Kill switch for isolating whether polarClimateRuggednessProxy() contributes to live chunk-gen
+    // lag: -Dlatitude.polarClimateRuggedProxy=false skips the extra sampler queries entirely and
+    // reverts to the old polarProbeDelta=0 behavior, without needing a rebuild to A/B.
+    private static final boolean POLAR_CLIMATE_RUGGED_PROXY_ENABLED =
+            Boolean.parseBoolean(System.getProperty("latitude.polarClimateRuggedProxy", "true"));
+    // Scales a raw weirdness swing (climate-noise units, roughly 0..2) up into the same rough
+    // magnitude as a real block-height robustDelta, so the existing polarProbeDelta >= 12 and
+    // polarMountainAuthority's robustDelta >= 18 thresholds stay meaningful. Chosen as a starting
+    // point, not yet atlas-calibrated -- retune via -Dlatitude.polarClimateRuggedScale after
+    // measuring live polar mountain-biome share against the pre-4ae1bec5 baseline.
+    private static final double POLAR_CLIMATE_RUGGED_SCALE =
+            Double.parseDouble(System.getProperty("latitude.polarClimateRuggedScale", "20.0"));
+
+    // ---- [2.0 re-apply] P7 village veto: DELIBERATELY NOT LIFTED ----
+    // The 2.0 line carried its own EXTREME_POLAR_VILLAGE_VETO_MIN_DEG = 80.0 plus an
+    // isBlockInPolarVillageVetoBand sibling, because its village guard keyed off the shared 74.5-degree
+    // deep-cap constant and needed a separate anchor to move villages to 80 without dragging the biome
+    // monoculture with them. On the 26.3 line that separation already exists and is already at 80:
+    // VillageLatitudePolicy.MAX_ALLOWED_ABSOLUTE_LATITUDE_DEGREES owns the village rule (reached through
+    // the polar village-limit predicate below), while EXTREME_POLAR_CAP_MIN_DEG stays at 74.5 for the biome
+    // and vegetation guards. Adding the 2.0 constant back would create a SECOND 80-degree authority that
+    // nothing reads and that could silently drift from the one the village tests pin.
+
+    // ---- [2.0 re-apply] P8 structure-climate helpers ----
+
+    private static boolean biomeIdContainsAny(String id, String... needles) {
+        for (String n : needles) {
+            if (id.contains(n)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    /**
+     * True when a structure whose id DECLARES a climate (village_desert, village_savanna, a modded
+     * desert/snowy outpost, etc.) is being placed in a biome of the WRONG climate — e.g. a savanna village in
+     * a forest, or a desert-styled outpost in a tundra. Because Latitude repaints biomes at the populate step
+     * (after vanilla picks the structure type from the raw biome source), the structure variant can disagree
+     * with the biome you actually stand in; a guard mixin cancels those. Conservative: only judges structures
+     * whose id names a climate, and fails "match" (no cancel) when unsure, so plains villages / neutral
+     * structures are never touched.
+     */
+    public static boolean structureClimateMismatch(String structurePath, Holder<Biome> biome) {
+        if (structurePath == null || biome == null) {
+            return false;
+        }
+        String p = structurePath.toLowerCase(java.util.Locale.ROOT);
+        String b = biome.unwrapKey().map(k -> k.identifier().toString()).orElse("").toLowerCase(java.util.Locale.ROOT);
+        if (b.isEmpty()) {
+            return false;
+        }
+        // Villages must never sit in a bog/swamp/marsh. Vanilla places a village on the raw (dry) biome at the
+        // STRUCTURE_STARTS phase, then Latitude can repaint the surface to a flat wetland underneath at the
+        // later BIOMES phase — leaving "A BOG village" (TEST 1 finding C2). This has no declared climate in the
+        // structure id (plains villages read as neutral below), so cancel it explicitly here. Matches vanilla
+        // swamp + modded bog/marsh/fen/bayou/mire.
+        if (p.contains("village") && biomeIdContainsAny(b, "swamp", "bog", "marsh", "wetland", "fen", "bayou", "mire")) {
+            return true;
+        }
+        if (p.contains("desert")) {
+            return !(isAridFamily(biome) || biomeIdContainsAny(b, "desert", "badlands", "mesa", "dune", "sand", "arid", "oasis", "outback"));
+        }
+        if (p.contains("savanna")) {
+            return !biomeIdContainsAny(b, "savanna", "shrubland", "prairie", "dryland", "scrub", "steppe");
+        }
+        if (p.contains("badlands") || p.contains("mesa")) {
+            return !(isBadlandsFamily(biome) || biomeIdContainsAny(b, "badlands", "mesa"));
+        }
+        if (p.contains("jungle")) {
+            return !biomeIdContainsAny(b, "jungle", "tropical", "rainforest", "bamboo");
+        }
+        if (p.contains("snowy") || p.contains("frozen") || p.contains("glacier")) {
+            return !biomeIdContainsAny(b, "snow", "frozen", "ice", "glacier", "tundra", "cold", "wintry", "polar", "frost");
+        }
+        if (p.contains("taiga")) {
+            return !biomeIdContainsAny(b, "taiga", "spruce", "conifer", "boreal", "grove", "cold", "snow", "tundra");
+        }
+        return false; // no declared climate (plains village, generic outpost, modded neutral structures) -> allow
+    }
+
+    /**
+     * Coarser, biome-independent companion to {@link #structureClimateMismatch}. During worldgen the biome
+     * sampled at structure-placement time can still be the RAW source biome (what vanilla used to pick the
+     * variant) rather than Latitude's repaint, so the biome check can wrongly see "savanna village in savanna"
+     * and allow it — then the surface is repainted temperate and you get "a savanna village in a temperate
+     * forest zone" (TEST 1 C1). This check judges the structure's declared climate against the authoritative
+     * latitude BAND instead: warm-climate structures (desert/savanna/badlands/jungle) don't belong in
+     * temperate/subpolar/polar; cold ones (snowy/frozen/taiga) don't belong in the tropics. Conservative — only
+     * the clear cross-climate cases, fails open (no cancel) otherwise, so plains/neutral structures and
+     * same-band mixes are never touched. Callers must only apply this in a globe/latitude world.
+     */
+    public static boolean structureClimateVsBandMismatch(String structurePath, com.example.globe.util.LatitudeBands.Band band) {
+        if (structurePath == null || band == null) {
+            return false;
+        }
+        String p = structurePath.toLowerCase(java.util.Locale.ROOT);
+        boolean warmDeclared = p.contains("desert") || p.contains("savanna") || p.contains("badlands")
+                || p.contains("mesa") || p.contains("jungle");
+        boolean coldDeclared = p.contains("snowy") || p.contains("frozen") || p.contains("glacier")
+                || p.contains("taiga");
+        boolean warmBand = band == com.example.globe.util.LatitudeBands.Band.TROPICAL
+                || band == com.example.globe.util.LatitudeBands.Band.SUBTROPICAL;
+        boolean coldBand = band == com.example.globe.util.LatitudeBands.Band.TEMPERATE
+                || band == com.example.globe.util.LatitudeBands.Band.SUBPOLAR
+                || band == com.example.globe.util.LatitudeBands.Band.POLAR;
+        if (warmDeclared && coldBand) {
+            return true;
+        }
+        return coldDeclared && warmBand;
+    }
+
+    // ---- [2.0 re-apply] P6 polar barrens final override (registry twin) ----
+
+    /**
+     * Phase 5 Slice B-8 Polar Barrens: flag-gated FINAL OVERRIDE (Registry twin). Runs AFTER every land
+     * law + the climate-compat reroll -- genuinely the last word -- so it introduces the barrens only
+     * once quarantine/enforcement can no longer touch it (which is why it needs no lat_* tag membership
+     * and no {@code allowedExtraBiomeIdsForBand} admission -- those would leak barrens equatorward to ~70
+     * deg via the flat-polar-shelf selector). Rewrites ONLY inland {@code minecraft:snowy_plains} to
+     * {@code globe:polar_barrens} on the coherent 82->84 fray; {@code ice_spikes} accents + real-mountain
+     * alpine picks are not snowy_plains and survive by construction; coasts/rivers are untouched.
+     * Byte-identical flag-off / off-fray / non-snowy_plains (returns {@code out} unchanged).
+     *
+     * <p><b>One chokepoint, three pipelines (gate-2 diagnosis 2026-07-14):</b> this twin's tail is
+     * traversed by the LIVE game ({@code ChunkGeneratorPopulateBiomesMixin} -> {@code "MIXIN"}), the
+     * atlas MAP sampler ({@code BiomePreviewExporter.ExportJob} -> {@code "ATLAS_SAMPLER"}), and the
+     * atlas INVENTORY sampler ({@code BiomeSamplerTools.sampleBiomeId} -> {@code "ATLAS_SAMPLER"}) --
+     * receipts: flag-on run 20260714-223215 had 11,161 barrens map pixels at 86.26-90.00 deg and
+     * inventory {@code present_in_world:true}. (The "zero cells" scare was the top-20-truncated
+     * {@code biomes.txt}; barrens at 1.43% ranks 21st. Future gates: count pixels in
+     * {@code biome_ids.png} via the palette, or grep {@code world_biome_inventory.json}, or run with
+     * {@code -Dlatitude.debugBarrens} and read the [LAT][BARRENS] counter line.)
+     */
+    private static Holder<Biome> applyPolarBarrensOverride(Registry<Biome> biomeRegistry, Holder<Biome> out,
+                                                           int landBandIndex, double finalLatDeg, int blockX, int blockZ) {
+        return applyPolarBarrensOverride(biomeRegistry, out, landBandIndex, finalLatDeg, blockX, blockZ,
+                LatitudeV2Flags.POLAR_BARRENS_ENABLED);
+    }
+
+    /**
+     * Flag-parameterized seam of the Registry-twin override -- the ONE implementation both the
+     * production tail (passing {@link LatitudeV2Flags#POLAR_BARRENS_ENABLED}) and the entry-point test
+     * (passing {@code true}; the flag is static-final and cannot be flipped in the suite JVM, per the
+     * flags class's own testing note) execute. Package-private for the test; identical behavior.
+     */
+    static Holder<Biome> applyPolarBarrensOverride(Registry<Biome> biomeRegistry, Holder<Biome> out,
+                                                   int landBandIndex, double finalLatDeg, int blockX, int blockZ,
+                                                   boolean enabled) {
+        POLAR_BARRENS_OVERRIDE_CALLS.increment();
+        if (enabled
+                && PolarBarrensBand.overridesSnowyPlains(isBiomeId(out, "minecraft:snowy_plains"),
+                        landBandIndex == BAND_POLAR, finalLatDeg, polarBarrensFrayNoise(blockX, blockZ))) {
+            Holder<Biome> barrens = biomeOrNull(biomeRegistry, POLAR_BARRENS_ID);
+            if (barrens != null) {
+                POLAR_BARRENS_OVERRIDE_REWRITES.increment();
+                maybeLogBarrensCounters();
+                return barrens;
+            }
+        }
+        maybeLogBarrensCounters();
+        return out;
+    }
+
+    /** Total pick-twin barrens-override traversals (both twins). Test/diagnostic surface. */
+    public static long polarBarrensOverrideCalls() {
+        return POLAR_BARRENS_OVERRIDE_CALLS.sum();
+    }
+
+    /** Total snowy_plains -> polar_barrens rewrites performed (both twins). Test/diagnostic surface. */
+    public static long polarBarrensOverrideRewrites() {
+        return POLAR_BARRENS_OVERRIDE_REWRITES.sum();
+    }
+
+    /**
+     * -Dlatitude.debugBarrens throwaway-grade traversal proof: once per ~1000 override calls, log the
+     * running call + rewrite totals so an atlas log alone proves (a) the pick twins traverse the
+     * override and (b) how many rewrites actually happened. Zero cost unless the debug prop is set.
+     */
+    private static void maybeLogBarrensCounters() {
+        if (!DEBUG_BARRENS) {
+            return;
+        }
+        long calls = POLAR_BARRENS_OVERRIDE_CALLS.sum();
+        if (calls % 1000L == 0L) {
+            LOGGER.info("[LAT][BARRENS] overrideCalls={} rewrites={} flagEnabled={}",
+                    calls, POLAR_BARRENS_OVERRIDE_REWRITES.sum(), LatitudeV2Flags.POLAR_BARRENS_ENABLED);
+        }
+    }
+
+    // ---- [2.0 re-apply] P6 polar barrens final override (collection twin) ----
+
+    /**
+     * Phase 5 Slice B-8 Polar Barrens final override (Collection twin -- mirrors the Registry twin).
+     * Resolves the barrens from the (flag-on expanded) candidate {@code biomePool} via {@code entryById}
+     * so the headless atlas SOURCE path agrees with the live registry reach; {@code null} if the pool
+     * lacks it (e.g. flag-on but {@code expandSourceCandidatePool} had no remembered registry yet), in
+     * which case the pick is left unchanged. Same flag + fray gate; byte-identical off. Shares the
+     * traversal/rewrite counters with the Registry twin (see {@code maybeLogBarrensCounters}).
+     */
+    private static Holder<Biome> applyPolarBarrensOverride(Collection<Holder<Biome>> biomePool, Holder<Biome> out,
+                                                           int landBandIndex, double finalLatDeg, int blockX, int blockZ) {
+        return applyPolarBarrensOverride(biomePool, out, landBandIndex, finalLatDeg, blockX, blockZ,
+                LatitudeV2Flags.POLAR_BARRENS_ENABLED);
+    }
+
+    /** Flag-parameterized seam of the Collection-twin override (see the Registry-twin seam's javadoc). */
+    static Holder<Biome> applyPolarBarrensOverride(Collection<Holder<Biome>> biomePool, Holder<Biome> out,
+                                                   int landBandIndex, double finalLatDeg, int blockX, int blockZ,
+                                                   boolean enabled) {
+        POLAR_BARRENS_OVERRIDE_CALLS.increment();
+        if (enabled
+                && PolarBarrensBand.overridesSnowyPlains(isBiomeId(out, "minecraft:snowy_plains"),
+                        landBandIndex == BAND_POLAR, finalLatDeg, polarBarrensFrayNoise(blockX, blockZ))) {
+            Holder<Biome> barrens = entryById(biomePool, POLAR_BARRENS_ID);
+            if (barrens != null) {
+                POLAR_BARRENS_OVERRIDE_REWRITES.increment();
+                maybeLogBarrensCounters();
+                return barrens;
+            }
+        }
+        maybeLogBarrensCounters();
+        return out;
+    }
+
+    // ---- [2.0 re-apply] P6 climate-compat reroll family ----
+
+    // Biome Consumer slice (ClimateAuthority live law). Coherent variant-selection noise so a reroll
+    // patch reads as one region, not per-block dither (Art VI: no floorDiv/cell-hash).
+    private static final long CLIMATE_COMPAT_VARIANT_SALT = 0x636C696D5F636D70L; // "clim_cmp"
+    private static final int CLIMATE_COMPAT_VARIANT_SCALE_BLOCKS = 256;
+
+    /**
+     * Whether {@code biome}'s family is a clear structural mismatch for {@code climateClass} -- the
+     * live analogue of {@code tools/atlas/band_correctness_check.py}'s offline wrong-band-contamination
+     * check. Deliberately conservative: only the most obviously-wrong combinations reroll (frozen biome
+     * in a hot climate, jungle in a desert climate, desert/snow in a rainforest climate); anything not
+     * listed here is treated as compatible and left untouched, so the existing province/band cascade's
+     * tuned variety survives everywhere except genuine mismatches.
+     *
+     * <p>Sweeper audit 2026-07-05 (findings #13/#14/#17/#20): the original version only covered the
+     * cold-family and hot-desert/rainforest classes, leaving every mid-range class (HUMID_CONTINENTAL,
+     * TEMPERATE_OCEANIC, HUMID_SUBTROPICAL, SAVANNA, TROPICAL_SAVANNA, MEDITERRANEAN) with NO guard at
+     * all -- so a column misclassified into one of those (exactly what the classifyBase fallthrough
+     * bug above used to produce) could carry an obviously-wrong pick (a desert or frozen biome) with
+     * zero correction. Also the desert classes only rejected jungle contamination, not frozen
+     * contamination. Both gaps are closed below; ocean classes are still excluded (`default -> false`)
+     * since this reroll only ever runs on the land pick path (the caller short-circuits on
+     * {@code climateClass.isOcean()} before reaching this method).
+     */
+    private static boolean climateFamilyMismatch(ClimateClass climateClass, Holder<Biome> biome) {
+        boolean cold = isSnowyVariant(biome);
+        boolean desert = isDesertFamily(biome) || isBadlandsFamily(biome);
+        boolean jungle = isJungleFamily(biome);
+        return switch (climateClass) {
+            case ICE_CAP, TUNDRA, BOREAL, COLD_STEPPE -> jungle || desert || isSavannaFamily(biome);
+            case HOT_DESERT, COOL_DESERT -> jungle || cold;
+            case TROPICAL_RAINFOREST, TROPICAL_MONSOON -> desert || cold;
+            // Savanna/tropical-savanna are dry-ish and legitimately border jungle in reality; only a
+            // frozen pick there is an obvious mismatch worth correcting.
+            case SAVANNA, TROPICAL_SAVANNA -> cold;
+            // Warm/temperate forest-family classes: a frozen or true-desert pick under one of these
+            // is the obvious mismatch (jungle-adjacency is a legitimate, common transition here).
+            case HUMID_SUBTROPICAL, TEMPERATE_OCEANIC, HUMID_CONTINENTAL, MEDITERRANEAN -> cold || desert;
+            default -> false; // OCEAN_* classes never reach this method (isOcean() short-circuits first)
+        };
+    }
+
+    /** Picks a coherent index into a non-empty vanilla-family list (never per-block dither). */
+    private static int climateCompatVariantIndex(int blockX, int blockZ, int size) {
+        double v = ValueNoise2D.sampleBlocks(WORLD_SEED ^ CLIMATE_COMPAT_VARIANT_SALT, blockX, blockZ,
+                CLIMATE_COMPAT_VARIANT_SCALE_BLOCKS);
+        int idx = (int) Math.floor(v * size);
+        return Math.max(0, Math.min(size - 1, idx));
+    }
+
+    /**
+     * P1-B acceptance line (audit fable5-biome-geography-audit-20260707.md §5): "zero snowy_plains cells
+     * below 45deg". Below this latitude a cold-class reroll repaint resolves against the ALTITUDE family
+     * ({@link ClimateClass#alpineFamily()}), never the flat-polar {@code vanillaFamily()}; at/above it the
+     * flat-polar families (snowy_plains, ice_spikes) are legitimate near the poles, so existing behavior
+     * stands. One named constant so the gate is a single, auditable citation of the acceptance line.
+     */
+    private static final double SNOWY_PLAINS_MIN_LAT_DEG = 45.0;
+
+    /**
+     * P1-B: the alpine-steppable COLD classes whose {@link ClimateClass#vanillaFamily()} LEADS with
+     * flat-polar biomes with no altitude meaning (audit fable5-biome-geography-audit-20260707.md §5).
+     * These are exactly the classes ClimateAuthority's {@code alpineStep} can demote a warm-band column
+     * into, and the only classes {@link #climateFamilyMismatch} lets reroll on a warm (jungle/desert/
+     * savanna) pick. BOREAL is included for the veto even though its family carries no snowy_plains.
+     */
+    private static boolean isColdAltitudeClimateClass(ClimateClass c) {
+        return c == ClimateClass.ICE_CAP || c == ClimateClass.TUNDRA
+                || c == ClimateClass.BOREAL || c == ClimateClass.COLD_STEPPE;
+    }
+
+    /**
+     * Latitude in degrees at this column, derived the SAME way the equatorial-dry law predicates do
+     * ({@link #shouldDemoteEquatorialBadlands} L8576-8578: {@code abs(blockZ)/ACTIVE_RADIUS*90}) so the
+     * P1-B 45deg gate and the audit's map-proof latitude binning agree exactly.
+     */
+    private static double rerollLatitudeDeg(int blockZ) {
+        int radius = ACTIVE_RADIUS_BLOCKS > 0 ? ACTIVE_RADIUS_BLOCKS : (REFERENCE_DIAMETER_BLOCKS / 2);
+        radius = Math.max(1, radius);
+        return Math.min(90.0, Math.abs((double) blockZ) / (double) radius * 90.0);
+    }
+
+    /**
+     * P1-B REAL-TERRAIN VETO (defect i, audit fable5-biome-geography-audit-20260707.md §5).
+     * ClimateAuthority's altitude proxy is terrain-BLIND ({@code alt = mountainIntent01 * ALT_GAIN});
+     * when {@code alt >= ALPINE_ALT} its {@code alpineStep} demotes a warm-band class one rung colder
+     * (e.g. SAVANNA -> COLD_STEPPE) even where the REAL terrain is flat -- intent is not actual
+     * elevation, especially now that Phase 4's wrapper is what shapes terrain. So: below the 45deg
+     * acceptance line, when a COLD class was reached by that altitude cooling
+     * ({@code altitudeCooling01 >= ALPINE_ALT} -- the SAME 0.45 anchor the classifier's alpineStep
+     * fires on, cited from {@link ClimateAuthorityParams#ALPINE_ALT}) but the real terrain here is NOT
+     * genuinely elevated, the alpine-cold is spurious: skip the repaint and keep the already-lawful
+     * warm pick.
+     *
+     * <p>"Genuinely elevated" reuses the temperate mountain-terrain authority's own two-part test
+     * (see {@link #temperateMountainTerrainAuthority} / debugSavannaRule L965-966): real
+     * {@code centerHeight >= seaLevel + PREVIEW_HEIGHT_MARGIN_BLOCKS} (25) OR
+     * {@code robustDelta >= WINDSWEPT_RUGGED_THRESH} (8) -- no new magic numbers. When real terrain is
+     * not known ({@code realTerrainKnown == false}: synthetic or absent preview -- the atlas/headless
+     * SOURCE/ATLAS_SAMPLER paths AND the live MIXIN/CAVE_CLAMP path, which use a synthetic preview by
+     * default) we treat the column as NOT elevated: the director's conservative default (veto the cold
+     * repaint below the gate). A non-altitude-driven cold classification (a genuinely cold climate, not
+     * the proxy) is NOT vetoed here -- {@link #rerollFamilyFor}'s (B) mapping still routes it away from
+     * snowy_plains below 45deg.
+     */
+    private static boolean rerollColdAltitudeVetoed(ClimateClass climateClass, ClimateSummary climate,
+                                                    int blockZ, PreviewTerrain preview, int seaLevel,
+                                                    boolean realTerrainKnown) {
+        if (!isColdAltitudeClimateClass(climateClass)) {
+            return false;
+        }
+        if (rerollLatitudeDeg(blockZ) >= SNOWY_PLAINS_MIN_LAT_DEG) {
+            return false; // >=45deg: alpine-cold near the poles is legitimate; existing behavior stands
+        }
+        boolean altitudeDriven = climate.altitudeCooling01() >= ClimateAuthorityParams.ALPINE_ALT;
+        if (!altitudeDriven) {
+            return false; // genuinely-cold classification, not the terrain-blind proxy -- let (B) remap it
+        }
+        boolean genuinelyElevated = realTerrainKnown
+                && (preview.centerHeight >= seaLevel + PREVIEW_HEIGHT_MARGIN_BLOCKS
+                    || preview.robustDelta >= WINDSWEPT_RUGGED_THRESH);
+        return !genuinelyElevated;
+    }
+
+    /**
+     * P1-B ALTITUDE-FAMILY MAPPING (defect ii, audit fable5-biome-geography-audit-20260707.md §5). A
+     * cold-class repaint accepted below the 45deg acceptance line resolves against the ALTITUDE family
+     * ({@link ClimateClass#alpineFamily()}: grove/snowy_slopes/frozen_peaks) instead of the flat-polar
+     * {@code vanillaFamily()} (COLD_STEPPE = snowy_plains/windswept_gravelly_hills), guaranteeing zero
+     * snowy_plains below 45deg even for a non-vetoed cold repaint. At/above 45deg, and for every
+     * non-cold class, the normal {@code vanillaFamily()} stands unchanged.
+     */
+    private static List<String> rerollFamilyFor(ClimateClass climateClass, int blockZ) {
+        if (isColdAltitudeClimateClass(climateClass) && rerollLatitudeDeg(blockZ) < SNOWY_PLAINS_MIN_LAT_DEG) {
+            return climateClass.alpineFamily();
+        }
+        return climateClass.vanillaFamily();
+    }
+
+    /**
+     * P1-A veto (audit doc fable5-biome-geography-audit-20260707.md). The climate-compat reroll runs
+     * LAST -- after {@link #applyFinalSavannaClimateClamp}'s tropical-dry laws
+     * ({@link #demoteEquatorialBadlands}/{@link #demoteEquatorialDesert}) have already scrubbed arid
+     * biomes from the wet tropics (below the 23.5deg ramp). Its runs-last position is itself a prior
+     * audit fix (sweeper 2026-07-05 #16) and must NOT move. But a HOT_DESERT/COOL_DESERT-classified
+     * column reaching this reroll would otherwise repaint an already-lawful jungle pick to
+     * desert/badlands at ANY latitude -- including the 10-20deg tropics the law just scrubbed --
+     * silently undoing the law. So before ACCEPTING a desert/badlands repaint candidate, consult the
+     * SAME predicates the base path uses; if either would demote this biome at this column, the reroll
+     * skips the repaint (the caller keeps the existing lawful pick -- keep-the-pick, never
+     * repaint-then-demote to a third biome). Reusing the predicates (rather than re-deriving the 23.5deg
+     * ramp + keep-noise) guarantees the reroll's veto and the base law can never drift apart, and
+     * preserves the correct arid the ramp still allows at >=25.5deg.
+     */
+    private static boolean rerollCandidateViolatesEquatorialAridLaw(Holder<Biome> candidate, int blockX, int blockZ) {
+        if (candidate == null || !(isDesertFamily(candidate) || isBadlandsFamily(candidate))) {
+            return false;
+        }
+        return shouldDemoteEquatorialBadlands(candidate, blockX, blockZ)
+                || shouldDemoteEquatorialDesert(candidate, blockX, blockZ);
+    }
+
+    private static Holder<Biome> applyClimateCompatReroll(Registry<Biome> biomes, Holder<Biome> pick,
+                                                            ClimateSummary climate, int blockX, int blockZ,
+                                                            PreviewTerrain preview, int seaLevel,
+                                                            boolean realTerrainKnown) {
+        ClimateClass climateClass;
+        try {
+            climateClass = ClimateClass.valueOf(climate.climateClass());
+        } catch (IllegalArgumentException unknown) {
+            return pick;
+        }
+        if (climateClass.isOcean() || !climateFamilyMismatch(climateClass, pick)) {
+            return pick;
+        }
+        // P1-B (fable5-biome-geography-audit-20260707.md §5): (A) veto a spurious altitude-cold repaint
+        // on flat warm terrain -- keep the already-lawful pick (never repaint-then-demote).
+        if (rerollColdAltitudeVetoed(climateClass, climate, blockZ, preview, seaLevel, realTerrainKnown)) {
+            return pick;
+        }
+        // P1-B: (B) below 45deg a cold-class repaint uses the ALTITUDE family, never flat-polar snowy_plains.
+        List<String> family = rerollFamilyFor(climateClass, blockZ);
+        int idx = climateCompatVariantIndex(blockX, blockZ, family.size());
+        for (int i = 0; i < family.size(); i++) {
+            String candidateId = "minecraft:" + family.get((idx + i) % family.size());
+            try {
+                Holder<Biome> candidate = biome(biomes, candidateId);
+                // P1-A: don't let the reroll repaint into an arid biome the equatorial dry LAW forbids
+                // at this column (fable5-biome-geography-audit-20260707.md). Keep the lawful pick.
+                if (rerollCandidateViolatesEquatorialAridLaw(candidate, blockX, blockZ)) {
+                    return pick;
+                }
+                return candidate;
+            } catch (Throwable ignored) {
+                // try the next family member
+            }
+        }
+        return pick; // no family member resolved; keep the existing pick rather than fail
+    }
+
+    private static Holder<Biome> applyClimateCompatReroll(Collection<Holder<Biome>> biomes, Holder<Biome> pick,
+                                                            ClimateSummary climate, int blockX, int blockZ,
+                                                            PreviewTerrain preview, int seaLevel,
+                                                            boolean realTerrainKnown) {
+        ClimateClass climateClass;
+        try {
+            climateClass = ClimateClass.valueOf(climate.climateClass());
+        } catch (IllegalArgumentException unknown) {
+            return pick;
+        }
+        if (climateClass.isOcean() || !climateFamilyMismatch(climateClass, pick)) {
+            return pick;
+        }
+        // P1-B (fable5-biome-geography-audit-20260707.md §5): (A) veto a spurious altitude-cold repaint
+        // on flat warm terrain -- keep the already-lawful pick (never repaint-then-demote).
+        if (rerollColdAltitudeVetoed(climateClass, climate, blockZ, preview, seaLevel, realTerrainKnown)) {
+            return pick;
+        }
+        // P1-B: (B) below 45deg a cold-class repaint uses the ALTITUDE family, never flat-polar snowy_plains.
+        List<String> family = rerollFamilyFor(climateClass, blockZ);
+        int idx = climateCompatVariantIndex(blockX, blockZ, family.size());
+        for (int i = 0; i < family.size(); i++) {
+            Holder<Biome> candidate = entryById(biomes, "minecraft:" + family.get((idx + i) % family.size()));
+            if (candidate != null) {
+                // P1-A: don't let the reroll repaint into an arid biome the equatorial dry LAW forbids
+                // at this column (fable5-biome-geography-audit-20260707.md). Keep the lawful pick.
+                if (rerollCandidateViolatesEquatorialAridLaw(candidate, blockX, blockZ)) {
+                    return pick;
+                }
+                return candidate;
+            }
+        }
+        return pick;
+    }
+
+    // ---- [2.0 re-apply] P8 polar climate ruggedness proxy ----
+
+    /**
+     * Non-reentrant ruggedness proxy for the live-worldgen polar mountain bridge in pick().
+     * Samples Climate.Sampler weirdness at a small ring of offsets around the column -- the same
+     * kind of query isMountainLike() already performs -- instead of calling previewTerrain()/
+     * previewHeight(), which re-enter the chunk generator and caused the 2026-06-20 spawn-prep
+     * worldgen stall. A large weirdness swing across the ring approximates jagged terrain without
+     * ever touching the generator. Returns 0 if sampler is null.
+     */
+    private static int polarClimateRuggednessProxy(Climate.Sampler sampler, int blockX, int blockZ) {
+        if (sampler == null) {
+            return 0;
+        }
+        int noiseX = blockX >> 2;
+        int noiseZ = blockZ >> 2;
+        int ring = POLAR_CLIMATE_RUGGED_RING_NOISE_CELLS;
+        int noiseY = SURFACE_CLASSIFY_Y >> 2;
+        double center = Climate.unquantizeCoord(sampler.sample(noiseX, noiseY, noiseZ).weirdness());
+        double maxDelta = 0.0;
+        int[][] offsets = {{ring, 0}, {-ring, 0}, {0, ring}, {0, -ring}};
+        for (int[] off : offsets) {
+            double w = Climate.unquantizeCoord(sampler.sample(noiseX + off[0], noiseY, noiseZ + off[1]).weirdness());
+            maxDelta = Math.max(maxDelta, Math.abs(w - center));
+        }
+        return (int) Math.round(maxDelta * POLAR_CLIMATE_RUGGED_SCALE);
+    }
+
+    // ---- [2.0 re-apply] P6 null-safe registry resolve ----
+
+    /**
+     * Null-safe registry resolve for optional first-party ids (Phase 5 Slice B-8 Polar Barrens): returns
+     * the holder for {@code id} if present, else {@code null} -- never throws. Used by the flag-gated
+     * final override so a missing biome (should be impossible: registered unconditionally) degrades to
+     * "leave the pick unchanged" rather than crashing worldgen.
+     */
+    private static Holder<Biome> biomeOrNull(Registry<Biome> biomes, String id) {
+        try {
+            return biomes.get(Identifier.parse(id)).orElse(null);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    // ---- [2.0 re-apply] P8 solid-floor preview twin (OCEAN_FLOOR_WG) ----
+    // Slice C-2: solid-floor twin of previewHeight (OCEAN_FLOOR_WG -- ignores fluid). Needed because the
+    // bathymetry+prelim fix makes carved ocean columns FLOOD correctly, which in turn makes the
+    // fluid-inclusive WORLD_SURFACE_WG read the waterline (63) -- blinding the sunk-land mirror veto that
+    // must see the SOLID floor. Its OWN cache, distinct from PREVIEW_HEIGHT_CACHE; re-uses the 26.3 line's
+    // PreviewHeightCache (which also keys on generator/noiseConfig/heightView) instead of the 2.0 line's
+    // chunk-key-only ThreadLocal pair, so a stale generator can never serve a cached floor.
+    private static final ThreadLocal<PreviewHeightCache> PREVIEW_FLOOR_CACHE =
+            ThreadLocal.withInitial(PreviewHeightCache::new);
+
+    private static int previewFloorHeight(NoiseBasedChunkGenerator generator, RandomState noiseConfig,
+                                          LevelHeightAccessor heightView, int blockX, int blockZ) {
+        long chunkKey = net.minecraft.world.level.ChunkPos.pack(blockX >> 4, blockZ >> 4);
+        PreviewHeightCache owner = PREVIEW_FLOOR_CACHE.get();
+        if (!owner.matches(generator, noiseConfig, heightView, chunkKey)) {
+            owner.reset(generator, noiseConfig, heightView, chunkKey);
+        }
+        long key = (((long) blockX) << 32) ^ (blockZ & 0xffffffffL);
+        int cached = owner.heights.getOrDefault(key, Integer.MIN_VALUE);
+        if (cached != Integer.MIN_VALUE) {
+            return cached;
+        }
+        int value = generator.getBaseHeight(blockX, blockZ, Heightmap.Types.OCEAN_FLOOR_WG, heightView, noiseConfig);
+        owner.heights.put(key, value);
+        return value;
     }
 
     // --- Tree line / alpine surface ---
@@ -3925,7 +5148,14 @@ public final class LatitudeBiomes {
         int polarProbeDelta  = preview.robustDelta;
         if (skipPreview && landBandIndex >= BAND_POLAR && rawMountainTruth && hasPreviewTerrainInputs) {
             polarProbeHeight = columnDecisionY;
-            polarProbeDelta  = 0;
+            // [2.0 re-apply] P8: recover the ruggedness read on the live path. Zeroing it here
+            // permanently disabled the polarProbeDelta >= 12 branch below, so ruggedness alone could no
+            // longer earn polar mountain authority. The proxy answers from Climate.Sampler queries only
+            // -- it never re-enters the chunk generator, which is what previewTerrain()/previewHeight()
+            // do and why they cannot be called from this path. -D kill switch, default on.
+            polarProbeDelta  = POLAR_CLIMATE_RUGGED_PROXY_ENABLED
+                    ? polarClimateRuggednessProxy(sampler, blockX, blockZ)
+                    : 0;
         }
         boolean polarTerrainMountainLike = (!hasPreviewTerrainInputs && isAtlasHeadlessContext(callerContext) && rawMountainTruth)
                 || (polarProbeDelta >= 12)
@@ -3934,9 +5164,26 @@ public final class LatitudeBiomes {
         if (landBandIndex >= BAND_POLAR && polarMountainLikeFinal) {
             mountainLike = true;
         }
+        // ---- [2.0 re-apply] P2: GeoAuthority / ClimateAuthority summaries ----
+        // Both flags default to false, so this is a no-op computation on a stock build. Whether a summary
+        // actually CHANGES selection is gated separately by BIOME_CONSUMER_V2_ENABLED below (and, for the
+        // ocean-authority swap, by its own BIOME_CONSUMER_V2_OCEAN_AUTHORITY_ENABLED sub-flag).
+        GeoSummary geoV2Summary = LatitudeV2Flags.GEO_V2_ENABLED
+                ? GEO_V2_PROVIDER.summarize(blockX, blockZ) : null;
+        ClimateSummary climateV2Summary = LatitudeV2Flags.CLIMATE_V2_ENABLED
+                ? CLIMATE_V2_PROVIDER.summarize(blockX, blockZ) : null;
         int oceanDistance = oceanDistanceBlocks(blockX, blockZ, sampler);
         boolean nearOcean = oceanDistance <= MANGROVE_COASTAL_MAX_BLOCKS;
         boolean oceanAuthority = oceanDistance == 0;
+        // ---- [2.0 re-apply] P3: ocean-authority relabel ----
+        // GeoAuthority's coherent continent/ocean-basin intent CAN replace the coarse per-cell
+        // OceanDistanceField threshold as land/ocean AUTHORITY. Deliberately placed BEFORE the raised-land
+        // veto below, so that veto still gets the last word on a clearly-raised column. Both flags default
+        // false; requires an explicit second flag so it cannot be enabled by accident.
+        if (LatitudeV2Flags.BIOME_CONSUMER_V2_ENABLED && LatitudeV2Flags.BIOME_CONSUMER_V2_OCEAN_AUTHORITY_ENABLED
+                && geoV2Summary != null) {
+            oceanAuthority = geoV2Summary.isOceanIntent();
+        }
         // A donor ocean label cannot own a mountain column. Reuse the surface height already
         // computed for terrain gates; the +16 threshold is Latitude's existing maximum coastal
         // relief allowance, so beaches and low sea stacks remain ocean-compatible.
@@ -3956,6 +5203,49 @@ public final class LatitudeBiomes {
                     : previewHeight(generator, noiseConfig, heightView, blockX & ~3, blockZ & ~3);
             if (realHeight >= seaLevel) {
                 oceanAuthority = false;
+            }
+        }
+        // ---- [2.0 re-apply] P4: latitude-aware EDGE OCEAN moat at the projection X-edge ----
+        // Consumes the X-ONLY edge term (projectionEdgeXOnly01), NOT projectionEdgeSuitability01 =
+        // max(edgeB, poleB): the poleB component would convert the already-good icy pole LAND shelf into
+        // frozen ocean (B-1 amendment 1). Sits AFTER the raised-land veto on purpose so that veto's
+        // fluid-inclusive WORLD_SURFACE_WG read cannot clobber it live (B-1 amendment 2). Frayed on a
+        // coherent province-noise field; columns with edgeB == 0 are bitwise-unaffected.
+        if (LatitudeV2Flags.BOUNDARY_V2_ENABLED
+                && geoV2Summary != null
+                && terrainBiasActivelyBiasing()
+                && LatitudeV2Flags.TERRAIN_V2_OCEAN_STRENGTH_RATIO != 0.0) {
+            double edgeB = geoV2Summary.projectionEdgeXOnly01();
+            if (edgeB > 0.0) {
+                int frayRadius = ACTIVE_RADIUS_BLOCKS > 0 ? ACTIVE_RADIUS_BLOCKS : (REFERENCE_DIAMETER_BLOCKS / 2);
+                int frayScale = Math.max(EDGE_OCEAN_FRAY_MIN_SCALE_BLOCKS,
+                        (int) Math.round(frayRadius * EDGE_OCEAN_FRAY_SCALE_FACTOR));
+                double frayNoise = ValueNoise2D.sampleBlocks(WORLD_SEED ^ EDGE_OCEAN_KEEP_SALT, blockX, blockZ, frayScale);
+                if (EdgeOceanRamp.frayedEdgeOcean(edgeB, frayNoise)) {
+                    oceanAuthority = true;
+                }
+            }
+        }
+        // ---- [2.0 re-apply] P4 (Slice C): drowned-land mirror of the raised-land veto ----
+        // The veto above is one-directional -- it demotes ocean authority on RAISED land, but nothing
+        // handled a LAND-family biome whose terrain the Phase 4 bias genuinely sank below sea level
+        // (swimming over plains). Terrain is the authority at the waterline in BOTH directions. Gates
+        // cheapest-first, so flag-off and armed-S=0 runs stay byte-identical.
+        if (!oceanAuthority && !base.is(BiomeTags.IS_OCEAN) && !base.is(BiomeTags.IS_RIVER)
+                && terrainBiasActivelyBiasing()
+                && LatitudeV2Flags.TERRAIN_V2_OCEAN_STRENGTH_RATIO != 0.0
+                && geoV2Summary != null && geoV2Summary.isOceanIntent()
+                && generator != null && noiseConfig != null && heightView != null) {
+            // SOLID floor, not the fluid-inclusive surface: a correctly-flooded carved column reads
+            // WORLD_SURFACE_WG == waterline (63), which blinds this veto. Flag-off keeps the unchanged
+            // columnDecisionY read on the cheap live branch.
+            int drownedHeight = skipPreview && hasPreviewTerrainInputs
+                    ? (LatitudeV2Flags.TERRAIN_V2_FLOOR_SIGHTED_VETO
+                            ? previewFloorHeight(generator, noiseConfig, heightView, blockX & ~3, blockZ & ~3)
+                            : columnDecisionY)
+                    : previewFloorHeight(generator, noiseConfig, heightView, blockX & ~3, blockZ & ~3);
+            if (drownedHeight < seaLevel - 2) {
+                oceanAuthority = true;
             }
         }
 
@@ -4644,6 +5934,14 @@ public final class LatitudeBiomes {
                 landBandIndex,
                 mountainLikeAfterFinalTruth,
                 sampler);
+        // ---- [2.0 re-apply] P6: climate-compat reroll, then the polar-barrens final override ----
+        // Both run LAST, strictly after enforceFinalAridTerrainAuthority and every other land law, so
+        // nothing downstream can undo them. This ordering is the load-bearing constraint of P6.
+        if (LatitudeV2Flags.BIOME_CONSUMER_V2_ENABLED && climateV2Summary != null) {
+            out = applyClimateCompatReroll(biomeRegistry, out, climateV2Summary, blockX, blockZ,
+                    preview, seaLevel, hasReliableSurface);
+        }
+        out = applyPolarBarrensOverride(biomeRegistry, out, landBandIndex, finalLatDeg, blockX, blockZ);
         debugPick(blockX, blockZ, effectiveRadius, t, band, base, out, false, out != sanitized, mangroveDecision);
         return out;
     }
@@ -4759,7 +6057,14 @@ public final class LatitudeBiomes {
         int polarProbeDelta  = preview.robustDelta;
         if (skipPreview && landBandIndex >= BAND_POLAR && rawMountainTruth && hasPreviewTerrainInputs) {
             polarProbeHeight = columnDecisionY;
-            polarProbeDelta  = 0;
+            // [2.0 re-apply] P8: recover the ruggedness read on the live path. Zeroing it here
+            // permanently disabled the polarProbeDelta >= 12 branch below, so ruggedness alone could no
+            // longer earn polar mountain authority. The proxy answers from Climate.Sampler queries only
+            // -- it never re-enters the chunk generator, which is what previewTerrain()/previewHeight()
+            // do and why they cannot be called from this path. -D kill switch, default on.
+            polarProbeDelta  = POLAR_CLIMATE_RUGGED_PROXY_ENABLED
+                    ? polarClimateRuggednessProxy(sampler, blockX, blockZ)
+                    : 0;
         }
         boolean polarTerrainMountainLike = (!hasPreviewTerrainInputs && isAtlasHeadlessContext(callerContext) && rawMountainTruth)
                 || (polarProbeDelta >= 12)
@@ -4768,9 +6073,26 @@ public final class LatitudeBiomes {
         if (landBandIndex >= BAND_POLAR && polarMountainLikeFinal) {
             mountainLike = true;
         }
+        // ---- [2.0 re-apply] P2: GeoAuthority / ClimateAuthority summaries ----
+        // Both flags default to false, so this is a no-op computation on a stock build. Whether a summary
+        // actually CHANGES selection is gated separately by BIOME_CONSUMER_V2_ENABLED below (and, for the
+        // ocean-authority swap, by its own BIOME_CONSUMER_V2_OCEAN_AUTHORITY_ENABLED sub-flag).
+        GeoSummary geoV2Summary = LatitudeV2Flags.GEO_V2_ENABLED
+                ? GEO_V2_PROVIDER.summarize(blockX, blockZ) : null;
+        ClimateSummary climateV2Summary = LatitudeV2Flags.CLIMATE_V2_ENABLED
+                ? CLIMATE_V2_PROVIDER.summarize(blockX, blockZ) : null;
         int oceanDistance = oceanDistanceBlocks(blockX, blockZ, sampler);
         boolean nearOcean = oceanDistance <= MANGROVE_COASTAL_MAX_BLOCKS;
         boolean oceanAuthority = oceanDistance == 0;
+        // ---- [2.0 re-apply] P3: ocean-authority relabel ----
+        // GeoAuthority's coherent continent/ocean-basin intent CAN replace the coarse per-cell
+        // OceanDistanceField threshold as land/ocean AUTHORITY. Deliberately placed BEFORE the raised-land
+        // veto below, so that veto still gets the last word on a clearly-raised column. Both flags default
+        // false; requires an explicit second flag so it cannot be enabled by accident.
+        if (LatitudeV2Flags.BIOME_CONSUMER_V2_ENABLED && LatitudeV2Flags.BIOME_CONSUMER_V2_OCEAN_AUTHORITY_ENABLED
+                && geoV2Summary != null) {
+            oceanAuthority = geoV2Summary.isOceanIntent();
+        }
         // Keep the collection-backed picker in exact parity with the registry-backed runtime path.
         boolean clearlyRaisedLand = OceanTerrainCompatibilityPolicy.isClearlyRaisedLand(
                 hasPreviewTerrainInputs,
@@ -4788,6 +6110,49 @@ public final class LatitudeBiomes {
                     : previewHeight(generator, noiseConfig, heightView, blockX & ~3, blockZ & ~3);
             if (realHeight >= seaLevel) {
                 oceanAuthority = false;
+            }
+        }
+        // ---- [2.0 re-apply] P4: latitude-aware EDGE OCEAN moat at the projection X-edge ----
+        // Consumes the X-ONLY edge term (projectionEdgeXOnly01), NOT projectionEdgeSuitability01 =
+        // max(edgeB, poleB): the poleB component would convert the already-good icy pole LAND shelf into
+        // frozen ocean (B-1 amendment 1). Sits AFTER the raised-land veto on purpose so that veto's
+        // fluid-inclusive WORLD_SURFACE_WG read cannot clobber it live (B-1 amendment 2). Frayed on a
+        // coherent province-noise field; columns with edgeB == 0 are bitwise-unaffected.
+        if (LatitudeV2Flags.BOUNDARY_V2_ENABLED
+                && geoV2Summary != null
+                && terrainBiasActivelyBiasing()
+                && LatitudeV2Flags.TERRAIN_V2_OCEAN_STRENGTH_RATIO != 0.0) {
+            double edgeB = geoV2Summary.projectionEdgeXOnly01();
+            if (edgeB > 0.0) {
+                int frayRadius = ACTIVE_RADIUS_BLOCKS > 0 ? ACTIVE_RADIUS_BLOCKS : (REFERENCE_DIAMETER_BLOCKS / 2);
+                int frayScale = Math.max(EDGE_OCEAN_FRAY_MIN_SCALE_BLOCKS,
+                        (int) Math.round(frayRadius * EDGE_OCEAN_FRAY_SCALE_FACTOR));
+                double frayNoise = ValueNoise2D.sampleBlocks(WORLD_SEED ^ EDGE_OCEAN_KEEP_SALT, blockX, blockZ, frayScale);
+                if (EdgeOceanRamp.frayedEdgeOcean(edgeB, frayNoise)) {
+                    oceanAuthority = true;
+                }
+            }
+        }
+        // ---- [2.0 re-apply] P4 (Slice C): drowned-land mirror of the raised-land veto ----
+        // The veto above is one-directional -- it demotes ocean authority on RAISED land, but nothing
+        // handled a LAND-family biome whose terrain the Phase 4 bias genuinely sank below sea level
+        // (swimming over plains). Terrain is the authority at the waterline in BOTH directions. Gates
+        // cheapest-first, so flag-off and armed-S=0 runs stay byte-identical.
+        if (!oceanAuthority && !base.is(BiomeTags.IS_OCEAN) && !base.is(BiomeTags.IS_RIVER)
+                && terrainBiasActivelyBiasing()
+                && LatitudeV2Flags.TERRAIN_V2_OCEAN_STRENGTH_RATIO != 0.0
+                && geoV2Summary != null && geoV2Summary.isOceanIntent()
+                && generator != null && noiseConfig != null && heightView != null) {
+            // SOLID floor, not the fluid-inclusive surface: a correctly-flooded carved column reads
+            // WORLD_SURFACE_WG == waterline (63), which blinds this veto. Flag-off keeps the unchanged
+            // columnDecisionY read on the cheap live branch.
+            int drownedHeight = skipPreview && hasPreviewTerrainInputs
+                    ? (LatitudeV2Flags.TERRAIN_V2_FLOOR_SIGHTED_VETO
+                            ? previewFloorHeight(generator, noiseConfig, heightView, blockX & ~3, blockZ & ~3)
+                            : columnDecisionY)
+                    : previewFloorHeight(generator, noiseConfig, heightView, blockX & ~3, blockZ & ~3);
+            if (drownedHeight < seaLevel - 2) {
+                oceanAuthority = true;
             }
         }
 
@@ -5418,6 +6783,14 @@ public final class LatitudeBiomes {
                 landBandIndex,
                 mountainLikeAfterFinalTruth,
                 sampler);
+        // ---- [2.0 re-apply] P6: climate-compat reroll, then the polar-barrens final override ----
+        // Both run LAST, strictly after enforceFinalAridTerrainAuthority and every other land law, so
+        // nothing downstream can undo them. This ordering is the load-bearing constraint of P6.
+        if (LatitudeV2Flags.BIOME_CONSUMER_V2_ENABLED && climateV2Summary != null) {
+            out = applyClimateCompatReroll(biomePool, out, climateV2Summary, blockX, blockZ,
+                    preview, seaLevel, hasReliableSurface);
+        }
+        out = applyPolarBarrensOverride(biomePool, out, landBandIndex, finalLatDeg, blockX, blockZ);
         debugPick(blockX, blockZ, effectiveRadius, t, band, base, out, false, out != sanitized, mangroveDecision);
         return out;
     }
@@ -6862,14 +8235,28 @@ public final class LatitudeBiomes {
         return (broad * 0.18) + (medium * 0.10);
     }
 
+    // Province wavelength: ProvinceAuthority derives WARM_OPENNESS_SCALE_BLOCKS / WARM_HUMIDITY_SCALE_BLOCKS
+    // as round(1792 * MULT) / round(1536 * MULT) off the SAME -Dlatitude.provinceWavelength, and its comment
+    // asserts they stay identical to these two fields. Keeping literals here while the authority scaled
+    // would have put the province classifier on a different wavelength from the in-province climate
+    // decisions (visible as province-boundary seams). Same formula, same clamp, same property key.
+    // Default 1.0 = the tuned baseline: the fresh-world vanilla coverage guarantee (VanillaBiomeCoveragePlan)
+    // must place an arid anchor in every world size, and at 1.7 the smallest worlds have no eligible desert
+    // or wooded-badlands centre at all (the worldgen-authority policy suite witnesses radius 3750). Values
+    // above 1.0 remain an opt-in experiment for vaster contiguous warm provinces on large worlds.
+    public static final double PROVINCE_WAVELENGTH_MULT =
+            Math.min(2.5, Math.max(1.0, Double.parseDouble(System.getProperty("latitude.provinceWavelength", "1.0"))));
+    private static final int WARM_PROVINCE_OPENNESS_SCALE_BLOCKS = (int) Math.round(1792 * PROVINCE_WAVELENGTH_MULT);
+    private static final int WARM_PROVINCE_HUMIDITY_SCALE_BLOCKS = (int) Math.round(1536 * PROVINCE_WAVELENGTH_MULT);
+
     private static double tropicalOpennessNoise(int blockX, int blockZ) {
-        return ValueNoise2D.sampleBlocks(WORLD_SEED ^ TROPICAL_OPENNESS_SALT, blockX, blockZ, 1792);
+        return ValueNoise2D.sampleBlocks(WORLD_SEED ^ TROPICAL_OPENNESS_SALT, blockX, blockZ, WARM_PROVINCE_OPENNESS_SCALE_BLOCKS);
     }
 
     private static final long SUBTROPICAL_HUMIDITY_SALT = 0xDECAF_50B7_0001L;
 
     private static double subtropicalHumidityNoise(int blockX, int blockZ) {
-        return ValueNoise2D.sampleBlocks(WORLD_SEED ^ SUBTROPICAL_HUMIDITY_SALT, blockX, blockZ, 1536);
+        return ValueNoise2D.sampleBlocks(WORLD_SEED ^ SUBTROPICAL_HUMIDITY_SALT, blockX, blockZ, WARM_PROVINCE_HUMIDITY_SCALE_BLOCKS);
     }
 
     private static double subtropicalHumidityThreshold(int step) {

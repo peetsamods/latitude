@@ -4,7 +4,7 @@ import java.util.Random;
 
 /**
  * Phase 5 B-9 / S25(A) -- deterministic CARVER-START prediction for {@code /latdev locateCrevasse} /
- * {@code locateTunnel} (Peetsa 2026-07-20, TEST 117: "I still can't find any crevasses. Can we add a lat dev
+ * {@code locateTunnel} (the maintainer 2026-07-20, TEST 117: "I still can't find any crevasses. Can we add a lat dev
  * locate command?"). Pure math, zero Minecraft imports (Core Logic layer, unit-testable in a plain JVM); the
  * MC-coupled glue (raw-biome carver counts, the barrens-band + sea-probe gates, teleporting) lives in the
  * {@code LatitudeDevCommands} subcommand.

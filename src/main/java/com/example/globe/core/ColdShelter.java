@@ -1,7 +1,7 @@
 package com.example.globe.core;
 
 /**
- * Phase 5 Slice B-7 (Pole Passage) -- Peetsa stipulation S4: the SHELTER RULE for cold damage. Pure threshold
+ * Phase 5 Slice B-7 (Pole Passage) -- the maintainer stipulation S4: the SHELTER RULE for cold damage. Pure threshold
  * classifier, zero Minecraft imports (Core Logic layer, unit-testable in a plain JVM). The MC-coupled part --
  * reading RAW SKY LIGHT at the player's eye position ({@code LightLayer.SKY} via the level light engine) --
  * is a thin shim in {@code GlobeMod}; this class owns only the threshold decision.
@@ -12,7 +12,7 @@ package com.example.globe.core;
  * with the damage (no bite = no cue) unless the S6 heal-lock holds it.
  *
  * <p><b>Why raw sky light, not {@code canSeeSky} (trap-proof, graded enclosure).</b> The single-overhead-log
- * trap -- Peetsa's explicit callout, the old warning-banner-under-a-tree bug class -- makes binary
+ * trap -- the maintainer's explicit callout, the old warning-banner-under-a-tree bug class -- makes binary
  * {@code canSeeSky} lie: one block over the head reads "sheltered" while the player stands in a howling
  * blizzard. Raw sky light is GRADED: under one overhead block with open sides, diffuse sky light floods in
  * sideways and the eye position still reads ~11-13 (NOT sheltered); a sealed hut / cave / snow burrow reads

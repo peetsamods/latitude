@@ -55,7 +55,7 @@ public final class SolarSkyMood {
     public static final double DUSK_HOLD_MAX_BLEND = 0.80;
 
     /**
-     * S27 (Peetsa, TEST 118 flight, 2026-07-20) — the MIDNIGHT-SUN TWILIGHT FLOOR. Owner: "it still becomes a
+     * S27 (the maintainer, TEST 118 flight, 2026-07-20) — the MIDNIGHT-SUN TWILIGHT FLOOR. Owner: "it still becomes a
      * night sky at midnight with the sun out... should be a true midnight sun where the sun only goes into a
      * twilight dusky state." The vanilla clock still drags the sky DOME + horizon FOG to full night at
      * clock-midnight while the tilted sun hangs above the horizon; the twilight floor CAPS how dark they may go.
@@ -245,6 +245,24 @@ public final class SolarSkyMood {
     public static float liftedStarBrightness(float vanillaStarBrightness, double gloom01) {
         double g = Double.isNaN(gloom01) ? 0.0 : clamp01(gloom01);
         return (float) Math.max(vanillaStarBrightness, g);
+    }
+
+    /**
+     * Linear channel blend in normalised [0,1] float space -- the float twin of the byte-channel lerp
+     * {@link #blendRgb(int, int, double)} performs, so the blending RULE stays in one place even where the
+     * renderer hands out float vectors instead of packed ints. 26.3 retyped {@code SkyRenderState.skyColor}
+     * from a packed ARGB {@code int} to an {@code org.joml.Vector3fc} (and {@code CLOUD_COLOR} to a
+     * {@code Vector4fc}), and this class deliberately keeps ZERO imports, so the vector assembly itself
+     * lives at the call site while the arithmetic lives here.
+     */
+    public static float blendChannel01(float from, float to, double t01) {
+        double t = clamp01(Double.isNaN(t01) ? 0.0 : t01);
+        return (float) (from + (to - from) * t);
+    }
+
+    /** One 0-255 channel of a packed RGB as a normalised [0,1] float. {@code shift} is 16/8/0 for R/G/B. */
+    public static float channel01(int rgb, int shift) {
+        return ((rgb >> shift) & 0xFF) / 255.0f;
     }
 
     /** Blend an ARGB colour's RGB toward a target RGB by {@code t01}, preserving the base alpha exactly. */

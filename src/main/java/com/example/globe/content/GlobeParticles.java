@@ -8,7 +8,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 
 /**
- * Phase 5 S27 (Peetsa, TEST 118 flight, 2026-07-20) — the mod's FIRST custom PARTICLE type,
+ * Phase 5 S27 (the maintainer, TEST 118 flight, 2026-07-20) — the mod's FIRST custom PARTICLE type,
  * {@code globe:frost_glint}. Owner on the snow-glint sparkle: "go back to the amethyst sparkle, but instead
  * desaturate it so it's not purple." The amethyst look is the vanilla {@code GlowParticle} 4-point glow star
  * (WAX_OFF), but its lilac cast is HARDCODED in the provider ({@code setColor(1.0, 0.9, 1.0)} + the emissive

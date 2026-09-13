@@ -1,7 +1,7 @@
 package com.example.globe.core;
 
 /**
- * Phase 5 Slice B-7 (Pole Passage) -- Peetsa stipulation S6 (FROZEN WOUNDS): the WARMTH-SOURCE classifier.
+ * Phase 5 Slice B-7 (Pole Passage) -- the maintainer stipulation S6 (FROZEN WOUNDS): the WARMTH-SOURCE classifier.
  * Pure Java, zero Minecraft imports (Core Logic layer, unit-testable in a plain JVM): the block-state facts
  * arrive as primitives (registry namespace + path + the LIT property where the block has one), so the warm-set
  * truth table is provable without a registry bootstrap. The MC-coupled part -- the ~4-block box scan

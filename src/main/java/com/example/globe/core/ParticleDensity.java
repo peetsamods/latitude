@@ -6,7 +6,7 @@ package com.example.globe.core;
  * in a plain JVM); the tiny glue that reads the LIVE vanilla {@code ParticleStatus} and maps it onto
  * {@link Tier} lives in {@code GlobeModClient} (a trivial 1:1 mapping, not math).
  *
- * <p><b>Why this exists (Peetsa, perf concern):</b> the N/S polar ambient-snow blizzard spawns a
+ * <p><b>Why this exists (the maintainer, perf concern):</b> the N/S polar ambient-snow blizzard spawns a
  * FIXED per-tick particle budget that ramps very heavy near the pole. If a player has turned their
  * vanilla Particles setting down for performance, the pole storm must honor that too or it can slow
  * their game right where the particle load is highest. This scales the polar snow budget down in
@@ -16,7 +16,7 @@ package com.example.globe.core;
  * .ParticleStatus} has exactly THREE tiers -- {@code ALL}, {@code DECREASED}, {@code MINIMAL} --
  * there is no separate "off" tier (verified against the mapped 26.2 jar). {@code MINIMAL} is the
  * lowest vanilla tier and is treated here as our floor: still a real (thin) blizzard, not literal
- * zero, because Peetsa wants the pole to always read as snowy.
+ * zero, because the maintainer wants the pole to always read as snowy.
  *
  * <p><b>Anti-backlog note:</b> this is a pure multiplicative scale of a count the caller already
  * computes fresh every spawn-tick. It holds no state, no counters, no accumulator -- calling

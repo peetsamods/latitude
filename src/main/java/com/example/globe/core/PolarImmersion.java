@@ -1,7 +1,7 @@
 package com.example.globe.core;
 
 /**
- * Phase 5 Slice B-7 (Pole Passage) -- Peetsa stipulation S7: POLAR IMMERSION ("polar water is three degrees
+ * Phase 5 Slice B-7 (Pole Passage) -- the maintainer stipulation S7: POLAR IMMERSION ("polar water is three degrees
  * colder than the air"). Pure Java, zero Minecraft imports (Core Logic layer, unit-testable in a plain JVM).
  * The MC-coupled part is ONE boolean read -- {@code player.isInWater()} -- in {@code GlobeMod.borderUxTick};
  * every decision lives here.
@@ -31,7 +31,7 @@ package com.example.globe.core;
  * crossing polar seas by boat is safe -- story-true, zero code. This class takes the boolean; the shim reads
  * {@code isInWater()} and nothing else.
  *
- * <p><b>Tunable:</b> {@link #IMMERSION_SEVERITY_DEG} (+3) is the one number Peetsa may want to feel live
+ * <p><b>Tunable:</b> {@link #IMMERSION_SEVERITY_DEG} (+3) is the one number the maintainer may want to feel live
  * (flagged in the flight brief).
  */
 public final class PolarImmersion {

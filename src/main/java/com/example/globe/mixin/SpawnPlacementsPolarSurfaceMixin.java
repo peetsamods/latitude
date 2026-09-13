@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * S13 (e) POLAR SURFACE ALLOWLIST (Peetsa, TEST-103 flight). Intercepts
+ * S13 (e) POLAR SURFACE ALLOWLIST (the maintainer, TEST-103 flight). Intercepts
  * {@code SpawnPlacements.checkSpawnRules(EntityType, ServerLevelAccessor, EntitySpawnReason, BlockPos,
  * RandomSource)} -- the TYPE-aware static gate every natural spawn attempt funnels through (called by
  * {@code NaturalSpawner} before the entity's own spawn predicate). Because it sees the entity TYPE it can do

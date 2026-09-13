@@ -40,7 +40,7 @@ package com.example.globe.core;
  *       plateau, symmetric dawn/dusk twilight ramps, 0 across clock-night ~13000-23000) multiplies
  *       {@link #glintWeight} EVERYWHERE -- all latitudes, all season states -- so the glint is a planet-wide
  *       DAYTIME phenomenon and the owner's "midnight glints" (his night flights) are gone; it also keeps the
- *       pulse consistent under midnight sun (his "keep it consistent" ask);</li>
+ *       pulse consistent under midnight sun (his "keep it consistent" request);</li>
  *   <li>a POLAR-NIGHT / MIDNIGHT-SUN band EXTENSION: when the caller reports that the observer's latitude is in
  *       an around-the-clock solar band ({@link SolarTilt.FunctionalBand#POLAR_NIGHT} /
  *       {@link SolarTilt.FunctionalBand#MIDNIGHT_SUN} -- the {@code functionalBandActive} flag), the glint's

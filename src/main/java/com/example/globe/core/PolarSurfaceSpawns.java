@@ -1,7 +1,7 @@
 package com.example.globe.core;
 
 /**
- * S13 (e) POLAR SURFACE ALLOWLIST (Peetsa, TEST-103 flight, 2026-07-17): in polar storm country
+ * S13 (e) POLAR SURFACE ALLOWLIST (the maintainer, TEST-103 flight, 2026-07-17): in polar storm country
  * ({@code |lat| >= } the storm/ambient onset, {@link PolarHazardWindow#AMBIENT_ONSET_DEG} = 80 deg) the
  * SKY-EXPOSED surface is too hostile for the ordinary hostile menagerie -- only the STRAY (the polar
  * biome's own signature skeleton, which vanilla already restricts to open sky) belongs out on the ice.

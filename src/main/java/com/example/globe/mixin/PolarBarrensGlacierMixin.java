@@ -5,24 +5,29 @@ import com.example.globe.core.PolarBarrensBand;
 import com.example.globe.core.PolarWaterFreezeRule;
 import com.example.globe.world.LatitudeBiomes;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.WorldGenRegion;
+import net.minecraft.core.Holder;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.StructureManager;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeManager;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
+import net.minecraft.world.level.levelgen.NoiseChunk;
 import net.minecraft.world.level.levelgen.RandomState;
+import net.minecraft.world.level.levelgen.material.rule.MaterialRule;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.Set;
+
 /**
- * B-9a GLACIER BODY ({@code latitude.polarBarrens.enabled} family, worldgen, NEW CHUNKS ONLY) -- Peetsa
+ * B-9a GLACIER BODY ({@code latitude.polarBarrens.enabled} family, worldgen, NEW CHUNKS ONLY) -- the maintainer
  * 2026-07-16 (TEST 99): the Barrens ground read as "~3 blocks of dressing over granite"; it "should be a
  * very very very thick layer of ice under like 10 blocks at least of snow." This TAIL hook on the surface
  * stage rebuilds every barrens LAND column top-down into a real glacier:
@@ -31,7 +36,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *       {@code snow_block} -- EXCEPT blocks that are already glacier-family (snow_block / the skin's
  *       {@code powder_snow} pockets / {@code packed_ice}-{@code ice} patches / snow layers), so the
  *       {@code PolarBarrensSurfaceMixin} surface dressing is preserved on top (A4's powder pockets stay).</li>
- *   <li><b>Ice body</b> (S37, Peetsa 2026-07-23, TEST 127: "not nearly enough ice ... caverns almost all
+ *   <li><b>Ice body</b> (S37, the maintainer 2026-07-23, TEST 127: "not nearly enough ice ... caverns almost all
  *       ice until sub-Y0"): below the cap the whole solid column is ice ALL THE WAY DOWN to
  *       {@link PolarBarrensBand#ICE_BODY_FLOOR_Y} (Y0) -- a uniform {@code packed_ice} slab (the carvable
  *       base) with a BOUNDED {@code blue_ice} heart seam ({@link PolarBarrensBand#BLUE_ICE_HEART_THICKNESS_BLOCKS}
@@ -58,6 +63,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *   <li><b>Fluid columns skipped</b> entirely (the {@code isSurfaceSkin} land-column clause: WORLD_SURFACE
  *       vs OCEAN_FLOOR split &gt; 1): the frozen SEA is the water-freeze law's domain, not the glacier's.</li>
  * </ul>
+ *
+ * <p><b>26.3 port note (descriptor only, no behaviour change).</b> 26.3 reshaped the surface stage:
+ * {@code buildSurface} is now the PRIVATE
+ * {@code buildSurface(ChunkAccess, NoiseChunk, RandomState, BiomeManager, Set&lt;Holder&lt;Biome&gt;&gt;, MaterialRule)}
+ * (verified with javap on the 26.3-rc-2 jar) -- the {@code WorldGenRegion} and {@code StructureManager}
+ * arguments are gone. This pass never read either of them (it works entirely from the {@code ChunkAccess}
+ * and Latitude's own static geography), so only the injector descriptor and the handler's parameter list
+ * moved; the TAIL position, the ordering guarantees below and every block decision are unchanged.
  *
  * <p><b>Why a buildSurface TAIL pass and not the {@code setBlockState} substitution hook:</b> the glacier
  * body must convert NOISE-stage stone tens of blocks down, and those blocks were written straight into the
@@ -86,11 +99,13 @@ public abstract class PolarBarrensGlacierMixin {
     private static final BlockState GLOBE_GLACIER_BLUE_ICE = Blocks.BLUE_ICE.defaultBlockState();
 
     @Inject(
-            method = "buildSurface(Lnet/minecraft/server/level/WorldGenRegion;Lnet/minecraft/world/level/StructureManager;Lnet/minecraft/world/level/levelgen/RandomState;Lnet/minecraft/world/level/chunk/ChunkAccess;)V",
+            method = "buildSurface(Lnet/minecraft/world/level/chunk/ChunkAccess;Lnet/minecraft/world/level/levelgen/NoiseChunk;Lnet/minecraft/world/level/levelgen/RandomState;Lnet/minecraft/world/level/biome/BiomeManager;Ljava/util/Set;Lnet/minecraft/world/level/levelgen/material/rule/MaterialRule;)V",
             at = @At("TAIL")
     )
-    private void globe$polarBarrensGlacierBody(WorldGenRegion region, StructureManager structureManager,
-                                               RandomState randomState, ChunkAccess chunk, CallbackInfo ci) {
+    private void globe$polarBarrensGlacierBody(ChunkAccess chunk, NoiseChunk noiseChunk,
+                                               RandomState randomState, BiomeManager biomeManager,
+                                               Set<Holder<Biome>> generatedBiomes, MaterialRule materialRule,
+                                               CallbackInfo ci) {
         if (!LatitudeV2Flags.POLAR_BARRENS_ENABLED) {
             return;
         }
@@ -157,7 +172,7 @@ public abstract class PolarBarrensGlacierMixin {
                         LatitudeBiomes.polarSeaFreezeFrayNoise(blockX, blockZ),
                         false, true);
                 int capBottomY = worldSurfaceY - PolarBarrensBand.GLACIER_SNOW_CAP_BLOCKS;
-                // S37 (Peetsa 2026-07-23, TEST 127: "not nearly enough ice ... caverns almost all ice until
+                // S37 (the maintainer 2026-07-23, TEST 127: "not nearly enough ice ... caverns almost all ice until
                 // sub-Y0"): the ice BODY reaches ALL THE WAY DOWN to Y0 (PolarBarrensBand.ICE_BODY_FLOOR_Y),
                 // no longer stopping at a shallow noise-wobbled sole. Below the snow cap the whole solid
                 // column becomes a uniform packed_ice slab (the carvable base -- packed_ice is in
@@ -203,7 +218,7 @@ public abstract class PolarBarrensGlacierMixin {
                         int depthBelowCap = capBottomY - y;
                         boolean blueHeart = depthBelowCap >= blueIceStartDepth
                                 && depthBelowCap < blueIceStartDepth + PolarBarrensBand.BLUE_ICE_HEART_THICKNESS_BLOCKS;
-                        // S38 SPECKLE (Peetsa 2026-07-23, TEST 128: "notice how uniform everything looks"): the
+                        // S38 SPECKLE (the maintainer 2026-07-23, TEST 128: "notice how uniform everything looks"): the
                         // non-heart body is no longer a monolithic packed slab -- a deterministic per-block hash
                         // (world seed + salt, Art VI) flecks it with ~7% snow_block pockets and ~5% blue_ice
                         // glints. Both speckle materials keep the carve story honest: snow_block IS carver-
@@ -225,7 +240,7 @@ public abstract class PolarBarrensGlacierMixin {
                         chunk.setBlockState(cursor, bodyState);
                     }
                 }
-                // S37 SUB-Y0 ICE DIFFUSION (Peetsa 2026-07-23: "sub-Y0, where there should be about a 10 block
+                // S37 SUB-Y0 ICE DIFFUSION (the maintainer 2026-07-23: "sub-Y0, where there should be about a 10 block
                 // diffusion of the ice into stone/deepslate"): the S24 permafrost stratum RELOCATED -- with the
                 // body now solid to Y0, the transition band hangs below Y0. From Y-1 down it grafts packed-ice
                 // fingering onto the stone/deepslate matrix, its per-column REACH riding the SAME glacier

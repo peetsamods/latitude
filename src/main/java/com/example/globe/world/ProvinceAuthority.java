@@ -39,9 +39,10 @@ public final class ProvinceAuthority {
     // boundaries align with existing picker climate signals. The scales are driven by the SAME
     // -Dlatitude.provinceWavelength multiplier (identical formula) as LatitudeBiomes.tropicalOpennessNoise /
     // subtropicalHumidityNoise, so enlarging province wavelength for vast contiguous regions keeps the
-    // province boundary aligned with the in-province climate decisions (no seams). 1.0 = legacy.
+    // province boundary aligned with the in-province climate decisions (no seams). 1.0 = the tuned
+    // baseline (see LatitudeBiomes.PROVINCE_WAVELENGTH_MULT for why the default is not larger).
     private static final double PROVINCE_WAVELENGTH_MULT =
-            Math.min(2.5, Math.max(1.0, Double.parseDouble(System.getProperty("latitude.provinceWavelength", "1.7"))));
+            Math.min(2.5, Math.max(1.0, Double.parseDouble(System.getProperty("latitude.provinceWavelength", "1.0"))));
     static final long WARM_OPENNESS_SALT = 0x7472_6F70_6F70_656EL;   // same as TROPICAL_OPENNESS_SALT
     static final int  WARM_OPENNESS_SCALE_BLOCKS = (int) Math.round(1792 * PROVINCE_WAVELENGTH_MULT); // == tropicalOpennessNoise
     static final long WARM_HUMIDITY_SALT = 0xDECAF_50B7_0001L;        // same as SUBTROPICAL_HUMIDITY_SALT

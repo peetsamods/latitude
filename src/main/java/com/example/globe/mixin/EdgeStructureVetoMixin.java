@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Phase 5 Slice B-5 (Hemisphere Passage polish, item 1): keep GENERATED STRUCTURES out of the E/W-edge band
- * (Peetsa saw one at the border, TEST 83). Same PROVEN chokepoint as {@link ExtremePolarVillageGuardMixin} and
+ * (the maintainer saw one at the border, TEST 83). Same PROVEN chokepoint as {@link ExtremePolarVillageGuardMixin} and
  * {@link StructureBiomeMatchGuardMixin} -- {@code StructureStart.placeInChunk} at HEAD, {@code cancellable}:
  * vetoing here runs BEFORE any block of the structure is written, so there are never half-built structures.
  *
@@ -30,7 +30,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *
  * <p><b>SURFACE structures only.</b> The band test is a purely horizontal (X) check, so an underground
  * structure whose anchor sits in the band would also match; we deliberately skip those ({@code step() !=
- * SURFACE_STRUCTURES}). Two reasons: mineshafts et al. are invisible from the surface (Peetsa's complaint was
+ * SURFACE_STRUCTURES}). Two reasons: mineshafts et al. are invisible from the surface (the maintainer's complaint was
  * VISUAL), and STRONGHOLDS carry the End portal -- vetoing one could strand End access. Underground structures
  * at the edge are harmless and left alone; the visible frontier is what gets cleared (and that is all B-6's
  * mirror-band seam needs).

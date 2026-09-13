@@ -6,8 +6,13 @@ import com.example.globe.core.LatitudeV2Flags;
 import com.example.globe.core.geo.GeoSummary;
 import com.example.globe.world.LatitudeBiomes;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.util.KeyDispatchDataCodec;
-import net.minecraft.world.level.levelgen.DensityFunction;
+import net.minecraft.util.Interval;
+import net.minecraft.world.level.levelgen.densityfunction.DensityBuffer;
+import net.minecraft.world.level.levelgen.densityfunction.DensityFunction;
+import net.minecraft.world.level.levelgen.densityfunction.DensitySampler;
+import net.minecraft.world.level.levelgen.densityfunction.DensityVolume;
+import net.minecraft.world.level.levelgen.densityfunction.DfRewriteRule;
+import net.minecraft.world.level.levelgen.densityfunction.SamplerContext;
 
 /**
  * Phase 4 (Terrain Integration Spike) density-function wrapper. Biases terrain surface height toward
@@ -56,7 +61,7 @@ import net.minecraft.world.level.levelgen.DensityFunction;
  *       the outer per-router-rebuild one in {@link TerrainRouterWrapping#installIfArmed}.</li>
  * </ul>
  */
-public final class GeoTerrainBiasFunction implements DensityFunction.SimpleFunction {
+public final class GeoTerrainBiasFunction implements DensityFunction {
 
     /**
      * Compile-time vertical-push scale in <b>density units</b> (NOT block units -- {@code finalDensity} is
@@ -93,7 +98,7 @@ public final class GeoTerrainBiasFunction implements DensityFunction.SimpleFunct
     //
     // The additive negative bias SHATTERED terrain: a uniform subtraction flips every marginal-positive
     // pocket in a column negative, and ocean-intent columns' undergrounds sit at +0.03..+0.11 density
-    // (measured at Peetsa's spawn: ONE solid mass [-64..98] became FOUR fragments + 63 void blocks at
+    // (measured at the maintainer's spawn: ONE solid mass [-64..98] became FOUR fragments + 63 void blocks at
     // S=0.4). A subtraction cannot be Y-windowed out of this, because the marginal band IS the seabed band
     // on other columns. The ocean side therefore stops being additive entirely: geography prescribes a
     // TARGET FLOOR Y* = seaLevel − depth(land01, shelf01), and the density becomes min(base, ramp(Y* − y)).
@@ -323,20 +328,22 @@ public final class GeoTerrainBiasFunction implements DensityFunction.SimpleFunct
      * -tripped through data, so a trivial unit codec is sufficient and correct (design §4.1
      * "documented non-serializable").
      */
-    private final KeyDispatchDataCodec<GeoTerrainBiasFunction> codec =
-            KeyDispatchDataCodec.of(MapCodec.unit(this));
+    private final MapCodec<GeoTerrainBiasFunction> codec = MapCodec.unit(this);
 
     public GeoTerrainBiasFunction(DensityFunction delegate) {
         this.delegate = delegate;
     }
 
-    @Override
-    public double compute(FunctionContext ctx) {
-        // Delegate evaluation deliberately OUTSIDE the safety try (Slice B, audit P1-2): if the DELEGATE
-        // itself throws, that is a vanilla/Terralith failure that must propagate exactly as it would with no
-        // wrapper installed. The old shape re-invoked the delegate from inside the catch, which doubled the
-        // delegate's cost on the failure path and let a second throw escape the "safety" net uncaught anyway.
-        double base = delegate.compute(ctx);
+    /**
+     * The bias math, unchanged from the 26.2 shape. 26.3 replaced the per-call
+     * {@code compute(FunctionContext)} contract with a compile-then-sample one
+     * ({@link DensityFunction#compileSampler}), so the delegate's value and the block coordinates arrive
+     * as plain arguments instead of being pulled off a context object. The delegate is still evaluated
+     * OUTSIDE this method's try (see {@link Sampler#sampleValue}) so a vanilla/Terralith failure in the
+     * delegate propagates exactly as it would with no wrapper installed, and the failure path never
+     * re-invokes it.
+     */
+    private double globe$biased(double base, int blockX, int blockY, int blockZ) {
         try {
             // Sweeper finding #23 -- DECISION: a NEGATIVE strength is INTENTIONALLY ALLOWED, not clamped. It
             // is a deliberate "flip" knob: S<0 inverts the bias direction (land columns sink, ocean columns
@@ -378,8 +385,6 @@ public final class GeoTerrainBiasFunction implements DensityFunction.SimpleFunct
                         LatitudeV2Flags.TERRAIN_V2_STRENGTH, LatitudeV2Flags.TERRAIN_V2_OCEAN_STRENGTH_RATIO);
             }
 
-            int blockX = ctx.blockX();
-            int blockZ = ctx.blockZ();
             ColumnMemo memo = COLUMN_MEMO.get();
             double land01;
             double shelf01;
@@ -416,7 +421,7 @@ public final class GeoTerrainBiasFunction implements DensityFunction.SimpleFunct
                 // here, but post-C-2 honesty: S<0 turns this into a SUBTRACTION on land and reintroduces
                 // the shatter hazard TEST 27 exposed -- it remains a diagnostics-only knob, never a
                 // shipping configuration.
-                return base + s * K * sm * taperWeight(ctx.blockY());
+                return base + s * K * sm * taperWeight(blockY);
             }
 
             // OCEAN side (Slice C-2 bathymetry -- see the K_DEPTH_BLOCKS block comment): carve down to a
@@ -430,7 +435,7 @@ public final class GeoTerrainBiasFunction implements DensityFunction.SimpleFunct
             }
             // The ceiling is already grip-graded (Slice C-3) inside the shared helper; pure min()
             // semantics stay untouched here.
-            double ceil = Math.max(CEIL_FLOOR, CEIL_SLOPE * (ceilY - ctx.blockY()));
+            double ceil = Math.max(CEIL_FLOOR, CEIL_SLOPE * (ceilY - blockY));
             return Math.min(base, ceil);
         } catch (Throwable t) {
             // Bias-math failure only (the delegate already evaluated fine above): fall back to the unbiased
@@ -451,7 +456,7 @@ public final class GeoTerrainBiasFunction implements DensityFunction.SimpleFunct
      * strength "flip" knob; sweeper #15/#22's r-amplification concern is retired with the r-multiplied
      * additive path itself). The CLAMP (bathymetry) regime can only LOWER values, never raise them, and
      * its ramp is floored at {@link #CEIL_FLOOR} -- so when it can bind at all ({@code S != 0} and
-     * {@code r != 0}), {@code minValue} must additionally admit {@code CEIL_FLOOR}. At {@code S == 0}
+     * {@code r != 0}), the {@link #range()} minimum must additionally admit {@code CEIL_FLOOR}. At {@code S == 0}
      * (or {@code r == 0} for the min side's clamp term) the corresponding widening vanishes, so the
      * S=0 bounds equal the delegate's exactly (the byte-identity contract).
      */
@@ -465,47 +470,82 @@ public final class GeoTerrainBiasFunction implements DensityFunction.SimpleFunct
     }
 
     @Override
-    public double minValue() {
-        double additiveMin = delegate.minValue() - maxAbsBias();
-        return clampRegimeCanBind() ? Math.min(additiveMin, CEIL_FLOOR) : additiveMin;
+    public DensitySampler compileSampler(CompileContext compileContext) {
+        return new Sampler(delegate.compileSampler(compileContext));
+    }
+
+    /**
+     * The compiled form. 26.3 compiles a density graph once (per {@link SamplerContext} scope) into a tree
+     * of {@link DensitySampler}s instead of walking {@code DensityFunction} nodes per cell, so the wrapper's
+     * per-cell work lives here and the structural wrapping lives on the enclosing node.
+     *
+     * <p>{@code sampleVolume} delegates to {@link DensitySampler#sampleVolumeNaive}: the bias is a pure
+     * per-cell function of {@code (base, x, y, z)} with no cross-cell state, so cell-by-cell evaluation of
+     * a volume is value-identical to any blocked strategy -- the same reasoning that let the 26.2 shape keep
+     * {@code SimpleFunction}'s default {@code fillArray}.
+     */
+    private final class Sampler implements DensitySampler {
+
+        private final DensitySampler base;
+
+        private Sampler(DensitySampler base) {
+            this.base = base;
+        }
+
+        @Override
+        public float sampleValue(SamplerContext context, int x, int y, int z) {
+            // Delegate OUTSIDE the bias try (precedent discipline preserved across the 26.3 port).
+            float raw = base.sampleValue(context, x, y, z);
+            return (float) globe$biased(raw, x, y, z);
+        }
+
+        @Override
+        public void sampleVolume(SamplerContext context, DensityBuffer buffer, DensityVolume volume) {
+            DensitySampler.sampleVolumeNaive(context, buffer, volume, this);
+        }
+    }
+
+    /**
+     * Bounds post-C-2, now expressed as 26.3's {@link Interval} instead of the retired
+     * {@code minValue()}/{@code maxValue()} pair. The ADDITIVE regime's bound is {@code |S| * K}
+     * ({@code Math.abs(s)} still covers the documented negative-strength "flip" knob). The CLAMP
+     * (bathymetry) regime can only LOWER values and its ramp is floored at {@link #CEIL_FLOOR}, so when it
+     * can bind at all ({@code S != 0} and {@code r != 0}) the minimum must additionally admit
+     * {@code CEIL_FLOOR}. At {@code S == 0} (or {@code r == 0}) the widening vanishes and the interval
+     * equals the delegate's exactly -- the S=0 byte-identity contract.
+     */
+    @Override
+    public Interval range() {
+        Interval base = delegate.range();
+        double bias = maxAbsBias();
+        double additiveMin = base.min() - bias;
+        double min = clampRegimeCanBind() ? Math.min(additiveMin, CEIL_FLOOR) : additiveMin;
+        return Interval.of((float) min, (float) (base.max() + bias));
+    }
+
+    /**
+     * The bias reads the column (X/Z) and the Y taper, so the wrapped node depends on all three axes
+     * regardless of what the delegate depends on. Declaring fewer would let 26.3's rewriter slice a
+     * uniform axis away and reuse one cell's value across a row the bias actually varies along.
+     */
+    @Override
+    public int domainAxes() {
+        return DensityFunction.ALL_AXES;
     }
 
     @Override
-    public double maxValue() {
-        return delegate.maxValue() + maxAbsBias();
-    }
-
-    @Override
-    public KeyDispatchDataCodec<? extends DensityFunction> codec() {
+    public MapCodec<? extends DensityFunction> codec() {
         return codec;
     }
 
     /**
-     * Overridden -- the design's own §6.1(b)(ii)/§9-R5 structural byte-identity leg found the default
-     * {@code SimpleFunction.mapChildren} ({@code return this;}, verified via javap on the 26.2 jar) breaks
-     * {@code NoiseChunk}'s cache/interpolation substitution: {@code NoiseChunk}'s constructor calls
-     * {@code NoiseRouter.mapAll(visitor)}, which recursively walks the router's density graph via
-     * {@code mapChildren} so the visitor can swap in chunk-scoped cache/interpolation nodes (e.g. the
-     * {@code interpolated(blendDensity(...))} node buried inside vanilla's real {@code finalDensity}
-     * graph, per §0). Returning {@code this} verbatim (the default) hides {@code delegate} from that
-     * visitor entirely, so the ORIGINAL RandomState-construction-time density graph is used instead of
-     * NoiseChunk's per-chunk one -- an installed-but-S=0 run then differs from the never-install run in
-     * specific generated blocks (confirmed empirically: this exact defect was caught by the §6.1(b)(ii)
-     * structural probe before this override existed).
-     *
-     * <p>The fix mirrors vanilla's own single-child wrapper pattern (e.g.
-     * {@code DensityFunctions.MulOrAdd.mapChildren}, verified via javap): call {@code visitor.apply(delegate)}
-     * to get the (possibly substituted) child, and construct a NEW {@code GeoTerrainBiasFunction} wrapping
-     * it -- never mutate or return {@code this} directly, since visitors may run more than once with
-     * different substitution behavior.
+     * 26.3's replacement for {@code mapChildren(Visitor)} (the §6.1(b)(ii)/§9-R5 structural leg). The rule
+     * must reach {@code delegate} or the rewriter's substitutions (reference inlining, uniform-axis slicing)
+     * never see the wrapped subgraph and the generated blocks desync from the compiled graph. Always
+     * construct anew -- a rule may be applied more than once with different substitution behaviour.
      */
     @Override
-    public DensityFunction mapChildren(Visitor visitor) {
-        return new GeoTerrainBiasFunction(visitor.apply(delegate));
+    public DensityFunction rewriteChildren(DfRewriteRule rule) {
+        return new GeoTerrainBiasFunction(rule.rewrite(delegate));
     }
-
-    // fillArray keeps SimpleFunction's default (per-cell delegation to compute() via
-    // ContextProvider.fillAllDirectly) -- that is value-correct or this class's compute() itself would be
-    // wrong, and the structural concern was specifically about mapChildren/cache-substitution, not
-    // fillArray's per-cell evaluation strategy.
 }

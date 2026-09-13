@@ -11,7 +11,7 @@ import java.util.Set;
 
 /**
  * Phase 5 Crew 8 / S29 -- the one piece of non-trivial pure math behind the ground-truth {@code /latdev
- * markGlacial} command (Peetsa 2026-07-20, verbatim: "None of this is working. Locate crevasse and teleport
+ * markGlacial} command (the maintainer 2026-07-20, verbatim: "None of this is working. Locate crevasse and teleport
  * just puts me in the same spot... there is no falling through the snow... To make it easier just for dev,
  * can you turn on a simple color filter for the trap crevasses -- maybe typing a command causes them to glow
  * green?"). Where {@link CrevasseLocator} PREDICTS a carver's seeded start chunk (and so can miss the visible

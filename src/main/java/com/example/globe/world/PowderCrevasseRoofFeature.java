@@ -4,23 +4,23 @@ import com.example.globe.GlobeMod;
 import com.example.globe.core.LatitudeV2Flags;
 import com.example.globe.core.SubterraneanTrapLayout;
 import com.example.globe.core.SubterraneanTrapPlan;
-import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.SnowLayerBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
-import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -38,10 +38,24 @@ import java.util.function.Predicate;
  * Bounded Polar Barrens powder-snow trap feature. Geometry and surface acceptance live in the pure
  * {@link SubterraneanTrapLayout}/{@link SubterraneanTrapPlan} layers; this adapter performs only world reads,
  * the complete preflight, and the already-ordered writes. No exposed-opening planner remains here.
+ *
+ * <p><b>26.3 port note.</b> 26.3 retired the {@code Feature<C extends FeatureConfiguration>} generic,
+ * {@code FeaturePlaceContext} and {@code NoneFeatureConfiguration}: a feature is now an unparameterised
+ * {@link Feature} that carries its own configuration as fields and is placed through
+ * {@code place(WorldGenLevel, ChunkGenerator, RandomSource, BlockPos)}. Registration moved with it -- the
+ * mod registers the feature TYPE (its {@link MapCodec}) into {@code BuiltInRegistries.FEATURE_TYPE}, and
+ * the instance itself is created by the datapack entry
+ * {@code data/globe/worldgen/feature/powder_crevasse_roof.json}, whose flat {@code {"type": ...}} body is
+ * already the 26.3 shape. This trap has no configuration at all, so the codec is a unit codec over one
+ * shared stateless instance.
  */
-public final class PowderCrevasseRoofFeature extends Feature<NoneFeatureConfiguration> {
+public final class PowderCrevasseRoofFeature implements Feature {
 
-    public static Feature<NoneFeatureConfiguration> INSTANCE;
+    /** The one shared stateless instance the unit codec resolves to. */
+    public static final PowderCrevasseRoofFeature INSTANCE = new PowderCrevasseRoofFeature();
+
+    /** The feature type's codec: no configuration, so a unit codec over {@link #INSTANCE}. */
+    public static final MapCodec<PowderCrevasseRoofFeature> CODEC = MapCodec.unit(INSTANCE);
 
     private static final BlockState POWDER_SNOW = Blocks.POWDER_SNOW.defaultBlockState();
     private static final BlockState SNOW_BLOCK = Blocks.SNOW_BLOCK.defaultBlockState();
@@ -70,23 +84,26 @@ public final class PowderCrevasseRoofFeature extends Feature<NoneFeatureConfigur
     private record SurfaceSnapshotCounts(int thinOverFull, int thinOther, int fullSnow, int powder, int other) {
     }
 
-    public PowderCrevasseRoofFeature(Codec<NoneFeatureConfiguration> codec) {
-        super(codec);
+    private PowderCrevasseRoofFeature() {
     }
 
-    /** Registers {@code globe:powder_crevasse_roof} unconditionally during mod initialization. */
+    /** Registers the {@code globe:powder_crevasse_roof} feature TYPE unconditionally during mod init. */
     public static void register() {
-        INSTANCE = Registry.register(
-                BuiltInRegistries.FEATURE,
+        Registry.register(
+                BuiltInRegistries.FEATURE_TYPE,
                 Identifier.fromNamespaceAndPath(GlobeMod.MOD_ID, "powder_crevasse_roof"),
-                new PowderCrevasseRoofFeature(NoneFeatureConfiguration.CODEC));
+                CODEC);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> ctx) {
-        WorldGenLevel level = ctx.level();
-        int baseX = (ctx.origin().getX() >> 4) << 4;
-        int baseZ = (ctx.origin().getZ() >> 4) << 4;
+    public MapCodec<? extends Feature> codec() {
+        return CODEC;
+    }
+
+    @Override
+    public boolean place(WorldGenLevel level, ChunkGenerator generator, RandomSource random, BlockPos origin) {
+        int baseX = (origin.getX() >> 4) << 4;
+        int baseZ = (origin.getZ() >> 4) << 4;
         int chunkX = baseX >> 4;
         int chunkZ = baseZ >> 4;
         if (!LatitudeV2Flags.POLAR_BARRENS_ENABLED || !LatitudeV2Flags.GLACIAL_CAVES_V1_ENABLED) {
@@ -354,7 +371,7 @@ public final class PowderCrevasseRoofFeature extends Feature<NoneFeatureConfigur
             BlockState current = level.getBlockState(pos);
             PowderTrapWorldSafetyLaw.CushionBaseAction action =
                     PowderTrapWorldSafetyLaw.cushionBaseAction(
-                            current.isAir(), current.blocksMotion(), !current.getFluidState().isEmpty(),
+                            current.isAir(), current.isSolid(), !current.getFluidState().isEmpty(),
                             level.getBlockEntity(pos) != null, isGravity(current), level.ensureCanWrite(pos));
             if (action == PowderTrapWorldSafetyLaw.CushionBaseAction.REJECT) {
                 return false;
@@ -396,7 +413,7 @@ public final class PowderCrevasseRoofFeature extends Feature<NoneFeatureConfigur
             if (write.phase() == SubterraneanTrapPlan.Phase.CUSHION_BASE) {
                 PowderTrapWorldSafetyLaw.CushionBaseAction action =
                         PowderTrapWorldSafetyLaw.cushionBaseAction(
-                                current.isAir(), current.blocksMotion(), hasFluid, hasBlockEntity,
+                                current.isAir(), current.isSolid(), hasFluid, hasBlockEntity,
                                 isGravity(current), writable);
                 if (action == PowderTrapWorldSafetyLaw.CushionBaseAction.REJECT) {
                     return PowderTrapWorldSafetyResult.failure(
@@ -563,12 +580,14 @@ public final class PowderCrevasseRoofFeature extends Feature<NoneFeatureConfigur
 
     private static boolean certifiedThinSupport(WorldGenLevel level, BlockPos pos, BlockState support) {
         return PowderTrapWorldSafetyLaw.certifiedThinSupport(
-                support.getFluidState().isEmpty(), support.blocksMotion(), level.getBlockEntity(pos) != null,
+                support.getFluidState().isEmpty(), support.isSolid(), level.getBlockEntity(pos) != null,
                 isGravity(support), isCarverReplaceableOrSnow(support));
     }
 
     private static boolean isCarverReplaceableOrSnow(BlockState state) {
-        return state.is(BlockTags.OVERWORLD_CARVER_REPLACEABLES) || state.is(Blocks.SNOW)
+        // 26.3 retired the positive OVERWORLD_CARVER_REPLACEABLES tag: vanilla carvers now carve every
+        // non-air block that is not in the inverse UNCARVABLE tag, so "carver replaceable" is that inverse.
+        return (!state.isAir() && !state.is(BlockTags.UNCARVABLE)) || state.is(Blocks.SNOW)
                 || state.is(Blocks.SNOW_BLOCK) || state.is(Blocks.POWDER_SNOW) || state.is(Blocks.BLUE_ICE)
                 || state.is(Blocks.PACKED_ICE);
     }
@@ -596,7 +615,7 @@ public final class PowderCrevasseRoofFeature extends Feature<NoneFeatureConfigur
                     && surfaceAboveIsSafe(level, pos, kind, layerSnapshots[localX][localZ])
                     && isPolarBarrens(level, pos.above());
         }
-        return !state.isAir() && state.blocksMotion()
+        return !state.isAir() && state.isSolid()
                 && isCarverReplaceableOrSnow(state) && !isGravity(state);
     }
 
@@ -645,7 +664,7 @@ public final class PowderCrevasseRoofFeature extends Feature<NoneFeatureConfigur
         BlockState current = level.getBlockState(pos);
         WorldWrite authored = planned.get(pos);
         boolean untouched = authored == null || authored.state().equals(current);
-        boolean dryStable = !current.isAir() && current.blocksMotion()
+        boolean dryStable = !current.isAir() && current.isSolid()
                 && current.getFluidState().isEmpty() && level.getBlockEntity(pos) == null
                 && !isGravity(current);
         return new PowderTrapWorldSafetyLaw.NaturalAnchorCandidate(
@@ -653,7 +672,7 @@ public final class PowderCrevasseRoofFeature extends Feature<NoneFeatureConfigur
     }
 
     private static boolean finalDryStableSolid(BlockState state) {
-        return !state.isAir() && state.blocksMotion()
+        return !state.isAir() && state.isSolid()
                 && state.getFluidState().isEmpty() && !isGravity(state);
     }
 
@@ -683,7 +702,7 @@ public final class PowderCrevasseRoofFeature extends Feature<NoneFeatureConfigur
                 || !support.is(Blocks.SNOW_BLOCK)
                 || !PowderTrapWorldSafetyLaw.exactSnapshotMatches(
                         supportSnapshots[plug.x()][plug.z()], support)
-                || !support.blocksMotion() || !support.getFluidState().isEmpty()
+                || !support.isSolid() || !support.getFluidState().isEmpty()
                 || level.getBlockEntity(supportPos) != null || isGravity(support)
                 || !surfaceAboveIsSafe(level, supportPos, kind, layerSnapshots[plug.x()][plug.z()])
                 || !isPolarBarrens(level, supportPos.above())) {
@@ -779,7 +798,7 @@ public final class PowderCrevasseRoofFeature extends Feature<NoneFeatureConfigur
 
     private static boolean isDryStableShellCell(WorldGenLevel level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        return !state.isAir() && state.blocksMotion() && state.getFluidState().isEmpty()
+        return !state.isAir() && state.isSolid() && state.getFluidState().isEmpty()
                 && level.getBlockEntity(pos) == null && !isGravity(state);
     }
 
@@ -801,7 +820,7 @@ public final class PowderCrevasseRoofFeature extends Feature<NoneFeatureConfigur
                 }
                 BlockState state = level.getBlockState(neighbour);
                 PowderTrapWorldSafetyLaw.ShellRejection rejection = PowderTrapWorldSafetyLaw.shellRejection(
-                        state.isAir(), state.blocksMotion(), !state.getFluidState().isEmpty(),
+                        state.isAir(), state.isSolid(), !state.getFluidState().isEmpty(),
                         level.getBlockEntity(neighbour) != null, isGravity(state));
                 if (rejection == PowderTrapWorldSafetyLaw.ShellRejection.FLUID) {
                     return PowderTrapWorldSafetyResult.failure(
@@ -874,7 +893,7 @@ public final class PowderCrevasseRoofFeature extends Feature<NoneFeatureConfigur
 
     private static boolean fluidPassable(WorldGenLevel level, BlockPos pos, BlockState state) {
         return state.getFluidState().isEmpty() && level.getBlockEntity(pos) == null
-                && (state.isAir() || !state.blocksMotion()) && !isGravity(state);
+                && (state.isAir() || !state.isSolid()) && !isGravity(state);
     }
 
     private static ApplyResult apply(WorldGenLevel level, List<WorldWrite> writes) {

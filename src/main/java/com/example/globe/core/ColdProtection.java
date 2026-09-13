@@ -1,7 +1,7 @@
 package com.example.globe.core;
 
 /**
- * Phase 5 Slice B-7 (Pole Passage) -- Peetsa stipulation S1: cold protection from freeze-immune wearables.
+ * Phase 5 Slice B-7 (Pole Passage) -- the maintainer stipulation S1: cold protection from freeze-immune wearables.
  * Pure math, zero Minecraft imports (Core Logic layer, unit-testable in a plain JVM). The MC-coupled part --
  * counting how many of the player's four armor slots carry an item in the vanilla {@code freeze_immune_wearables}
  * tag (leather by default, datapack-extensible per the vanilla-first law) -- lives in a thin server shim in

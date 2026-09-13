@@ -12,7 +12,7 @@ package com.example.globe.core;
  * envelope is eased (a squared ramp) so the first couple degrees past onset are only a whisper and the
  * gale is concentrated in the last few degrees toward {@link #FULL_DEG}.
  *
- * <p><b>S29 (Peetsa 2026-07-20, TEST 120 flight): "ramp up the wind noise a little bit earlier -- maybe
+ * <p><b>S29 (the maintainer 2026-07-20, TEST 120 flight): "ramp up the wind noise a little bit earlier -- maybe
  * 83? And just a little more intense at 90 (a little)."</b> {@link #START_DEG} moved 85 -&gt; 83 (onset no
  * longer literally matches the ambient-snow/whiteout-fog onset, which has itself drifted to 80 across
  * earlier rounds -- this bed is now tuned on its own dial, not chained to that other constant) and
@@ -86,7 +86,7 @@ public final class PolarWindSound {
      * {@code [0,1]} (see {@link PolarExposure}). Blends between full open-air volume and the sheltered floor:
      * {@code SHELTERED_VOLUME_SCALE + (1 - SHELTERED_VOLUME_SCALE) * exposure01}. So exposure 1.0 -> 1.0 (full
      * howl, matches the old sky-exposed case), exposure 0.0 -> {@link #SHELTERED_VOLUME_SCALE} (0.35, the
-     * existing sealed-room floor, unchanged), and a partial exposure (an open doorway, or under Peetsa's arch
+     * existing sealed-room floor, unchanged), and a partial exposure (an open doorway, or under the maintainer's arch
      * ~0.9) blends between -- no longer a hard 1.0/0.35 step off a single overhead block.
      */
     public static float windMuffleFactor(float exposure01) {

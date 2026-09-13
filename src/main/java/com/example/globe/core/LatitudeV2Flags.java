@@ -144,18 +144,18 @@ public final class LatitudeV2Flags {
      * experience -- the approach fog, the two-button "pass through?" prompt, the mirror-X teleport, the
      * arrival title, and the turn-back push. NOTE (2026-07-12, degree-geometry slice): the EW edge
      * PRESENTATION (storm onset / haze ramp / banner at ~177.5-179 deg, anchored to the intended
-     * X radius) is a GLOBAL redesign per Peetsa's explicit directive ("make the world border features
+     * X radius) is a GLOBAL redesign per the maintainer's explicit directive ("make the world border features
      * begin at 176 or 177... fog, particles, warnings") and is deliberately NOT gated here -- flag-off
      * disables only the CROSSING (prompt/teleport/curtain/arrival/nudge): the server passage receiver
      * rejects every C2S answer, the
      * turn-back nudge never fires, and no S2C arrival is ever sent. NOT tied to {@link #BOUNDARY_V2_ENABLED}
      * -- the passage works whatever the edge terrain looks like (the B-2 ocean shore is a visual nicety,
-     * not a requirement). A later default-on decision is Peetsa's (design
+     * not a requirement). A later default-on decision is the maintainer's (design
      * {@code docs/binder/phase5-b5-hemisphere-passage-design-20260710.md}). This flag is born WITH its
      * build.gradle forwarding line beside {@code boundaryV2} in the same pass (L17 discipline).
      */
     public static final boolean PASSAGE_V2_ENABLED =
-            Boolean.parseBoolean(System.getProperty("latitude.passageV2.enabled", "true")); // DEFAULT ON since 2026-07-12: Peetsa live-approved the passage at P3 ("everything felt good") and it is consensual by design (prompt-gated); the flag remains the kill switch.
+            Boolean.parseBoolean(System.getProperty("latitude.passageV2.enabled", "true")); // DEFAULT ON since 2026-07-12: the maintainer live-approved the passage at P3 ("everything felt good") and it is consensual by design (prompt-gated); the flag remains the kill switch.
 
     /**
      * Phase 5 Slice B-7 (Pole Passage). Ships enabled, while the prompt keeps each N/S pole crossing opt-in.
@@ -176,19 +176,19 @@ public final class LatitudeV2Flags {
      * crossing/clamp/netcode/nudge ONLY; the polar cold PACING is a separate, global change this pass ships.
      *
      * <p><b>Zero worldgen.</b> Unlike B-6, B-7 is pure presentation + teleport + movement clamp -- no per-world
-     * capture, no atlas gate, no mirror-band strips. It works on EVERY existing world (including Peetsa's live
+     * capture, no atlas gate, no mirror-band strips. It works on EVERY existing world (including the maintainer's live
      * ones), so there is no world-state to persist here. NOT tied to {@link #PASSAGE_V2_ENABLED} (the EW axis) --
      * the server passage receiver routes by {@link PassageAxis}, gating EW on {@code PASSAGE_V2_ENABLED} and POLE
-     * on this. A later default-on decision is Peetsa's post-P3 call, same as B-5's history. Born WITH its
+     * on this. A later default-on decision is the maintainer's post-P3 call, same as B-5's history. Born WITH its
      * build.gradle client-run forwarding line in the SAME pass (L17 discipline). Design
      * {@code docs/binder/phase5-b7-pole-passage-design-20260713.md} (incl. the binding S1-S6 tail).
      */
     public static final boolean POLE_PASSAGE_V2_ENABLED =
-            Boolean.parseBoolean(System.getProperty("latitude.polePassageV2.enabled", "true")); // SHIP DEFAULT ON — Peetsa decided 2026-07-25 ("ship the polar features on by default"); the REVISIT gate is CLOSED, this is the intended shipped default.
+            Boolean.parseBoolean(System.getProperty("latitude.polePassageV2.enabled", "true")); // SHIP DEFAULT ON — the maintainer decided 2026-07-25 ("ship the polar features on by default"); the REVISIT gate is CLOSED, this is the intended shipped default.
 
     /**
      * Phase 5 Slice B-5 (Hemisphere Passage polish, item 1): keep GENERATED STRUCTURES out of an absolute band
-     * inward from the E/W (X) world-border edge (Peetsa saw a structure at the border, TEST 83). Default TRUE.
+     * inward from the E/W (X) world-border edge (the maintainer saw a structure at the border, TEST 83). Default TRUE.
      *
      * <p><b>Its OWN flag, NOT tied to {@link #PASSAGE_V2_ENABLED}.</b> This changes WORLDGEN (which chunks get
      * a structure placed), and worldgen must never silently change under a UI/experience flag -- so the veto
@@ -247,7 +247,7 @@ public final class LatitudeV2Flags {
             Boolean.parseBoolean(System.getProperty("latitude.polarOutfitting.enabled", "false"));
 
     /**
-     * Polar small-vegetation fade (Peetsa 2026-07-10). Default TRUE since 2026-07-12: the TEST 75 live
+     * Polar small-vegetation fade (the maintainer 2026-07-10). Default TRUE since 2026-07-12: the TEST 75 live
      * look found flowers/grass/sugarcane/firefly bushes thriving at 88+ deg because this shipped off --
      * vanilla 26.2 decorates snowy_plains/frozen_river themselves (flower_default, patch_sugar_cane,
      * patch_firefly_bush_near_water), so the polar cap is never bare without the fade. When on (and the world is an
@@ -264,7 +264,7 @@ public final class LatitudeV2Flags {
             Boolean.parseBoolean(System.getProperty("latitude.polarVegetationFade.enabled", "true"));
 
     /**
-     * Polar water-freeze correctness fix (Peetsa 2026-07-12). Default TRUE: he stood at 89 deg S in a full
+     * Polar water-freeze correctness fix (the maintainer 2026-07-12). Default TRUE: he stood at 89 deg S in a full
      * blizzard with a pool of LIQUID water in his doorway and asked for all water frozen by ~85 deg. Vanilla
      * decides water-&gt;ice per column via {@code Biome.shouldFreeze}, whose first gate rejects any biome that is
      * "warm enough to rain"; latitude-blind {@code river}/{@code ocean} columns (base temperature 0.5) placed
@@ -273,7 +273,7 @@ public final class LatitudeV2Flags {
      * that temperature veto for columns at/above {@link com.example.globe.core.PolarWaterFreezeRule#FREEZE_ALL_DEG}
      * (85 deg), so vanilla's own genuine-water/light/edge logic freezes the exposed water on its own edge-inward
      * cadence -- ongoing (tick) AND at worldgen. Default-on rather than gated behind a launch flag because it is a
-     * correctness fix Peetsa explicitly requested (mirroring {@code POLAR_VEGETATION_FADE_ENABLED}), but it IS a
+     * correctness fix the maintainer explicitly requested (mirroring {@code POLAR_VEGETATION_FADE_ENABLED}), but it IS a
      * flag because -- unlike the client-only {@link com.example.globe.core.PolarPrecipitationRule} -- this MODIFIES
      * THE WORLD (places ice, including over player-placed water), so it needs a clean kill switch. Explicitly
      * setting it off is byte-identical: the redirect returns vanilla's unmodified {@code warmEnoughToRain} result.
@@ -332,7 +332,7 @@ public final class LatitudeV2Flags {
      * {@code docs/binder/phase5-b8-snow-barrens-design-20260714.md}.
      */
     public static final boolean POLAR_BARRENS_ENABLED =
-            Boolean.parseBoolean(System.getProperty("latitude.polarBarrens.enabled", "true")); // SHIP DEFAULT ON — Peetsa decided 2026-07-25 ("ship the polar features on by default"); the REVISIT gate is CLOSED, this is the intended shipped default.
+            Boolean.parseBoolean(System.getProperty("latitude.polarBarrens.enabled", "true")); // SHIP DEFAULT ON — the maintainer decided 2026-07-25 ("ship the polar features on by default"); the REVISIT gate is CLOSED, this is the intended shipped default.
 
     /**
      * Absolute latitude (deg) where the Polar Barrens begin to fray in. Default 82 deg -- the owner's chosen
@@ -360,7 +360,7 @@ public final class LatitudeV2Flags {
             parseDoubleOrDefault(System.getProperty("latitude.polarBarrens.fullDeg"), 84.0);
 
     /**
-     * Phase 5 B-9 P1 GLACIAL CAVES &amp; CREVASSES (Peetsa, TEST-110 flight: polar "caverns are giant
+     * Phase 5 B-9 P1 GLACIAL CAVES &amp; CREVASSES (the maintainer, TEST-110 flight: polar "caverns are giant
      * voids" -- the crevasses should be "narrow and winding ice labyrinths"; design
      * {@code docs/binder/phase5-b9-glacial-caves-design-20260719.md}, swept 2026-07-19). When on, the
      * carver-list filter in {@code NoiseChunkGeneratorCarveMixin} APPENDS two globe configured carvers
@@ -406,7 +406,7 @@ public final class LatitudeV2Flags {
      * (class-load side) + the orchestrator self-fly as the end-to-end carve proof.
      */
     public static final boolean GLACIAL_CAVES_V1_ENABLED =
-            Boolean.parseBoolean(System.getProperty("latitude.glacialCavesV1", "true")); // SHIP DEFAULT ON — Peetsa decided 2026-07-25 ("ship the polar features on by default"); the REVISIT gate is CLOSED, this is the intended shipped default.
+            Boolean.parseBoolean(System.getProperty("latitude.glacialCavesV1", "true")); // SHIP DEFAULT ON — the maintainer decided 2026-07-25 ("ship the polar features on by default"); the REVISIT gate is CLOSED, this is the intended shipped default.
 
     // ── S36 VOID TAMING (owner 2026-07-21: mechanism C / onset 82 / tame-not-eliminate) ──────────────────
     //
@@ -447,7 +447,7 @@ public final class LatitudeV2Flags {
                     (double) VoidTamingLaw.FLOOR_FEATHER_BLOCKS));
 
     /**
-     * S13 (e) POLAR SURFACE ALLOWLIST (Peetsa, TEST-103 flight, 2026-07-17). Default TRUE -- a polar-immersion
+     * S13 (e) POLAR SURFACE ALLOWLIST (the maintainer, TEST-103 flight, 2026-07-17). Default TRUE -- a polar-immersion
      * spawn rule (sibling of the vegetation fade / water freeze), shipped live for the S13 flight; the owner
      * confirms the ship default post-flight like every prior polar rule. This is NOT worldgen (it filters
      * per-tick {@code NATURAL} monster spawns), so there is no byte-identity axis to protect -- the flag is a
@@ -476,7 +476,7 @@ public final class LatitudeV2Flags {
     /** Master switch for Solar Tilt (sky path tilt + seasons + the effective-sun mob rules). Ships enabled;
      *  explicit false → byte-identical control. */
     public static final boolean SOLAR_TILT_V2_ENABLED =
-            Boolean.parseBoolean(System.getProperty("latitude.solarTiltV2.enabled", "true")); // SHIP DEFAULT ON — Peetsa decided 2026-07-25 ("ship the polar features on by default"); the REVISIT gate is CLOSED, this is the intended shipped default.
+            Boolean.parseBoolean(System.getProperty("latitude.solarTiltV2.enabled", "true")); // SHIP DEFAULT ON — the maintainer decided 2026-07-25 ("ship the polar features on by default"); the REVISIT gate is CLOSED, this is the intended shipped default.
 
     /** Axial-tilt amplitude δ_max (deg). Default 30 → midnight-sun / polar-night onset at a round, visible
      *  60° (§11 "delta pick"; real Earth 23.5° → 66.5°, deep in the storm cap; max theatrical ≈ 35). */
@@ -512,7 +512,7 @@ public final class LatitudeV2Flags {
             parseDoubleOrDefault(System.getProperty("latitude.solarTilt.functionalMinDeg"), 60.0);
 
     /** Frozen-mode phase (deg), used only when {@link #SOLAR_TILT_YEAR_LENGTH_DAYS} {@code <= 0}. Default 0 →
-     *  δ = +δ_max → permanent NORTHERN summer (the owner's original ask). A seed-random 0-vs-180 sign is the
+     *  δ = +δ_max → permanent NORTHERN summer (the owner's original request). A seed-random 0-vs-180 sign is the
      *  clean future home for "which pole is summer this world" (§9). */
     public static final double SOLAR_TILT_FROZEN_PHASE_DEG =
             parseDoubleOrDefault(System.getProperty("latitude.solarTilt.frozenPhaseDeg"),

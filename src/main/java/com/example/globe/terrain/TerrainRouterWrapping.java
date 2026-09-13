@@ -6,7 +6,7 @@ import com.example.globe.core.LatitudeV2Flags;
 import com.example.globe.mixin.terrain.RandomStateAccessor;
 import com.example.globe.world.LatitudeBiomes;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.levelgen.DensityFunction;
+import net.minecraft.world.level.levelgen.densityfunction.DensityFunction;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseRouter;
 import net.minecraft.world.level.levelgen.RandomState;
@@ -15,8 +15,27 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 
 /**
- * Shared Phase 4 (Terrain Integration Spike) install logic: the triple gate (design §1.2) + the 15-field
- * {@link NoiseRouter} rebuild wrapping only {@code finalDensity} (#12).
+ * Shared Phase 4 (Terrain Integration Spike) install logic: the triple gate (design §1.2) + the
+ * {@link NoiseRouter} rebuild wrapping only {@code finalDensity} and {@code chunkSurfaceLevel}.
+ *
+ * <p><b>26.3 port note.</b> {@code NoiseRouter} shrank from fifteen fields to eight
+ * (temperature, vegetation, continents, erosion, depth, ridges, chunkSurfaceLevel, finalDensity) -- the
+ * aquifer/vein/lava fields moved out of the router entirely, and {@code preliminarySurfaceLevel} was
+ * renamed {@code chunkSurfaceLevel}. The rebuild below passes every field this wrapper does not own
+ * through by identity, exactly as before; only the arity and the one field name changed. 26.3 also
+ * removed {@code RandomState}'s public {@code router()} getter, so the read now goes through the same
+ * {@link RandomStateAccessor} the write always used.
+ *
+ * <p><b>26.3 KNOWN GAP (terrainV2 ships OFF; not proven, recorded so it is never assumed away).</b>
+ * {@code RandomState}'s constructor now hands {@code router.chunkSurfaceLevel()} to
+ * {@code MaterialSystem} at construction time (verified with javap on the 26.3-rc-2 jar), so swapping the
+ * {@code router} field afterwards cannot reach the surface/material system's copy of that field. The
+ * {@code finalDensity} wrap still takes effect (that field is read back off the router), but the Slice C-2
+ * bathymetry clamp on {@code chunkSurfaceLevel} reaches only consumers that re-read the router. Both
+ * {@code latitude.terrainV2.enabled} and {@code latitude.voidTaming.enabled} default to {@code false}, so
+ * nothing ships through this path; before terrainV2 is ever armed on 26.3 the install seam has to move
+ * (wrap the router BEFORE {@code RandomState.create}, or hook {@code MaterialSystem}'s own construction)
+ * and be re-proven.
  *
  * <p><b>Why this exists as a standalone helper, not inlined in one mixin.</b> {@code RandomState.create(...)}
  * (the static factory {@code RandomState.create(NoiseGeneratorSettings, HolderGetter, long)}) is called from
@@ -84,6 +103,16 @@ public final class TerrainRouterWrapping {
     }
 
     /**
+     * Reads a {@link RandomState}'s {@link NoiseRouter}. 26.3 removed the public {@code router()} getter,
+     * so the read goes through {@link RandomStateAccessor} -- and it lives HERE, next to the write, so the
+     * ordinary-code callers (the dev/atlas tooling and the proof harness) never have to reference the
+     * mixin package themselves (see the "Package note" above for why that matters).
+     */
+    public static NoiseRouter routerOf(RandomState randomState) {
+        return ((RandomStateAccessor) (Object) randomState).globe$getRouter();
+    }
+
+    /**
      * Result of an {@code installIfArmed} attempt -- lets a caller (notably
      * {@code com.example.globe.dev.TerrainProofHarness}) assert DEFINITIVELY whether the wrapper was
      * installed on a given {@link RandomState}, instead of scraping a once-per-JVM install log (which cannot
@@ -92,7 +121,7 @@ public final class TerrainRouterWrapping {
      */
     public enum InstallResult {
         /**
-         * The 15-field {@link NoiseRouter} was rebuilt and {@code finalDensity} (#12) is now structurally
+         * The {@link NoiseRouter} was rebuilt and {@code finalDensity} is now structurally
          * wrapped by {@link GeoTerrainBiasFunction}. This does NOT guarantee the bias is currently taking
          * effect: {@code GeoTerrainBiasFunction.compute()} independently re-checks, on every call, whether
          * {@code GEO_V2_PROVIDER} is a real {@link GeoAuthorityProvider} yet (not the {@code NoOp}
@@ -158,8 +187,8 @@ public final class TerrainRouterWrapping {
     }
 
     /**
-     * Shared core: the triple gate (design §1.2) + the 15-field {@link NoiseRouter} rebuild wrapping only
-     * {@code finalDensity} (#12). {@code globeCheck} supplies gate (1) (the real positive globe check,
+     * Shared core: the triple gate (design §1.2) + the {@link NoiseRouter} rebuild wrapping only
+     * {@code finalDensity}. {@code globeCheck} supplies gate (1) (the real positive globe check,
      * whichever mechanism is safe for the caller's site); gates (2)/(3) are
      * {@link LatitudeV2Flags#TERRAIN_V2_ENABLED} / {@link LatitudeV2Flags#GEO_V2_ENABLED}. If any gate fails,
      * or {@code randomState} is null, this is a no-op and the router is left completely untouched -&gt;
@@ -216,7 +245,8 @@ public final class TerrainRouterWrapping {
             // above pass, and simply no-ops per-column until the real provider is ready -- which resolves
             // itself moments after world load, long before any chunk is actually generated for a player, and
             // stays a no-op forever on a genuine seed-0 world where the provider never becomes real at all.
-            NoiseRouter original = randomState.router();
+            RandomStateAccessor accessor = (RandomStateAccessor) (Object) randomState;
+            NoiseRouter original = accessor.globe$getRouter();
             if (original == null) {
                 return InstallResult.SKIPPED_NULL_OR_ERROR;
             }
@@ -235,35 +265,31 @@ public final class TerrainRouterWrapping {
             if (voidArmed) {
                 f12 = new VoidTamingFunction(f12, original.depth());
             }
-            DensityFunction f11 = terrainArmed
-                    // 11: Slice C-2 — wrapped with the block-unit-correct bathymetry ceiling clamp
+            DensityFunction surfaceLevel = terrainArmed
+                    // Slice C-2 — wrapped with the block-unit-correct bathymetry ceiling clamp
                     // (min(prelim, carveCeilY)); exact pass-through whenever no carve applies. See
                     // GeoTerrainPrelimSurfaceFunction's javadoc for why the locked design's refusal to
-                    // touch #11 (an additive DENSITY term — a unit mismatch, L16) does not apply to a
-                    // block-Y clamp, and why the fluid/aquifer system requires it once real carving exists.
-                    ? new GeoTerrainPrelimSurfaceFunction(original.preliminarySurfaceLevel())
-                    : original.preliminarySurfaceLevel();
+                    // touch this field (an additive DENSITY term — a unit mismatch, L16) does not apply
+                    // to a block-Y clamp, and why the fluid/aquifer system requires it once real carving
+                    // exists. 26.3 renamed the field preliminarySurfaceLevel -> chunkSurfaceLevel.
+                    ? new GeoTerrainPrelimSurfaceFunction(original.chunkSurfaceLevel())
+                    : original.chunkSurfaceLevel();
 
-            // Rebuild the 15-field canonical NoiseRouter, wrapping ONLY #11/#12 as armed above and passing
-            // every other field through by identity. Field order verified against the 26.2 deobf jar.
+            // Rebuild the canonical NoiseRouter, wrapping ONLY chunkSurfaceLevel/finalDensity as armed
+            // above and passing every other field through by identity. Field order verified against the
+            // 26.3-rc-2 jar (javap: the record's canonical constructor takes exactly these eight, in
+            // this order).
             NoiseRouter rebuilt = new NoiseRouter(
-                    original.barrierNoise(),               // 1
-                    original.fluidLevelFloodednessNoise(), // 2
-                    original.fluidLevelSpreadNoise(),      // 3
-                    original.lavaNoise(),                  // 4
-                    original.temperature(),                // 5
-                    original.vegetation(),                 // 6
-                    original.continents(),                 // 7
-                    original.erosion(),                    // 8
-                    original.depth(),                      // 9
-                    original.ridges(),                     // 10
-                    f11,                                   // 11
-                    f12,                                   // 12
-                    original.veinToggle(),                 // 13
-                    original.veinRidged(),                 // 14
-                    original.veinGap());                   // 15
+                    original.temperature(),
+                    original.vegetation(),
+                    original.continents(),
+                    original.erosion(),
+                    original.depth(),
+                    original.ridges(),
+                    surfaceLevel,
+                    f12);
 
-            ((RandomStateAccessor) (Object) randomState).globe$setRouter(rebuilt);
+            accessor.globe$setRouter(rebuilt);
 
             if (INSTALL_LOGGED.compareAndSet(false, true)) {
                 GlobeMod.LOGGER.info(

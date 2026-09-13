@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * B-7 S6 (FROZEN WOUNDS, Peetsa 2026-07-13) -- the single heal chokepoint for the polar heal lock.
+ * B-7 S6 (FROZEN WOUNDS, the maintainer 2026-07-13) -- the single heal chokepoint for the polar heal lock.
  *
  * <p><b>The rule.</b> While SHELTERED (the S4 raw-sky-light predicate) inside the polar cold zone
  * ({@code |lat| >= 85}) and NOT near warmth (a lit non-soul campfire / fire / lava / working furnace within

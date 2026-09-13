@@ -56,7 +56,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
  * PowderCrevasseRoofFeature.register()}, {@code GlobeParticles.register()}) -- BEFORE registry freeze.
  */
 /*
- * S40 (Peetsa 2026-07-23, TEST 130 flight): the icicles "look like blue dripstone" -- the owner asked to
+ * S40 (the maintainer 2026-07-23, TEST 130 flight): the icicles "look like blue dripstone" -- the owner asked to
  * REMOVE them. globe:icicle no longer GENERATES anywhere (its icicle_cluster.json feature + the plain-ice
  * hanging_icicles feature were deleted and unlisted from both biomes). The BLOCK stays REGISTERED (it
  * shipped in TEST 128-130; unregistering would orphan any hand-placed instance -- the registry-consistency

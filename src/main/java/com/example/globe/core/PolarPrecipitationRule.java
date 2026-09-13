@@ -4,7 +4,7 @@ package com.example.globe.core;
  * Pure decision for the "no RAIN at the poles" correctness rule (Core Logic layer, zero Minecraft
  * imports, unit-testable in a plain JVM).
  *
- * <p><b>The bug.</b> Standing at 90 deg latitude over ice-spike terrain, Peetsa saw vanilla RAIN
+ * <p><b>The bug.</b> Standing at 90 deg latitude over ice-spike terrain, the maintainer saw vanilla RAIN
  * streaks. Vanilla picks rain-vs-snow per COLUMN via {@code ClientLevel.getPrecipitationAt(pos) ->
  * Biome.getPrecipitationAt(pos, seaLevel)}, which keys off the biome's precipitation type + a
  * temperature/height check. Ice spikes are SNOW-only (temperature 0.0), so the rain is NOT coming

@@ -4,8 +4,13 @@ import com.example.globe.core.LatitudeV2Flags;
 import com.example.globe.core.VoidTamingLaw;
 import com.example.globe.world.LatitudeBiomes;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.util.KeyDispatchDataCodec;
-import net.minecraft.world.level.levelgen.DensityFunction;
+import net.minecraft.util.Interval;
+import net.minecraft.world.level.levelgen.densityfunction.DensityBuffer;
+import net.minecraft.world.level.levelgen.densityfunction.DensityFunction;
+import net.minecraft.world.level.levelgen.densityfunction.DensitySampler;
+import net.minecraft.world.level.levelgen.densityfunction.DensityVolume;
+import net.minecraft.world.level.levelgen.densityfunction.DfRewriteRule;
+import net.minecraft.world.level.levelgen.densityfunction.SamplerContext;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -37,7 +42,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * markers localize per chunk exactly like the router's #9 copy (sweep finding 7: benign double
  * localization, two independent 2D column caches).
  */
-public final class VoidTamingFunction implements DensityFunction.SimpleFunction {
+public final class VoidTamingFunction implements DensityFunction {
 
     private final DensityFunction delegate;
     private final DensityFunction depthDelegate;
@@ -46,8 +51,7 @@ public final class VoidTamingFunction implements DensityFunction.SimpleFunction 
     private static final AtomicBoolean COMPUTE_FAILED_LOGGED = new AtomicBoolean(false);
 
     /** Cached, never-serialized codec (precedent: built in-JVM at RandomState time, never data-round-tripped). */
-    private final KeyDispatchDataCodec<VoidTamingFunction> codec =
-            KeyDispatchDataCodec.of(MapCodec.unit(this));
+    private final MapCodec<VoidTamingFunction> codec = MapCodec.unit(this);
 
     public VoidTamingFunction(DensityFunction delegate, DensityFunction depthDelegate) {
         this.delegate = delegate;
@@ -59,17 +63,25 @@ public final class VoidTamingFunction implements DensityFunction.SimpleFunction 
         COMPUTE_FAILED_LOGGED.set(false);
     }
 
-    @Override
-    public double compute(FunctionContext ctx) {
-        // The delegate is evaluated OUTSIDE the try (precedent discipline): its own failures are its own
-        // story and must propagate exactly as they would un-wrapped.
-        double base = delegate.compute(ctx);
+    /**
+     * The fill math. 26.3's compile-then-sample contract replaced {@code compute(FunctionContext)}, so the
+     * delegate's value, the depth field's value and the block coordinates arrive as plain arguments. The
+     * delegate is still evaluated OUTSIDE this try (see {@link Sampler#sampleValue}): its own failures are
+     * its own story and must propagate exactly as they would un-wrapped.
+     *
+     * <p>The depth sampler is passed in (rather than its value) so the depth read stays LAZY: the 26.2 shape
+     * only evaluated the depth graph after the cheap flag/Y/latitude gates had all passed, and evaluating it
+     * eagerly would pay a second density graph on every cell the gates reject. Passing the sampler and the
+     * coordinates rather than a lambda keeps this allocation-free on the per-cell worldgen path.
+     */
+    private double globe$tamed(double base, SamplerContext context, DensitySampler depthSampler,
+                               int blockX, int blockY, int blockZ) {
         try {
             double k = LatitudeV2Flags.VOID_TAMING_STRENGTH;
             if (k <= 0.0 || !(base < 0.0)) {
                 return base; // solid cell, or belt-and-suspenders strength gate: nothing to fill.
             }
-            int y = ctx.blockY();
+            int y = blockY;
             int floor = LatitudeV2Flags.VOID_TAMING_PROTECT_FLOOR_Y;
             if (y <= floor) {
                 return base; // the labyrinth below is untouchable, hard.
@@ -78,13 +90,13 @@ public final class VoidTamingFunction implements DensityFunction.SimpleFunction 
             if (radius <= 0) {
                 return base; // not an armed globe world (defensive; install already gated on globe).
             }
-            double absLat = Math.abs((double) ctx.blockZ()) * 90.0 / radius;
+            double absLat = Math.abs((double) blockZ) * 90.0 / radius;
             double latGate = VoidTamingLaw.latGate(absLat,
                     LatitudeV2Flags.VOID_TAMING_ONSET_DEG, LatitudeV2Flags.VOID_TAMING_FULL_DEG);
             if (latGate <= 0.0) {
                 return base;
             }
-            double dv = depthDelegate.compute(ctx);
+            double dv = depthSampler.sampleValue(context, blockX, blockY, blockZ);
             double band = VoidTamingLaw.bandWeight(dv);
             if (band <= 0.0) {
                 return base; // open sky (dv<=0) or deeper than the fade band -- both untouchable.
@@ -105,37 +117,70 @@ public final class VoidTamingFunction implements DensityFunction.SimpleFunction 
         }
     }
 
+    @Override
+    public DensitySampler compileSampler(CompileContext compileContext) {
+        return new Sampler(delegate.compileSampler(compileContext),
+                depthDelegate.compileSampler(compileContext));
+    }
+
+    /**
+     * Compiled form. BOTH children are compiled through the same {@link CompileContext} so the depth graph's
+     * own caching nodes localize per scope exactly like the router's copy of #9 (the 26.2 mapChildren
+     * lesson, carried across).
+     */
+    private final class Sampler implements DensitySampler {
+
+        private final DensitySampler base;
+        private final DensitySampler depth;
+
+        private Sampler(DensitySampler base, DensitySampler depth) {
+            this.base = base;
+            this.depth = depth;
+        }
+
+        @Override
+        public float sampleValue(SamplerContext context, int x, int y, int z) {
+            float raw = base.sampleValue(context, x, y, z);
+            return (float) globe$tamed(raw, context, depth, x, y, z);
+        }
+
+        @Override
+        public void sampleVolume(SamplerContext context, DensityBuffer buffer, DensityVolume volume) {
+            DensitySampler.sampleVolumeNaive(context, buffer, volume, this);
+        }
+    }
+
     /**
      * The fill only ADDS density to negative (air) cells: the minimum can never drop below the delegate's.
      * The maximum exceeds the delegate's only when {@code K > 1} pushes a formerly-negative cell positive,
-     * bounded by {@code (K-1) * |delegate.minValue()|} (architect formula 5, sweep-verified claim 4).
+     * bounded by {@code (K-1) * |delegate min|} (architect formula 5, sweep-verified claim 4).
      */
     @Override
-    public double minValue() {
-        return delegate.minValue();
-    }
-
-    @Override
-    public double maxValue() {
+    public Interval range() {
+        Interval base = delegate.range();
         double k = Math.max(0.0, LatitudeV2Flags.VOID_TAMING_STRENGTH);
-        double overshoot = Math.max(0.0, k - 1.0) * Math.max(0.0, -delegate.minValue());
-        return delegate.maxValue() + overshoot;
+        double overshoot = Math.max(0.0, k - 1.0) * Math.max(0.0, -base.min());
+        return Interval.of(base.min(), (float) (base.max() + overshoot));
+    }
+
+    /** Latitude (Z), the protect floor and band (Y) and the delegate all vary: every axis is live. */
+    @Override
+    public int domainAxes() {
+        return DensityFunction.ALL_AXES;
     }
 
     @Override
-    public KeyDispatchDataCodec<? extends DensityFunction> codec() {
+    public MapCodec<? extends DensityFunction> codec() {
         return codec;
     }
 
     /**
-     * R5-precedent override (see {@link GeoTerrainBiasFunction#mapChildren}): NoiseChunk's {@code mapAll}
-     * visitor must reach BOTH children so chunk-scoped cache/interpolation nodes substitute into the real
-     * per-chunk graph; returning {@code this} (the SimpleFunction default) would hide them and desync the
-     * generated blocks from the RandomState-time graph. Always construct anew -- visitors may run more
-     * than once with different substitution behavior.
+     * 26.3's replacement for the R5-precedent {@code mapChildren} override: the rewrite rule must reach BOTH
+     * children (the delegate graph AND the depth graph) or the rewriter's substitutions never see the
+     * wrapped subgraphs. Always construct anew -- a rule may be applied more than once.
      */
     @Override
-    public DensityFunction mapChildren(Visitor visitor) {
-        return new VoidTamingFunction(visitor.apply(delegate), visitor.apply(depthDelegate));
+    public DensityFunction rewriteChildren(DfRewriteRule rule) {
+        return new VoidTamingFunction(rule.rewrite(delegate), rule.rewrite(depthDelegate));
     }
 }

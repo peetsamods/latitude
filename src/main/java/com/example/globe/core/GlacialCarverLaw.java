@@ -6,7 +6,7 @@ import java.util.function.Predicate;
 
 /**
  * Phase 5 B-9 P1 "Glacial Caves &amp; Crevasses" -- the pure carver-list filter law
- * ({@code latitude.glacialCavesV1}). Peetsa (TEST 110): polar "caverns are giant voids" -- the future
+ * ({@code latitude.glacialCavesV1}). the maintainer (TEST 110): polar "caverns are giant voids" -- the future
  * crevasses should be "narrow and winding ice labyrinths". P1 delivers them as two vanilla-type
  * configured carvers ({@code globe:crevasse}, canyon type; {@code globe:glacial_tunnels}, cave type)
  * attached CODE-SIDE at the one {@code getCarvers()} call site inside

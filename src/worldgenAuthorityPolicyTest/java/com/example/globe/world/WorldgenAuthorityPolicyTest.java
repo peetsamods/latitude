@@ -113,10 +113,20 @@ public final class WorldgenAuthorityPolicyTest {
                 "riparian/desert_bank_plants.json",
                 "riparian/desert_bank_soil.json",
                 "underground_river/ice.json",
-                "underground_river/lanterns.json"));
+                "underground_river/lanterns.json",
+                "glacial_blue_ice_blob.json",
+                "glacial_frost_carpet.json",
+                "glacial_glow_lichen.json",
+                "glacial_ice_blob.json",
+                "glacial_powder_pocket.json",
+                "glacial_slush_floe.json",
+                "glacial_snow_drift.json",
+                "hanging_icicles.json",
+                "powder_crevasse_roof.json"));
         Set<String> actual = jsonFiles(featureRoot);
         assertTrue(expected.equals(actual),
-                "26.3 Latitude feature registry must contain exactly its four owned entries: " + actual);
+                "26.3 Latitude feature registry must contain exactly its thirteen owned entries "
+                        + "(the original four plus the nine glacial/powder-roof migrants): " + actual);
 
         for (String relative : expected) {
             JsonObject feature = JsonParser.parseString(
@@ -146,6 +156,75 @@ public final class WorldgenAuthorityPolicyTest {
             assertFalse(placed.toString().contains("minecraft:random_offset"),
                     "26.3 placed feature must not use the removed random_offset type: " + relative);
         }
+
+        worldgenCarverDataUsesCurrentRegistry();
+        worldgenBiomeSpawnDataUsesCurrentAttributesGrammar();
+    }
+
+    /** 26.3 moved the two Latitude carvers out of the removed {@code configured_carver/} registry into
+     *  the flat {@code carver/} registry (no {@code config} wrapper; {@code lava_level} and
+     *  {@code replaceable} no longer exist on either carver record -- verified via javap on
+     *  {@code CanyonWorldCarver}/{@code CaveWorldCarver} against the 26.3-rc-2 loom jar). */
+    private static void worldgenCarverDataUsesCurrentRegistry() throws Exception {
+        Path oldRoot = Path.of("src/main/resources/data/globe/worldgen/configured_carver");
+        assertTrue(jsonFiles(oldRoot).isEmpty(),
+                "26.3 must not retain Latitude JSON in the removed configured_carver registry");
+
+        Path carverRoot = Path.of("src/main/resources/data/globe/worldgen/carver");
+        Set<String> expected = new TreeSet<>(List.of("crevasse.json", "glacial_tunnels.json"));
+        Set<String> actual = jsonFiles(carverRoot);
+        assertTrue(expected.equals(actual),
+                "26.3 Latitude carver registry must contain exactly its two owned entries: " + actual);
+
+        for (String relative : expected) {
+            JsonObject carver = JsonParser.parseString(
+                    read(carverRoot.resolve(relative).toString())).getAsJsonObject();
+            assertTrue(carver.has("type") && carver.get("type").isJsonPrimitive(),
+                    "carver must retain its registered type: " + relative);
+            assertFalse(carver.has("config"),
+                    "26.3 carver configuration must be flat, not nested under config: " + relative);
+            assertFalse(carver.has("lava_level"),
+                    "26.3 carver record no longer has a lava_level field: " + relative);
+            assertFalse(carver.has("replaceable"),
+                    "26.3 carver record no longer has a replaceable field: " + relative);
+            assertFalse(carver.has("yScale"),
+                    "26.3 canyon carver's y-scale lives at shape.y_scale, not the carver root: " + relative);
+        }
+    }
+
+    /** 26.3 moved biome top-level {@code spawners}/{@code spawn_costs} into
+     *  {@code attributes["minecraft:gameplay/natural_mob_spawns"]} and top-level
+     *  {@code creature_spawn_probability} into
+     *  {@code attributes["minecraft:gameplay/creature_world_gen_spawn_probability"]} (verified against
+     *  the 26.3-rc-2 jar's {@code snowy_plains.json}/{@code soul_sand_valley.json}). */
+    private static void worldgenBiomeSpawnDataUsesCurrentAttributesGrammar() throws Exception {
+        Path biomeRoot = Path.of("src/main/resources/data/globe/worldgen/biome");
+        for (String relative : List.of("glacial_caves.json", "polar_barrens.json")) {
+            JsonObject biome = JsonParser.parseString(
+                    read(biomeRoot.resolve(relative).toString())).getAsJsonObject();
+            assertFalse(biome.has("spawners"),
+                    "26.3 biome must not retain the removed top-level spawners field: " + relative);
+            assertFalse(biome.has("spawn_costs"),
+                    "26.3 biome must not retain the removed top-level spawn_costs field: " + relative);
+            assertFalse(biome.has("creature_spawn_probability"),
+                    "26.3 biome must not retain the removed top-level creature_spawn_probability field: "
+                            + relative);
+            JsonObject attributes = biome.getAsJsonObject("attributes");
+            assertTrue(attributes != null && attributes.has("minecraft:gameplay/natural_mob_spawns"),
+                    "26.3 biome must carry attributes[minecraft:gameplay/natural_mob_spawns]: " + relative);
+            JsonObject naturalMobSpawns = attributes.getAsJsonObject("minecraft:gameplay/natural_mob_spawns");
+            assertEquals("overlay", naturalMobSpawns.get("modifier").getAsString(),
+                    "natural_mob_spawns modifier must be overlay: " + relative);
+            JsonObject argument = naturalMobSpawns.getAsJsonObject("argument");
+            assertTrue(argument.has("spawn_costs") && argument.has("spawns_by_category"),
+                    "natural_mob_spawns argument must carry spawn_costs and spawns_by_category: " + relative);
+        }
+
+        JsonObject barrens = JsonParser.parseString(
+                read(biomeRoot.resolve("polar_barrens.json").toString())).getAsJsonObject();
+        assertTrue(barrens.getAsJsonObject("attributes")
+                        .has("minecraft:gameplay/creature_world_gen_spawn_probability"),
+                "polar_barrens must carry attributes[minecraft:gameplay/creature_world_gen_spawn_probability]");
     }
 
     private static Set<String> jsonFiles(Path root) throws Exception {
@@ -1045,13 +1124,15 @@ public final class WorldgenAuthorityPolicyTest {
         String tools = normalize(read("src/main/java/com/example/globe/tools/LatitudeToolsCommand.java"));
         String launcher = normalize(read(
                 "src/main/java/com/example/globe/client/create/LatitudeWorldLauncher.java"));
+        // The 2.0 line's handshake also carries the Mercator radii (latitudeZRadius, intendedXRadius)
+        // ahead of the 1.5 loading-band id; the band id stays the last, authoritative field.
         assertTrue(
-                net.contains("record GlobeStatePayload(boolean isGlobe, String loadingBandId)")
+                net.contains("record GlobeStatePayload(boolean isGlobe, int latitudeZRadius, int intendedXRadius, String loadingBandId)")
                         && net.contains("GlobeStatePayload::loadingBandId"),
                 "the existing globe handshake must carry the authoritative loading-band id");
         assertTrue(
                 server.contains("recordLastKnownBand(overworld, overworld.getWorldBorder(), handler.player);")
-                        && server.contains("new GlobeNet.GlobeStatePayload(isGlobe, loadingBandId)"),
+                        && server.contains("new GlobeNet.GlobeStatePayload(isGlobe, latitudeZRadius, intendedXRadius, loadingBandId)"),
                 "the first Latitude join must snapshot the actual band before it sends the loading state");
         assertTrue(
                 tools.contains("Commands.literal(\"latitude_locate_teleport\")")

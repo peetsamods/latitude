@@ -72,6 +72,17 @@ public final class LatitudePaintableCustomBiomes {
             "lat_ocean_polar"
     };
 
+    /**
+     * First-party biomes that reach the world through neither the {@code lat_*} tags nor the ledger.
+     * Listed UNCONDITIONALLY (not behind their feature flags): a world generated flag-on and then
+     * loaded flag-off must never reference a biome this union has stopped reporting, and the registry
+     * lookup already skips anything the datapack does not define.
+     */
+    private static final String[] FIRST_PARTY_UNROUTED_BIOME_IDS = {
+            LatitudeBiomes.POLAR_BARRENS_ID,
+            LatitudeBiomes.GLACIAL_CAVES_ID
+    };
+
     private LatitudePaintableCustomBiomes() {}
 
     /** Every non-vanilla biome Latitude can paint, tag-routed and ledger-routed alike. */
@@ -87,6 +98,18 @@ public final class LatitudePaintableCustomBiomes {
                     }
                 });
             }
+        }
+        // 2.0 first-party biomes placed OUTSIDE both routes above: the polar barrens is introduced by
+        // pick()'s flag-gated final override (deliberately past every tag/ledger admission, so it carries
+        // no lat_* membership), and the glacial caves biome is placed only by the populate mixin's
+        // depth-conditioned per-quart swap. Neither would otherwise appear in this union, and vanilla's
+        // retainAll(possibleBiomes()) would then strip their decoration entirely.
+        for (String firstPartyId : FIRST_PARTY_UNROUTED_BIOME_IDS) {
+            Identifier id = Identifier.tryParse(firstPartyId);
+            if (id == null || out.containsKey(id)) {
+                continue;
+            }
+            biomeRegistry.get(id).ifPresent(holder -> out.putIfAbsent(id, holder));
         }
         for (BiomeDescriptorLedger.Descriptor descriptor : BiomeDescriptorLedger.descriptors()) {
             Identifier id = Identifier.tryParse(descriptor.biomeId());

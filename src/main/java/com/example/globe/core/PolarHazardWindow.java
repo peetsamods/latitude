@@ -11,7 +11,7 @@ package com.example.globe.core;
  * <p>Two independent windows, both symmetric about the equator because the caller feeds {@code |lat|}:
  * <ul>
  *   <li><b>B-3a HAZARD window {@code [87.5,90]}</b> -- the ONLY player-affecting hazardous band.
- *       Onset at 87.5 deg (moved in from 88.5 per Peetsa's TEST 76 note: at 89 deg he took ZERO freeze
+ *       Onset at 87.5 deg (moved in from 88.5 per the maintainer's TEST 76 note: at 89 deg he took ZERO freeze
  *       damage because the old curve only crossed vanilla's fully-frozen threshold in the last fractional
  *       degree), full-lethal at 90 deg, over {@code progress = clamp01((|lat|-87.5)/2.5)}. Slowness /
  *       weakness / mining-fatigue amplifiers scale continuously with progress. FREEZE is split into a
@@ -38,7 +38,7 @@ public final class PolarHazardWindow {
     // ---- B-3a: continuous player-affecting hazard window [87.5,90] (server-side) ----
 
     /** Latitude (deg) at which the player-affecting hazard window opens; below this the pole is fully
-     *  explorable. Moved 88.5 -> 87.5 (TEST 76: at 89 deg Peetsa took ZERO freeze damage -- the old onset
+     *  explorable. Moved 88.5 -> 87.5 (TEST 76: at 89 deg the maintainer took ZERO freeze damage -- the old onset
      *  + curve made damage a near-binary flip in the last fractional degree). Slowness now ramps in at
      *  87.5; frost builds visibly from here and freeze DAMAGE begins ~88 deg and intensifies to a lethal
      *  pole (see {@link #freezeDamageIntervalTicks} / {@link #freezeDamageAmount}). The AMBIENT band
@@ -82,14 +82,14 @@ public final class PolarHazardWindow {
     // frozen (ticksFrozen >= getTicksRequiredToFreeze() == 140), and then a FIXED 1.0 HP every 40 ticks
     // (both verified in LivingEntity.aiStep / Entity for 26.2). Driving that single knob (ticksFrozen) made
     // damage a near-binary flip: the pre-TEST-76 curve pushed ticksFrozen past 140 only in the last ~0.03 deg,
-    // so Peetsa stood at 89 deg and took nothing. So we apply our OWN latitude-scaled freeze damage
+    // so the maintainer stood at 89 deg and took nothing. So we apply our OWN latitude-scaled freeze damage
     // ({@link #freezeDamageIntervalTicks} + {@link #freezeDamageAmount}), a cadence + amount that build from
     // ~88 deg and worsen to a lethal pole. Same damage TYPE (freeze) and death screen as vanilla, only the
     // timing is ours.
     //
     // TEST 76 kept the frost VISUAL capped at 139 -- one tick BELOW the fully-frozen threshold -- specifically
     // so vanilla's own fixed auto-damage never fired and couldn't double-dip with our curve. But that also
-    // permanently disabled a piece of vanilla feedback Peetsa WANTS: the HUD hearts only tint blue when
+    // permanently disabled a piece of vanilla feedback the maintainer WANTS: the HUD hearts only tint blue when
     // {@code isFullyFrozen()} is true ({@code Hud$HeartType.forPlayer} returns FROZEN iff ticksFrozen >= 140).
     // Capping at 139 meant the hearts never went blue even while our curve was taking HP -- TEST 77 report:
     // "the hearts aren't turning blue while I'm taking damage." TEST 77 fix: let ticksFrozen CROSS 140 (so
@@ -125,7 +125,7 @@ public final class PolarHazardWindow {
      *   <li><b>[0, DAMAGE_ONSET_PROGRESS]</b> (87.5 -> 88 deg): builds 0 -> exactly {@link #FROZEN_THRESHOLD_TICKS}
      *       (140). So the frost overlay thickens visibly across the grace band and the hearts flip BLUE at the
      *       instant freeze DAMAGE begins -- the "you are now truly freezing" cue lands exactly when HP starts
-     *       to fall (Peetsa's TEST 77 ask), not only at the pole.</li>
+     *       to fall (the maintainer's TEST 77 request), not only at the pole.</li>
      *   <li><b>(DAMAGE_ONSET_PROGRESS, 1]</b> (88 -> 90 deg): holds at/above 140, easing up to
      *       {@link #FROST_VISUAL_POLE_TICKS} (148) for decay-headroom (see {@link #FROST_POLE_HEADROOM_TICKS}).</li>
      * </ul>
@@ -190,7 +190,7 @@ public final class PolarHazardWindow {
 
     // ---- B-7 S3: the FROSTBITE band [85,88) -- a gentle two-stage lead-in to the lethal core ----
     //
-    // Peetsa's two-stage-cold decision (2026-07-13): freeze damage should start EARLIER, as a gentle
+    // the maintainer's two-stage-cold decision (2026-07-13): freeze damage should start EARLIER, as a gentle
     // "frostbite" nibble well ahead of the lethal core, so the pole has a graduated bite instead of a hard
     // doorstep at 88 deg. This band is a SEPARATE, self-contained curve that sits ENTIRELY equatorward of the
     // existing lethal core: it applies ONLY on [FROSTBITE_ONSET_DEG, FROSTBITE_END_DEG) = [85,88), and hands off
@@ -291,7 +291,7 @@ public final class PolarHazardWindow {
     // ---- B-3b: ambient snow + fog window [AMBIENT_ONSET_DEG,90] (client particles + screen fog) ----
 
     /** Latitude (deg) at which the CLIENT ambient snow/fog atmosphere begins -- where POLAR COUNTRY starts.
-     *  Moved 85 -> 82 (B-7 S3, Peetsa 2026-07-13), then 82 -> 80 (S8, Peetsa 2026-07-14: the "cheap 80%" of
+     *  Moved 85 -> 82 (B-7 S3, the maintainer 2026-07-13), then 82 -> 80 (S8, the maintainer 2026-07-14: the "cheap 80%" of
      *  the dilation idea -- ~2 more degrees of storm-country approach, ~110 blocks on Regular-Wide; geometric
      *  dilation stays parked). {@code PolarColdCues.Rung#APPROACH} is PINNED to this constant symbolically,
      *  so "Entering polar storm country." speaks with the first snowflakes wherever this moves. This is a
@@ -352,7 +352,7 @@ public final class PolarHazardWindow {
     //
     // The flat PolarWhiteoutOverlayHud screen fill has NO depth information, so it can only be painted when
     // the player is sky-exposed (painting it while sheltered would haze the player's OWN interior walls, not
-    // just the view out a doorway). Peetsa wants the exterior to stay heavily fogged "respective to the level
+    // just the view out a doorway). the maintainer wants the exterior to stay heavily fogged "respective to the level
     // outside" even while he is standing inside looking out. The correct fix is Minecraft's OWN render-distance
     // fog (FogData.renderDistanceStart/End), which the fog shader (assets/.../include/fog.glsl) applies as a
     // linear fog of the CYLINDRICAL per-fragment distance max(|xz|,|y|): geometry nearer than START takes zero
@@ -368,7 +368,7 @@ public final class PolarHazardWindow {
 
     /** Cylindrical render-distance fog END (blocks) at the pole: a heavy whiteout leaving ~1 chunk of sight.
      *  TEST 78 tightened 24 -> 16: this depth fog is the ONLY heavy-haze layer that reads the same standing
-     *  exposed OR sheltered-looking-out (the whiteout top-coat is exposure-gated), so Peetsa's "inside is much
+     *  exposed OR sheltered-looking-out (the whiteout top-coat is exposure-gated), so the maintainer's "inside is much
      *  lighter than outside" is narrowed by making the shared depth fog carry MORE of the total -- heaviest at
      *  the pole where the parity gap mattered most. */
     public static final float POLAR_FOG_END_NEAR = 16.0f;
@@ -376,7 +376,7 @@ public final class PolarHazardWindow {
      *  reads as white -- but a wall 2-3 blocks away is still under START, hence unfogged. */
     public static final float POLAR_FOG_START_NEAR = 5.0f;
     /** END-curve exponent over {@link #ambientProgress}. {@code <1} front-loads the ramp so genuinely heavy fog
-     *  is reached a little before the pole (Peetsa's 88 deg shelter should already read heavy, not thin). TEST
+     *  is reached a little before the pole (the maintainer's 88 deg shelter should already read heavy, not thin). TEST
      *  78 nudged 0.85 -> 0.80 so the tightening front-loads a touch more toward 88-90 without disturbing the
      *  light 85-86 approach. */
     public static final double POLAR_FOG_END_CURVE = 0.80;
@@ -423,10 +423,10 @@ public final class PolarHazardWindow {
     /** Latitude (deg) at which the storm sky begins to lift. Its OWN 85 anchor, UNCHANGED by B-7 S3 (which
      *  moved the ambient snow/fog onset to 82, S8 to 80): the near-field flurry and depth haze now LEAD the overcast by
      *  5 deg (a greying approach), and from 85 the sky lift joins on its original steep 85-&gt;87.5 ramp so the
-     *  sun is still fully gone by 87.5 (the Peetsa sun-at-86 fix is preserved bit-for-bit). */
+     *  sun is still fully gone by 87.5 (the the maintainer sun-at-86 fix is preserved bit-for-bit). */
     public static final double STORM_ONSET_DEG = 85.0;
     /** Latitude (deg) at which the storm sky is FULLY overcast (rain level 1.0, sun fully faded). Reached
-     *  by ~87.5 deg -- deliberately much steeper than the 85->90 ambient ramp: Peetsa saw the sun still
+     *  by ~87.5 deg -- deliberately much steeper than the 85->90 ambient ramp: the maintainer saw the sun still
      *  shining at 86 deg because the sky lift was linear over 85->90 (only ~0.2 at 86). At 86 deg this is
      *  now 0.4 (clearly overcast); by 87.5 deg it is full storm and the sun is gone. */
     public static final double STORM_FULL_DEG = 87.5;
@@ -444,7 +444,7 @@ public final class PolarHazardWindow {
 
     /** Latitude (deg) at which the blizzard VISUAL drive begins to ramp. Held at 87 (NOT the moved
      *  {@link #HAZARD_ONSET_DEG}, now 87.5 after the TEST 76 retune -- was 88.5 for one round in between):
-     *  the driven-gale look + dense second particle pass are ATMOSPHERE, which Peetsa asked to keep exactly
+     *  the driven-gale look + dense second particle pass are ATMOSPHERE, which the maintainer asked to keep exactly
      *  as-is regardless of where the player-affecting hazard onset lands. */
     public static final double BLIZZARD_ONSET_DEG = 87.0;
     /** Latitude (deg) at which the blizzard visual drive is fully driven (the geographic pole). */
@@ -457,7 +457,7 @@ public final class PolarHazardWindow {
      * from 87 deg this scales the flakes'
      * fall speed and sideways wind up to a driven gale and gates the dense low second particle pass so the
      * pole reads as a real BLIZZARD. Keeping this on the original {@code [87,90]} ramp preserves the blizzard
-     * LOOK exactly (Peetsa: keep the ambient band as-is) while only the mechanics moved inward. Changes how
+     * LOOK exactly (the maintainer: keep the ambient band as-is) while only the mechanics moved inward. Changes how
      * flakes LOOK/MOVE and adds a fixed per-tick second budget; never a catch-up accumulator (B-3b law).
      */
     public static float blizzardDrive(double absLatDeg) {
@@ -466,7 +466,7 @@ public final class PolarHazardWindow {
 
     // ---- TEST 77 round 2 item 2: BLIZZARD particle drive MAGNITUDES (blocks/tick) ----
     //
-    // Peetsa (TEST 77): the polar snow is "slow and falls down, not sideways like a blizzard." Root cause is
+    // the maintainer (TEST 77): the polar snow is "slow and falls down, not sideways like a blizzard." Root cause is
     // vanilla SnowflakeParticle physics, NOT a plumbing bug -- the wind vector we pass DOES reach the flake,
     // but SnowflakeParticle.tick() multiplies horizontal velocity by 0.95 EVERY tick (decays ~5%/tick, halving
     // in ~13 ticks) and pins the vertical velocity to a gravity terminal of ~0.081/tick (gravity 0.225 vs its

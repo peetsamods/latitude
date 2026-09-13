@@ -176,7 +176,7 @@ public final class HemisphereCrossing {
     }
 
     /**
-     * B-4 hemisphere-title ANTI-SPAM, revised for PER-HEMISPHERE full titles (Peetsa's round-2 design):
+     * B-4 hemisphere-title ANTI-SPAM, revised for PER-HEMISPHERE full titles (the maintainer's round-2 design):
      * EACH SIDE of the line gets the big center-screen title ONCE per visit-episode. We track which sides
      * have already been FULL-announced since the player last LEFT the band ({@code negSideAnnounced} /
      * {@code posSideAnnounced}); crossing INTO a not-yet-announced side while inside {@code band} shows the

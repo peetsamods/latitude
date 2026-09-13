@@ -2,7 +2,7 @@ package com.example.globe.core;
 
 /**
  * Phase 5 Slice B-5 (Hemisphere Passage polish, item 1) -- pure band math for the E/W-EDGE structure-free
- * band. Peetsa saw a generated structure standing at/near the world's E/W border (TEST 83) and asked the
+ * band. the maintainer saw a generated structure standing at/near the world's E/W border (TEST 83) and asked the
  * edge to be structure-free: "the storm belt is wild, empty land." This class answers ONE question with zero
  * Minecraft imports (Core Logic layer, unit-testable in a plain JVM): is a given block-X column within the
  * veto band inward from the nearest E/W (X) world-border edge?
@@ -14,11 +14,11 @@ package com.example.globe.core;
  * <p><b>Band width is DEGREE-ANCHORED with a fan-out buffer (TEST 89 owner decision).</b> It USED to be a
  * fixed absolute 500 blocks, decoupled from the ramp -- but on a big world 500 blocks is NARROWER than the
  * visible storm band (which is degree-anchored: fog onset at {@link EdgeGeometry#RAMP_START_DEG} 177.5 deg),
- * so a structure could stand INSIDE the visible storm (Peetsa saw a village there). It also had no allowance
+ * so a structure could stand INSIDE the visible storm (the maintainer saw a village there). It also had no allowance
  * for a multi-chunk village whose houses fan 150-300 blocks toward the band from an anchor just outside it.
  * The band is now the same DEGREE geometry the visible edge uses: it vetoes structures poleward of
  * {@link #VETO_DEG} 173 deg -- the visible band (177.5) PLUS a {@code 177.5 - 173 = 4.5}-deg fan-out buffer
- * ("a few degrees" per Peetsa), so every structure that could fan a house into the visible storm is vetoed at
+ * ("a few degrees" per the maintainer), so every structure that could fan a house into the visible storm is vetoed at
  * its anchor. (TEST 92 tightened the fog onset 176.5 -&gt; 177.5 while VETO_DEG held at 173, so the buffer grew
  * from 3.5 to 4.5 deg -- even more conservative; the veto still comfortably covers the now-smaller visible band
  * plus fan-out.) On a wide world 4.5 deg is ~375-500 blocks of buffer, comfortably clearing the ~300-block max
@@ -61,7 +61,7 @@ public final class EdgeStructureVeto {
 
     /** Poleward-of-this longitude degree the structure-free band begins. The visible storm onset is
      *  {@link EdgeGeometry#RAMP_START_DEG} 177.5 deg (TEST 92); this sits {@code 177.5 - 173 = 4.5} deg further
-     *  out (the "few degrees" fan-out buffer Peetsa asked for), so a multi-chunk village anchored just outside
+     *  out (the "few degrees" fan-out buffer the maintainer asked for), so a multi-chunk village anchored just outside
      *  the visible band cannot fan a house into it. Degrees, so it scales with the world instead of the old
      *  fixed 500 blocks that read narrower than the visible band on wide worlds. */
     public static final double VETO_DEG = 173.0;

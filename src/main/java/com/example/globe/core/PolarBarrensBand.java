@@ -2,7 +2,7 @@ package com.example.globe.core;
 
 /**
  * Pure latitude-driven placement + surface math for Phase 5 Slice B-8 "Polar Barrens"
- * ({@code latitude.polarBarrens.enabled}). Peetsa 2026-07-14: past the vegetation-fade finish line the
+ * ({@code latitude.polarBarrens.enabled}). the maintainer 2026-07-14: past the vegetation-fade finish line the
  * deep polar cap should stop being a dirt-and-snow {@code snowy_plains} monoculture and become a
  * first-party frozen waste ({@code globe:polar_barrens}) -- snow blocks, snow carpet, powder-snow
  * pockets and ice, no dirt, its own name.
@@ -106,7 +106,7 @@ public final class PolarBarrensBand {
     private PolarBarrensBand() {
     }
 
-    // --- S11(a) LUSH-CAVE VETO (Peetsa 2026-07-16, TEST 101: lush_caves is ILLEGAL in the polar core) ----
+    // --- S11(a) LUSH-CAVE VETO (the maintainer 2026-07-16, TEST 101: lush_caves is ILLEGAL in the polar core) ----
 
     /**
      * S11(a): should an UNDERGROUND cave-biome cell resolving to {@code minecraft:lush_caves} be remapped to
@@ -133,12 +133,12 @@ public final class PolarBarrensBand {
         return a >= ONSET_DEG;
     }
 
-    // --- B-9a GLACIER BODY (Peetsa 2026-07-16, TEST 99: "a very very very thick layer of ice under like
+    // --- B-9a GLACIER BODY (the maintainer 2026-07-16, TEST 99: "a very very very thick layer of ice under like
     // --- 10 blocks at least of snow" -- the Glacial Caves design family pulled forward) -------------------
     //
     // DEPTH LAW (build-crew proposal, per the B-9 family): a barrens column's ground becomes a real glacier
     // sole-down: a fixed SNOW CAP of GLACIER_SNOW_CAP_BLOCKS (10 -- the owner's floor) over a packed-ice
-    // BODY. S37 (Peetsa 2026-07-23, TEST 127: "not nearly enough ice ... caverns almost all ice until sub-Y0")
+    // BODY. S37 (the maintainer 2026-07-23, TEST 127: "not nearly enough ice ... caverns almost all ice until sub-Y0")
     // EXTENDS that body: it no longer stops at the shallow noise-wobbled sole -- below the cap the whole solid
     // column is ice all the way down to ICE_BODY_FLOOR_Y (Y0), a uniform packed_ice slab with a bounded
     // blue_ice heart seam (BLUE_ICE_HEART_THICKNESS_BLOCKS) tracking the existing wobble-warped blue line, so
@@ -158,7 +158,7 @@ public final class PolarBarrensBand {
     public static final int GLACIER_SNOW_CAP_BLOCKS = 10;
 
     /**
-     * S37 (Peetsa 2026-07-23, TEST 127: "not nearly enough ice ... caverns almost all ice until sub-Y0"):
+     * S37 (the maintainer 2026-07-23, TEST 127: "not nearly enough ice ... caverns almost all ice until sub-Y0"):
      * the absolute Y the ice BODY reaches. The glacier no longer stops at a shallow noise-wobbled sole; below
      * the snow cap the whole solid column becomes ice down to this line, and the sub-Y0 diffusion band
      * ({@link #permafrostIceDepthBelowY0}) takes over below it. Y0 = the classic overworld deepslate seam,
@@ -203,7 +203,7 @@ public final class PolarBarrensBand {
         return Math.max(1, Math.min(GLACIER_ICE_MAX_BLOCKS + GLACIER_DEPTH_WOBBLE_BLOCKS, ice));
     }
 
-    // --- S37 SUB-Y0 ICE DIFFUSION (Peetsa 2026-07-23, TEST 127: "caverns almost all ice until sub-Y0, where
+    // --- S37 SUB-Y0 ICE DIFFUSION (the maintainer 2026-07-23, TEST 127: "caverns almost all ice until sub-Y0, where
     // --- there should be about a 10 block diffusion of the ice into stone/deepslate") ---------------------
     //
     // This is the S24 permafrost stratum RELOCATED (owner S37): the ice body now reaches all the way down to
@@ -222,7 +222,7 @@ public final class PolarBarrensBand {
     /**
      * Thickness (blocks) of the sub-Y0 ice-diffusion band -- from {@link #ICE_BODY_FLOOR_Y} (Y0) down to
      * {@code Y0 - this} -- within which stone/deepslate may be replaced by packed-ice fingering. S37 RETUNE
-     * (Peetsa 2026-07-23): the owner asked for "about a 10 block diffusion" below Y0 (was the 24-block S25b
+     * (the maintainer 2026-07-23): the owner asked for "about a 10 block diffusion" below Y0 (was the 24-block S25b
      * permafrost band below the glacier sole); the body now carries solid ice down to Y0, so this band is the
      * short diffusion tail, bounded well above bedrock (the living underground -- ores/lakes/geodes -- keeps
      * the whole column below it). Name kept stable ("permafrost" = ice-cemented ground); only its LOCALITY

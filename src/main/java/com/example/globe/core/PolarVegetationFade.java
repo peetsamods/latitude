@@ -2,7 +2,7 @@ package com.example.globe.core;
 
 /**
  * Pure latitude-driven keep-chance math for the polar small-vegetation fade
- * ({@code latitude.polarVegetationFade.enabled}). Peetsa 2026-07-10: grass / ferns / flowers /
+ * ({@code latitude.polarVegetationFade.enabled}). the maintainer 2026-07-10: grass / ferns / flowers /
  * sugarcane sprouting in the deep polar low-80s reads as unimmersive, so surface vegetation should
  * THIN with latitude and be essentially gone against the bare snow/ice cap.
  *
@@ -39,7 +39,7 @@ public final class PolarVegetationFade {
 
     /**
      * Absolute latitude (deg) at/above which vegetation is fully gone (keep-chance exactly 0.0) --
-     * the bare snow/ice cap Peetsa asked for. The 72->80 span (S21c) puts the ~half-stripped point near
+     * the bare snow/ice cap the maintainer asked for. The 72->80 span (S21c) puts the ~half-stripped point near
      * 76deg, so grass/flowers are clearly sparse by the mid-70s and absent by 80deg -- the ONE threshold
      * where surface vegetation, villages, and calm air all end.
      *
@@ -58,7 +58,7 @@ public final class PolarVegetationFade {
             ONSET_DEG + 0.5);
 
     /**
-     * S11(c) FIREFLY BUSH BAN (Peetsa, TEST 101 -- the owner has flagged firefly bushes TWICE with
+     * S11(c) FIREFLY BUSH BAN (the maintainer, TEST 101 -- the owner has flagged firefly bushes TWICE with
      * exclamation marks): {@code firefly_bush} placement is banned OUTRIGHT at/above this absolute latitude
      * -- 50 deg, the SUBPOLAR onset ({@code LatitudeMath.TEMPERATE_MAX_FRAC} boundary), far equatorward of
      * the general fade's 72-deg onset, because a glowing summer-evening plant reads absurd anywhere in the

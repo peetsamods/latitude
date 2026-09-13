@@ -8,7 +8,7 @@ package com.example.globe.core;
  * Every edge feature -- the approach fog, the crossing prompt, the arm re-arm line, the single white
  * advisory banner (TEST 89 retired the two-tier system and the EW dust particles), the mirror-teleport
  * arrival -- USED to derive its trigger distances from
- * the LIVE {@code WorldBorder} size ({@code getSize()*0.5}). In Peetsa's TEST-86 world the vanilla border was
+ * the LIVE {@code WorldBorder} size ({@code getSize()*0.5}). In the maintainer's TEST-86 world the vanilla border was
  * mid-LERP at join (a stale {@code BorderLerp*} persisted in level.dat, growing halfSize over ~4 minutes), so
  * every one of those lines physically SLID ~100 blocks during his session -- a very plausible contributor to
  * the walked-repro failures. This class fixes that at the root: ALL edge geometry is derived from the mod's
@@ -16,16 +16,16 @@ package com.example.globe.core;
  * {@code zRadius * MERCATOR_ASPECT} in Wide/Mercator), NOT the live border. The vanilla border stays the
  * physical wall; a lerping or {@code /worldborder}-vandalized border can no longer move our lines.
  *
- * <h2>Degrees, not blocks (Peetsa's directive)</h2>
+ * <h2>Degrees, not blocks (the maintainer's directive)</h2>
  * The anchors are LONGITUDE DEGREES from the world center. The antimeridian edge is 180 deg; 1 deg of
- * longitude is {@code xRadiusIntended / 180} blocks. Peetsa asked the whole edge experience to be COMPACT --
+ * longitude is {@code xRadiusIntended / 180} blocks. the maintainer asked the whole edge experience to be COMPACT --
  * fog within ~2.5 deg of the wall, a crossing that lands ~2 deg in, and a HEADS-UP advisory that leads the
  * fog rather than landing on top of it. The edge-flow rework (2026-07-13, this pass) resettled the anchors on
- * Peetsa's confirmed B-5 flight:
+ * the maintainer's confirmed B-5 flight:
  * <ul>
  *   <li>{@link #ADVISORY_DEG} 176.0 -- the single white advisory banner fires here (4 deg out), the OUTERMOST
  *       edge element and a genuine heads-up: it now leads the fog by 0.5 deg instead of arming ON the fog
- *       onset (Peetsa: the old advisory "lands almost simultaneously" with the fog). Decoupled from
+ *       onset (the maintainer: the old advisory "lands almost simultaneously" with the fog). Decoupled from
  *       {@link #RAMP_START_DEG} -- this is the banner-visibility cap now (nothing edge-related shows equatorward
  *       of here).</li>
  *   <li>{@link #REARM_DEG} 177.0 -- the passage arm re-arms once the player walks back out past this line
@@ -36,7 +36,7 @@ package com.example.globe.core;
  *   <li>{@link #RAMP_START_DEG} 177.5 -- fog begins (2.5 deg out). UNCHANGED. The fog onset and its inner
  *       full-opacity {@link #CLIMAX_DEG} are both untouched by this pass, so the fog subsystem
  *       ({@code FogRendererPassageSetupMixin}, {@code GlobeClientState.ewIntensity01}) is byte-identical ONLY where the 177.5-deg term dominates rampStart (xRadius >= ~8640).</li>
- *   <li>{@link #PROMPT_DEG} 178.0 -- the crossing prompt opens (2 deg out). Moved 179 -&gt; 178 (Peetsa's
+ *   <li>{@link #PROMPT_DEG} 178.0 -- the crossing prompt opens (2 deg out). Moved 179 -&gt; 178 (the maintainer's
  *       confirmed flow offers the crossing at 178, not 179). Now sits INSIDE the fog onset (the prompt fires
  *       while the fog is still building, ~1/3 opacity) and coincides with {@link #ARRIVAL_DEG}.</li>
  *   <li>{@link #CLIMAX_DEG} 179.0 -- fog reaches FULL opacity here (1 deg out) and holds to the wall. This is
@@ -131,7 +131,7 @@ public final class EdgeGeometry {
      *  of here. */
     public static final double RAMP_START_DEG = 177.5;
     /** The crossing prompt opens at/inside this -- 178 deg (2 deg out). Edge-flow rework: moved 179 -&gt; 178
-     *  (Peetsa's confirmed flow). Coincides with {@link #ARRIVAL_DEG}. */
+     *  (the maintainer's confirmed flow). Coincides with {@link #ARRIVAL_DEG}. */
     public static final double PROMPT_DEG = 178.0;
     /** Fog reaches FULL opacity at/inside this -- 179 deg (1 deg out) -- and holds to the wall. Edge-flow
      *  rework: this is the OLD prompt position, now a DEDICATED anchor decoupled from {@link #PROMPT_DEG} so the

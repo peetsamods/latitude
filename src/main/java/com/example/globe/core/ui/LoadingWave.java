@@ -2,11 +2,11 @@ package com.example.globe.core.ui;
 
 /**
  * Pure envelope math for the loading screen's gentle "reading light" wave over the world-summary line
- * (Peetsa 2026-07-11: "a progressive illumination of each word like a gaussian gradient wave... gentle and
+ * (the maintainer 2026-07-11: "a progressive illumination of each word like a gaussian gradient wave... gentle and
  * gradual... would soothe the eye from seeing so much visual clutter").
  *
  * <p>The summary line ("Itty Bitty · Square 1:1 · 7,500 × 7,500 · subpolar start") is split into its
- * {@code · }-separated SEGMENTS — the natural "elements" Peetsa named — and a single crest travels slowly and
+ * {@code · }-separated SEGMENTS — the natural "elements" the maintainer named — and a single crest travels slowly and
  * continuously across the segment indices, wrapping forever. One segment glows gently brighter while the one
  * behind it eases back down; a soft Gaussian falloff gives adjacent segments a whisper of spillover, which is
  * what makes it read as a travelling wave rather than a blinking highlight.
@@ -18,7 +18,7 @@ package com.example.globe.core.ui;
  *
  * <p>Design intent: this is a caress, not the title glimmer. But — like the title glimmer learned the hard
  * way — a warm-white line lerped <em>toward white</em> barely changes, so a "brighten only" wave is invisible.
- * The illumination is therefore a DIM-BASELINE + BRIGHT-CREST contrast (exactly Peetsa's original phrasing:
+ * The illumination is therefore a DIM-BASELINE + BRIGHT-CREST contrast (exactly the maintainer's original phrasing:
  * "illuminate each word, de-illuminate the word behind it"): every word rests at {@link #REST_DIM} of its
  * base brightness (the "waiting its turn" state) and the single crest word lifts back to full plus a gentle
  * white pop ({@link #CREST_POP}). Because there is always a crest somewhere, the resting dim is permanent
@@ -32,7 +32,7 @@ public final class LoadingWave {
     }
 
     /** Milliseconds the crest spends travelling across ONE segment. At ~1.5 s/segment a 4-segment line completes
-     *  a full loop every ~6 s — squarely in the "slow and soothing" band Peetsa asked for (a full cycle every
+     *  a full loop every ~6 s — squarely in the "slow and soothing" band the maintainer asked for (a full cycle every
      *  ~5–7 s). Slow enough that the eye reads it as a gentle drift, not a pulse. */
     public static final long SEGMENT_PERIOD_MS = 1500L;
 
@@ -115,7 +115,7 @@ public final class LoadingWave {
 
     /**
      * Colours a segment from its {@link #gaussian01} crest height using a DIM-BASELINE + BRIGHT-CREST contrast
-     * (Peetsa 2026-07-11: "illuminate each word, de-illuminate the word behind it"). This is what makes the
+     * (the maintainer 2026-07-11: "illuminate each word, de-illuminate the word behind it"). This is what makes the
      * wave visible on a warm-white line, where a lerp-toward-white ({@link TitleStyle#brighten}) barely moves:
      *
      * <ol>

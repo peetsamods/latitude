@@ -10,7 +10,7 @@ import net.minecraft.world.entity.animal.polarbear.PolarBear;
 import net.minecraft.world.entity.player.Player;
 
 /**
- * S25(B-behavior) HUNGRY BEARS (Peetsa 2026-07-20, TEST 117 round: in the food-scarce Barrens a polar bear
+ * S25(B-behavior) HUNGRY BEARS (the maintainer 2026-07-20, TEST 117 round: in the food-scarce Barrens a polar bear
  * is not neutral -- it hunts). A {@link NearestAttackableTargetGoal} over players, added to the bear's
  * target selector at priority 5 by {@code PolarBearHungryAggroMixin} (a TAIL inject on
  * {@code PolarBear.registerGoals}, flag-gated so flag-off registers nothing -- vanilla bear byte-identical).

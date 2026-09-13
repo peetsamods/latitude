@@ -4,7 +4,7 @@ package com.example.globe.core;
  * Pure decision for the "all exposed water is frozen at the poles" correctness rule (Core Logic layer,
  * zero Minecraft imports, unit-testable in a plain JVM). Sibling of {@link PolarPrecipitationRule}.
  *
- * <p><b>The bug.</b> Standing at 89 deg S in a full blizzard, Peetsa saw a pool of LIQUID water in his
+ * <p><b>The bug.</b> Standing at 89 deg S in a full blizzard, the maintainer saw a pool of LIQUID water in his
  * shelter doorway. Vanilla decides "should this exposed water column freeze into ice" per column via
  * {@code Biome.shouldFreeze(LevelReader, BlockPos, boolean)}, whose very first gate is
  * {@code if (this.warmEnoughToRain(pos, seaLevel)) return false;} -- i.e. a biome whose temperature is
@@ -74,7 +74,7 @@ public final class PolarWaterFreezeRule {
         return Math.abs(latDeg) >= FREEZE_ALL_DEG;
     }
 
-    // --- B-9a SEA-FREEZE FRAY (Peetsa 2026-07-16, TEST 99 screenshots: the 85-deg freeze line was a harsh
+    // --- B-9a SEA-FREEZE FRAY (the maintainer 2026-07-16, TEST 99 screenshots: the 85-deg freeze line was a harsh
     // --- razor seam on JourneyMap and in-world) --------------------------------------------------------
 
     /** Half-width (deg) of the freeze-line fray: the effective threshold wanders {@code 85 +/- 1} deg on a
@@ -111,7 +111,7 @@ public final class PolarWaterFreezeRule {
         return Math.abs(latDeg) >= threshold;
     }
 
-    // --- S11(b) FROZEN RIVERS -> COMPLETE ICE (Peetsa 2026-07-16, TEST 101) ---------------------------
+    // --- S11(b) FROZEN RIVERS -> COMPLETE ICE (the maintainer 2026-07-16, TEST 101) ---------------------------
 
     /**
      * S11(b): should a fluid column freeze FULL DEPTH (surface to bed, no water left -- which also kills
@@ -147,7 +147,7 @@ public final class PolarWaterFreezeRule {
         return depthBelowSurface > 0;
     }
 
-    // --- S14(b) UNIVERSAL FREEZE (Peetsa 2026-07-17, TEST 104) -----------------------------------------
+    // --- S14(b) UNIVERSAL FREEZE (the maintainer 2026-07-17, TEST 104) -----------------------------------------
     // The owner found LIQUID water one block under the surface ice of a frozen LAKE at 89 deg, and
     // WATERFALLS cascading unfrozen into polar country. S11(b) only solid-froze RIVER-classified columns
     // (ponds/lakes were explicitly left for B-9). S14(b) generalises the solid freeze to ALL land-family
@@ -252,7 +252,7 @@ public final class PolarWaterFreezeRule {
         return skyExposed || aboveFreezeFloor;
     }
 
-    // --- S15(b) PERSISTENT ICE (Peetsa 2026-07-17, TEST 105) -------------------------------------------
+    // --- S15(b) PERSISTENT ICE (the maintainer 2026-07-17, TEST 105) -------------------------------------------
     // Live evidence (video): "as soon as there is any shelter, the water is liquid instead of ice. Ice
     // needs to be a little more persistent." TWO tick-time causes keep sheltered polar water liquid, each
     // with its own law + consumer, both riding the SAME forced-freeze front the surface ice uses (>= 85,
@@ -326,7 +326,7 @@ public final class PolarWaterFreezeRule {
      */
     public static final int ROOFED_FREEZE_REACH_BLOCKS = 16;
 
-    // --- S17(b) WATERFALL FREEZE v3 (Peetsa 2026-07-18, TEST 107 video: liquid waterfalls STILL cascade) ---
+    // --- S17(b) WATERFALL FREEZE v3 (the maintainer 2026-07-18, TEST 107 video: liquid waterfalls STILL cascade) ---
     // v3 added the FLOW-TICK seam (FlowingFluidWaterfallFreezeMixin on FlowingFluid.tick -- the single method
     // every moving water block funnels through: in-zone, above the floor, non-ocean, a FLOWING block is a freeze
     // candidate at the moment of motion; decision {@link #freezesFlowing}) plus an "upward scan" companion.
@@ -342,7 +342,7 @@ public final class PolarWaterFreezeRule {
     // cascade top); the v6 sweep in ServerLevelRoofedWaterFreezeMixin descends the flowing column to its landed
     // base instead (see {@link #FLOWING_DESCENT_CAP_BLOCKS}).
 
-    // --- S18/S19 (history) -> S20 SETTLED-WATER FREEZE (Peetsa 2026-07-19, TEST 110: the THIRD failed water
+    // --- S18/S19 (history) -> S20 SETTLED-WATER FREEZE (the maintainer 2026-07-19, TEST 110: the THIRD failed water
     // --- round -> the LIVE-INSTRUMENT LAW) -----------------------------------------------------------------
     // THE ROOT MECHANISM (finally understood, recon + owner verified): a FLOWING water block only receives fluid
     // TICKS while it is actively SPREADING. Once the fluid reaches equilibrium (fully spread) the game STOPS
@@ -412,7 +412,7 @@ public final class PolarWaterFreezeRule {
         return belowIsIce || northIsIce || eastIsIce || southIsIce || westIsIce;
     }
 
-    // --- S25 LEVEL GRACE (Peetsa 2026-07-20, TEST 117 addendum: "Water sometimes freezes so fast that when
+    // --- S25 LEVEL GRACE (the maintainer 2026-07-20, TEST 117 addendum: "Water sometimes freezes so fast that when
     // --- pouring, it doesn't even get a chance to spread and just becomes a pillar.") ---------------------
     // ROOT CAUSE: when a pour lands on/beside existing ice, the flow-tick HUNTER (landed + ice-touch =
     // certain) and the SPREAD-CONVERTER (ice-adjacent destination converts at the moment of spread) claim the
@@ -495,7 +495,7 @@ public final class PolarWaterFreezeRule {
         return freezeEligible && landedOnSupport && settled;
     }
 
-    // --- S21(d) WATER v5 (Peetsa 2026-07-19, TEST 111: "still ~5x too slow", and the source froze FIRST and
+    // --- S21(d) WATER v5 (the maintainer 2026-07-19, TEST 111: "still ~5x too slow", and the source froze FIRST and
     // --- beheaded the fall) -------------------------------------------------------------------------------
     // Two pacing/ordering fixes on top of the S20 division of labour; NO new RNG, all exemptions verbatim.
 
@@ -547,7 +547,7 @@ public final class PolarWaterFreezeRule {
         return adjacentHasFlowing;
     }
 
-    // --- S22 WATER v6 (Peetsa 2026-07-19, TEST 113: the FOURTH live water failure) -----------------------
+    // --- S22 WATER v6 (the maintainer 2026-07-19, TEST 113: the FOURTH live water failure) -----------------------
     // Owner flight: an 84S pour froze NOTHING (outside the 85 front while the Barrens/crevasses start at 82);
     // at exactly 85S the pour flooded tens of blocks in 12 s, reached only 20-30% checkerboard ice at 36 s,
     // and the supply kept re-spreading fresh water ON TOP of fresh ice. Forensics (bytecode-verified) found
@@ -574,7 +574,7 @@ public final class PolarWaterFreezeRule {
     //       leave the supply recomputing forever).
 
     /**
-     * S25(C) the TICK FRONT's equatorward-most possible onset (deg) -- a DEDICATED 80 anchor (Peetsa
+     * S25(C) the TICK FRONT's equatorward-most possible onset (deg) -- a DEDICATED 80 anchor (the maintainer
      * 2026-07-20, TEST 117: "freezing water is a bit inconsistent... should at least start from eighty
      * degrees, if not a little sooner depending on what you think"; the architect call is EXACTLY 80, the
      * polar-country rung: the ambient snowfall onset ({@code PolarHazardWindow.AMBIENT_ONSET_DEG}, 80 since

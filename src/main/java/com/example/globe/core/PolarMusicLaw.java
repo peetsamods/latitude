@@ -1,7 +1,7 @@
 package com.example.globe.core;
 
 /**
- * Phase 5 Slice B-9/B-7 -- Peetsa stipulation S26 (2026-07-20): MUSIC FADES OUT AT THE DAMAGE LINE. Pure
+ * Phase 5 Slice B-9/B-7 -- the maintainer stipulation S26 (2026-07-20): MUSIC FADES OUT AT THE DAMAGE LINE. Pure
  * envelope + easing math for the polar MUSIC volume multiplier. Zero Minecraft imports (Core Logic layer,
  * unit-testable in a plain JVM). Callers pass absolute latitude in DEGREES ({@code |lat|} in {@code [0,90]})
  * and read back a music-volume factor in {@code [0,1]} to multiply onto the {@code SoundSource.MUSIC}

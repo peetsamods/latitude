@@ -4,11 +4,14 @@ import com.example.globe.core.LatitudeV2Flags;
 import com.example.globe.core.PolarVegetationFade;
 import com.example.globe.world.LatitudeBiomes;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.feature.BlockColumnFeature;
-import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.SimpleBlockFeature;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -16,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Polar small-vegetation fade (Peetsa 2026-07-10; {@code latitude.polarVegetationFade.enabled}).
+ * Polar small-vegetation fade (the maintainer 2026-07-10; {@code latitude.polarVegetationFade.enabled}).
  *
  * <p>Thins surface vegetation toward the pole so the extreme-polar cap reads as bare snow/ice rather
  * than grass/ferns/flowers/sugarcane at 84-86deg. 26.1 removed {@code RandomPatchFeature}; in 26.2 the
@@ -24,8 +27,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * ({@link SimpleBlockFeature} -- grass, ferns, single flowers, wildflower, bushes, leaf litter, dead bush)
  * and {@code minecraft:block_column} ({@link BlockColumnFeature} -- sugarcane). This guard reuses the exact
  * interception mechanism the tree guards use ({@code @Inject} HEAD-cancellable on
- * {@code Feature.place(FeaturePlaceContext)} reading {@code context.origin()}), just pointed at those two
- * feature classes. Trees are deliberately NOT included -- {@link TreeLineVegetationGuardMixin} and
+ * {@code Feature.place(...)} reading the placement origin), just pointed at those two
+ * feature classes.
+ *
+ * <p><b>26.3 port note.</b> 26.3 retired {@code FeaturePlaceContext} and the whole
+ * {@code Feature<C extends FeatureConfiguration>} generic: a feature is now an unparameterised
+ * {@code Feature} that carries its own configuration as record components and is placed through
+ * {@code place(WorldGenLevel, ChunkGenerator, RandomSource, BlockPos)}. So the level/origin that used to
+ * come off the context are plain parameters now, and the firefly-bush config read goes through the target
+ * instance itself ({@code SimpleBlockFeature.toPlace()}) rather than {@code context.config()}. Same three
+ * gates, same short-circuit order, same flag-off byte-identity.
+ *
+ * <p>Trees are deliberately NOT included -- {@link TreeLineVegetationGuardMixin} and
  * {@link ExtremePolarVegetationGuardMixin} ({@code TreeFeature}) already own tree suppression.
  *
  * <p>Flag-off is byte-identical: the first line returns before touching anything. The latitude ramp +
@@ -50,41 +63,44 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  *       {@link PolarVegetationFade#SURFACE_MARGIN}) keeps the fade to the surface layer so an under-cap
  *       lush cave is never stripped bare.</li>
  * </ol>
- * {@code require = 1}: both {@code place(FeaturePlaceContext)Z} descriptors are present in the 26.2 merged
- * jar (both classes override {@code Feature.place}), so a future remap that drops either target fails loud
- * instead of silently no-opping the guard.
+ * {@code require = 1}: both
+ * {@code place(Lnet/minecraft/world/level/WorldGenLevel;Lnet/minecraft/world/level/chunk/ChunkGenerator;Lnet/minecraft/util/RandomSource;Lnet/minecraft/core/BlockPos;)Z}
+ * descriptors are present in the 26.3-rc-2 merged jar (verified with javap: both records implement
+ * {@code Feature} and declare that method), so a future remap that drops either target fails loud instead
+ * of silently no-opping the guard.
  */
 @Mixin({SimpleBlockFeature.class, BlockColumnFeature.class})
 public class PolarVegetationFadeGuardMixin {
 
     @Inject(
-            method = "place(Lnet/minecraft/world/level/levelgen/feature/FeaturePlaceContext;)Z",
+            method = "place(Lnet/minecraft/world/level/WorldGenLevel;Lnet/minecraft/world/level/chunk/ChunkGenerator;Lnet/minecraft/util/RandomSource;Lnet/minecraft/core/BlockPos;)Z",
             at = @At("HEAD"),
             cancellable = true,
             require = 1
     )
-    private void globe$polarVegetationFade(FeaturePlaceContext<?> context,
+    private void globe$polarVegetationFade(WorldGenLevel level,
+                                           ChunkGenerator generator,
+                                           RandomSource random,
+                                           BlockPos origin,
                                            CallbackInfoReturnable<Boolean> cir) {
         if (!LatitudeV2Flags.POLAR_VEGETATION_FADE_ENABLED) {
             return; // flag-off: byte-identical, nothing read
         }
-        WorldGenLevel level = context.level();
         // Overworld-only: SimpleBlockFeature also backs nether patches. Cheap early short-circuit.
         if (level.getLevel().dimension() != Level.OVERWORLD) {
             return;
         }
-        BlockPos origin = context.origin();
         // S11(c) FIREFLY BUSH BAN (owner-flagged twice): firefly_bush specifically is banned OUTRIGHT from
         // 50 deg (SUBPOLAR onset) -- far equatorward of the general 76/82 fade. Identified by the SimpleBlock
         // config's placed STATE, sampled with a THROWAWAY per-position random so the worldgen RNG sequence is
         // never consumed (firefly uses a simple provider, which ignores the random entirely). Rides this same
         // guard + the veg-fade flag family (default ON -- the ban must ship live, not behind the default-off
         // barrens flag); every non-firefly placement falls through to the ordinary fade below.
-        if (context.config() instanceof net.minecraft.world.level.levelgen.feature.configurations.SimpleBlockConfiguration simpleConfig
+        if ((Object) this instanceof SimpleBlockFeature simpleFeature
                 && LatitudeBiomes.fireflyBanApplies(origin.getX(), origin.getZ())) {
-            net.minecraft.world.level.block.state.BlockState toPlace = simpleConfig.toPlace()
-                    .getState(level, net.minecraft.util.RandomSource.create(origin.asLong()), origin);
-            if (toPlace.getBlock() == net.minecraft.world.level.block.Blocks.FIREFLY_BUSH) {
+            BlockState toPlace = simpleFeature.toPlace().value()
+                    .getState(level, RandomSource.create(origin.asLong()), origin);
+            if (toPlace.getBlock() == Blocks.FIREFLY_BUSH) {
                 cir.setReturnValue(false);
                 return;
             }

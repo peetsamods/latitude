@@ -2,7 +2,7 @@ package com.example.globe.core;
 
 /**
  * Pure latitude-driven decision for the UNDERGROUND glacial identity -- Phase 5 Crew 7 Slice S28
- * "The Underground Glacial Blend" (Peetsa 2026-07-20: "Can we not blend? A transition?" ... "Yes, go
+ * "The Underground Glacial Blend" (the maintainer 2026-07-20: "Can we not blend? A transition?" ... "Yes, go
  * ahead with the blend build" -- a GRADUAL widening of the glacial underground, not a hard switch).
  *
  * <p><b>Why this exists (the S27 fray diagnosis, {@code docs/binder/phase5-b9-glacial-caves-design-20260719.md}):</b>

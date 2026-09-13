@@ -149,7 +149,7 @@ public final class TitleStyle {
     //   FAREWELL [GLIMMER_BLOOM_END_MS .. GLIMMER_FAREWELL_END_MS) -- a FAST second L->R crest (~500ms, visibly
     //            quicker than the 900ms hero), same envelope math + same intensity scaling, with bloom + swell
     //            HELD at their peak so the title stays present while the parting glint travels. "One more quick
-    //            glimmer" (Peetsa, 2026-07-12) before the fade.
+    //            glimmer" (the maintainer, 2026-07-12) before the fade.
     //   MELT     [GLIMMER_FAREWELL_END_MS .. GLIMMER_MELT_END_MS)   -- bloom + swell decay 0.65/0.02 -> 0
     //            (easeOutCubic decay), a slow graceful dissolve. Same 850ms duration/shape as v2, just delayed by
     //            the farewell.
@@ -178,7 +178,7 @@ public final class TitleStyle {
 
     /** Default Glimmer Strength (the "C v3" intensity scalar; HUD Studio slider range
      *  {@link #GLIMMER_INTENSITY_MIN}..{@link #GLIMMER_INTENSITY_MAX}). 1.3 is deliberately stronger than the
-     *  1.0 that reproduces the old v2 contract (Peetsa 2026-07-12: "a stronger glimmer on the title"). */
+     *  1.0 that reproduces the old v2 contract (the maintainer 2026-07-12: "a stronger glimmer on the title"). */
     public static final double GLIMMER_INTENSITY_DEFAULT = 1.3;
     /** Lower bound of the Glimmer Strength slider: a gentle glimmer (shallow dim, soft crest). */
     public static final double GLIMMER_INTENSITY_MIN = 0.5;

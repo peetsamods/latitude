@@ -6,7 +6,7 @@ package com.example.globe.core;
  * DEGREES ({@code |lat|} in {@code [0,90]}) plus the highest tier already fired this episode, and read
  * back which tier (if any) to fire NOW and the next episode state to persist.
  *
- * <p><b>Episode model</b> (Peetsa's round-2 design): each of the four polar warning tiers fires its
+ * <p><b>Episode model</b> (the maintainer's round-2 design): each of the four polar warning tiers fires its
  * message ONCE when first crossed, then the caller displays it ~10 s and fades it out -- it must NOT
  * re-show while the player stays poleward. Going DEEPER fires each next tier once. The whole ladder
  * re-arms only when the player fully RETREATS below {@link #RETREAT_REARM_DEG} (a single shared

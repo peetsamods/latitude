@@ -1,7 +1,7 @@
 package com.example.globe.core;
 
 /**
- * S25 addendum (Peetsa 2026-07-20, TEST 117 screenshot): the pure input-derivation law for the
+ * S25 addendum (the maintainer 2026-07-20, TEST 117 screenshot): the pure input-derivation law for the
  * {@code /latdev survey} gatherer. Standing at 78N on solid snowy plains, the survey told the owner he was
  * "over open water... deep open-ocean basin... nearest land roughly 576 blocks off."
  *

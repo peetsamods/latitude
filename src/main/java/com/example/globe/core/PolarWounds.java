@@ -1,7 +1,7 @@
 package com.example.globe.core;
 
 /**
- * Phase 5 Slice B-7 (Pole Passage) -- Peetsa stipulation S6 (FROZEN WOUNDS): the pure heal-lock + frost-cue
+ * Phase 5 Slice B-7 (Pole Passage) -- the maintainer stipulation S6 (FROZEN WOUNDS): the pure heal-lock + frost-cue
  * predicates. Zero Minecraft imports (Core Logic layer, unit-testable in a plain JVM). The MC-coupled parts --
  * the {@code LivingEntity.heal} chokepoint mixin ({@code LivingEntityHealLockMixin}) and the three input reads
  * (cold zone from latitude, S4 shelter from raw sky light, warmth from the {@link PolarWarmth} box scan) --
@@ -67,7 +67,7 @@ public final class PolarWounds {
         return coldBiting || healLocked;
     }
 
-    // --- S25(F) WHISPER HYSTERESIS (Peetsa 2026-07-20, TEST 117: "The warning message for 'your wounds are
+    // --- S25(F) WHISPER HYSTERESIS (the maintainer 2026-07-20, TEST 117: "The warning message for 'your wounds are
     // --- frozen' inside the glacial caves is glitchy, it'll re-trigger.") --------------------------------
     //
     // ROOT CAUSE (diagnosed from the live wiring, PolarCuesClient.frozenWoundsWhisperTick): the whisper fired

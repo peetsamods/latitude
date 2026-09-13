@@ -11,7 +11,7 @@ package com.example.globe.core;
  * <p><b>Degree-anchored, intended-radius geometry (redesign 2026-07-12).</b> The trigger distances
  * ({@code promptAt}, {@code rearmAt}, {@code rampStart}, {@code climax}) are NO LONGER hardcoded blocks here.
  * They are resolved PER WORLD from longitude degrees against the mod's INTENDED X radius by
- * {@link EdgeGeometry#resolve}, and passed IN to every method below. This does two things Peetsa's TEST-86
+ * {@link EdgeGeometry#resolve}, and passed IN to every method below. This does two things the maintainer's TEST-86
  * flight recorder demanded: (1) the lines are anchored to the intended radius, so a lerping/vandalized live
  * border can never slide them; (2) the whole experience begins at the ~176-deg advisory (edge-flow rework)
  * leading a ~177.5-deg fog onset instead of everything starting near ~170, so a crossing lands you in the
@@ -37,7 +37,7 @@ package com.example.globe.core;
  * out), so an in-band arrival HOLDS disarmed; a player who then walks toward the wall is not re-prompted by the
  * ordinary machine.
  *
- * <p><b>The post-arrival EDGE auto-re-prompt (edge-flow rework, Peetsa's confirmed flow).</b> A just-arrived
+ * <p><b>The post-arrival EDGE auto-re-prompt (edge-flow rework, the maintainer's confirmed flow).</b> A just-arrived
  * player is in a DISTINCT state -- {@link Phase#SEEDED_DISARMED} -- not ordinary disarmed. While they remain in
  * the sticky band, walking ALL THE WAY to the wall ({@code distToEdge <= edgeRepromptAt}, ~179.6 deg) re-offers
  * the crossing ONCE, automatically -- no click, no walk-out. Declining consumes the one-shot
@@ -230,7 +230,7 @@ public final class HemispherePassage {
         return 2.0 * centerX - x;
     }
 
-    // ---- TEST 92 right-click-at-the-wall re-prompt (Peetsa): re-summon the crossing prompt without the ----
+    // ---- TEST 92 right-click-at-the-wall re-prompt (the maintainer): re-summon the crossing prompt without the ----
     // ---- walk-out. A disarmed player standing in the prompt band who presses USE while FACING the border ----
     // ---- re-arms the passage so the prompt opens next tick. Pure predicates here; the input read (use key, ----
     // ---- yaw, rate limit, "no screen up") is client glue in HemispherePassageClient. ----
@@ -352,7 +352,7 @@ public final class HemispherePassage {
 
     // ---- B-5-P2 approach fog (A2): pure distance->fog curves for the REAL DEPTH FOG mixin ----
     //
-    // The approach to the E/W edge is NOT a flat screen tint (Peetsa vetoed that): it drives Minecraft's OWN
+    // The approach to the E/W edge is NOT a flat screen tint (the maintainer vetoed that): it drives Minecraft's OWN
     // render-distance fog exactly like {@code FogRendererPolarSetupMixin} does for the pole, so it is depth-
     // correct and wall-aware. These are the pure, testable curves; the client mixin (FogRendererPassageSetupMixin)
     // does the GL-side FogData mutation + haze-palette tint. The intensity axis is the SAME distance-to-edge the

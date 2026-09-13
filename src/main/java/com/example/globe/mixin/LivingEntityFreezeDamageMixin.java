@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.Slice;
  * visual at 139 -- one tick below vanilla's fully-frozen threshold (140) -- so vanilla's own automatic freeze
  * damage never fired. Side effect: the HUD hearts only tint blue when {@code isFullyFrozen()} is true
  * ({@code Hud$HeartType.forPlayer} returns FROZEN iff {@code ticksFrozen >= getTicksRequiredToFreeze()}, 140),
- * so capping at 139 permanently disabled that cue. Peetsa (TEST 77): "the hearts aren't turning blue while I'm
+ * so capping at 139 permanently disabled that cue. the maintainer (TEST 77): "the hearts aren't turning blue while I'm
  * taking damage."
  *
  * <p><b>Fix.</b> {@code frostVisualTicks} now CROSSES 140 at the ~88 deg damage onset, so the blue hearts and

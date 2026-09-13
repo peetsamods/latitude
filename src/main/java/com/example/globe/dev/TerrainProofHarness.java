@@ -12,7 +12,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.NoiseColumn;
 import net.minecraft.world.level.chunk.ChunkGenerator;
-import net.minecraft.world.level.levelgen.DensityFunction;
+import net.minecraft.world.level.levelgen.densityfunction.DensityFunction;
+import net.minecraft.world.level.levelgen.densityfunction.SamplerContext;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.RandomState;
@@ -69,7 +70,7 @@ import java.util.List;
  * **NOT** prove that the shipped REAL-GAMEPLAY {@code RandomStateRouterTerrainMixin} on {@code ChunkMap}
  * fires with the SAME provider-readiness timing a live create-world flow has -- and this gap was not
  * theoretical: it is exactly how a real ordering bug slipped through every headless proof gate here and
- * only surfaced on Peetsa's first live create-world test. This harness's own dev/atlas {@code ServerLevel}
+ * only surfaced on the maintainer's first live create-world test. This harness's own dev/atlas {@code ServerLevel}
  * always boots with a fully-initialized {@code GEO_V2_PROVIDER} already in place (the exporter runs well
  * after world load completes), so it can never reproduce "install fires before the real provider exists" --
  * only a genuine client/server create-world boot through {@code ChunkMap} construction can. That requires a
@@ -549,10 +550,11 @@ public final class TerrainProofHarness {
             }
         }
 
+        // 26.3 reordered RandomState.create to (noiseParams, seed, settings).
         RandomState randomState = RandomState.create(
-                generator.generatorSettings().value(),
                 world.registryAccess().lookupOrThrow(Registries.NOISE),
-                seed);
+                seed,
+                generator.generatorSettings().value());
 
         // Reuse the EXACT same install call the real dev/atlas tooling path uses (see
         // com.example.globe.dev.BiomePreviewExporter) so this harness proves the actual shipped
@@ -567,7 +569,9 @@ public final class TerrainProofHarness {
                 "[latdev][terrainProof] install result={} wrapperInstalled={} geoProvider={}",
                 installResult, report.wrapperInstalled, report.geoProviderClass);
 
-        DensityFunction finalDensity = randomState.router().finalDensity();
+        // 26.3 removed RandomState.router(); TerrainRouterWrapping owns the accessor-backed read so
+        // this dev class never references the mixin package directly.
+        DensityFunction finalDensity = TerrainRouterWrapping.routerOf(randomState).finalDensity();
 
         int xRadius = LatitudeBiomes.getActiveXRadiusBlocks();
         int zRadius = LatitudeBiomes.getActiveRadiusBlocks();
@@ -593,7 +597,7 @@ public final class TerrainProofHarness {
         GeoAuthority referenceAuthority = new GeoAuthority(seed, zRadius, xRadius);
 
         runColumnProbes(report, finalDensity, referenceAuthority, generator, randomState, world, zRadius, xRadius);
-        runTransectProbes(report, finalDensity, referenceAuthority, zRadius, xRadius);
+        runTransectProbes(report, finalDensity, randomState, referenceAuthority, zRadius, xRadius);
         runLandFractionProbe(report, generator, randomState, world, referenceAuthority, zRadius, xRadius);
         runStructuralProbes(report, generator, randomState, world, referenceAuthority, zRadius, xRadius);
         runCoherenceProbes(report, generator, randomState, world, referenceAuthority, zRadius, xRadius);
@@ -645,7 +649,9 @@ public final class TerrainProofHarness {
                 biomeSource instanceof com.example.globe.world.LatitudeBiomeSource latitudeSource
                         ? latitudeSource.original()
                         : biomeSource;
-        net.minecraft.world.level.biome.Climate.Sampler sampler = randomState.sampler();
+        net.minecraft.world.level.biome.Climate.Sampler sampler =
+                randomState.createClimateSampler(SamplerContext.EMPTY_UNCACHED);
+        net.minecraft.world.level.biome.BiomeResolver baseResolver = baseSource.createResolver(sampler);
         int seaLevel = generator.generatorSettings().value().seaLevel();
         report.coherenceSeaLevel = seaLevel;
 
@@ -661,7 +667,7 @@ public final class TerrainProofHarness {
                 probe.latDeg = Math.abs(z) * 90.0 / zRadius;
                 probe.land01 = authority.sample(x, z).land01();
                 net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome> base =
-                        baseSource.getNoiseBiome(Math.floorDiv(x, 4), noiseY, Math.floorDiv(z, 4), sampler);
+                        baseResolver.getNoiseBiome(Math.floorDiv(x, 4), noiseY, Math.floorDiv(z, 4));
                 net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome> picked = LatitudeBiomes.pick(
                         biomeRegistry, base, x, z, y, zRadius, sampler,
                         "TERRAIN_PROOF_COHERENCE", generator, randomState, world);
@@ -695,7 +701,7 @@ public final class TerrainProofHarness {
             probe.land01 = pick.land01;
             int surfaceY = Integer.MIN_VALUE;
             for (int y : ys) {
-                double d = finalDensity.compute(ctx(pick.x, y, pick.z));
+                double d = sampleDensity(randomState, finalDensity, pick.x, y, pick.z);
                 probe.samples.add(new double[]{y, d});
                 if (d >= 0.0) {
                     surfaceY = Math.max(surfaceY, y);
@@ -831,8 +837,9 @@ public final class TerrainProofHarness {
         rp.afterIsNoOp = !(after instanceof com.example.globe.adapter.geo.GeoAuthorityProvider);
 
         try {
-            DensityFunction installed = world.getChunkSource().randomState().router().finalDensity();
-            rp.postResetSample = installed.compute(ctx(0, 64, 0));
+            RandomState live = world.getChunkSource().randomState();
+            DensityFunction installed = TerrainRouterWrapping.routerOf(live).finalDensity();
+            rp.postResetSample = sampleDensity(live, installed, 0, 64, 0);
             rp.sampledPostReset = true;
         } catch (Throwable t) {
             rp.sampledPostReset = false;
@@ -853,12 +860,12 @@ public final class TerrainProofHarness {
 
     // --- §6.2 three-transect Lipschitz / smoothness probe ---------------------------------------------
 
-    private static void runTransectProbes(Report report, DensityFunction finalDensity, GeoAuthority authority,
-                                           int zRadius, int xRadius) {
+    private static void runTransectProbes(Report report, DensityFunction finalDensity, RandomState randomState,
+                                           GeoAuthority authority, int zRadius, int xRadius) {
         int y = 64;
 
         // (i) an ordinary interior coast: sweep x through the interior at z=0, dense step.
-        addTransect(report, finalDensity, "interior-coast", 0, -(int) (xRadius * 0.4), (int) (xRadius * 0.4), 4, y);
+        addTransect(report, finalDensity, randomState, "interior-coast", 0, -(int) (xRadius * 0.4), (int) (xRadius * 0.4), 4, y);
 
         // (ii) a transect through the EDGE_START..1.0 edge band (per §0: EDGE_START=0.80) and the POLE
         // band (POLE_START=0.92) -- sweep x from just inside EDGE_START*xRadius out past the border, at
@@ -866,17 +873,17 @@ public final class TerrainProofHarness {
         int edgeXStart = (int) (xRadius * 0.75);
         int edgeXEnd = (int) (xRadius * 1.02);
         int poleZ = (int) (zRadius * 0.94);
-        addTransect(report, finalDensity, "edge-pole-band", poleZ, edgeXStart, edgeXEnd, 4, y);
+        addTransect(report, finalDensity, randomState, "edge-pole-band", poleZ, edgeXStart, edgeXEnd, 4, y);
 
         // (iii) a transect swept across several (int)Math.round domain-warp snap crossings: a fine
         // single-block sweep over a modest span is enough to cross multiple integer-rounding snaps of
         // the warp field (the warp amplitude/period are geometry constants scaled off zRadius, so a
         // span on the order of a few hundred blocks at step=1 reliably crosses several).
-        addTransect(report, finalDensity, "warp-snap-crossings", 0, -400, 400, 1, y);
+        addTransect(report, finalDensity, randomState, "warp-snap-crossings", 0, -400, 400, 1, y);
     }
 
-    private static void addTransect(Report report, DensityFunction finalDensity, String label,
-                                     int fixedZ, int xStart, int xEnd, int step, int y) {
+    private static void addTransect(Report report, DensityFunction finalDensity, RandomState randomState,
+                                     String label, int fixedZ, int xStart, int xEnd, int step, int y) {
         TransectProbe probe = new TransectProbe();
         probe.label = label;
         probe.fixedZ = fixedZ;
@@ -887,7 +894,7 @@ public final class TerrainProofHarness {
         double prev = Double.NaN;
         double maxAbsDiff = 0.0;
         for (int x = xStart; x <= xEnd; x += step) {
-            double d = finalDensity.compute(ctx(x, y, fixedZ));
+            double d = sampleDensity(randomState, finalDensity, x, y, fixedZ);
             probe.densities.add(d);
             if (!Double.isNaN(prev)) {
                 maxAbsDiff = Math.max(maxAbsDiff, Math.abs(d - prev));
@@ -957,10 +964,15 @@ public final class TerrainProofHarness {
         }
     }
 
-    private static DensityFunction.FunctionContext ctx(int x, int y, int z) {
-        return new SimpleCtx(x, y, z);
-    }
-
-    private record SimpleCtx(int blockX, int blockY, int blockZ) implements DensityFunction.FunctionContext {
+    /**
+     * One uncached block-coordinate sample of a density function. 26.3 retired
+     * {@code DensityFunction.compute(FunctionContext)} (and the {@code FunctionContext} record this harness
+     * used to hand it) in favour of compiling a function into a {@code DensitySampler}; {@code RandomState}
+     * exposes exactly that one-shot read for tooling, and it compiles against the SAME
+     * {@code RandomState} the probe is measuring, so the wrapper under test is included whenever it is
+     * installed on that state's router.
+     */
+    private static double sampleDensity(RandomState randomState, DensityFunction function, int x, int y, int z) {
+        return randomState.sampleBlockValueUncached(function, x, y, z);
     }
 }

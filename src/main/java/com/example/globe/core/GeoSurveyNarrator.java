@@ -14,7 +14,7 @@ import java.util.Locale;
  * unit test with synthetic geography. The command layer ({@code LatitudeDevCommands.survey}) is the
  * only thing that fetches the real summaries and builds the {@link Input}.
  *
- * <p>Design intent (Peetsa, non-programmer): NO raw field names ever appear in the output; each line
+ * <p>Design intent (the maintainer, non-programmer): NO raw field names ever appear in the output; each line
  * is a cause-and-effect sentence ("this massif is here because ..."). Output is 5-9 short lines.
  */
 public final class GeoSurveyNarrator {

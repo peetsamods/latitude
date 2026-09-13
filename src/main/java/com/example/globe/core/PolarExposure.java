@@ -7,7 +7,7 @@ package com.example.globe.core;
  *
  * <p><b>Why this exists.</b> Every polar presentation system used to key off {@code GlobeClientState
  * .isSurfaceOk} ~= {@code world.canSeeSky(pos.above())} -- a BINARY single-column check. One block over the
- * player's head flipped them fully "indoors": standing under Peetsa's open freestanding arch (two pillars +
+ * player's head flipped them fully "indoors": standing under the maintainer's open freestanding arch (two pillars +
  * a flat lintel over open terrain) muffled the wind, cut the particles, and dropped the whiteout, even though
  * he was outdoors in every meaningful sense. The fix is a graded estimate: the client samples {@code canSeeSky}
  * at a small grid of offsets around the player's head, and {@code exposure01 = seen / total}. Under the arch
@@ -116,7 +116,7 @@ public final class PolarExposure {
      * the old BINARY {@code surfaceOk} gate that let ONE block/leaf overhead fully hide the banners.
      *
      * <p>Full ({@code 1.0}) at {@code exposure01 >= }{@link #WARNING_FULL_EXPOSURE} (0.5) -- comfortably met
-     * under a tree or Peetsa's open arch, where the center sample is blocked but the ring still sees sky
+     * under a tree or the maintainer's open arch, where the center sample is blocked but the ring still sees sky
      * ({@code exposure ~0.9}). LINEAR fade below 0.5, reaching 0 as {@code exposure01 -> 0}, so the banners are
      * hidden ONLY when genuinely sealed in / deep underground (where the sampler returns {@code exposure01 == 0}
      * via {@link #isBelowSurface}'s short-circuit -- the same "no storm banners in a cave" rule item 2's

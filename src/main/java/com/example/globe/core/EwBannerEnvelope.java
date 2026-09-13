@@ -8,7 +8,7 @@ package com.example.globe.core;
  *
  * <h2>Single white advisory (TEST 89 owner decision)</h2>
  * The banner USED to be a two-tier system (a mild LEVEL_1 line escalating to a severe/yellow LEVEL_2
- * whiteout/sandstorm line). Peetsa retired the second tier: the edge now shows ONE white advisory on entering
+ * whiteout/sandstorm line). the maintainer retired the second tier: the edge now shows ONE white advisory on entering
  * the band, and nothing else. So this machine is single-tier -- it arms one episode when the player APPROACHES
  * into the band and lets it play its wall-clock fade envelope; there is no severe boundary, no thin-window
  * skip, no per-tier text. The severe-tier degree anchor ({@code SEVERE_DEG}) is gone from {@link EdgeGeometry}
@@ -18,7 +18,7 @@ package com.example.globe.core;
  * The advisory's only boundary is the PER-WORLD {@code capDist} resolved from longitude degrees against the
  * mod's intended X radius ({@link EdgeGeometry#resolve}) and passed IN. Edge-flow rework (2026-07-13): the cap
  * is now {@code advisoryDist} (~176 deg), the OUTERMOST edge element -- so the advisory arms 0.5 deg BEFORE the
- * fog onset ({@code rampStartDist}, ~177.5 deg) rather than sharing it. Peetsa's confirmed flow wants the
+ * fog onset ({@code rampStartDist}, ~177.5 deg) rather than sharing it. the maintainer's confirmed flow wants the
  * advisory as a genuine heads-up that leads the fog, not a callout that "lands almost simultaneously" with it.
  * No banner shows farther out than {@code capDist}, and it is where the advisory arms on approach. Because it
  * scales with the world, the callout leads the crossing prompt by the same DEGREE spacing on every size instead

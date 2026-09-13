@@ -10,7 +10,7 @@ import java.util.Set;
 
 /**
  * Pure detection + planning math for the polar POWDER-ROOF CREVASSE TRAPS -- S36 hidden-bridge form
- * (Peetsa 2026-07-21 video correction + independent level-design review). A valid encounter is ordinary,
+ * (the maintainer 2026-07-21 video correction + independent level-design review). A valid encounter is ordinary,
  * level-looking ground spanning a real crevasse: broad enough to walk onto naturally, flush with two opposing
  * banks, completely covered, and deep/cushioned under every powder column. Tiny lids, recessed shelves,
  * one-wide strips, and covers with late-opened holes are invalid.

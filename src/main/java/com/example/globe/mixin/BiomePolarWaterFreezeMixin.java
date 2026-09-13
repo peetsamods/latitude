@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
  * latitude-blind rivers/oceans stay liquid at 89 deg. Server-side sibling of the client-only
  * {@code ClientLevelPolarSnowMixin} (no rain at the poles).
  *
- * <p>Peetsa's bug: standing at 89 deg S in a full blizzard, a pool of liquid water sat in his doorway.
+ * <p>the maintainer's bug: standing at 89 deg S in a full blizzard, a pool of liquid water sat in his doorway.
  * Vanilla's per-column freeze decision {@code Biome.shouldFreeze(LevelReader, BlockPos, boolean)} opens with
  * {@code if (this.warmEnoughToRain(pos, seaLevel)) return false;}. Vanilla's noise router places
  * {@code river}/{@code ocean} (base temperature 0.5) anywhere including the polar cap and

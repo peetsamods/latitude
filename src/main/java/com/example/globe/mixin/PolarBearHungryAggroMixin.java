@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * S25(B-behavior) HUNGRY BEARS -- the ONE seam (Peetsa 2026-07-20, TEST 117 round: "I don't see any polar
+ * S25(B-behavior) HUNGRY BEARS -- the ONE seam (the maintainer 2026-07-20, TEST 117 round: "I don't see any polar
  * bears... in polar storm country" -- Crew 1 owns the spawns; this mixin owns the BEHAVIOR: in the
  * food-scarce Barrens a polar bear is not neutral, it hunts players within ~16 blocks, warning roar and all).
  *

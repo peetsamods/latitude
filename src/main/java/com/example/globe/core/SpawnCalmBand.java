@@ -1,7 +1,7 @@
 package com.example.globe.core;
 
 /**
- * Phase 5 S10(a) -- the WORLD-SPAWN CALM BAND, ZONE-AWARE since the owner's correction (Peetsa 2026-07-17:
+ * Phase 5 S10(a) -- the WORLD-SPAWN CALM BAND, ZONE-AWARE since the owner's correction (the maintainer 2026-07-17:
  * "you completely neutered the spawn zone of 'polar' that I chose. Player should still be able to initially
  * spawn in polar; however, they should only be spawned at the lowest latitude of polar"). Pure Java, zero
  * Minecraft imports (Core Logic layer, unit-testable in a plain JVM). The shim is

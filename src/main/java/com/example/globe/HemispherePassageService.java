@@ -7,16 +7,24 @@ import com.example.globe.core.PoleGeometry;
 import com.example.globe.util.BiomeSamplerTools;
 import com.example.globe.util.BiomeSamplerTools.SamplerTemplate;
 import com.example.globe.util.LatitudeMath;
+import com.example.globe.world.LatitudeBiomeSource;
 import com.example.globe.world.LatitudeBiomes;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BiomeTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Relative;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.border.WorldBorder;
+import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.RandomState;
+import net.minecraft.world.level.levelgen.densityfunction.SamplerContext;
 
 import java.util.EnumSet;
 
@@ -32,7 +40,7 @@ import java.util.EnumSet;
  * <ol>
  *   <li>Mirror to the far hemisphere ({@link HemispherePassage#mirrorX}) to pick the SIDE, then pull the
  *       arrival INLAND to {@code EdgeGeometry.arrivalDist} -- 178 deg, half a degree POLEWARD of the fog onset,
- *       so the player emerges in the THINNING FOG EDGE (Peetsa: "right at the edge of the fog, even slightly
+ *       so the player emerges in the THINNING FOG EDGE (the maintainer: "right at the edge of the fog, even slightly
  *       inside"). Edge-flow rework: 178 deg now coincides EXACTLY with the crossing PROMPT line -- arrival lands
  *       on the prompt line, disarmed (the seeded state carries the post-arrival EDGE auto-re-prompt). Z is kept.
  *       This is the X border-half geometry (border centered at 0,0), NEVER the Z latitude radius, and is
@@ -93,7 +101,7 @@ public final class HemispherePassageService {
     static BlockPos resolveArrival(ServerLevel world, double playerX, double playerZ) {
         WorldBorder border = world.getWorldBorder();
         double centerX = border.getCenterX();
-        // Mirror to the far hemisphere, then PULL INLAND to the arrival column (Peetsa's teleport ask). The SIDE
+        // Mirror to the far hemisphere, then PULL INLAND to the arrival column (the maintainer's teleport request). The SIDE
         // is taken from the mirror; the inland depth comes from the resolved geometry (EdgeGeometry.arrivalDist =
         // ARRIVAL_DEG 178 deg, ~2 deg from the wall, just INSIDE the fog onset). |arrivalX| is the same in both
         // hemispheres, so the far-side border distance is deterministic. Edge-flow rework: the arrival lands in
@@ -113,7 +121,7 @@ public final class HemispherePassageService {
 
         // 1) The exact mirror column (3x3 FULL ring + fluid/air safety inside placeSafeY).
         budget--;
-        BlockPos safe = GlobeMod.placeSafeY(world, targetX, baseZ);
+        BlockPos safe = GlobeMod.placeSafeYForPassage(world, targetX, baseZ, PREPARE_TELEPORT_NEIGHBORS);
         if (safe != null) {
             return safe;
         }
@@ -126,7 +134,7 @@ public final class HemispherePassageService {
             int zUp = baseZ + off;
             if (zUp <= maxAbsZ) {
                 budget--;
-                safe = GlobeMod.placeSafeY(world, targetX, zUp);
+                safe = GlobeMod.placeSafeYForPassage(world, targetX, zUp, PREPARE_TELEPORT_NEIGHBORS);
                 if (safe != null) {
                     return safe;
                 }
@@ -134,7 +142,7 @@ public final class HemispherePassageService {
             int zDown = baseZ - off;
             if (zDown >= -maxAbsZ && budget > xNudgeProbes) {
                 budget--;
-                safe = GlobeMod.placeSafeY(world, targetX, zDown);
+                safe = GlobeMod.placeSafeYForPassage(world, targetX, zDown, PREPARE_TELEPORT_NEIGHBORS);
                 if (safe != null) {
                     return safe;
                 }
@@ -146,7 +154,7 @@ public final class HemispherePassageService {
         int dir = targetX >= centerX ? -1 : 1;
         for (int nudge = X_NUDGE_STEP; nudge <= X_NUDGE_MAX && budget > 0; nudge += X_NUDGE_STEP) {
             budget--;
-            safe = GlobeMod.placeSafeY(world, targetX + dir * nudge, baseZ);
+            safe = GlobeMod.placeSafeYForPassage(world, targetX + dir * nudge, baseZ, PREPARE_TELEPORT_NEIGHBORS);
             if (safe != null) {
                 return safe;
             }
@@ -365,7 +373,7 @@ public final class HemispherePassageService {
 
     /** {@link GlobeMod#placeSafeY} plus the A4 powder-snow rejection: a safe, non-fluid, non-powder-snow column. */
     private static BlockPos placeSafePoleColumn(ServerLevel world, int x, int z) {
-        BlockPos safe = GlobeMod.placeSafeY(world, x, z);
+        BlockPos safe = GlobeMod.placeSafeYForPassage(world, x, z, PREPARE_TELEPORT_NEIGHBORS);
         if (safe == null) {
             return null;
         }
@@ -384,8 +392,16 @@ public final class HemispherePassageService {
                 || world.getBlockState(spawn.below(2)).getBlock() == Blocks.POWDER_SNOW;
     }
 
+    /**
+     * A crossing lands the player on the probed column, so the 3x3 ring around it must be real before the
+     * teleport -- {@code placeSafeY}'s 26.3 fourth argument (the 8-neighbour teleport ring) is exactly that
+     * preparation, and a passage is a teleport.
+     */
+    private static final boolean PREPARE_TELEPORT_NEIGHBORS = true;
+
     /** The no-chunk-gen biome-source context for surface-class matching, built once per crossing. */
-    private record ClassProbe(SamplerTemplate template, Climate.Sampler sampler, int radiusBlocks, int classifyY) {
+    private record ClassProbe(LatitudeBiomeSource painted, Climate.Sampler sampler, int radiusBlocks,
+                              int classifyY) {
     }
 
     /** Build the surface-class probe (best effort). Returns {@code null} on any failure -> class-agnostic search. */
@@ -393,14 +409,30 @@ public final class HemispherePassageService {
         try {
             SamplerTemplate template = BiomeSamplerTools.createTemplate(world);
             long seed = world.getServer().getWorldGenSettings().options().seed();
+            // 26.3: RandomState.create reordered to (noiseParams, seed, settings), and the climate sampler
+            // is now built from a SamplerContext instead of a bare sampler() accessor.
             RandomState noiseConfig = RandomState.create(
-                    template.settings().value(), template.noiseParameters(), seed);
-            Climate.Sampler sampler = noiseConfig.sampler();
+                    template.noiseParameters(), seed, template.settings().value());
+            Climate.Sampler sampler = noiseConfig.createClimateSampler(SamplerContext.EMPTY_UNCACHED);
             int radiusBlocks = LatitudeBiomes.getActiveRadiusBlocks();
             if (radiusBlocks <= 0) {
                 radiusBlocks = zRadius;
             }
-            return new ClassProbe(template, sampler, radiusBlocks, LatitudeBiomes.SURFACE_CLASSIFY_Y);
+            ChunkGenerator generator = world.getChunkSource().getGenerator();
+            if (!(generator instanceof NoiseBasedChunkGenerator terrainGenerator)) {
+                throw new IllegalStateException("Surface-class probe requires a NoiseChunkGenerator");
+            }
+            // The painted (Latitude-resolved) view of the base source -- the same view GlobeMod's spawn
+            // search classifies against. Built here rather than borrowed from GlobeMod because the probe
+            // only needs the land/ocean-family tag test, which is two lines and costs no chunk generation.
+            LatitudeBiomeSource painted = LatitudeBiomeSource.forLocate(
+                    template.baseSource(),
+                    world.registryAccess().lookupOrThrow(Registries.BIOME),
+                    radiusBlocks,
+                    terrainGenerator,
+                    noiseConfig,
+                    world);
+            return new ClassProbe(painted, sampler, radiusBlocks, LatitudeBiomes.SURFACE_CLASSIFY_Y);
         } catch (Exception e) {
             GlobeMod.LOGGER.warn("[Latitude][PolePassage] Surface-class probe unavailable; arrival uses class-agnostic search", e);
             return null;
@@ -411,7 +443,12 @@ public final class HemispherePassageService {
      *  the probe throws for this column (treated as unknown = non-matching). */
     private static Boolean isLandProbe(ClassProbe p, int x, int z) {
         try {
-            return GlobeMod.isLandBiome(p.template(), p.sampler(), x, z, p.classifyY(), p.radiusBlocks());
+            Holder<Biome> resolved = p.painted().getNoiseBiome(
+                    Math.floorDiv(x, 4),
+                    Math.floorDiv(p.classifyY(), 4),
+                    Math.floorDiv(z, 4),
+                    p.sampler());
+            return !resolved.is(BiomeTags.IS_OCEAN) && !resolved.is(BiomeTags.IS_RIVER);
         } catch (Exception e) {
             return null;
         }

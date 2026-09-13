@@ -1,7 +1,7 @@
 package com.example.globe.core;
 
 /**
- * S37 F1 -- PONDED WATER CAUSES FREEZING (Peetsa: "The water that has ponded is not causing freezing
+ * S37 F1 -- PONDED WATER CAUSES FREEZING (the maintainer: "The water that has ponded is not causing freezing
  * damage — hearts are red"). Pure Java, zero Minecraft imports (Core Logic layer, unit-testable in a
  * plain JVM). The MC-coupled part is a handful of primitive reads (latitude, {@code isInWater()},
  * {@code canFreeze()}, {@code getTicksFrozen()}, {@code getTicksRequiredToFreeze()}) in

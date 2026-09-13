@@ -1,9 +1,12 @@
 package com.example.globe.mixin;
 
 import com.example.globe.GlobeMod;
+import com.example.globe.core.LatitudeV2Flags;
+import com.example.globe.core.PolarBarrensBand;
 import com.example.globe.util.LatitudeBands;
 import com.example.globe.world.LatitudeBiomeResolver;
 import com.example.globe.world.LatitudeBiomes;
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags;
@@ -12,6 +15,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.BiomeTags;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeResolver;
 import net.minecraft.world.level.biome.Climate;
@@ -122,6 +126,16 @@ public abstract class ChunkGeneratorPopulateBiomesMixin {
     @Unique
     private static final Identifier SULFUR_CAVES_ID = Identifier.fromNamespaceAndPath("minecraft", "sulfur_caves");
 
+    // B-9 P2 KEYSTONE (owner flight TEST 113, 2026-07-19: the polar underground read as "generic dark
+    // stone"): the globe:glacial_caves underground biome id, resolved once per chunk (see the swap in the
+    // resolver below for the full law).
+    @Unique
+    private static final Identifier GLACIAL_CAVES_BIOME_ID = Identifier.fromNamespaceAndPath("globe", "glacial_caves");
+
+    @Unique
+    private static final java.util.concurrent.atomic.AtomicBoolean GLACIAL_CAVES_MISSING_WARNED =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
     @Unique
     private static final ResourceKey<NoiseGeneratorSettings> GLOBE_SETTINGS_KEY =
             ResourceKey.create(Registries.NOISE_SETTINGS, GLOBE_SETTINGS_ID);
@@ -217,6 +231,20 @@ public abstract class ChunkGeneratorPopulateBiomesMixin {
             return;
         }
 
+        LatitudeBiomes.rememberSourcePolicyBiomeRegistry(biomes);
+        // B-9 P2 KEYSTONE: resolve the globe:glacial_caves holder once per chunk (one map get). Missing
+        // from the registry (broken datapack) degrades to no-swap with a one-time warn rather than
+        // crashing worldgen -- the biome JSON schema test and the boot-time datapack parse gate own that
+        // failure class (the carver-holder degrade precedent).
+        Holder<Biome> glacialCavesResolved = null;
+        if (LatitudeV2Flags.GLACIAL_CAVES_V1_ENABLED) {
+            glacialCavesResolved = biomes.get(GLACIAL_CAVES_BIOME_ID).orElse(null);
+            if (glacialCavesResolved == null && GLACIAL_CAVES_MISSING_WARNED.compareAndSet(false, true)) {
+                LOGGER.warn("[Latitude] B-9 glacial_caves biome missing from the biome registry (id={}) "
+                        + "action=skipping the underground biome swap", GLACIAL_CAVES_BIOME_ID);
+            }
+        }
+        final Holder<Biome> glacialCaves = glacialCavesResolved;
         int borderRadiusBlocks = this.globe$borderRadiusBlocks();
         NoiseBasedChunkGenerator generator = (NoiseBasedChunkGenerator)(Object) this;
         Long2LongOpenHashMap surfaceYCache = new Long2LongOpenHashMap();
@@ -224,6 +252,10 @@ public abstract class ChunkGeneratorPopulateBiomesMixin {
         Long2ObjectOpenHashMap<Holder<Biome>> columnPickCache = new Long2ObjectOpenHashMap<>();
         Long2ObjectOpenHashMap<Holder<Biome>> columnPickBase = new Long2ObjectOpenHashMap<>();
         Long2ObjectOpenHashMap<Holder<Biome>> columnBaseCache = new Long2ObjectOpenHashMap<>();
+        // B-9 P2: per-column memoization of the glacial-caves blend+ocean decision (1 = swap, 0 = no) --
+        // one region-noise sample per column instead of one per deep quart cell.
+        Long2IntOpenHashMap glacialColumnCache = new Long2IntOpenHashMap();
+        glacialColumnCache.defaultReturnValue(Integer.MIN_VALUE);
         logWorldgenPathOnce(chunk, borderRadiusBlocks, globe$matchedSettingsLabel());
         BiomeResolver sourceSupplier = cir.getReturnValue() != null
                 ? cir.getReturnValue()
@@ -278,6 +310,61 @@ public abstract class ChunkGeneratorPopulateBiomesMixin {
                     }
                     return replacement;
                 }
+            }
+            // B-9 P2 KEYSTONE: beneath glacial-blend LAND columns, every quart cell below the fixed
+            // LatitudeBiomes.GLACIAL_CAVES_CEILING_Y (48) line resolves to globe:glacial_caves. Ordering is
+            // deliberate: AFTER the near-surface/too-high/deep-dark cave clamps (their outputs stay
+            // bitwise-unchanged) and BEFORE the deep-cave pass-through and every pick() path, so deep
+            // dripstone/sulfur/lush cells and deep non-cave cells all take the glacial identity while ALL
+            // surface and upper quarts (blockY >= 48) keep today's pick order exactly -- the surface-quart
+            // identity pin, enforced by isBelowGlacialCaveCeiling. The column decision is the EXACT shared
+            // UNDERGROUND BLEND law the crevasse/tunnel carvers and the /latdev locator ride (S28:
+            // glacialCaveColumnApplies -> glacialBlendColumnApplies, a wide 78-86 deg band on ONE 640-block
+            // coherent region field, deliberately NOT the 64-block surface barrens fray, so the underground
+            // identity onsets equatorward of the surface barrens and blends in gradually). Populate runs
+            // PRE-NOISE, so this is pure lat/Y math -- no heightmaps, no block reads. Ocean-family columns
+            // are excluded from the SAME memoized per-column source sample `base` the resolver classifies
+            // everything else with: the sacred sea keeps its vanilla underground. deep_dark cells pass
+            // through untouched (ancient cities and sculk are biome-tied; "the underground stays alive"
+            // means reskin-plus, never stripping a vanilla underground landmark). Flag-off, or a missing
+            // registry entry, is byte-identical: glacialCaves stays null and this block never runs.
+            if (glacialCaves != null && LatitudeBiomes.isBelowGlacialCaveCeiling(blockY)) {
+                int glacialDecision = glacialColumnCache.get(colKey);
+                if (glacialDecision == Integer.MIN_VALUE) {
+                    glacialDecision = LatitudeBiomes.glacialCaveColumnApplies(
+                            blockX, blockZ, borderRadiusBlocks, base.is(BiomeTags.IS_OCEAN)) ? 1 : 0;
+                    glacialColumnCache.put(colKey, glacialDecision);
+                }
+                if (glacialDecision == 1 && !isDeepDark(biomes, current)) {
+                    return glacialCaves;
+                }
+            }
+
+            // S11(a) LUSH-CAVE VETO: a legitimate DEEP cave cell (past the near-surface/too-high clamps
+            // above) resolving to lush_caves inside the polar barrens band remaps to the COLUMN'S SURFACE
+            // biome -- lush reads tropical, and dripstone/sulfur/deep_dark deliberately pass through.
+            // Band-gated on the core onset, not the fray (PolarBarrensBand.vetoesLushCaveCell documents
+            // why). The remap is the SAME per-column memoized surface pick the surface cells get -- no
+            // second surface decision, the pick derives its own surface column -- so the cave column
+            // inherits exactly the biome above it (fray-aware: polar_barrens or snowy_plains). Runs AFTER
+            // the glacial keystone, which owns the same cells when armed.
+            if (caveCurrent && PolarBarrensBand.vetoesLushCaveCell(
+                    LatitudeV2Flags.POLAR_BARRENS_ENABLED,
+                    globe$isBiomeId(biomes, current, LUSH_CAVES_ID),
+                    borderRadiusBlocks > 0 ? Math.abs((double) blockZ) * 90.0 / borderRadiusBlocks : Double.NaN)) {
+                Holder<Biome> cachedSurfacePick = columnPickCache.get(colKey);
+                if (cachedSurfacePick != null && columnPickBase.get(colKey) == base) {
+                    return cachedSurfacePick;
+                }
+                Holder<Biome> surfacePick = globe$pickOrNull(
+                        biomes, base, blockX, blockZ, blockY, borderRadiusBlocks,
+                        sampler, generator, noiseConfig, chunk);
+                if (surfacePick == null) {
+                    surfacePick = pickSafeFallback(biomes, blockZ);
+                }
+                columnPickCache.put(colKey, surfacePick);
+                columnPickBase.put(colKey, base);
+                return surfacePick;
             }
             if (caveCurrent) {
                 return LatitudeBiomes.caveCoverageOverride(biomes, current, blockX, blockY, blockZ);
@@ -398,6 +485,15 @@ public abstract class ChunkGeneratorPopulateBiomesMixin {
         }
         surfaceYCache.put(key, surfaceY);
         return surfaceY;
+    }
+
+    @Unique
+    private static boolean globe$isBiomeId(Registry<Biome> biomes, Holder<Biome> entry, Identifier id) {
+        Identifier actual = biomes.getKey(entry.value());
+        if (actual == null) {
+            actual = entry.unwrapKey().map(key -> key.identifier()).orElse(null);
+        }
+        return id.equals(actual);
     }
 
     @Unique
