@@ -107,8 +107,31 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
             "Tending the edge of the world..."
     };
 
+    // Phrases for the Minecraft 26.3 update (Dappled Forest, abandoned camps and their furnishings).
+    // They only make sense on the 26.3 line, so they live here rather than in PHRASES, and the
+    // picker favours them over PHRASES (maintainer ruling, 2026-09-13: three of every four cycles).
+    @Unique private static final String[] NEW_PHRASES = {
+            "Struggling with tent poles...",
+            "Dappling forests...",
+            "Fluffing cushions...",
+            "Roasting marshmallows...",
+            "Sweeping out cobwebs...",
+            "De-bugging the straw beds...",
+            "Planting poplars...",
+            "Raking leaf litter...",
+            "Shelving mushrooms...",
+            "Redrawing the camp maps...",
+            "Carpeting the stairs..."
+    };
+
+    // Of every PHRASE_SCHEDULE_PERIOD consecutive cycles, the first NEW_PHRASES_PER_PERIOD come
+    // from NEW_PHRASES and the rest from PHRASES. Each pool is walked in order from its own random
+    // seed so a phrase does not come round again until its whole pool has been shown.
+    @Unique private static final int PHRASE_SCHEDULE_PERIOD = 4;
+    @Unique private static final int NEW_PHRASES_PER_PERIOD = 3;
+
     // The Latitude-feature splashes are the last FEATURED_PHRASE_COUNT entries of PHRASES.
-    // Always start there so even a fast load shows one player-facing Latitude detail.
+    // The old pool's seed always starts there so its first visit shows a player-facing detail.
     @Unique private static final int FEATURED_PHRASE_COUNT = 14;
 
     @Unique
@@ -121,11 +144,35 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
         return (int) (Math.random() * total);
     }
 
+    @Unique
+    private static int globe$pickNewSeedIndex() {
+        return (int) (Math.random() * NEW_PHRASES.length);
+    }
+
+    /**
+     * Chooses the phrase for the given zero-based cycle number (one cycle = PHRASE_CYCLE_MS).
+     * Must honour the NEW_PHRASES_PER_PERIOD : (PHRASE_SCHEDULE_PERIOD - NEW_PHRASES_PER_PERIOD)
+     * ratio and walk each pool sequentially from globe$newPhraseSeedIdx / globe$phraseSeedIdx.
+     */
+    @Unique
+    private String globe$phraseForCycle(long cycle) {
+        long period = cycle / PHRASE_SCHEDULE_PERIOD;
+        long slot = cycle % PHRASE_SCHEDULE_PERIOD;
+        if (slot < NEW_PHRASES_PER_PERIOD) {
+            long newOrdinal = period * NEW_PHRASES_PER_PERIOD + slot;
+            return NEW_PHRASES[(int) ((globe$newPhraseSeedIdx + newOrdinal) % NEW_PHRASES.length)];
+        }
+        long oldOrdinal = period * (PHRASE_SCHEDULE_PERIOD - NEW_PHRASES_PER_PERIOD)
+                + (slot - NEW_PHRASES_PER_PERIOD);
+        return PHRASES[(int) ((globe$phraseSeedIdx + oldOrdinal) % PHRASES.length)];
+    }
+
     @Unique private static final long PHRASE_CYCLE_MS = 4800;
     @Unique private static final long FAIL_SAFE_CLEAR_MS = 10 * 60 * 1000L;
     @Unique private long globe$overlayStartMs = 0L;
     @Unique private float globe$displayProgress = 0f;
     @Unique private int globe$phraseSeedIdx = 0;
+    @Unique private int globe$newPhraseSeedIdx = 0;
 
     // ── Compass needle animation state ──
     @Unique private double globe$needleAngle = 0.0;
@@ -172,6 +219,7 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
             globe$lastDirectionChangeMs = now;
             globe$displayProgress = 0f;
             globe$phraseSeedIdx = globe$pickSeedIndex();
+            globe$newPhraseSeedIdx = globe$pickNewSeedIndex();
             GLOBE_LOGGER.info("[LAT][LOADUI] bespoke overlay first render — {}ms since beginExpedition",
                     LatitudeClientState.elapsedSinceExpeditionMs());
         } else if (LatitudeClientState.elapsedSinceExpeditionMs() >= FAIL_SAFE_CLEAR_MS) {
@@ -444,8 +492,7 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
     @Unique
     private void globe$drawPhrase(GuiGraphicsExtractor context, int cx, int y, long elapsedMs) {
         long cyclePos = elapsedMs % PHRASE_CYCLE_MS;
-        int phraseIdx = (globe$phraseSeedIdx + (int) ((elapsedMs / PHRASE_CYCLE_MS) % PHRASES.length)) % PHRASES.length;
-        String phrase = PHRASES[phraseIdx];
+        String phrase = globe$phraseForCycle(elapsedMs / PHRASE_CYCLE_MS);
 
         // Fade: quick in (first 15%), steady (60%), quick out (last 25%)
         float t = (float) cyclePos / PHRASE_CYCLE_MS;
