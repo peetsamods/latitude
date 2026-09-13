@@ -45,7 +45,7 @@ public class EntityRenderDispatcherPolarCullMixin {
 
     @Inject(method = "shouldRender", at = @At("RETURN"), cancellable = true)
     private void globe$polarEntityCull(Entity entity, Frustum frustum, double camX, double camY, double camZ,
-                                       CallbackInfoReturnable<Boolean> cir) {
+                                       float partialTick, CallbackInfoReturnable<Boolean> cir) {
         if (!Boolean.TRUE.equals(cir.getReturnValue())) {
             return; // vanilla already culled it (frustum / renderer) -- leave that decision alone.
         }

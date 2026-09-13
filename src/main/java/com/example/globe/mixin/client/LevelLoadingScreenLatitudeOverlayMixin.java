@@ -36,7 +36,7 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
     @Unique private static final int GOLD = 0xFFE8B64A; // Chartroom latitude gold (Pillar 6 token)
     @Unique private static final int WARM_WHITE = 0xFFEDE0D0;
     @Unique private static final int MUTED = 0xFF8C8078;
-    // Faint mechanics-note tint for the F9 hint (Peetsa TEST 79: "make the F9 line a little bit fainter to
+    // Faint mechanics-note tint for the F9 hint (maintainer TEST 79: "make the F9 line a little bit fainter to
     // reduce clashing" with the progress bar + stage line jammed under it). Same muted rose-brown RGB as
     // MUTED but dropped to ~60% alpha (0xFF -> 0x99) so it reads as a quiet aside, a step below the stage
     // line (which stays full-alpha MUTED). Still legible over the dark PANE_BG at 60%.
@@ -45,6 +45,17 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
     // (0x14504840) to ~12% warm gold-tinted (0x1E5A4A38) so the grid reads as chart paper, not grey static.
     @Unique private static final int GRID_COLOR = 0x1E5A4A38;
     @Unique private static final int GRID_STEP = 16;
+    /** The quiet zone line's scale — under body text on purpose (see its call site). */
+    @Unique private static final float ZONE_LABEL_SCALE = 0.75f;
+    @Unique private static final float globe$VERSION_LABEL_SCALE = 0.67f;
+    @Unique private static final int globe$VERSION_LABEL_GAP = 4;
+    @Unique private static final int globe$VERSION_LABEL_SCREEN_MARGIN = 2;
+    /** Resolved once from the loader's own metadata rather than a hand-kept constant, so it can never claim
+     *  a version the running jar is not. Empty when the container is unavailable, and then never drawn. */
+    @Unique private static final String globe$VERSION_LABEL = net.fabricmc.loader.api.FabricLoader.getInstance()
+            .getModContainer(com.example.globe.GlobeMod.MOD_ID)
+            .map(container -> "v" + container.getMetadata().getVersion().getFriendlyString())
+            .orElse("");
 
     // ── Loading compass = the new DEFAULT compass look: SUNSET scheme + ROSE shape ──
     // SOURCE OF TRUTH: CompassHud.java:1520 — SUNSET DialColors(face=0x261712, ring=0xFFF2A65A,
@@ -130,7 +141,21 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
             "Settling the ancient faults...",
             "Wearing down the old massifs...",
             "Pulling moisture off the sea...",
-            "Deepening the continental interiors..."
+            "Deepening the continental interiors...",
+            // Carried from the 1.5 line's own copy pass — the same cartographic register as the block above,
+            // and the reason FEATURED_PHRASE_COUNT moved 34 -> 45. Kept in the FEATURED tail (not the levity
+            // front block) because they are signature Latitude lines, not filler.
+            "Drawing the treeline...",
+            "Settling the alpine line...",
+            "Capping the high peaks with snow...",
+            "Following the contour lines...",
+            "Carving mountain passes...",
+            "Mapping the highlands...",
+            "Balancing warm and cold currents...",
+            "Finding a place for every biome...",
+            "Blending the climate bands...",
+            "Tracing the polar seas...",
+            "Tending the edge of the world..."
     };
 
     // The Latitude-feature splashes are the last FEATURED_PHRASE_COUNT entries of PHRASES. Bias the
@@ -138,7 +163,7 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
     // phrases usually lead. Count = the whole featured tail above (signature 18 + 8 navigation + 8
     // geology). If you add/remove a tail line, update this so featuredStart still lands exactly on the
     // "Charting the frontier..." row (the first signature line).
-    @Unique private static final int FEATURED_PHRASE_COUNT = 34;
+    @Unique private static final int FEATURED_PHRASE_COUNT = 45;
 
     @Unique
     private static int globe$pickSeedIndex() {
@@ -302,14 +327,25 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
             globe$drawSummaryWave(context, summary, cx, summaryY, WARM_WHITE, elapsed);
         }
 
-        // ── F9 hint: moved back up under the title/summary (Peetsa TEST 81: "move the F9 line to under
+        // ── Zone label (optional) — the climate zone this load is entering or resuming. Deliberately
+        //    quiet: smaller than body text, muted rather than warm-white, italic — a background detail,
+        //    not something competing with the wordmark, the summary or the rotating phrase. It pushes the
+        //    F9 footnote below it rather than overlapping, hence the shared cursor. ──
+        int hintY = summaryY + 12;
+        String zoneLabel = LatitudeClientState.loadingZoneLabel();
+        if (zoneLabel != null) {
+            globe$drawMutedItalicCentered(context, "Loading " + zoneLabel, cx, hintY, ZONE_LABEL_SCALE, MUTED);
+            hintY += Math.round(this.font.lineHeight * ZONE_LABEL_SCALE) + 3;
+        }
+
+        // ── F9 hint: moved back up under the title/summary (maintainer TEST 81: "move the F9 line to under
         //    Latitude so it's less cluttered" — it had been living in the bottom mechanics zone crowding
         //    the bar/stage stack; that zone is calmer without it). Still faint (F9_HINT ~60% alpha) and
         //    small (0.75x, TEST 80) — a true footnote sitting in the open space below the identity block,
         //    whether or not a summary line is present.
         {
             float f9Scale = 0.75f;
-            int f9Y = summaryY + 12;
+            int f9Y = hintY;
             var f9m = context.pose();
             f9m.pushMatrix();
             f9m.translate(cx, (float) f9Y);
@@ -350,13 +386,27 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
             // barY+8: a touch of air below the bar; leaves ~4px bottom margin inside the pane at paneH=200.
             globe$drawCentered(context, stage, cx, barY + 8, MUTED, false);
         }
+
+        // Small, quiet build identity just below the pane's right edge — so a screenshot of a load always
+        // carries the version it was taken on, which is most of what a bug report needs from this screen.
+        globe$drawVersionLabel(context, paneX, paneY, paneW, paneH);
     }
 
     @Inject(method = "onClose", at = @At("HEAD"), cancellable = true)
     private void globe$clearLoadingFlag(CallbackInfo ci) {
         if (LatitudeClientState.isLatitudeWorldLoading()) {
-            ci.cancel();
-            return;
+            Minecraft client = Minecraft.getInstance();
+            if (client.level != null && client.player != null) {
+                ci.cancel();
+                return;
+            }
+            // Vanilla is closing the loading screen WITHOUT a playable client world: an abort or an error
+            // transition, not the render-warmup handoff this cancel exists to hold open. Release the flag and
+            // let vanilla show its next screen, instead of trapping the player behind the overlay until the
+            // ten-minute fail-safe finally clears it.
+            long clearedAt = LatitudeClientState.clearLatitudeLoadingState();
+            GLOBE_LOGGER.info("[LAT][LOADUI] loading close released without a playable world — {}ms since beginExpedition",
+                    clearedAt);
         }
         long sinceExpedition = LatitudeClientState.elapsedSinceExpeditionMs();
         if (sinceExpedition < 0L) {
@@ -390,6 +440,45 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
         context.text(this.font, text, cx - w / 2, y, color, shadow);
     }
 
+    /** Scaled + centered + italic — used only for the quiet zone line, never for the wordmark or the phrase. */
+    @Unique
+    private void globe$drawMutedItalicCentered(GuiGraphicsExtractor context, String text, int cx, int y,
+                                               float scale, int color) {
+        Component styled = Component.literal(text)
+                .withStyle(net.minecraft.network.chat.Style.EMPTY.withItalic(true));
+        int w = Math.round(this.font.width(styled) * scale);
+        int x = cx - w / 2;
+        var matrices = context.pose();
+        matrices.pushMatrix();
+        matrices.translate((float) x, (float) y);
+        matrices.scale(scale, scale);
+        context.text(this.font, styled, 0, 0, color, false);
+        matrices.popMatrix();
+    }
+
+    @Unique
+    private void globe$drawVersionLabel(GuiGraphicsExtractor context, int paneX, int paneY, int paneW, int paneH) {
+        if (globe$VERSION_LABEL.isEmpty()) {
+            return;
+        }
+        float scaledWidth = this.font.width(globe$VERSION_LABEL) * globe$VERSION_LABEL_SCALE;
+        float scaledHeight = this.font.lineHeight * globe$VERSION_LABEL_SCALE;
+        float x = (paneX + paneW) - scaledWidth;
+        float preferredY = (paneY + paneH) + globe$VERSION_LABEL_GAP;
+        float maxY = context.guiHeight() - scaledHeight - globe$VERSION_LABEL_SCREEN_MARGIN;
+        // The pane geometry always reserves at least 20px below itself; the clamp keeps the label attached
+        // to the lower-right edge at compact window heights instead of running off the bottom.
+        float y = Math.min(preferredY, maxY);
+        var matrices = context.pose();
+        matrices.pushMatrix();
+        matrices.scale(globe$VERSION_LABEL_SCALE, globe$VERSION_LABEL_SCALE);
+        context.text(this.font, globe$VERSION_LABEL,
+                Math.round(x / globe$VERSION_LABEL_SCALE),
+                Math.round(y / globe$VERSION_LABEL_SCALE),
+                MUTED, false);
+        matrices.popMatrix();
+    }
+
     /**
      * Draws the world-summary "passport" line ("Itty Bitty · Square 1:1 · 7,500 × 7,500 · subpolar start") with
      * two treatments layered together:
@@ -401,7 +490,7 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
      *       LAST segment (zone) are the world's character → gold ({@link #GOLD}); segment 0 (size) and the
      *       middle numerals stay warm-white ({@link #WARM_WHITE}). Separators stay neutral, drawn at the
      *       warm-white resting dim so they never out-shine a resting word.</li>
-     *   <li><b>Reading-light wave</b> (Peetsa 2026-07-11): a gentle looping crest illuminates one segment at a
+     *   <li><b>Reading-light wave</b> (maintainer ruling, 2026-07-11): a gentle looping crest illuminates one segment at a
      *       time, now operating on EACH segment's own base colour (gold segments wave in gold-space, white in
      *       white-space) via {@link com.example.globe.core.ui.LoadingWave#shade}.</li>
      * </ul>
@@ -502,7 +591,7 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
         int starLen = radius - 4;
         if (starLen > 0) {
             int baseHalf = Math.max(1, radius / 8);
-            // S34 revert (Peetsa 2026-07-21, TEST 124: "The compass rose is cut off... Put the compass back to
+            // S34 revert (maintainer ruling, 2026-07-21, TEST 124: "The compass rose is cut off... Put the compass back to
             // how it was, with the N just above the compass"): the shortened north arm is retired -- the full
             // symmetric 4-arm rose returns, and the N lives OUTSIDE the ring (the S32 placement he asked back).
             for (int i = 0; i <= starLen; i++) {
@@ -528,7 +617,7 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
         context.fill(cx + radius - 2 - tickLen, cy, cx + radius - 2, cy + 1, SUNSET_MUTED);        // E
         context.fill(cx - radius + 2, cy, cx - radius + 2 + tickLen, cy + 1, SUNSET_MUTED);        // W
 
-        // S34 (Peetsa 2026-07-21: "Put the compass back to how it was, with the N just above the compass"):
+        // S34 (maintainer ruling, 2026-07-21: "Put the compass back to how it was, with the N just above the compass"):
         // the S32 placement he asked back -- coral N with the vanilla drop shadow, floating just above the
         // ring's top edge, face left entirely to the rose + wandering needle.
         String nLabel = "N";
@@ -722,7 +811,7 @@ class LatitudeLoadingClientTickMixin {
 
     @Unique
     private void globe$notifyFailSafe(long sinceExpeditionMs) {
-        // Plain-language chat line (Peetsa: non-programmer-facing text, keep jargon in the binder/logs).
+        // Plain-language chat line (maintainer: non-programmer-facing text, keep jargon in the binder/logs).
         // The technical detail (exact elapsed ms, "10-minute fail-safe") stays in the GLOBE_LOGGER.info
         // line right before this is called -- the player only needs to know the screen closed and why.
         try {
@@ -756,10 +845,21 @@ class LatitudeLoadingClientTickMixin {
         }
         boolean renderQueueEmpty = client.levelRenderer.hasRenderedAllSections();
         int renderedSections = client.levelRenderer.visibleSections().size();
-        boolean playerSectionVisible = client.levelRenderer.isSectionCompiledAndVisible(this.player.blockPosition());
+        // 26.3 drift: isSectionCompiledAndVisible now takes the section FADE-IN duration in milliseconds as a
+        // second argument. A compiled section's visibility ramps from 0 to 1 over that window after it is
+        // uploaded, and the method answers true once the ramp passes its internal threshold -- so the argument
+        // decides how long after upload a section still counts as "not visible yet". Vanilla derives it from
+        // the player's own Graphics option, and so do we: the readiness gate then agrees with what the player
+        // is actually looking at, including when they have turned the fade off (0 ms = visible as soon as it
+        // is compiled, which is exactly the pre-26.3 behaviour this call used to have).
+        long sectionFadeInMs = net.minecraft.util.Util.toMillis(
+                client.options.chunkSectionFadeInTime().get());
+        boolean playerSectionVisible =
+                client.levelRenderer.isSectionCompiledAndVisible(this.player.blockPosition(), sectionFadeInMs);
         net.minecraft.core.BlockPos feetPos = net.minecraft.core.BlockPos.containing(
                 this.player.getX(), this.player.getY() - 1.0, this.player.getZ());
-        boolean feetSectionVisible = client.levelRenderer.isSectionCompiledAndVisible(feetPos);
+        boolean feetSectionVisible =
+                client.levelRenderer.isSectionCompiledAndVisible(feetPos, sectionFadeInMs);
         boolean ready = (playerSectionVisible || feetSectionVisible)
                 || (renderQueueEmpty && renderedSections > 0);
         return new RenderReadiness(ready, renderedSections, renderQueueEmpty, playerSectionVisible, feetSectionVisible);

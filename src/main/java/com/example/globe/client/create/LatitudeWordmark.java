@@ -52,6 +52,24 @@ public final class LatitudeWordmark {
      */
     public static int draw(GuiGraphicsExtractor context, Font font, int rx, int ry, int rw, int rh,
                            float scale, int sparkleCount, boolean reduceMotion) {
+        return draw(context, font, rx, ry, rw, rh, scale, sparkleCount, reduceMotion, 1.0f);
+    }
+
+    /**
+     * As {@link #draw(GuiGraphicsExtractor, Font, int, int, int, int, float, int, boolean)}, with every
+     * painted colour's alpha multiplied by {@code alpha}.
+     *
+     * <p>Added for the create-world title intro, which fades the whole nameplate in and out on a shared
+     * clock. Doing the fade here rather than in the caller is what keeps every surface that shows the
+     * intro pixel-identical: {@code CreateWorldIntroTitle} is the single entry point and it is called by
+     * the create screen, the preparing screen and the generic-message overlay alike.</p>
+     */
+    public static int draw(GuiGraphicsExtractor context, Font font, int rx, int ry, int rw, int rh,
+                           float scale, int sparkleCount, boolean reduceMotion, float alpha) {
+        if (alpha <= 0f) {
+            return 0;
+        }
+        final float fade = Math.min(1.0f, alpha);
         final String text = "LATITUDE";
         int spacing = Math.max(1, 2);
         int rawW = 0;
@@ -78,12 +96,12 @@ public final class LatitudeWordmark {
         int glowR = Math.max(2, drawH * 3 / 4);
         int glowStep = Math.max(1, glowR);
         for (int gx = startX; gx <= startX + drawW; gx += glowStep) {
-            RulesIcons.glow(context, gx, glowMidY, glowR, glowIntensity);
+            RulesIcons.glow(context, gx, glowMidY, glowR, glowIntensity * fade);
         }
 
         // Slight brightness lift on the gold, breathing in lockstep with the bloom (steady mid when reduced).
         float lift = reduceMotion ? 1.0f : (float) (1.0 + TITLE_GOLD_LIFT * Math.sin(nowSec * 2.0 * Math.PI / TITLE_GLOW_PERIOD_SEC));
-        int goldLit = liftBrightness(GOLD, lift);
+        int goldLit = fadeAlpha(liftBrightness(GOLD, lift), fade);
 
         var m = context.pose();
         m.pushMatrix();
@@ -93,7 +111,7 @@ public final class LatitudeWordmark {
             int cx = 0;
             for (int i = 0; i < text.length(); i++) {
                 String s = String.valueOf(text.charAt(i));
-                context.text(font, s, cx + 1, 1, 0xFF3A2410, false); // letterpress under-layer
+                context.text(font, s, cx + 1, 1, fadeAlpha(0xFF3A2410, fade), false); // letterpress under-layer
                 context.text(font, s, cx, 0, goldLit, false);
                 cx += font.width(s) + spacing;
             }
@@ -115,15 +133,15 @@ public final class LatitudeWordmark {
                 long bucket = (long) Math.floor(staggered);
                 double frac = staggered - bucket; // 0..1 within this mote's current cycle
                 float a = (float) Math.sin(frac * Math.PI);
-                int alpha = Math.round(a * a * 235f); // fade in -> twinkle -> fade out
-                if (alpha <= 8) continue;
+                int moteAlpha = Math.round(a * a * 235f); // fade in -> twinkle -> fade out
+                if (moteAlpha <= 8) continue;
                 int hx = hash32((int) (k * 73856093 ^ bucket * 19349663));
                 int hy = hash32((int) (k * 83492791 ^ bucket * 2971215073L));
                 int sxp = boxX0 + Math.floorMod(hx, boxW);
                 int syp = boxY0 + Math.floorMod(hy, boxH);
                 // Alternate gold / warm-white cores by hash bit; size 1-2px.
                 int core = ((hx & 1) == 0) ? (0xFFF2C24E) : 0xFFFFF4DC;
-                int spark = (Math.min(255, alpha) << 24) | (core & 0xFFFFFF);
+                int spark = fadeAlpha((Math.min(255, moteAlpha) << 24) | (core & 0xFFFFFF), fade);
                 boolean big = (frac > 0.35 && frac < 0.65); // briefly 2px at peak twinkle
                 context.fill(sxp, syp, sxp + 1, syp + 1, spark);          // center
                 context.fill(sxp - 1, syp, sxp, syp + 1, spark);          // + arms
@@ -131,7 +149,7 @@ public final class LatitudeWordmark {
                 context.fill(sxp, syp - 1, sxp + 1, syp, spark);
                 context.fill(sxp, syp + 1, sxp + 1, syp + 2, spark);
                 if (big) {
-                    int dim = (Math.min(255, alpha) / 2 << 24) | (core & 0xFFFFFF);
+                    int dim = fadeAlpha((Math.min(255, moteAlpha) / 2 << 24) | (core & 0xFFFFFF), fade);
                     context.fill(sxp - 2, syp, sxp - 1, syp + 1, dim);
                     context.fill(sxp + 2, syp, sxp + 3, syp + 1, dim);
                     context.fill(sxp, syp - 2, sxp + 1, syp - 1, dim);
@@ -144,13 +162,23 @@ public final class LatitudeWordmark {
         int gap = 8;
         int lineLen = (rw - drawW) / 2 - gap * 2;
         if (lineLen >= 10) {
-            int lw = 0x66000000 | (GOLD & 0xFFFFFF);
+            int lw = fadeAlpha(0x66000000 | (GOLD & 0xFFFFFF), fade);
+            int tip = fadeAlpha(GOLD, fade);
             context.fill(startX - gap - lineLen, midY, startX - gap, midY + 1, lw);
             context.fill(startX + drawW + gap, midY, startX + drawW + gap + lineLen, midY + 1, lw);
-            context.fill(startX - gap - 2, midY - 1, startX - gap + 1, midY + 2, GOLD);
-            context.fill(startX + drawW + gap - 1, midY - 1, startX + drawW + gap + 2, midY + 2, GOLD);
+            context.fill(startX - gap - 2, midY - 1, startX - gap + 1, midY + 2, tip);
+            context.fill(startX + drawW + gap - 1, midY - 1, startX + drawW + gap + 2, midY + 2, tip);
         }
         return drawH;
+    }
+
+    /** Multiplies an ARGB color's alpha channel by {@code fade} (clamped to 0..255), preserving RGB. */
+    private static int fadeAlpha(int argb, float fade) {
+        if (fade >= 1.0f) {
+            return argb;
+        }
+        int a = Math.max(0, Math.min(255, Math.round(((argb >>> 24) & 0xFF) * fade)));
+        return (a << 24) | (argb & 0x00FFFFFF);
     }
 
     /** Multiplies an ARGB color's RGB channels by {@code mult} (clamped to 255), preserving alpha. Used for the

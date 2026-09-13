@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /**
  * Correctness fix: NEVER render rain at the poles -- force SNOW at extreme latitudes.
  *
- * <p>Peetsa's bug: standing at 90 deg over ice-spike terrain, vanilla RAIN streaks fell. The cause
+ * <p>the maintainer's bug: standing at 90 deg over ice-spike terrain, vanilla RAIN streaks fell. The cause
  * is latitude-blind columns: vanilla's noise router places {@code river}/{@code ocean} (temperature
  * 0.5, precipitation RAIN) anywhere including the polar cap, and {@code LatitudeBiomeSource} never
  * re-classifies them, so a polar river/ocean column reports RAIN. The weather renderer samples a

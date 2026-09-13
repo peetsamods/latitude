@@ -11,7 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * The 8 numbered HUD-look preset slots (2026-07-08, Peetsa's request), persisted separately from the
+ * The 8 numbered HUD-look preset slots (2026-07-08, the maintainer's request), persisted separately from the
  * live compass config so switching presets can never corrupt the file the game reads every frame.
  */
 public final class CompassHudPresetSlots {

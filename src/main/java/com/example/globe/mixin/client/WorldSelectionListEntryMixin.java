@@ -151,10 +151,10 @@ public abstract class WorldSelectionListEntryMixin {
             LevelSettings levelSettings,
             WorldCreationContext context,
             java.nio.file.Path tempDataPackDir) {
+        java.nio.file.Path worldRoot = this.minecraft.getLevelSource()
+                .getBaseDir()
+                .resolve(this.summary.getLevelId());
         if (this.globe$recreatedWorldPresetId == null) {
-            java.nio.file.Path worldRoot = this.minecraft.getLevelSource()
-                    .getBaseDir()
-                    .resolve(this.summary.getLevelId());
             try {
                 this.globe$recreatedWorldPresetId = RecreatedWorldMetadata.latitudePresetId(worldRoot);
             } catch (IOException e) {
@@ -163,11 +163,23 @@ public abstract class WorldSelectionListEntryMixin {
                 }
             }
         }
+        // The World Shape axis is persisted separately from the size preset, so it has to be read and
+        // carried separately too -- otherwise Re-Create restores a Square 1:1 world as Wide 2:1. A world
+        // saved before the axis existed has no field here, and null correctly means "leave the default".
+        String shapeId = null;
+        try {
+            shapeId = RecreatedWorldMetadata.lastKnownGlobeShape(worldRoot);
+        } catch (IOException e) {
+            if (DEBUG_CWPATH) {
+                GLOBE_LOGGER.warn("[LAT][CWPATH] could not read saved Latitude world shape", e);
+            }
+        }
 
         CreateWorldScreen screen = CreateWorldScreen.createFromExisting(
                 client, onClose, levelSettings, context, tempDataPackDir);
         ((RecreatedWorldPresetCarrier) screen)
                 .globe$setRecreatedWorldPresetId(this.globe$recreatedWorldPresetId);
+        ((RecreatedWorldPresetCarrier) screen).globe$setRecreatedGlobeShapeId(shapeId);
         if (DEBUG_CWPATH) {
             GLOBE_LOGGER.info(
                     "[LAT][CWPATH] carried persisted Re-Create preset={} world={}",

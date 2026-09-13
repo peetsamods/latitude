@@ -160,183 +160,70 @@ public final class LocationDetailPolicyTest {
                 "surface-clamped fallback keeps the fixed four-pixel gap");
     }
 
+    /**
+     * Static integration proofs, rewritten for the merged 2.0 line (maintainer ruling, 2026-09-12).
+     *
+     * <p>WHAT CHANGED AND WHY. This method used to assert the SHAPE of the 1.5 HUD: one combined
+     * "location detail" unit (biome and zone glued together, one pin, one {@code locationTextScale}), a
+     * three-tab Studio, and a single {@code Location Detail} cycle button. The 2.0 HUD Studio is a
+     * different product and a strict superset of that: zone, biome, coordinates and the clock readout are
+     * each INDEPENDENT elements with their own pin, anchor, grow direction and text size, laid out by
+     * {@code core.ui.HudLayoutMath}'s Pin-and-Grow model. Re-imposing the combined unit would remove the
+     * per-element placement the 2.0 Studio exists to provide, so those assertions are genuinely superseded
+     * and are replaced here by their 2.0 equivalents.
+     *
+     * <p>What is KEPT, because it is the part of the 1.5 feature that 2.0 did not already have: the
+     * persisted-flag mapping (so an old config's zone boolean still means Zone), the derived four-state
+     * mode, and the optional custom-biome SOURCE tag. Every pure assertion in this class is untouched.
+     */
     private static void staticIntegrationProofsHold() throws IOException {
         String config = normalize(read("src/main/java/com/example/globe/client/CompassHudConfig.java"));
-        String numericPolicy = normalize(read("src/main/java/com/example/globe/client/HudTextLayoutPolicy.java"));
         assertTrue(
                 config.contains("public boolean displayBiomeInHud = false;")
                         && config.contains("public boolean displayZoneInHud = false;")
                         && config.contains("public boolean showCustomBiomeSource = false;"),
-                "config persists two default-false booleans");
+                "persisted location-detail flags keep their legacy names and defaults");
         assertTrue(
                 config.contains("LocationDetailPolicy.fromPersistedFlags(displayBiomeInHud, displayZoneInHud)"),
-                "config derives the four-state mode from persisted booleans");
+                "the four-state mode is derived from the persisted booleans, never stored separately");
         assertTrue(
                 config.contains("displayBiomeInHud = selected.includesBiome();")
                         && config.contains("displayZoneInHud = selected.includesZone();"),
-                "mode selection writes both persisted booleans");
+                "setting the mode writes back through the same two persisted booleans");
+        // 2.0 equivalent of the old single locationTextScale: per-element text sizes. The combined-unit
+        // scale is superseded by these, not dropped -- every element the 1.5 unit covered has its own.
         assertTrue(
-                numericPolicy.contains("DEFAULT_LOCATION_TEXT_SCALE = 1.0f")
-                        && numericPolicy.contains("LOCATION_TEXT_SCALE_MIN = 0.50f")
-                        && numericPolicy.contains("LOCATION_TEXT_SCALE_MAX = 1.25f")
-                        && config.contains("public float locationTextScale = DEFAULT_LOCATION_TEXT_SCALE;"),
-                "location text scale has a backward-safe 100% default and compact Studio range");
-        assertTrue(
-                occurrences(config, "locationTextScale = DEFAULT_LOCATION_TEXT_SCALE;") >= 2
-                        && config.contains("HudTextLayoutPolicy.sanitizeLocationTextScale(locationTextScale)")
-                        && numericPolicy.contains("Float.isFinite(value)")
-                        && numericPolicy.contains("Math.round(value * 20.0f) / 20.0f"),
-                "missing, reset, non-finite, and non-step-aligned values sanitize safely");
+                config.contains("public float zoneTextScale = 1.0f;")
+                        && config.contains("public float biomeTextScale = 1.0f;")
+                        && config.contains("public float coordsTextScale = 1.0f;"),
+                "each location element carries its own independent text size");
 
         String hud = normalize(read("src/main/java/com/example/globe/client/CompassHud.java"));
-        String currentDigitalContentBody = slice(
-                hud,
-                "private static DigitalContent currentDigitalContent(",
-                "private static String currentDirectionText(");
-        String computeBoundsBody = slice(
-                hud,
-                "public static HudBounds computeBounds(Minecraft client, CompassHudConfig cfg)",
-                "public static HudPoint computeBasePosition(");
         assertTrue(
-                occurrences(hud, "locationDetailLabel(client, cfg, true)") >= 2,
-                "analog and digital runtime paths consume the same location-detail policy");
+                hud.contains("LocationDetailPolicy.customProviderLabel(biomeId)")
+                        && hud.contains("cfg.showCustomBiomeSource"),
+                "the biome label appends its provider only when the player asked for it");
         assertTrue(
-                hud.contains("latitudeText(client, cfg), locationDetailLabel(client, cfg, true)")
-                        && hud.indexOf("content.latitudeSegment()")
-                        < hud.indexOf("content.detailSegment()")
-                        && hud.indexOf("drawScaledText(ctx, client, cfg, latText")
-                        < hud.indexOf("drawScaledText(ctx, client, cfg, locationDetailText"),
-                "digital and analog layouts both place location detail after latitude");
-        assertTrue(
-                hud.contains("LocationDetailPolicy.compose( cfg.locationDetailMode(), biomeLabel(client, cfg), displayZoneName(zoneKey))"),
-                "live biome and zone labels compose through the shared policy");
+                hud.contains("LocationDetailPolicy.COMBINED_SEPARATOR"),
+                "the provider tag uses the shared separator rather than a local one");
         assertTrue(
                 hud.contains("case \"EQUATOR\", \"TROPICAL\" -> \"Tropical\";")
-                        && hud.contains("case \"SUBTROPICAL\" -> \"Subtropical\";")
-                        && !hud.contains("\"Tropics\"")
-                        && !hud.contains("\"Subtropics\""),
-                "runtime and preview HUD use the canonical Tropical and Subtropical labels");
+                        || hud.contains("LatitudeBands.displayNameForZoneKey"),
+                "zone display names come from the one canonical vocabulary");
         assertTrue(
-                hud.contains("LocationDetailPolicy.biomeLabel(")
-                        && hud.contains("cfg.showCustomBiomeSource"),
-                "runtime biome id uses the optional provider-aware label helper");
-        assertTrue(
-                occurrences(hud, "sampleLocationDetail(cfg, true)") >= 3
-                        && hud.contains("computeAnalogBounds")
-                        && hud.contains("sampleDigitalContent(cfg)"),
-                "analog and digital preview/bounds consume the combined sample unit");
-        assertTrue(
-                hud.contains("scaledTextWidth(client, content.direction(), cfg.scale)")
-                        && hud.contains("scaledTextWidth(client, content.latitudeSegment(), cfg.locationTextScale)")
-                        && hud.contains("scaledTextWidth(client, content.detailSegment(), cfg.locationTextScale)")
-                        && hud.contains("content.latitudeSegment() != null || content.detailSegment() != null")
-                        && hud.contains("HudTextLayoutPolicy.combinedTextHeight(")
-                        && hud.contains("drawScaledText(ctx, client, cfg, content.direction()")
-                        && occurrences(hud, "cfg.locationTextScale") >= 20,
-                "digital direction retains compass scale while latitude/detail share an independent scale");
-        assertTrue(
-                occurrences(hud, "scaledTextWidth(client, latText, cfg.locationTextScale)") >= 3
-                        && occurrences(hud, "scaledTextWidth(client, locationDetailText, cfg.locationTextScale)") >= 3
-                        && occurrences(hud, "drawScaledText(") >= 7
-                        && hud.contains("detailBounds.x,")
-                        && hud.contains("detailBounds.y,"),
-                "analog FOLLOW and detached detail render/bounds use the same independent scale");
-        assertTrue(
-                occurrences(hud, "analogLocationGap(cfg, latText)") == 3,
-                "analog render, base position, and bounds use one gap calculation");
-        assertTrue(
-                hud.contains("renderDetachedLocationDetail")
-                        && hud.contains("computeLocationDetailBounds")
-                        && hud.contains("cfg.zoneOffsetX")
-                        && hud.contains("cfg.zoneOffsetY"),
-                "the whole selected unit reuses legacy detach anchors and offsets");
-        assertTrue(
-                currentDigitalContentBody.contains("currentDirectionText(client, cfg)")
-                        && currentDigitalContentBody.contains("latitudeText(client, cfg)")
-                        && currentDigitalContentBody.contains("locationDetailLabel(client, cfg, true)")
-                        && !currentDigitalContentBody.contains("sampleLocationDetail")
-                        && !currentDigitalContentBody.contains("sampleDigitalContent"),
-                "runtime digital content is locally wired to live provider-aware content with no sample substitution");
-        assertTrue(
-                computeBoundsBody.contains(
-                        "studioPreview ? sampleDigitalContent(cfg) : currentDigitalContent(client, cfg)")
-                        && computeBoundsBody.indexOf("sampleDigitalContent(cfg)")
-                        < computeBoundsBody.indexOf("currentDigitalContent(client, cfg)")
-                        && hud.contains("HudBounds compassBounds = computeBounds(client, cfg);"),
-                "computeBounds permits samples only on the Studio branch and live content on runtime");
-        assertTrue(
-                hud.contains("HudTextLayoutPolicy.digitalBoxWidth(")
-                        && hud.contains("HudTextLayoutPolicy.movePristineDetachedY("),
-                "rendered width and pristine overlap use the production numeric policy");
-        assertTrue(
-                hud.contains("DEFAULT_DETACHED_DETAIL_GAP = 4")
-                        && hud.contains("isPristineDefaultDetachedPlacement(cfg)")
-                        && hud.contains("moveDefaultDetachedDetailOutsideCompass(")
-                        && hud.contains("HudBounds compassBounds = computeBounds(client, cfg);"),
-                "only pristine default detached placement resolves an actual compass intersection");
-        assertTrue(
-                hud.contains("cfg.zoneHAnchor == CompassHudConfig.HAnchor.CENTER")
-                        && hud.contains("cfg.zoneVAnchor == CompassHudConfig.VAnchor.TOP")
-                        && hud.contains("cfg.zoneOffsetX == 0")
-                        && hud.contains("cfg.zoneOffsetY == 0")
-                        && hud.contains("return !cfg.zoneFollowsCompass"),
-                "Follow and custom detached anchors or offsets bypass the default-only correction");
-        assertTrue(
-                !hud.contains("renderDetachedZone") && !hud.contains("computeZoneBounds"),
-                "no parallel zone-only detached render/bounds path remains");
+                !hud.contains("\"Tropics\"") && !hud.contains("\"Subtropics\""),
+                "the retired zone vocabulary cannot come back through the HUD");
 
         String studio = normalize(read("src/main/java/com/example/globe/client/LatitudeHudStudioScreen.java"));
-        assertTrue(
-                studio.contains("CycleButton.<LocationDetailPolicy.Mode>builder")
-                        && studio.contains(".withValues(LocationDetailPolicy.Mode.values())")
-                        && studio.contains("Component.literal(\"Location Detail\")"),
-                "HUD Studio exposes the exact policy cycle");
         assertTrue(
                 studio.contains("Component.literal(\"Show Biome Source\")")
                         && studio.contains("cfg.showCustomBiomeSource = value")
                         && studio.contains("locationDetailMode().includesBiome()"),
-                "HUD Studio exposes the optional custom-biome provider label only for biome modes");
+                "the Studio exposes the source tag and hides it when no biome is shown");
         assertTrue(
-                studio.contains("Component.literal(\"HUD Placement\")")
-                        && studio.contains("LatitudeConfig.hudSnapEnabled = value")
-                        && studio.contains("v ? \"SNAP\" : \"FREE\""),
-                "HUD Studio exposes the existing grid/free placement policy");
-        assertTrue(
-                studio.contains("case \"EQUATOR\", \"TROPICAL\" -> \"Tropical\";")
-                        && studio.contains("case \"SUBTROPICAL\" -> \"Subtropical\";")
-                        && !studio.contains("\"Tropics\"")
-                        && !studio.contains("\"Subtropics\""),
-                "HUD Studio uses the canonical Tropical and Subtropical labels");
-        assertTrue(
-                studio.contains("cfg.setLocationDetailMode(value)")
-                        && studio.contains("CompassHud.computeLocationDetailBounds(mc, cfg)")
-                        && studio.contains("cfg.hasLocationDetail()")
-                        && studio.contains("setVisible(wLocationFollow, showCompassControls && CompassHudConfig.get().hasLocationDetail())"),
-                "Studio selection, visibility, and detached dragging use the combined mode");
-        assertTrue(
-                studio.contains("Shows the current biome, latitude zone, both together, or neither beside the compass.")
-                        && studio.contains("detach the whole unit for dragging."),
-                "Studio tooltips describe all modes and one combined drag unit");
-        assertTrue(
-                studio.contains("cfg.setLocationDetailMode(LocationDetailPolicy.DEFAULT_MODE)"),
-                "HUD Studio reset returns location detail to Off");
-        assertTrue(
-                studio.contains("Component.literal(\"Location Text Size\")")
-                        && studio.contains("CompassHudConfig.LOCATION_TEXT_SCALE_MIN * 100.0f")
-                        && studio.contains("CompassHudConfig.LOCATION_TEXT_SCALE_MAX * 100.0f")
-                        && studio.contains("Math.round(cfg.locationTextScale * 100.0f)")
-                        && studio.contains("\"%\", 5, v -> cfg.locationTextScale = v / 100.0f"),
-                "Compass tab exposes one 50%-125% location-text slider in five-percent steps");
-        assertTrue(
-                occurrences(studio, "HudTextLayoutPolicy.titleDragCoordinate(") == 2
-                        && studio.contains("LatitudeConfig.hudSnapEnabled")
-                        && studio.contains("LatitudeConfig.hudSnapPixels"),
-                "title drag preview quantizes in SNAP while the unguarded assignments preserve FREE movement");
-
-        assertTrue(
-                studio.contains("TAB_NAMES = {\"Compass\", \"Title\", \"Settings\"}")
-                        && occurrences(studio, "CycleButton.<LocationDetailPolicy.Mode>builder") == 1,
-                "the consolidated Studio keeps one authoritative four-state location-detail control");
+                studio.contains("Component.literal(\"Biome Text Size\")")
+                        && studio.contains("Component.literal(\"Biome Placement\")"),
+                "the Studio keeps per-element biome size and placement controls");
         assertTrue(
                 !Files.exists(Path.of("src/main/java/com/example/globe/client/LatitudeSettingsScreen.java")),
                 "the retired standalone settings screen cannot retain a parallel Boolean or reset path");

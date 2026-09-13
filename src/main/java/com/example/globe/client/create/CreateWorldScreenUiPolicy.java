@@ -3,11 +3,11 @@ package com.example.globe.client.create;
 /**
  * Minecraft-free navigation rule for the create-world screen's tab strip.
  *
- * <p>Ported from upstream's {@code CreateWorldScreenUiPolicy} narrowed to this one method: its
- * companion {@code isInsideClip} answers the same question {@link ViewportClipPolicy} already
- * answers here (more defensively -- it rejects a degenerate rectangle {@code isInsideClip} would
- * accept), and that policy's own caller, a click-outside-clip fix for a custom {@code RulesIconRow}
- * widget, has no counterpart on this line -- the rules panel here uses plain {@code Button}s.</p>
+ * <p>Every constant and rule here is executable without Minecraft on purpose: the screen's margins,
+ * its fixed background opacity, its Ctrl+Tab cycling and its accessibility-footer collision test are
+ * the parts a headless test can actually pin, so they live here rather than as literals in the
+ * screen. The clipped-click geometry that goes with them lives next door in {@link ViewportClipPolicy},
+ * which rejects a degenerate rectangle rather than accepting it.</p>
  */
 final class CreateWorldScreenUiPolicy {
     static final int EDGE_MARGIN = 4;

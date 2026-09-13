@@ -164,6 +164,61 @@ public final class GlobeClientState {
         };
     }
 
+    private static int ewRank(EwStormStage stage) {
+        return switch (stage) {
+            case NONE -> 0;
+            case LEVEL_1 -> 1;
+            case LEVEL_2 -> 2;
+        };
+    }
+
+    /** The absolute latitude in degrees for a world Z, as the presentation policies want it (0 at the equator,
+     *  90 at a pole). Degree-exact and anchored to the mod's synced latitude radius rather than the live border
+     *  half, so a lerping border cannot slide the band boundaries the E/W sand-haze gate and the polar fog law
+     *  read (the same TEST-86 anchoring {@link #distanceToEwBorderBlocks} uses on the X axis). */
+    public static double absoluteLatitudeDegrees(WorldBorder border, double z) {
+        if (border == null) {
+            return 0.0;
+        }
+        double deg = com.example.globe.util.LatitudeMath.absLatDegExact(border, z);
+        return Math.max(0.0, Math.min(90.0, deg));
+    }
+
+    /** The east/west TEXT stage for a block distance to the nearest world edge -- the single exposed owner of
+     *  that mapping, so the banner, the fog and the tests can never disagree about where a stage begins. */
+    public static EwStormStage ewTextStageForDistance(double distanceToBorder) {
+        return switch (EwPresentationPolicy.warningStageRank(distanceToBorder)) {
+            case 2 -> EwStormStage.LEVEL_2;
+            case 1 -> EwStormStage.LEVEL_1;
+            default -> EwStormStage.NONE;
+        };
+    }
+
+    public static EwStormStage computeEwTextStage(ClientLevel world, Player player) {
+        return ewTextStageForDistance(distanceToEwBorderBlocks(world.getWorldBorder(), player.getX()));
+    }
+
+    /** Corner precedence between the polar and east/west warning families, decided by the pure
+     *  {@link PolarPresentationPolicy#arbitrateWarning(int, int)} table so the ordering is testable without a
+     *  client. Null stages are read as NONE. */
+    public static WarningState arbitrateWarning(PolarStage activePolar, EwStormStage ewStage) {
+        PolarStage polar = activePolar != null ? activePolar : PolarStage.NONE;
+        EwStormStage ew = ewStage != null ? ewStage : EwStormStage.NONE;
+        var selection = PolarPresentationPolicy.arbitrateWarning(polarRank(polar), ewRank(ew));
+        if (selection.stageRank() <= 0) {
+            return WarningState.NONE;
+        }
+        return selection.polar()
+                ? new WarningState(WarningType.POLAR, polar, selection.stageRank())
+                : new WarningState(WarningType.STORM, ew, selection.stageRank());
+    }
+
+    public static PolarStage computePolarStage(ClientLevel world, Player player) {
+        var border = world.getWorldBorder();
+        double progressZ = com.example.globe.util.LatitudeMath.hazardProgress(border, player.getZ());
+        return polarStageForProgress(border, player.getZ(), progressZ);
+    }
+
     private static double distanceToEwBorderBlocks(WorldBorder border, double camX) {
         // Anchored to the mod's INTENDED X radius (synced from the server), NOT the live border half -- so a
         // lerping / vandalized border can never slide the fog/prompt/re-arm/banner lines that read this (TEST
@@ -318,16 +373,42 @@ public final class GlobeClientState {
         return Math.max(minChunks, Math.min(originalChunks, target));
     }
 
-        public static float computeEwFogEnd(double camX) {
-        if (DEBUG_DISABLE_WARNINGS) {
+    /**
+     * EAST/WEST DEPTH FOG (maintainer ruling, 2026-09-12: the 1.5 depth fog is the east/west presentation; the
+     * flat screen-space veil is retired). The envelope is the pure {@link EwPresentationPolicy} 400 -> 50 block
+     * smoothstep, applied to whatever fog distance the engine already computed for this frame, so the mod only
+     * ever TIGHTENS vanilla's fog and rejoins the live baseline continuously at 400 blocks. Confirmed shelter
+     * ({@link #ewPresentationVisibility()}) scales the whole effect back to the live baseline.
+     *
+     * <p>Returns a negative value when the fog must be left alone; callers min-guard against their own current
+     * value. Deliberately distinct from {@link #ewIntensity01(double)}, which stays on the degree-anchored
+     * {@code EdgeGeometry} band because it drives the render-distance/passage side, not the fog.
+     */
+    public static float computeEwFogEnd(double camX) {
+        return computeEwFogEnd(camX, 64.0f);
+    }
+
+    public static float computeEwFogEnd(double camX, float baselineEnd) {
+        if (DEBUG_DISABLE_WARNINGS || DEBUG_DISABLE_FOG) {
             return -1.0f;
         }
-        float a = ewIntensity01(camX);
-        if (a <= 0.0f) return -1.0f;
+        return EwPresentationPolicy.fogEndDistance(
+                distanceToEwBorderBlocks(camX),
+                baselineEnd,
+                ewPresentationVisibility());
+    }
 
-        float endFar = 64f;
-        float endNear = 12f;
-        return endFar + (endNear - endFar) * a;
+    /** The near-fog start sibling of {@link #computeEwFogEnd(double, float)}: pulls the fog START in toward the
+     *  camera as the edge is approached, so the storm reads as a wall of air rather than a distant curtain.
+     *  Returns the untouched baseline when the effect is off, so callers can min-guard unconditionally. */
+    public static float computeEwFogStart(double camX, float baselineStart) {
+        if (DEBUG_DISABLE_WARNINGS || DEBUG_DISABLE_FOG) {
+            return baselineStart;
+        }
+        return EwPresentationPolicy.fogStartDistance(
+                distanceToEwBorderBlocks(camX),
+                baselineStart,
+                ewPresentationVisibility());
     }
 
     private static float polarWhiteoutIntensity(ClientLevel world, Player player) {
@@ -353,6 +434,7 @@ public final class GlobeClientState {
             globeWorld = value;
             cachedEvalWorldTime = Long.MIN_VALUE;
             cachedEval = null;
+            resetEwPresentationState();
         }
     }
 
@@ -370,9 +452,14 @@ public final class GlobeClientState {
     private static long cachedExposureTick = Long.MIN_VALUE;
     private static long cachedExposurePos = Long.MIN_VALUE;
     private static float cachedExposure01;
+    // The RAW visible-sky sample count behind cachedExposure01 (0..SKY_SAMPLE_COUNT). The graded fraction
+    // loses the "exactly zero samples" fact that the E/W shelter rule keys on, so the count is kept beside it
+    // -- it costs nothing, and it means the E/W shelter state rides the SAME cached 13-lookup scan instead of
+    // running a second one every tick.
+    private static int cachedVisibleSkySamples = EwPresentationPolicy.SKY_SAMPLE_COUNT;
     private static final int EXPOSURE_RECOMPUTE_TICKS = 5;
     // 13 sky samples around the player's head: the center column + a ring at radius 3 (8 points) + the 4
-    // cardinals at radius 5. Under a small overhead (Peetsa's flat lintel) the center is blocked but the ring
+    // cardinals at radius 5. Under a small overhead (the maintainer's flat lintel) the center is blocked but the ring
     // sees sky -> exposure ~0.9; in a sealed room all 13 are blocked -> 0; at a doorway some see sky -> partial.
     private static final int[][] EXPOSURE_OFFSETS = {
         {0, 0},
@@ -401,6 +488,9 @@ public final class GlobeClientState {
 
         boolean surfaceOk = isSurfaceOk(client, pos);
         float exposure01 = computeExposure01(client, pos);
+        // Runs on the SAME once-per-game-tick path as the exposure sample (evaluate() is tick-cached), which is
+        // what the E/W shelter confirm/fade counters are measured in.
+        updateEwShelterState(client, pos);
 
         boolean active = globeWorld;
         if (!active) {
@@ -470,7 +560,7 @@ public final class GlobeClientState {
      * ({@code canSeeSky(pos.above())}, the sampler's center sample). AND-ed so open low-lying terrain a couple
      * blocks under sea level (a shore, a shallow dip) is NOT mistaken for a cave -- only a genuinely roofed,
      * below-surface column counts. Under a tree/arch at the edge the player is at the surface (Y not below
-     * sea-2) so this is false -- still the full experience, exactly as Peetsa asked.
+     * sea-2) so this is false -- still the full experience, exactly as the maintainer asked.
      */
     public static boolean isDeepUnderground(Minecraft client) {
         if (client == null || client.player == null || client.level == null) {
@@ -503,7 +593,7 @@ public final class GlobeClientState {
     /**
      * TEST 78: graded enclosure estimate in {@code [0,1]} for the PRESENTATION systems (wind muffle, whiteout
      * alpha, ambient particle budget) -- NOT the server hazard mechanics, which are untouched. Replaces the
-     * binary {@code surfaceOk} single-column check so Peetsa's open freestanding arch (a flat lintel over open
+     * binary {@code surfaceOk} single-column check so the maintainer's open freestanding arch (a flat lintel over open
      * terrain) reads as ~outdoors instead of fully "inside". Cached: recomputed only when the player's block
      * position changes or every {@link #EXPOSURE_RECOMPUTE_TICKS} ticks (13 cheap heightmap lookups, but not
      * every frame).
@@ -536,6 +626,7 @@ public final class GlobeClientState {
         // from leaking a partial exposure.
         int sea = world.getSeaLevel();
         if (pos.getY() < sea - 2) {
+            cachedVisibleSkySamples = 0;
             return 0.0f;
         }
         BlockPos head = pos.above();
@@ -545,7 +636,64 @@ public final class GlobeClientState {
                 seen++;
             }
         }
+        cachedVisibleSkySamples = seen;
         return com.example.globe.core.PolarExposure.fraction(seen, EXPOSURE_OFFSETS.length);
+    }
+
+    // --- EAST/WEST SHELTER (maintainer ruling, 2026-09-12) ------------------------------------------------
+    // The east/west presentation is depth fog, and depth fog must NOT be released by a leaf or a lintel -- only
+    // by genuinely being sealed away from the storm. EwPresentationPolicy.ShelterState is that rule, and it is
+    // deliberately STRICTER than the graded polar exposure01 used by the warning banners: it wants a full
+    // second (HIDDEN_CONFIRM_TICKS) of continuous, deep, zero-sky evidence before it fades anything, then
+    // restores within five ticks. Everything east/west -- fog distances, the sand haze colour, the storm
+    // particle budget and the advisory banner -- reads the one visibility this produces, so they can never
+    // disagree about whether the player is inside.
+    private static final EwPresentationPolicy.ShelterState EW_SHELTER_STATE =
+            new EwPresentationPolicy.ShelterState();
+
+    private static void updateEwShelterState(Minecraft client, BlockPos pos) {
+        var world = client.level;
+        if (world == null || client.player == null) {
+            resetEwPresentationState();
+            return;
+        }
+        // Outside the storm envelope there is nothing to shelter from; keeping the counters armed out here
+        // would let a long cave walk 500 blocks inland arrive at the edge already faded out.
+        if (distanceToEwBorderBlocks(world.getWorldBorder(), client.player.getX())
+                > EwPresentationPolicy.ADVISORY_DISTANCE_BLOCKS) {
+            resetEwPresentationState();
+            return;
+        }
+        EW_SHELTER_STATE.update(pos.getY(), world.getSeaLevel(), cachedVisibleSkySamples);
+    }
+
+    /** 1 = fully presented, 0 = confirmed sealed away from the storm. The single shared multiplier for every
+     *  east/west presentation channel. */
+    public static float ewPresentationVisibility() {
+        return EW_SHELTER_STATE.visibility();
+    }
+
+    /** True while confirmed shelter should PAUSE the east/west advisory episode rather than burn it -- a player
+     *  who crosses the advisory line inside a tunnel still gets the warning when they surface. */
+    public static boolean ewEpisodePaused() {
+        return EW_SHELTER_STATE.pauseEpisode();
+    }
+
+    public static void resetEwPresentationState() {
+        EW_SHELTER_STATE.reset();
+        cachedVisibleSkySamples = EwPresentationPolicy.SKY_SAMPLE_COUNT;
+    }
+
+    /** Clears every per-world client cache on disconnect, so nothing from the last world can be read as the
+     *  first frame of the next one. */
+    public static void resetForDisconnect() {
+        globeWorld = false;
+        cachedEvalWorldTime = Long.MIN_VALUE;
+        cachedEval = null;
+        cachedExposureTick = Long.MIN_VALUE;
+        cachedExposurePos = Long.MIN_VALUE;
+        cachedExposure01 = 0.0f;
+        resetEwPresentationState();
     }
 
     public static float computePoleFogEnd(double z) {

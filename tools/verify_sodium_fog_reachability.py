@@ -17,7 +17,10 @@ from pathlib import Path
 EXPECTED_SODIUM_SHA256 = "de406c7a0ca5e748dfbe44740278400882a44e3109e2584b243ec02d4003344b"
 DEAD_MIXIN = "client.compat.sodium.RenderSectionManagerVisibilityMixin"
 DEAD_SOURCE = Path("src/main/java/com/example/globe/mixin/client/compat/sodium/RenderSectionManagerVisibilityMixin.java")
-FOG_SOURCE = Path("src/main/java/com/example/globe/mixin/client/FogRendererEwMixin.java")
+# The east/west depth-fog mixin is the one Latitude class that must sit below Sodium's default-priority
+# FogData snapshot (maintainer ruling, 2026-09-12: depth fog is the east/west presentation, and it is the
+# half that writes the fog DISTANCES Sodium then reads for its culling search distance).
+FOG_SOURCE = Path("src/main/java/com/example/globe/mixin/client/FogRendererEwSetupMixin.java")
 MIXIN_CONFIG = Path("src/main/resources/globe.mixins.json")
 
 

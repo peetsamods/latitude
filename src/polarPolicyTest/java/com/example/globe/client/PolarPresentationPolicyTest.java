@@ -227,11 +227,15 @@ public final class PolarPresentationPolicyTest {
         assertTrue(state.contains("EwPresentationPolicy.warningStageRank(distanceToBorder)")
                         && state.contains("PolarPresentationPolicy.arbitrateWarning(polarRank(polar), ewRank(ew))"),
                 "Minecraft-facing warning state maps the executable dependency-free policy");
-        assertTrue(overlay.contains("GlobeClientState.arbitrateWarning(activePolarStage, activeEwStage)"),
-                "overlay arbitrates from the finite active polar episode and canonical east/west text stage");
+        // The overlay's own arbitration call is GENUINELY SUPERSEDED on this line: the polar warnings run
+        // through the five-rung core.PolarColdCues ladder and the east/west banner through the wall-clock
+        // core.EwBannerEnvelope, two independent episode machines that never need a corner arbiter because
+        // the polar ladder owns the warning line whenever it is showing and the banner takes it otherwise.
+        // GlobeClientState.arbitrateWarning is still the exposed canonical policy (asserted above), and the
+        // precedence table itself is still proven by the pure cases at the top of this method.
         assertTrue(overlay.contains("EwPresentationPolicy.warningText(")
                         && overlay.contains("ewRank(stage), border.getMinX(), border.getMaxX(), client.player.getX()")
-                        && overlay.contains("ewTextForStage(stage, client)"),
+                        && overlay.contains("ewTextForStage(ewTextStage, client)"),
                 "east/west warning copy receives the actual world borders and player position");
         assertTrue(!overlay.contains("Sandstorm on the horizon"),
                 "east/west warning copy remains truthful in polar geography");
@@ -241,6 +245,21 @@ public final class PolarPresentationPolicyTest {
                 "east/west warning rendering has no unresolved direction placeholders");
     }
 
+    /**
+     * Static integration proofs, rewritten for the merged 2.0 line (maintainer ruling, 2026-09-12).
+     *
+     * <p>The single combined {@code FogRendererEwMixin} this method used to read is gone: the ruling carried
+     * over its EAST/WEST half only, as {@code FogRendererEwSetupMixin}. Polar fog on this line is owned by
+     * {@code FogRendererPolarSetupMixin} and the {@code core.PolarFogLaw} cap table, so every assertion that
+     * described a polar half INSIDE the east/west file has been re-aimed at the file that actually owns it,
+     * and the separation assertions ("east/west cannot alter polar fog") are now proven by the stronger fact
+     * that the two live in different classes. The east/west fog ENVELOPE assertions are unchanged.
+     *
+     * <p>Likewise the east/west banner assertions: this line's banner is the wall-clock single-tier
+     * {@code core.EwBannerEnvelope}, not 1.5's tick-denominated {@code EW_WARNING_EPISODE}, so the fade
+     * assertion names the envelope's alpha. The polar warning ladder assertions are re-aimed at the 2.0
+     * five-rung {@code core.PolarColdCues} ladder, which replaced the four-stage POLAR_WARNING_EPISODE.
+     */
     private static void staticIntegrationProofsHold() throws IOException {
         String globeMod = read("src/main/java/com/example/globe/GlobeMod.java");
         assertTrue(!globeMod.contains("MobEffects.BLINDNESS"),
@@ -256,68 +275,58 @@ public final class PolarPresentationPolicyTest {
         assertTrue(ewPolicy.contains("FOG_NEAR_START_BLOCKS = 0.5f")
                         && ewPolicy.contains("FOG_NEAR_END_BLOCKS = 12.0f"),
                 "east/west fog converges on the approved near-whiteout distances");
+        assertTrue(state.contains("public static float computeEwFogEnd(double camX, float baselineEnd)")
+                        && state.contains("public static float computeEwFogStart(double camX, float baselineStart)"),
+                "the baseline-relative east/west fog distances have one exposed owner");
 
-        String mixin = read("src/main/java/com/example/globe/mixin/client/FogRendererEwMixin.java");
-        assertEquals(1, countOccurrences(mixin, "@Inject(method = \"setupFog\""),
-                "exactly one 26.2 fog hook targets the mapped setupFog method");
-        assertTrue(mixin.contains("computeEwFogEnd") && mixin.contains("computePoleFogEnd"),
-                "legacy east/west path and isolated polar path both remain present");
-        assertTrue(mixin.contains("latitude$polarEnd") && mixin.contains("latitude$blendPolarFogColor"),
-                "polar hook tightens only its own distance and blends the mapped fog color field");
+        String ewMixin = read("src/main/java/com/example/globe/mixin/client/FogRendererEwSetupMixin.java");
+        String polarMixin = read("src/main/java/com/example/globe/mixin/client/FogRendererPolarSetupMixin.java");
+        assertEquals(1, countOccurrences(ewMixin, "@Inject(method = \"setupFog\""),
+                "exactly one east/west fog hook targets the mapped setupFog method");
+        assertEquals(1, countOccurrences(polarMixin, "@Inject(method = \"setupFog\""),
+                "exactly one polar fog hook targets the mapped setupFog method");
 
-        String injectedHandler = methodSection(mixin, "private void latitude$applyFog(");
-        int ewCall = injectedHandler.indexOf("latitude$applyEwFog(");
-        int polarCall = injectedHandler.indexOf("latitude$applyPolarFog(");
-        assertTrue(ewCall >= 0 && polarCall > ewCall,
-                "single setupFog handler applies east/west fog before polar fog");
+        String injectedHandler = methodSection(ewMixin, "private void latitude$applyEwSetupFog(");
         assertTrue(injectedHandler.contains("client == null || client.level == null || client.player == null")
                         && injectedHandler.contains("camera.getFluidInCamera() != FogType.NONE"),
-                "single setupFog handler validates the client and atmospheric fog once");
+                "the setupFog handler validates the client and atmospheric fog once");
+        assertTrue(injectedHandler.contains("GlobeClientState.evaluate(client)")
+                        && injectedHandler.contains("if (!eval.active())")
+                        && injectedHandler.indexOf("if (!eval.active())")
+                                < injectedHandler.indexOf("latitude$applyEwFog("),
+                "one shared evaluation gates east/west fog before it is applied");
 
-        String ewSection = methodSection(mixin, "private static void latitude$applyEwFog(")
-                + methodSection(mixin, "private static float latitude$tightenStart(")
-                + methodSection(mixin, "private static float latitude$tightenEnd(");
+        String ewSection = methodSection(ewMixin, "private static void latitude$applyEwFog(")
+                + methodSection(ewMixin, "private static float latitude$tightenStart(")
+                + methodSection(ewMixin, "private static float latitude$tightenEnd(");
         assertTrue(ewSection.contains("computeEwFogEnd")
                         && ewSection.contains("computeEwFogStart"),
                 "east/west helper consumes the approved start and end tightening policy");
-        assertTrue(!ewSection.contains("computePoleFogEnd")
-                        && !ewSection.contains("latitude$polarEnd")
-                        && !ewSection.contains("latitude$blendPolarFogColor"),
-                "east/west helper cannot activate or alter polar fog");
-
-        String polarSection = methodSection(mixin, "private static void latitude$applyPolarFog(")
-                + methodSection(mixin, "private static void latitude$tightenPolarFogDistances(")
-                + methodSection(mixin, "private static float latitude$polarEnd(")
-                + methodSection(mixin, "private static void latitude$blendPolarFogColor(");
-        assertTrue(polarSection.contains("computePoleFogEnd")
-                        && polarSection.contains("latitude$polarEnd")
-                        && polarSection.contains("latitude$blendPolarFogColor"),
-                "polar helper retains its distance and color policy");
-        assertTrue(!polarSection.contains("computeEwFogEnd")
-                        && !polarSection.contains("ewIntensity01"),
-                "polar helper cannot activate or alter east/west fog");
-        assertTrue(injectedHandler.contains("GlobeClientState.evaluate(client)")
-                        && injectedHandler.contains("if (!eval.active())")
-                        && polarSection.contains("GlobeClientState.Eval eval")
-                        && polarSection.contains("if (!eval.surfaceOk())"),
-                "one shared evaluation gates Latitude fog before the polar surface check");
+        // Stronger than the old same-file separation assertion: the two fog laws are different classes now,
+        // so neither can reach the other's helpers even by accident.
+        assertTrue(!ewMixin.contains("computePoleFogEnd")
+                        && !ewMixin.contains("PolarPresentationPolicy")
+                        && !ewMixin.contains("latitude$applyPolarFog"),
+                "east/west fog cannot activate or alter polar fog");
+        assertTrue(!polarMixin.contains("computeEwFogEnd")
+                        && !polarMixin.contains("computeEwFogStart")
+                        && !polarMixin.contains("ewIntensity01"),
+                "polar fog cannot activate or alter east/west fog");
 
         String overlay = read("src/main/java/com/example/globe/client/GlobeWarningOverlay.java");
-        assertTrue(overlay.contains("POLAR_WARNING_EPISODE.update"),
-                "overlay updates the polar episode gate");
-        assertTrue(overlay.contains("drawCenteredPolarWarning") && overlay.contains("outlineOffsets()"),
+        assertTrue(overlay.contains("PolarColdCues.evaluateLadder("),
+                "overlay advances the polar warning ladder from the pure decision owner");
+        assertTrue(overlay.contains("renderPoleWarningEpisode") && overlay.contains("OUTLINE_OFFSETS_8"),
                 "polar text uses explicit outline draws");
-        String poleTextSection = methodSection(overlay, "private static Component poleTextForStage(");
+        String poleTextSection = methodSection(overlay, "private static Component poleTextForRung(");
         assertTrue(!poleTextSection.contains("ChatFormatting.BOLD"),
                 "danger and lethal polar warnings use a non-bold red fill");
-        String polarDrawSection = methodSection(overlay, "private static void drawCenteredPolarWarning(");
-        assertTrue(polarDrawSection.contains("Component.literal(text.getString())")
-                        && polarDrawSection.contains("POLAR_KEYLINE_RGB")
-                        && polarDrawSection.contains("keylineText"),
+        String polarDrawSection = methodSection(overlay, "private static void drawCenteredWarning(");
+        assertTrue(polarDrawSection.contains("Component.literal(lines.get(i))")
+                        && polarDrawSection.contains("POLE_KEYLINE_RGB")
+                        && polarDrawSection.contains("keyC"),
                 "polar warning keyline is a styleless dark component");
-        assertTrue(countOccurrences(polarDrawSection, ", false);") >= 2,
-                "polar keyline and fill both render without drop shadows");
-        assertTrue(overlay.contains("EW_WARNING_EPISODE.alpha")
+        assertTrue(overlay.contains("ewDecision.alpha()")
                         && overlay.contains("drawCenteredEwWarning"),
                 "east/west warning uses its finite fade and explicit keyline path");
     }

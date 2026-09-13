@@ -12,6 +12,8 @@ import net.minecraft.world.attribute.EnvironmentAttributes;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import com.mojang.renderpearl.api.commands.RenderPass;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -19,6 +21,9 @@ import net.minecraft.client.renderer.SkyRenderer;
 import net.minecraft.client.renderer.state.level.SkyRenderState;
 import net.minecraft.world.level.Level;
 import org.joml.Quaternionfc;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
+import org.joml.Vector4fc;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -32,8 +37,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *
  * <ol>
  *   <li><b>The celestial tilt (A6 option B, PRIMARY).</b> {@code @WrapOperation} on the PER-BODY
- *       {@code PoseStack.mulPose} calls inside {@code renderSunMoonAndStars} (bytecode receipt: ordinal 0 =
- *       the shared {@code YP(-90)} yaw — untouched; 1 = sun {@code XP(sunAngle)}; 2 = moon; 3 = stars).
+ *       {@code PoseStack.rotate(Axis, float)} calls inside {@code renderSunMoonAndStars} (26.3-rc-2 bytecode
+ *       receipt: the shared {@code YP(-90)} yaw goes through {@code rotateDegrees} and is untouched; the
+ *       {@code rotate(Axis,float)} ordinals are 0 = sun {@code XP(sunAngle)}, 1 = moon, 2 = stars).
  *       Each body's vanilla rotation argument is replaced with {@link SolarPose#tiltedBodyPose}
  *       ({@code ZP(−φ)·q·ZP(+δ)}; stars tilt-only) — the numerically-solved composition that lands the body
  *       exactly on {@link SolarTilt#solarDirection} and reduces to vanilla BY CONSTRUCTION at φ = 0, δ = 0
@@ -95,21 +101,40 @@ public class SkyRendererSolarTiltMixin {
         return new double[] {phi, delta};
     }
 
-    /** SUN (ordinal 1): full tilt + declination, ROLL-FREE (S11d — the bare composition rolled the quad into
-     *  the TEST 101 "diamond sun"; the horizon-locked rebuild keeps the direction and uprights the billboard).
-     *  Ordinal 0 (the shared yaw) is not wrapped, so flag-off/off-globe frames execute vanilla's exact chain. */
+    /**
+     * SUN (ordinal 0 of {@code rotate(Axis,float)}): full tilt + declination, ROLL-FREE (S11d — the bare
+     * composition rolled the quad into the TEST 101 "diamond sun"; the horizon-locked rebuild keeps the
+     * direction and uprights the billboard).
+     *
+     * <p><b>26.3 seam change (verified with javap -c on the 26.3-rc-2 jar).</b> {@code renderSunMoonAndStars}
+     * no longer calls {@code PoseStack.mulPose(Quaternionfc)} at all: that method was renamed
+     * {@code PoseStack.rotate(Quaternionfc)}, and the method now rotates through the new
+     * {@code rotate(Axis, float)} / {@code rotateDegrees(Axis, float)} conveniences. The bytecode is
+     * {@code rotateDegrees(YP, -90)} (the shared yaw) followed by exactly three {@code rotate(XP, angle)}
+     * calls: sun, moon, stars. Because the yaw now goes through a DIFFERENT method, the three body rotations
+     * are ordinals 0/1/2 of {@code rotate(Axis,float)} — the shared yaw is structurally outside the ordinal
+     * sequence instead of being ordinal 0 of it, so it still cannot be hit by accident.
+     *
+     * <p>The wrapped call takes an axis and an angle rather than a quaternion, so the handler rebuilds
+     * vanilla's own rotation with {@code axis.rotation(angle)} — which is exactly what
+     * {@code PoseStack.rotate(Axis,float)} applies (javap: it forwards to {@code Axis.rotate(Matrix4f,float)},
+     * the matrix form of that same rotation) — feeds it to the unchanged {@link SolarPose} math, and applies
+     * the result through {@code rotate(Quaternionfc)}. Flag-off / off-globe frames call the operation
+     * untouched, so they still execute vanilla's exact chain.
+     */
     @WrapOperation(method = "renderSunMoonAndStars", at = @At(value = "INVOKE",
-            target = "Lcom/mojang/blaze3d/vertex/PoseStack;mulPose(Lorg/joml/Quaternionfc;)V", ordinal = 1))
-    private void globe$tiltSunPose(PoseStack stack, Quaternionfc vanillaRotation, Operation<Void> original) {
+            target = "Lcom/mojang/blaze3d/vertex/PoseStack;rotate(Lcom/mojang/math/Axis;F)V", ordinal = 0))
+    private void globe$tiltSunPose(PoseStack stack, Axis axis, float angle, Operation<Void> original) {
         double[] ctx = globe$tiltContext();
         if (ctx == null) {
-            original.call(stack, vanillaRotation);
+            original.call(stack, axis, angle);
             return;
         }
-        original.call(stack, SolarPose.rollFreeTiltedBodyPose(vanillaRotation, ctx[0], ctx[1]));
+        Quaternionfc vanillaRotation = axis.rotation(angle);
+        stack.rotate(SolarPose.rollFreeTiltedBodyPose(vanillaRotation, ctx[0], ctx[1]));
     }
 
-    /** MOON (ordinal 2): full tilt + the MIRROR declination −δ (S11e — the TEST 101 "sun AND moon both up
+    /** MOON (ordinal 1): full tilt + the MIRROR declination −δ (S11e — the TEST 101 "sun AND moon both up
      *  under the midnight sun" bug). The moon's own vanilla angle (antipodal H+π) always survived the wrap;
      *  the bug was giving the moon the SUN's +δ, which hoisted it onto the sun's never-setting small circle —
      *  in the midnight-sun band EVERY point of that circle is above the horizon, so the phase offset no
@@ -117,33 +142,41 @@ public class SkyRendererSolarTiltMixin {
      *  circle) the moon is the sun's EXACT antipode — midnight sun ⇒ moon permanently down, polar night ⇒
      *  the moon owns the sky — and δ = 0 still reduces to vanilla. Roll-free like the sun (same billboard). */
     @WrapOperation(method = "renderSunMoonAndStars", at = @At(value = "INVOKE",
-            target = "Lcom/mojang/blaze3d/vertex/PoseStack;mulPose(Lorg/joml/Quaternionfc;)V", ordinal = 2))
-    private void globe$tiltMoonPose(PoseStack stack, Quaternionfc vanillaRotation, Operation<Void> original) {
+            target = "Lcom/mojang/blaze3d/vertex/PoseStack;rotate(Lcom/mojang/math/Axis;F)V", ordinal = 1))
+    private void globe$tiltMoonPose(PoseStack stack, Axis axis, float angle, Operation<Void> original) {
         double[] ctx = globe$tiltContext();
         if (ctx == null) {
-            original.call(stack, vanillaRotation);
+            original.call(stack, axis, angle);
             return;
         }
-        original.call(stack, SolarPose.rollFreeTiltedBodyPose(vanillaRotation, ctx[0], -ctx[1]));
+        Quaternionfc vanillaRotation = axis.rotation(angle);
+        stack.rotate(SolarPose.rollFreeTiltedBodyPose(vanillaRotation, ctx[0], -ctx[1]));
     }
 
-    /** Stars (ordinal 3): tilt only — the sphere wheels around a celestial pole at altitude φ (§5: the δ
+    /** Stars (ordinal 2): tilt only — the sphere wheels around a celestial pole at altitude φ (§5: the δ
      *  offset is meaningless for a full-sphere field). */
     @WrapOperation(method = "renderSunMoonAndStars", at = @At(value = "INVOKE",
-            target = "Lcom/mojang/blaze3d/vertex/PoseStack;mulPose(Lorg/joml/Quaternionfc;)V", ordinal = 3))
-    private void globe$tiltStarPose(PoseStack stack, Quaternionfc vanillaRotation, Operation<Void> original) {
+            target = "Lcom/mojang/blaze3d/vertex/PoseStack;rotate(Lcom/mojang/math/Axis;F)V", ordinal = 2))
+    private void globe$tiltStarPose(PoseStack stack, Axis axis, float angle, Operation<Void> original) {
         double[] ctx = globe$tiltContext();
         if (ctx == null) {
-            original.call(stack, vanillaRotation);
+            original.call(stack, axis, angle);
             return;
         }
-        original.call(stack, SolarPose.tiltedStarPose(vanillaRotation, ctx[0]));
+        Quaternionfc vanillaRotation = axis.rotation(angle);
+        stack.rotate(SolarPose.tiltedStarPose(vanillaRotation, ctx[0]));
     }
 
     /** A3: no vanilla sunrise/sunset glow inside the midnight-sun / polar-night bands (wrong compass point,
-     *  wrong hours). Equatorward of the visual onset the glow is vanilla-untouched. */
+     *  wrong hours). Equatorward of the visual onset the glow is vanilla-untouched.
+     *
+     *  <p>26.3 reshaped the target to
+     *  {@code renderSunriseAndSunset(RenderPass, PoseStack, float, Vector4fc)} — a render pass leads, and the
+     *  packed-int colour became an RGBA vector. Nothing here reads any of them; only the handler's parameter
+     *  list had to follow, or the HEAD injector would no longer match the descriptor. */
     @Inject(method = "renderSunriseAndSunset", at = @At("HEAD"), cancellable = true)
-    private void globe$suppressPolarGlow(PoseStack poseStack, float alpha, int color, CallbackInfo ci) {
+    private void globe$suppressPolarGlow(RenderPass renderPass, PoseStack poseStack, float alpha,
+                                         Vector4fc color, CallbackInfo ci) {
         double[] ctx = globe$tiltContext();
         if (ctx == null) {
             return;
@@ -179,7 +212,7 @@ public class SkyRendererSolarTiltMixin {
         if (SolarTilt.isPolarNight(phi, delta)) {
             // S14(a)(ii): gloom deepened to ~1.0 (GLOOM_MAX_BLEND 0.85->0.97) — full-dark deep polar-night sky.
             double gloom = SolarSkyMood.stormDamp(SolarSkyMood.polarNightGloom01(elevation), storm);
-            state.skyColor = SolarSkyMood.blendRgb(state.skyColor, SolarSkyMood.POLAR_NIGHT_SKY_RGB,
+            state.skyColor = globe$blendSkyColor(state.skyColor, SolarSkyMood.POLAR_NIGHT_SKY_RGB,
                     gloom * SolarSkyMood.GLOOM_MAX_BLEND);
             state.starBrightness = SolarSkyMood.liftedStarBrightness(state.starBrightness, gloom);
         } else if (SolarTilt.isMidnightSun(phi, delta)) {
@@ -197,9 +230,9 @@ public class SkyRendererSolarTiltMixin {
             double floorReach = SolarSkyMood.midnightSunFloorReach01(true, Math.abs(phi),
                     SolarTilt.onsetLatDeg(delta));
             double duskBlend = SolarSkyMood.midnightSunDuskBlend01(frac, storm, floorReach);
-            state.skyColor = SolarSkyMood.blendRgb(state.skyColor, SolarSkyMood.MIDNIGHT_SUN_DUSK_RGB, duskBlend);
+            state.skyColor = globe$blendSkyColor(state.skyColor, SolarSkyMood.MIDNIGHT_SUN_DUSK_RGB, duskBlend);
             double gold = SolarSkyMood.stormDamp(SolarSkyMood.midnightSunGold01(elevation), storm);
-            state.skyColor = SolarSkyMood.blendRgb(state.skyColor, SolarSkyMood.MIDNIGHT_SUN_SKY_RGB,
+            state.skyColor = globe$blendSkyColor(state.skyColor, SolarSkyMood.MIDNIGHT_SUN_SKY_RGB,
                     gold * SolarSkyMood.GOLD_MAX_BLEND);
             state.starBrightness = SolarSkyMood.suppressedStarBrightness(state.starBrightness, holdRaw);
         }
@@ -236,7 +269,37 @@ public class SkyRendererSolarTiltMixin {
         if (t <= 0.0) {
             return;
         }
-        int cloudColor = (Integer) camera.attributeProbe().getValue(EnvironmentAttributes.CLOUD_COLOR, partialTick);
-        state.skyColor = SolarSkyMood.blendRgb(state.skyColor, cloudColor, t);
+        // 26.3: CLOUD_COLOR is an RGBA Vector4fc and skyColor an RGB Vector3fc (both were packed ints in
+        // 26.2). The overcast pull is an RGB blend, so the cloud alpha is deliberately ignored -- the blend
+        // WEIGHT is stormOvercastBlend01, exactly as before, not the cloud's own opacity.
+        Vector4fc cloudColor = camera.attributeProbe().getValue(EnvironmentAttributes.CLOUD_COLOR, partialTick);
+        state.skyColor = globe$blendSkyColor(state.skyColor,
+                cloudColor.x(), cloudColor.y(), cloudColor.z(), t);
+    }
+
+    /**
+     * Blend {@code skyColor} toward a packed RGB target. 26.3 retyped {@code SkyRenderState.skyColor} from a
+     * packed ARGB {@code int} to an {@code org.joml.Vector3fc}, so the palette constants (still packed ints,
+     * and still the single source of truth in {@link SolarSkyMood}) are normalised per channel here and the
+     * lerp itself is {@link SolarSkyMood#blendChannel01}. A NEW vector is always returned: the render state's
+     * current value may be a shared immutable view, and mutating it in place would leak the mood into
+     * whatever else holds that reference.
+     */
+    @Unique
+    private static Vector3f globe$blendSkyColor(Vector3fc base, int targetRgb, double t01) {
+        return globe$blendSkyColor(base,
+                SolarSkyMood.channel01(targetRgb, 16),
+                SolarSkyMood.channel01(targetRgb, 8),
+                SolarSkyMood.channel01(targetRgb, 0),
+                t01);
+    }
+
+    /** Channel-wise form, for a target that is already normalised floats (the cloud colour). */
+    @Unique
+    private static Vector3f globe$blendSkyColor(Vector3fc base, float r, float g, float b, double t01) {
+        return new Vector3f(
+                SolarSkyMood.blendChannel01(base.x(), r, t01),
+                SolarSkyMood.blendChannel01(base.y(), g, t01),
+                SolarSkyMood.blendChannel01(base.z(), b, t01));
     }
 }

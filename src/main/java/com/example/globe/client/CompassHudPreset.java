@@ -13,7 +13,7 @@ import java.lang.reflect.Modifier;
  * player preferences about the game, not part of a compass "look" someone would want to save or share.
  *
  * <p>Backs BOTH the 8-slot Presets tab and the Export/Import-to-clipboard feature (2026-07-08,
- * Peetsa's request) -- they are the exact same shape, just persisted to a different place (a numbered
+ * the maintainer's request) -- they are the exact same shape, just persisted to a different place (a numbered
  * slot file vs. the system clipboard), so this one class serves both.
  */
 public final class CompassHudPreset {
@@ -22,7 +22,7 @@ public final class CompassHudPreset {
      *  null-then-sanitize behavior, not a parse failure (same discipline as every other config here). */
     public int presetFormatVersion = 1;
 
-    /** Owner-editable slot name (HUD Studio round 10, Peetsa: "stop identical unnamed rows"). Null / blank =
+    /** Owner-editable slot name (HUD Studio round 10, the maintainer: "stop identical unnamed rows"). Null / blank =
      *  the DEFAULT behavior -- the auto-summary of the look ({@link CompassHudPresetSlots#summarize}). Persisted
      *  with the preset data (a plain Gson field) so a renamed slot keeps its name across sessions and rides along
      *  in an Export/Import blob. Not applied to the live HUD by {@link #applyToLive()} -- it names the slot, it is
@@ -66,7 +66,7 @@ public final class CompassHudPreset {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    // One-level undo/redo for the last Load/Import (2026-07-09, Peetsa's request: recover from an accidental
+    // One-level undo/redo for the last Load/Import (2026-07-09, the maintainer's request: recover from an accidental
     // load, and re-apply it if the undo itself was the accident). In-memory only (a mistaken load is a
     // this-session accident, not something worth persisting to disk like the numbered slots) -- plain static
     // fields, same pattern as every other singleton here. Classic single-step toggle: a fresh Load/Import

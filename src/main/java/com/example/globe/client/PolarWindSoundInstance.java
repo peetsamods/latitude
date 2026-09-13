@@ -131,7 +131,7 @@ public final class PolarWindSoundInstance extends AbstractTickableSoundInstance 
         // TEST 78: continuous muffle. Full volume out in the open (exposure01 ~1), blended down to the
         // SHELTERED_VOLUME_SCALE floor in a sealed room (exposure01 ~0), partial under an open arch / at a
         // doorway -- tracked live each tick so it fades smoothly as the player moves through an opening. (Was
-        // a hard 1.0/0.35 step off eval.surfaceOk(), which muffled the wind under Peetsa's open arch.)
+        // a hard 1.0/0.35 step off eval.surfaceOk(), which muffled the wind under the maintainer's open arch.)
         this.volume = PolarWindSound.liveVolume(absLatDeg, eval.exposure01());
     }
 }

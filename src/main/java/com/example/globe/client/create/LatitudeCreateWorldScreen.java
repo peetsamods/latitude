@@ -1,5 +1,6 @@
 package com.example.globe.client.create;
 
+import com.example.globe.GlobeMod;
 import com.example.globe.client.GlobeWorldSize;
 import com.example.globe.client.LatitudeConfig;
 import com.example.globe.client.LatitudeHudStudioScreen;
@@ -8,6 +9,8 @@ import com.example.globe.core.config.LatitudeConfigData.AccessibilityMode;
 import com.example.globe.core.ui.AccessibilityPalette;
 import com.example.globe.util.LatitudeBands;
 import com.example.globe.world.LatitudeBiomes;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
@@ -16,15 +19,19 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
-import net.minecraft.client.gui.screens.GenericMessageScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
 import net.minecraft.client.gui.screens.worldselection.DataPackReloadCookie;
 import net.minecraft.client.gui.screens.worldselection.WorldCreationGameRulesScreen;
 import net.minecraft.client.gui.screens.worldselection.WorldCreationContext;
 import net.minecraft.client.gui.screens.worldselection.WorldCreationContextMapper;
+import net.minecraft.client.gui.screens.worldselection.WorldCreationUiState;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.commands.Commands;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.WorldLoader;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.ServerPacksSource;
@@ -34,10 +41,13 @@ import net.minecraft.world.Difficulty;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.level.DataPackConfig;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.WorldGenSettings;
 import net.minecraft.world.level.levelgen.WorldOptions;
+import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -53,12 +63,21 @@ public class LatitudeCreateWorldScreen extends Screen {
     private static final Logger LOGGER = LoggerFactory.getLogger("LatitudeCreateWorldScreen");
 
     // ── Theme constants ──
-    private static final int BG_COLOR = 0xFF2C2420;
+    // The panel bodies and the inactive tab fills are translucent at a FIXED 80% (alpha 204) so the
+    // panorama reads through Latitude's own window. 80 is a design value, not a preference: the
+    // per-screen opacity slider and its MIN/DEFAULT/MAX constants were deliberately removed, and
+    // CreateWorldScreenUiPolicyTest fails if either comes back. Borders, gold and warm white stay fully
+    // opaque -- only the two background fills go translucent, so text and chrome stay crisp.
+    /** The flat Still backdrop: opaque on purpose. It is a cover for the panorama, not a panel. */
+    private static final int STILL_BACKGROUND_COLOR = 0xFF2C2420;
+    private static final int PANEL_BG_RGB = 0x3A302A;
+    private static final int TAB_INACTIVE_BG_RGB = 0x2A2420;
     private static final int GOLD = 0xFFD4A74A;
     private static final int WARM_WHITE = 0xFFEDE0D0;
     private static final int MUTED = 0xFF8C8078;
     private static final int PANEL_BORDER = 0xFF5C4A3A;
-    private static final int PANEL_BG = 0xFF3A302A;
+    private static final int PANEL_BG = CreateWorldScreenUiPolicy.bespokeBackground(PANEL_BG_RGB);
+    private static final int TAB_INACTIVE_BG = CreateWorldScreenUiPolicy.bespokeBackground(TAB_INACTIVE_BG_RGB);
     private static final int SCROLLBAR_GUTTER = 6;
     private static final int MIN_LEFT_W = 108;   // World: text fields (leftW-8) + padding
     private static final int MIN_RIGHT_W = 130;  // Spawn Zone: zone rows + description
@@ -69,7 +88,17 @@ public class LatitudeCreateWorldScreen extends Screen {
     // laptop, ~456px viewport) squeezes three columns into a cramped, heavily-wrapping mess. At ~530 GUI 3
     // (~616px) stays three-column while GUI 4 drops to the tabbed layout, and every column has comfortable room.
     private static final int COMFORTABLE_THREE_COL_W = 530;
+    /** At or above this GUI scale the screen ALWAYS goes tabbed, whatever the viewport width says. */
+    private static final int HIGH_GUI_SCALE = 3;
+    /** The wider of the two Still labels sizes the tab, so toggling never changes its width. */
+    private static final String STILL_TAB_WIDEST_LABEL = "Still: OFF";
     private static final double[] PREVIEW_LABEL_DEGREES = {0.0, 23.5, 35.0, 50.0, 66.5, 90.0};
+
+    private static final float CREATE_VERSION_LABEL_SCALE = 0.67f;
+    private static final String CREATE_VERSION_LABEL = FabricLoader.getInstance()
+            .getModContainer(GlobeMod.MOD_ID)
+            .map(container -> "v" + container.getMetadata().getVersion().getFriendlyString())
+            .orElse("");
 
     private static final GlobeWorldSize DEFAULT_SIZE = GlobeWorldSize.REGULAR;
 
@@ -126,7 +155,7 @@ public class LatitudeCreateWorldScreen extends Screen {
     // ── World shape constants (2.0 "Longitude" release) ──
     // Index 0 = Mercator/Wide (the current forced default for every new world; MUST stay index 0 so
     // worldShapeIdx=0 preserves today's behavior for anyone who never touches this toggle).
-    // Display names renamed per Peetsa 2026-07-10: "Mercator 2:1"/"Legacy 1:1" -> "Wide 2:1"/"Square 1:1"
+    // Display names renamed per the maintainer 2026-07-10: "Mercator 2:1"/"Legacy 1:1" -> "Wide 2:1"/"Square 1:1"
     // (user-facing only; the underlying LatitudeBiomes.GlobeShape enum stays MERCATOR/CLASSIC).
     private static final String[] WORLD_SHAPE_NAMES = { "Wide 2:1", "Square 1:1" };
     private static final int[] WORLD_SHAPE_COLORS = { GOLD, MUTED };
@@ -137,7 +166,7 @@ public class LatitudeCreateWorldScreen extends Screen {
     // subtler than the Atlas band's traveling Gaussian crest (see LatitudePlanisphereRenderer) -- this reads
     // as "alive", not "jumping". Wall-clock driven, same System.currentTimeMillis() idiom as every other
     // animation on this screen.
-    // Motion-sickness tone-down (Peetsa, 2026-07-11 -- "a teensy smidge" calmer so the wave can't nauseate anyone):
+    // Motion-sickness tone-down (the maintainer, 2026-07-11 -- "a teensy smidge" calmer so the wave can't nauseate anyone):
     // amplitude 1.8 -> 1.4 (smaller bob) and period 0.95 -> 1.1s (slower = less oscillation energy). Still alive, just
     // gentler; letter phase is unchanged so the wave still TRAVELS across the word rather than pulsing in place.
     private static final double ZONE_BOUNCE_PERIOD_SEC = 1.1;   // one full bob; slowed a touch to bleed off oscillation energy (motion-sickness tone-down) -- still a lively ripple, not a slow heave
@@ -145,7 +174,7 @@ public class LatitudeCreateWorldScreen extends Screen {
     private static final double ZONE_BOUNCE_LETTER_PHASE = 0.6; // radians of phase lag per letter -> a soft travelling wave (unchanged: the wave must still travel)
     private static final double ZONE_TAB_SHIMMER_PERIOD_SEC = 2.4; // slower than the Atlas crest's 2.6s sweep
     private static final double ZONE_TAB_SHIMMER_AMPLITUDE = 0.20; // +/-20% brightness
-    // Accessibility (Peetsa 2026-07-11): the selected zone row's name/subtitle were barely brighter than an
+    // Accessibility (the maintainer 2026-07-11): the selected zone row's name/subtitle were barely brighter than an
     // unselected row's. These lift multipliers (fed through the existing liftBrightness helper, same idiom as
     // the wordmark's gold breath) push the selected name to a distinctly brighter gold and the selected
     // subtitle to a distinctly brighter warm grey, while leaving unselected rows (GOLD/MUTED) untouched.
@@ -179,6 +208,11 @@ public class LatitudeCreateWorldScreen extends Screen {
 
     private String worldNameInput = "New World";
     private String seedInput = "";
+    /** Real difficulty state. There is no on-screen control for it: it arrives from a Re-Create's saved
+     *  state or from the vanilla screen behind the escape hatch, and Hardcore overrides it at use time
+     *  (see {@link #effectiveDifficulty()}). Before this existed the screen simply discarded whatever
+     *  difficulty the state carried and created every non-Hardcore world on Normal. */
+    private Difficulty selectedDifficulty = Difficulty.NORMAL;
     private Button seedRandomBtn;
     private Button seedCopyBtn;
     private EditBox worldNameField;
@@ -186,6 +220,7 @@ public class LatitudeCreateWorldScreen extends Screen {
     private Button sizePrevBtn;
     private Button sizeNextBtn;
     private final List<ZoneRowWidget> zoneRows = new ArrayList<>();
+    private final List<TabHitboxWidget> tabHitboxes = new ArrayList<>();
     // Rules-panel buttons are added via addWidget (input/focus only, NOT auto-rendered by super) and rendered
     // manually inside the panel's scissor in extractRenderState, so they clip into partial "half buttons" at
     // the scroll edges (like vanilla option lists) instead of popping. 26.2 sealed Button's own render
@@ -209,6 +244,28 @@ public class LatitudeCreateWorldScreen extends Screen {
     private Button modeNextBtn;
     private RulesIconRow gameRulesBtn;
     private RulesIconRow hudStudioBtn;
+    /** The way out of Latitude's own flow. Without it this screen is a dead end for anyone wanting a
+     *  Superflat, a datapack world, or another mod's world type, because Latitude claims the vanilla
+     *  create-world screen (issue #19). Kept LAST in the rail. */
+    private RulesIconRow otherWorldTypesBtn;
+
+    // ── Title intro (tabbed mode only) ──
+    // Tabbed mode has no room for a permanent header, so the wordmark plays once as a brief centred
+    // overlay instead and then hands the space back to the panels (maintainer ruling, 2026-08-08). The
+    // timing lives in CreateWorldIntroClock and the pixels in CreateWorldIntroTitle so the create screen,
+    // the preparing screen and the generic-message overlay all show one identical fade. Any click or key
+    // skips it, so it can never block the player.
+    private boolean introSkipped;
+    private boolean introClockClaimed;
+    private final boolean continueIntroFromPreparing;
+    private Button createWorldBtn;
+    private Button cancelBtn;
+    /** The Still control: a bespoke tab hung from the panel's bottom-left edge (see drawStillTab). */
+    private StillTabWidget stillBackgroundBtn;
+    private int stillTabX;
+    private int stillTabY;
+    private int stillTabW;
+    private boolean lastInputWasMouse;
 
     // ── Layout cache (computed in init, used in render) ──
     private int headerY;
@@ -276,13 +333,17 @@ public class LatitudeCreateWorldScreen extends Screen {
     private int activeTab; // 0=World, 1=Spawn Zone, 2=Rules
     private static final String[] TAB_LABELS = {"World", "Spawn Zone", "Rules"};
     private static final int TAB_H = 20;
-    private static final int TAB_GAP = 4;
     private int tabStripY;
     private int tabPanelTop; // content area top (below tab strip)
     private long debugSwitchSampleDeadlineMs;
     private int debugSwitchSeq;
 
     private LatitudeCreateWorldScreen(Runnable onClose, @Nullable Screen parent, WorldCreationContext holder) {
+        this(onClose, parent, holder, false);
+    }
+
+    private LatitudeCreateWorldScreen(Runnable onClose, @Nullable Screen parent,
+                                      WorldCreationContext holder, boolean continueIntroFromPreparing) {
         super(Component.literal("New World"));
         LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.<init> parent={} holder={}",
                 parent == null ? "null" : parent.getClass().getName(),
@@ -290,28 +351,200 @@ public class LatitudeCreateWorldScreen extends Screen {
         this.onClose = onClose;
         this.parent = parent;
         this.holder = holder;
+        this.continueIntroFromPreparing = continueIntroFromPreparing;
         this.gameRules = new GameRules(holder.dataConfiguration().enabledFeatures());
     }
 
-    public static void openLoaded(Minecraft client, Runnable onClose, @Nullable Screen parent, WorldCreationContext holder,
-                                  @Nullable String seed, @Nullable String worldName) {
-        LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.openLoaded parent={} holder={} seedPreset={} namePreset={}",
-                parent == null ? "null" : parent.getClass().getName(),
-                holder,
-                seed != null && !seed.isBlank(),
-                worldName != null && !worldName.isBlank());
-        LatitudeCreateWorldScreen screen = new LatitudeCreateWorldScreen(onClose, parent, holder);
-        client.setScreenAndShow(screen);
-        // Carry over the seed AND world name vanilla was holding. On "Re-create" both come from the source
-        // world (seed via getSeed(), name via getName()); on a fresh create they are the defaults. This makes
-        // recreate pre-fill both fields instead of resetting them (TEST 1 A5 + bug-catcher #2: recreate used to
-        // drop the source name and always create "New World"). probeSetWorldInputs no-ops on a blank seed/name,
-        // so fresh create still starts empty/default.
-        boolean hasSeed = seed != null && !seed.isBlank();
-        boolean hasName = worldName != null && !worldName.isBlank();
-        if (hasSeed || hasName) {
-            screen.probeSetWorldInputs(hasName ? worldName : null, hasSeed ? seed : null, null);
+    private LatitudeCreateWorldScreen(Runnable onClose, @Nullable Screen parent,
+                                      WorldCreationUiState initialState, boolean recreated,
+                                      @Nullable String recreatedPresetId,
+                                      @Nullable String recreatedGlobeShapeId,
+                                      boolean continueIntroFromPreparing) {
+        this(onClose, parent, initialState.getSettings(), continueIntroFromPreparing);
+        if (recreated) {
+            hydrateInitialState(initialState, recreated, recreatedPresetId, recreatedGlobeShapeId);
         }
+    }
+
+    /**
+     * Whether this screen can faithfully represent the state vanilla is holding.
+     *
+     * <p>A fresh create always can. A Re-Create can only when the source world resolves to a world type
+     * this screen actually has a control for -- otherwise hijacking the vanilla screen would silently
+     * rewrite someone's Superflat or datapack world into a Latitude one. The redirect asks this BEFORE
+     * taking over, so an unrepresentable Re-Create is simply left on vanilla's own screen.</p>
+     */
+    public static boolean canRepresent(WorldCreationUiState initialState, boolean recreated,
+                                       @Nullable String recreatedPresetId) {
+        return !recreated
+                || (effectivePresetKey(initialState, recreated, recreatedPresetId) != null
+                && worldTypeIndex(initialState, recreated, recreatedPresetId) >= 0);
+    }
+
+    public static boolean canRepresent(WorldCreationUiState initialState, boolean recreated) {
+        return canRepresent(initialState, recreated, null);
+    }
+
+    /**
+     * Opens the bespoke screen on a context vanilla has already loaded.
+     *
+     * <p>The whole {@link WorldCreationUiState} travels rather than a name/seed pair: it carries name,
+     * seed, difficulty, game mode, allowCommands, bonus chest, structures and game rules, so Re-Create
+     * restores what the player actually had instead of the two fields that used to be carried by hand.</p>
+     */
+    public static void openLoaded(Minecraft client, Runnable onClose, @Nullable Screen parent,
+                                  WorldCreationUiState initialState, boolean recreated,
+                                  @Nullable String recreatedPresetId,
+                                  @Nullable String recreatedGlobeShapeId) {
+        LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.openLoaded parent={} recreated={} seedSet={} holder={}",
+                parent == null ? "null" : parent.getClass().getName(),
+                recreated,
+                initialState.getSeed() != null && !initialState.getSeed().isBlank(),
+                initialState.getSettings());
+        client.gui.setScreen(new LatitudeCreateWorldScreen(
+                onClose, parent, initialState, recreated, recreatedPresetId, recreatedGlobeShapeId, true));
+    }
+
+    public static void openLoaded(Minecraft client, Runnable onClose, @Nullable Screen parent,
+                                  WorldCreationUiState initialState, boolean recreated,
+                                  @Nullable String recreatedPresetId) {
+        openLoaded(client, onClose, parent, initialState, recreated, recreatedPresetId, null);
+    }
+
+    public static void openLoaded(Minecraft client, Runnable onClose, @Nullable Screen parent,
+                                  WorldCreationUiState initialState, boolean recreated) {
+        openLoaded(client, onClose, parent, initialState, recreated, null, null);
+    }
+
+    private void hydrateInitialState(WorldCreationUiState initialState, boolean recreated,
+                                     @Nullable String recreatedPresetId,
+                                     @Nullable String recreatedGlobeShapeId) {
+        this.worldNameInput = initialState.getName();
+        this.seedInput = initialState.getSeed();
+        this.allowCommands = initialState.isAllowCommands();
+        this.selectedDifficulty = initialState.getDifficulty();
+        this.bonusChest = initialState.isBonusChest();
+        this.generateStructures = initialState.isGenerateStructures();
+        this.gameRules = initialState.getGameRules();
+        this.selectedModeIdx = switch (initialState.getGameMode()) {
+            case HARDCORE -> 1;
+            case CREATIVE -> 2;
+            default -> 0;
+        };
+
+        int loadedWorldType = worldTypeIndex(initialState, recreated, recreatedPresetId);
+        if (loadedWorldType < 0) {
+            throw new IllegalArgumentException(
+                    "Unsupported Re-create world preset: "
+                            + effectivePresetKey(initialState, recreated, recreatedPresetId));
+        }
+        this.worldTypeIdx = loadedWorldType;
+
+        if (loadedWorldType == 0) {
+            var key = effectivePresetKey(initialState, recreated, recreatedPresetId);
+            for (GlobeWorldSize size : GlobeWorldSize.values()) {
+                if (size.worldPresetId.equals(key.identifier())) {
+                    this.selectedSize = size;
+                    break;
+                }
+            }
+            hydrateWorldShape(recreatedGlobeShapeId);
+        }
+
+        LOGGER.info(
+                "[LAT][CWPATH] hydrated create state seedSet={} mode={} commands={} difficulty={} bonusChest={} structures={} worldType={} size={} shape={}",
+                this.seedInput != null && !this.seedInput.isBlank(),
+                MODE_NAMES[this.selectedModeIdx],
+                this.allowCommands,
+                this.selectedDifficulty,
+                this.bonusChest,
+                this.generateStructures,
+                this.worldTypeIdx,
+                this.selectedSize,
+                WORLD_SHAPE_NAMES[this.worldShapeIdx]);
+    }
+
+    /**
+     * Recovers the World Shape axis from the source world's own saved state.
+     *
+     * <p>The shape rides a separate {@code globe_shape} save field rather than the preset id, so nothing
+     * in vanilla's carried state knows about it and a Re-Create would otherwise hand a Square 1:1 world
+     * back as Wide 2:1. The id is read off disk by the world-list entry (the only place that knows which
+     * save is being recreated) and carried here through {@link RecreatedWorldPresetCarrier}.</p>
+     *
+     * <p>An absent id means "never stamped", NOT "Mercator", and keeps this screen's own default. That
+     * asymmetry is deliberate and matches the save format's own rule: a world written before the shape
+     * axis existed must not be retroactively declared to be either shape.</p>
+     */
+    private void hydrateWorldShape(@Nullable String recreatedGlobeShapeId) {
+        if (recreatedGlobeShapeId == null || recreatedGlobeShapeId.isBlank()) {
+            return;
+        }
+        this.worldShapeIdx = LatitudeBiomes.shapeFromString(recreatedGlobeShapeId)
+                == LatitudeBiomes.GlobeShape.MERCATOR ? 0 : 1;
+    }
+
+    @Nullable
+    private static ResourceKey<WorldPreset> presetKey(WorldCreationUiState initialState) {
+        if (initialState == null || initialState.getWorldType() == null
+                || initialState.getWorldType().preset() == null) {
+            return null;
+        }
+        return initialState.getWorldType().preset().unwrapKey().orElse(null);
+    }
+
+    @Nullable
+    private static ResourceKey<WorldPreset> effectivePresetKey(
+            WorldCreationUiState initialState,
+            boolean recreated,
+            @Nullable String recreatedPresetId) {
+        ResourceKey<WorldPreset> selectedPreset = presetKey(initialState);
+        if (selectedPreset == null) {
+            return null;
+        }
+        String effectivePresetId = RecreatedWorldTypePolicy.effectivePresetId(
+                recreated,
+                selectedPreset.identifier().toString(),
+                recreatedPresetId,
+                overworldNoiseSettingsId(initialState));
+        if (effectivePresetId == null
+                || effectivePresetId.equals(selectedPreset.identifier().toString())) {
+            return selectedPreset;
+        }
+        return ResourceKey.create(Registries.WORLD_PRESET, Identifier.parse(effectivePresetId));
+    }
+
+    @Nullable
+    private static String overworldNoiseSettingsId(WorldCreationUiState initialState) {
+        if (initialState == null || initialState.getSettings() == null
+                || !(initialState.getSettings().selectedDimensions().overworld()
+                instanceof NoiseBasedChunkGenerator noise)) {
+            return null;
+        }
+        return noise.generatorSettings()
+                .unwrapKey()
+                .map(key -> key.identifier().toString())
+                .orElse(null);
+    }
+
+    private static int worldTypeIndex(WorldCreationUiState initialState, boolean recreated,
+                                      @Nullable String recreatedPresetId) {
+        var key = effectivePresetKey(initialState, recreated, recreatedPresetId);
+        if (key == null) {
+            return -1;
+        }
+        if (WorldPresets.NORMAL.equals(key)) {
+            return 1;
+        }
+        if (WorldPresets.FLAT.equals(key)) {
+            return 2;
+        }
+        for (GlobeWorldSize size : GlobeWorldSize.values()) {
+            if (size.worldPresetId.equals(key.identifier())) {
+                return 0;
+            }
+        }
+        return -1;
     }
 
     /**
@@ -321,8 +554,10 @@ public class LatitudeCreateWorldScreen extends Screen {
     public static void open(Minecraft client, Runnable onClose, @Nullable Screen parent) {
         LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.open parent={}",
                 parent == null ? "null" : parent.getClass().getName());
-        // Show "Preparing..." message (vanilla pattern)
-        client.setScreenAndShow(new GenericMessageScreen(Component.translatable("createWorld.preparing")));
+        // Preparing screen, but Latitude's own: it starts the shared title clock so the fade CONTINUES
+        // into the create screen instead of restarting there.
+        CreateWorldPreparingScreen preparingScreen = new CreateWorldPreparingScreen();
+        client.setScreenAndShow(preparingScreen);
 
         try {
             // Build datapack configuration (replicates createServerConfig, lines 511-513)
@@ -349,7 +584,7 @@ public class LatitudeCreateWorldScreen extends Screen {
                     serverConfig,
                     context -> new WorldLoader.DataLoadOutput<>(
                             new DataPackReloadCookie(
-                                    new WorldGenSettings(WorldOptions.defaultWithRandomSeed(), WorldPresets.createNormalWorldDimensions(context.datapackWorldgen())),
+                                    new WorldGenSettings(WorldOptions.defaultWithRandomSeed(), WorldPresets.createNormalWorldDimensions(context.datapackWorldRegistries())),
                                     context.dataConfiguration()),
                             context.datapackDimensions()),
                     (resourceManager, dataPackContents, dynamicRegistries, settings) -> {
@@ -364,31 +599,66 @@ public class LatitudeCreateWorldScreen extends Screen {
                     if (throwable != null) {
                         LOGGER.error("Failed to load datapacks for Latitude create-world screen", throwable);
                         onClose.run();
-                        if (client.gui.screen() == null || client.gui.screen() instanceof GenericMessageScreen) {
+                        if (client.gui.screen() == null || client.gui.screen() == preparingScreen) {
                             client.setScreenAndShow(parent);
                         }
                         return;
                     }
 
-                    // Open the bespoke screen with the loaded holder.
-                    client.setScreenAndShow(new LatitudeCreateWorldScreen(onClose, parent, loadedHolder));
+                    // Open the bespoke screen with the loaded holder, continuing the preparing screen's fade.
+                    client.setScreenAndShow(new LatitudeCreateWorldScreen(onClose, parent, loadedHolder, true));
                 });
             });
         } catch (Exception e) {
             LOGGER.error("Failed to load datapacks for Latitude create-world screen", e);
             // 5A error path: return to caller screen, never show bespoke screen
             onClose.run();
-            if (client.gui.screen() == null || client.gui.screen() instanceof GenericMessageScreen) {
+            if (client.gui.screen() == null || client.gui.screen() == preparingScreen) {
                 client.setScreenAndShow(parent);
             }
         }
     }
 
+    /** Only tabbedMode ever plays the intro -- three-column already fits comfortably. */
+    private boolean introActive() {
+        return tabbedMode && !introSkipped && CreateWorldIntroClock.active();
+    }
+
+    private void skipIntro() {
+        introSkipped = true;
+    }
+
+    private int scaledUi(int px) {
+        return px;
+    }
+
+    private int compactUi(int px) {
+        return scaledUi(px);
+    }
+
+    /**
+     * Whether the three columns collapse into one pane per tab.
+     *
+     * <p>Two independent reasons, either of which is enough. The width term is the old one: three columns
+     * need room to READ well, not merely to fit, so anything narrower than {@link #COMFORTABLE_THREE_COL_W}
+     * goes tabbed. The GUI-scale gate is the real fix (maintainer ruling, 2026-08-08: the screen was being
+     * cut off at high GUI scale): at scale 3 and above the hard panel minima still let three columns
+     * "fit" while producing a crammed, heavily-wrapping layout, so high scale always gets one pane per
+     * tab regardless of how wide the window is.</p>
+     */
+    private static boolean shouldUseTabbedLayout(int viewportWidth, int guiScale, int minThreeColWidth) {
+        return guiScale >= HIGH_GUI_SCALE || viewportWidth < minThreeColWidth;
+    }
+
     @Override
     protected void init() {
+        // Idempotent load-once. Already called at client init, but the explicit call is what guarantees
+        // the Still preference is loaded before the first paint on EVERY entry path into this screen.
+        LatitudeConfig.get();
         LOGGER.info("[LAT][CWPATH] LatitudeCreateWorldScreen.init screen={} holder={}",
                 this.getClass().getName(), this.holder);
         zoneRows.clear();
+        tabHitboxes.clear();
         // The Rules-panel widgets are tracked in this custom list AND drawn manually by
         // renderSettingsScrollWidgets(). The harness's clearWidgets() (run before every init) empties
         // children/renderables/narratables but NOT this list, so re-init (window resize, or returning from
@@ -400,44 +670,79 @@ public class LatitudeCreateWorldScreen extends Screen {
         // it here, exactly like zoneRows above, so each init rebuilds one coherent layer. See addWidget vs
         // addRenderableWidget note at the field declaration.
         settingsScrollWidgets.clear();
-        int headerGap = 10;
-        int headerToPanel = 42;
-        int bottomMargin = 40;
-        int btnBottomOffset = 30;
-        int fieldGap1 = 38;
-        int fieldGap2 = 40;
-        int labelFieldGap = 22;
-        int fieldH = Math.max(16, 16);
-        int btnH = Math.max(18, 20);
+        // Claim the shared intro clock only on this screen instance's FIRST init. Screen.init() also runs
+        // after every widget rebuild (resize, sub-screen return), so claiming on each one would replay the
+        // fade during ordinary interaction -- while a genuinely NEW screen instance must always start a
+        // fresh fade rather than inherit a stale one.
+        if (!introClockClaimed) {
+            introClockClaimed = true;
+            if (continueIntroFromPreparing) {
+                CreateWorldIntroClock.continueForOwner(this, Util.getMillis());
+            } else {
+                CreateWorldIntroClock.beginForOwner(this, Util.getMillis());
+            }
+        }
+        int headerGap = scaledUi(CreateWorldScreenUiPolicy.HEADER_GAP);
+        int bottomMargin = scaledUi(CreateWorldScreenUiPolicy.PANEL_BOTTOM_MARGIN);
+        int btnBottomOffset = scaledUi(CreateWorldScreenUiPolicy.BUTTON_ROW_TOP_FROM_BOTTOM);
+        int fieldGap1 = scaledUi(38);
+        int fieldGap2 = scaledUi(40);
+        int labelFieldGap = scaledUi(22);
+        int fieldH = Math.max(16, scaledUi(16));
+        int btnH = Math.max(18, scaledUi(20));
         int stepperBtnW = 20;
 
-        headerY = headerGap;
         int bottomY = this.height - btnBottomOffset;
-        panelTop = headerY + headerToPanel;
-        panelBottom = this.height - bottomMargin;
         int cx = this.width / 2;
-        paneGap = 8;
-        paneStripViewportLeft = 12;
-        paneStripViewportRight = Math.max(paneStripViewportLeft + 1, this.width - 12);
+        // The button row is sized BEFORE the panel bottom is known, because the Still tab hangs from that
+        // bottom edge into this same band and has to be able to ask whether the two would collide.
+        int btnSpacing = scaledUi(8);
+        int beginW = Math.max(120, this.font.width("Create World") + 20);
+        int cancelW = Math.max(70, this.font.width("Cancel") + 20);
+        int totalBtnW = beginW + btnSpacing + cancelW;
+        int btnStartX = cx - totalBtnW / 2;
+        stillTabW = uiTextWidth(STILL_TAB_WIDEST_LABEL) + scaledUi(16);
+        boolean accessibilityOwnRow = CreateWorldScreenUiPolicy.accessibilityControlsNeedOwnRow(
+                btnStartX, stillTabW);
+        paneGap = scaledUi(CreateWorldScreenUiPolicy.PANE_GAP);
+        paneStripViewportLeft = CreateWorldScreenUiPolicy.EDGE_MARGIN;
+        paneStripViewportRight = Math.max(
+                paneStripViewportLeft + 1,
+                this.width - CreateWorldScreenUiPolicy.EDGE_MARGIN);
         paneStripViewportWidth = Math.max(1, paneStripViewportRight - paneStripViewportLeft);
         paneStripContentWidth = paneStripViewportWidth;
+        // Everything below keys off the already-gui-scaled this.width/height, so spacing is plain
+        // gui-pixel values routed through scaledUi() -- an identity seam today, one place to change later.
+        int minThreeColWidth = Math.max(COMFORTABLE_THREE_COL_W, MIN_LEFT_W + MIN_RIGHT_W + MIN_RAIL_W + paneGap * 2);
+        int guiScale = Minecraft.getInstance().getWindow().getGuiScale();
+        tabbedMode = shouldUseTabbedLayout(paneStripViewportWidth, guiScale, minThreeColWidth);
+        threeCol = !tabbedMode;
+        // Tabbed mode plays a brief title intro instead of permanently reserving header space for it, so
+        // its header gap collapses and the panels get the room back.
+        int headerToPanel = tabbedMode ? scaledUi(6) : scaledUi(42);
+
+        headerY = headerGap;
+        panelTop = headerY + headerToPanel;
+        panelBottom = this.height - bottomMargin
+                - (accessibilityOwnRow ? TAB_H + scaledUi(4) : 0);
+        stillTabX = paneStripViewportLeft;
+        stillTabY = panelBottom;
         paneStripScrollbarX = paneStripViewportLeft;
         paneStripScrollbarW = paneStripViewportWidth;
         paneStripScrollbarY = panelBottom + 2;
-        paneStripScrollbarH = Math.max(4, Math.min(Math.max(4, 6), Math.max(4, bottomY - paneStripScrollbarY - 2)));
-        // Use the comfortable threshold, not the bare fit-width, so cramped mid-GUI-scale cases go tabbed.
-        // This is the screen's real scale/DPI adaptation: everything below keys off the already-gui-scaled
-        // this.width/height, so spacing is plain gui-pixel literals (no separate per-pixel scaling layer).
-        int minThreeColWidth = Math.max(COMFORTABLE_THREE_COL_W, MIN_LEFT_W + MIN_RIGHT_W + MIN_RAIL_W + paneGap * 2);
-        tabbedMode = paneStripViewportWidth < minThreeColWidth;
-        threeCol = !tabbedMode;
+        paneStripScrollbarH = Math.max(4, Math.min(Math.max(4, scaledUi(6)), Math.max(4, bottomY - paneStripScrollbarY - 2)));
         if (tabbedMode) {
             tabStripY = panelTop;
-            tabPanelTop = tabStripY + TAB_H + TAB_GAP;
+            // Flush against the panel below -- no vertical gap between the tab strip and the panel it
+            // gates (TAB_GAP survives only as the horizontal gap between adjacent tabs).
+            tabPanelTop = tabStripY + TAB_H;
             panelTop = tabPanelTop;
             leftW = paneStripContentWidth;
             rightW = paneStripContentWidth;
             railW = paneStripContentWidth;
+            if (activeTab < 0 || activeTab >= TAB_LABELS.length) {
+                activeTab = 0;
+            }
         } else {
             tabStripY = 0;
             tabPanelTop = panelTop;
@@ -455,16 +760,28 @@ public class LatitudeCreateWorldScreen extends Screen {
         if (paneStripScroll > maxPaneStripScroll) paneStripScroll = maxPaneStripScroll;
         updatePaneStripLayout();
 
+        if (tabbedMode) {
+            int tabX = paneStripViewportLeft;
+            int[] widths = tabWidths();
+            for (int i = 0; i < widths.length; i++) {
+                TabHitboxWidget hitbox = new TabHitboxWidget(tabX, tabStripY, widths[i], TAB_H, i);
+                tabHitboxes.add(hitbox);
+                this.addRenderableWidget(hitbox);
+                tabX += widths[i] + CreateWorldScreenUiPolicy.TAB_GAP;
+            }
+        }
+
         // Input field area within left panel
         int inputX = leftX + 4;
         int inputW = leftW - 8;
 
         // ═══════════════════════════════════════════════
         // Frozen tab order — widgets added in exact sequence:
-        // 1. World Name  2. Seed  3. Size ◀  4. Size ▶
-        // 5–9. Zone rows (Tropical → Polar)
-        // 10–18. Settings rail
-        // 17. Begin Expedition  18. Cancel
+        // 1–3. Tabs when present  4. World Name  5. Seed  6–7. Seed roll / copy
+        // 8–9. World Shape ◀ ▶  10–11. Size ◀ ▶
+        // 12–17. Zone rows (Tropical → Polar, then Random)
+        // 18–26. Settings rail (ending with Other World Types)
+        // 27. Still  28. Create World  29. Cancel
         // ═══════════════════════════════════════════════
 
         // ── 1. World Name ──
@@ -586,6 +903,12 @@ public class LatitudeCreateWorldScreen extends Screen {
             gameRulesBtn = actionRow(RulesIconRow.Kind.GAME_RULES, "Game Rules",
                     "Fine-tune the world's rules (mob spawning, daylight cycle, keep inventory, and more).",
                     this::openGameRules, false);
+            // The way out of Latitude's own flow, kept LAST in the rail. Without it this screen is a dead
+            // end for anyone wanting a Superflat, a datapack world, or another mod's world type, because
+            // Latitude claims the create-world screen (issue #19).
+            otherWorldTypesBtn = actionRow(RulesIconRow.Kind.OTHER_WORLD_TYPES, "Other World Types",
+                    "Open Minecraft's own world creation screen for Superflat, datapacks and other mods' world types.",
+                    this::openOtherWorldTypes, false);
 
             // addWidget (not addRenderableWidget): these get input/focus but are NOT auto-rendered by super --
             // renderSettingsScrollWidgets() draws them inside the Rules-panel scissor so they clip when scrolled.
@@ -599,6 +922,7 @@ public class LatitudeCreateWorldScreen extends Screen {
             addSettingsScrollWidget(bonusChestBtn);
             addSettingsScrollWidget(gameRulesBtn);
             addSettingsScrollWidget(hudStudioBtn);
+            addSettingsScrollWidget(otherWorldTypesBtn);
             updateSettingsLayout();
         }
 
@@ -606,26 +930,36 @@ public class LatitudeCreateWorldScreen extends Screen {
             applyTabbedVisibility();
         }
 
-        // ── 17. Create World ──
-        int btnSpacing = 8;
-        int beginW = Math.max(120, this.font.width("Create World") + 20);
-        int cancelW = Math.max(70, this.font.width("Cancel") + 20);
-        int totalBtnW = beginW + btnSpacing + cancelW;
-        int btnStartX = cx - totalBtnW / 2;
-        this.addRenderableWidget(Button.builder(Component.literal("Create World"), b -> beginExpedition())
+        // ── 27. Always-visible accessibility control: the Still tab under the panel ──
+        this.stillBackgroundBtn = new StillTabWidget(stillTabX, stillTabY, stillTabW, TAB_H);
+        this.addRenderableWidget(this.stillBackgroundBtn);
+
+        // ── 28. Create World ──
+        // Fielded rather than anonymous: the intro hides both of these and must be able to show them again.
+        this.createWorldBtn = Button.builder(Component.literal("Create World"), b -> beginExpedition())
                 .bounds(btnStartX, bottomY, beginW, btnH)
-                .build());
+                .build();
+        this.addRenderableWidget(this.createWorldBtn);
 
-        // ── 18. Cancel ──
-        this.addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose())
+        // ── 29. Cancel ──
+        this.cancelBtn = Button.builder(Component.literal("Cancel"), b -> onClose())
                 .bounds(btnStartX + beginW + btnSpacing, bottomY, cancelW, btnH)
-                .build());
+                .build();
+        this.addRenderableWidget(this.cancelBtn);
 
-        // ── Focus: pre-select world name text for immediate overwrite ──
-        this.worldNameField.setFocused(true);
-        this.setFocused(this.worldNameField);
-        this.worldNameField.moveCursorToEnd(false);
-        this.worldNameField.setHighlightPos(0);
+        // ── Focus: pre-select world name text, but only when that field is actually on screen. ──
+        // On a tabbed screen opened to Spawn Zone or Rules, or during the intro, focusing it would put
+        // the caret in an invisible field that still swallows typing.
+        if ((!tabbedMode || activeTab == 0) && !introActive()) {
+            this.worldNameField.setFocused(true);
+            this.setFocused(this.worldNameField);
+            this.worldNameField.moveCursorToEnd(false);
+            this.worldNameField.setHighlightPos(0);
+        } else {
+            this.worldNameField.setFocused(false);
+            this.setFocused(null);
+        }
+        applyIntroVisibility();
     }
 
     // ── Size stepper ──
@@ -871,7 +1205,7 @@ public class LatitudeCreateWorldScreen extends Screen {
         updateLeftWidgetVisibility(sizePrevBtn);
         updateLeftWidgetVisibility(sizeNextBtn);
         // World Shape and World Size only apply to Latitude worlds — grey the steppers out for Vanilla /
-        // Vanilla Superflat (Peetsa TEST 7: "mercator/regular should be greyed out for vanilla, not just vanilla
+        // Vanilla Superflat (the maintainer TEST 7: "mercator/regular should be greyed out for vanilla, not just vanilla
         // superflat" -- World Shape moved here from the Rules panel keeps the same gating it had there).
         if (!isLatitudeWorld()) {
             if (worldShapePrevBtn != null) worldShapePrevBtn.active = false;
@@ -952,7 +1286,7 @@ public class LatitudeCreateWorldScreen extends Screen {
                     && zoneY + zoneRowHeight > rightViewportTop
                     && zoneY < rightViewportBottom;
             row.visible = visible;
-            // H-fix (2026-07-19, Peetsa live report): active must match the render gate (intersect), not a
+            // H-fix (2026-07-19, the maintainer live report): active must match the render gate (intersect), not a
             // fully-contained gate -- a row scrolled partway past the top/bottom edge still draws its visible
             // sliver (see extractWidgetRenderState's scissor) and must accept clicks on that sliver. The old
             // fully-contained gate silently dropped clicks on any row not ENTIRELY inside the viewport, which
@@ -975,10 +1309,11 @@ public class LatitudeCreateWorldScreen extends Screen {
         if (bonusChestBtn != null) bonusChestBtn.active = bonusChestBtn.visible;
         if (gameRulesBtn != null) gameRulesBtn.active = gameRulesBtn.visible;
         if (hudStudioBtn != null) hudStudioBtn.active = hudStudioBtn.visible;
+        if (otherWorldTypesBtn != null) otherWorldTypesBtn.active = otherWorldTypesBtn.visible;
     }
 
     private void updateSettingsLayout() {
-        if (worldTypePrevBtn == null || worldTypeNextBtn == null || modePrevBtn == null || modeNextBtn == null || commandsBtn == null || compassBtn == null || structuresBtn == null || bonusChestBtn == null || gameRulesBtn == null || hudStudioBtn == null) {
+        if (worldTypePrevBtn == null || worldTypeNextBtn == null || modePrevBtn == null || modeNextBtn == null || commandsBtn == null || compassBtn == null || structuresBtn == null || bonusChestBtn == null || gameRulesBtn == null || hudStudioBtn == null || otherWorldTypesBtn == null) {
             settingsViewportTop = 0;
             settingsViewportBottom = 0;
             settingsContentHeight = 0;
@@ -988,22 +1323,24 @@ public class LatitudeCreateWorldScreen extends Screen {
         int settBtnW = railW - 8;
         int settBtnX = railX + 4;
         int btnH = worldTypePrevBtn.getHeight();
-        int labelGap = 10;
-        int rowGap = 10;
+        int labelGap = scaledUi(10);
+        int rowGap = scaledUi(10);
         // threeCol reserves a top strip for the "World Settings" inline heading. Tabbed mode has the tab strip
         // instead, so drop that reserved strip — otherwise content scrolls up into a blank ~36px "invisible
         // header bar" (the old WORLD/SETTINGS header was drawn inside the scissor above its own top edge, so it
         // was clipped away and just left dead space). Matches the panel-2 Spawn Zone tabbed-mode fix.
-        settingsViewportTop = threeCol ? (panelTop + 36) : (panelTop + 8);
-        settingsViewportBottom = panelBottom - 8;
+        settingsViewportTop = threeCol ? (panelTop + scaledUi(36)) : (panelTop + scaledUi(8));
+        settingsViewportBottom = panelBottom - scaledUi(8);
         int viewportHeight = Math.max(0, settingsViewportBottom - settingsViewportTop);
-        int contentTop = settingsViewportTop + 4;
+        int contentTop = settingsViewportTop + scaledUi(4);
         int blockHeight = labelGap + btnH;
-        // Leave a little trailing room so the HUD Studio row can scroll fully into view
-        // on short windows instead of sitting flush against the viewport edge.
-        // 8 rows: World Type, Game Mode, Commands, Starting Compass, Generate Structures,
-        // Bonus Chest, Game Rules, HUD Studio. (World Shape moved to the World panel per live feedback.)
-        settingsContentHeight = blockHeight * 8 + rowGap * 7 + 12;
+        // Leave a little trailing room so the LAST row can scroll fully into view on short windows
+        // instead of sitting flush against the viewport edge.
+        // 9 rows: World Type, Game Mode, Commands, Starting Compass, HUD Studio, Generate Structures,
+        // Bonus Chest, Game Rules, Other World Types. (World Shape moved to the World panel per live
+        // feedback.) This count MUST track the rows positioned below, or the rail clips its last row and
+        // that row can never be scrolled into view.
+        settingsContentHeight = blockHeight * 9 + rowGap * 8 + 12;
         int maxScroll = Math.max(0, settingsContentHeight - viewportHeight);
         if (settingsScroll < 0) settingsScroll = 0;
         if (settingsScroll > maxScroll) settingsScroll = maxScroll;
@@ -1038,6 +1375,9 @@ public class LatitudeCreateWorldScreen extends Screen {
         y += btnH + rowGap + labelGap;
         positionSettingsButton(gameRulesBtn, settBtnX, settBtnW, y, btnH);
 
+        y += btnH + rowGap + labelGap;
+        positionSettingsButton(otherWorldTypesBtn, settBtnX, settBtnW, y, btnH);
+
         updateSettingsButtons();
     }
 
@@ -1068,6 +1408,7 @@ public class LatitudeCreateWorldScreen extends Screen {
         setTabbedWidgetVisible(bonusChestBtn, showRules);
         setTabbedWidgetVisible(gameRulesBtn, showRules);
         setTabbedWidgetVisible(hudStudioBtn, showRules);
+        setTabbedWidgetVisible(otherWorldTypesBtn, showRules);
     }
 
     private void setTabbedWidgetVisible(AbstractWidget widget, boolean visible) {
@@ -1076,9 +1417,142 @@ public class LatitudeCreateWorldScreen extends Screen {
         widget.active = visible;
     }
 
+    /**
+     * Forces every interactive widget invisible and inert for the duration of the title intro.
+     *
+     * <p>Must run every frame (from the render pass), because updateLeftLayout / updateRightLayout /
+     * updateSettingsLayout already recompute widget visibility every frame and would otherwise undo a
+     * one-time hide.</p>
+     *
+     * <p>{@code createWorldBtn} and {@code cancelBtn} are the reason the non-intro branch RE-SHOWS rather
+     * than simply returning: unlike every other widget hidden here they are screen-level, with no
+     * per-frame layout pass of their own, so nothing else ever sets them visible again. A one-shot hide
+     * would permanently strand the player with no way to create the world or leave.</p>
+     */
+    private void applyIntroVisibility() {
+        boolean showTabs = tabbedMode && !introActive();
+        for (TabHitboxWidget tab : tabHitboxes) {
+            setTabbedWidgetVisible(tab, showTabs);
+        }
+        if (!introActive()) {
+            setTabbedWidgetVisible(stillBackgroundBtn, true);
+            setTabbedWidgetVisible(createWorldBtn, true);
+            setTabbedWidgetVisible(cancelBtn, true);
+            return;
+        }
+        setTabbedWidgetVisible(worldNameField, false);
+        setTabbedWidgetVisible(seedField, false);
+        setTabbedWidgetVisible(seedRandomBtn, false);
+        setTabbedWidgetVisible(seedCopyBtn, false);
+        setTabbedWidgetVisible(worldShapePrevBtn, false);
+        setTabbedWidgetVisible(worldShapeNextBtn, false);
+        setTabbedWidgetVisible(sizePrevBtn, false);
+        setTabbedWidgetVisible(sizeNextBtn, false);
+        for (ZoneRowWidget row : zoneRows) {
+            setTabbedWidgetVisible(row, false);
+        }
+        setTabbedWidgetVisible(worldTypePrevBtn, false);
+        setTabbedWidgetVisible(worldTypeNextBtn, false);
+        setTabbedWidgetVisible(modePrevBtn, false);
+        setTabbedWidgetVisible(modeNextBtn, false);
+        setTabbedWidgetVisible(commandsBtn, false);
+        setTabbedWidgetVisible(compassBtn, false);
+        setTabbedWidgetVisible(structuresBtn, false);
+        setTabbedWidgetVisible(bonusChestBtn, false);
+        setTabbedWidgetVisible(gameRulesBtn, false);
+        setTabbedWidgetVisible(hudStudioBtn, false);
+        setTabbedWidgetVisible(otherWorldTypesBtn, false);
+        setTabbedWidgetVisible(stillBackgroundBtn, false);
+        setTabbedWidgetVisible(createWorldBtn, false);
+        setTabbedWidgetVisible(cancelBtn, false);
+    }
+
+    private static boolean intersectsClip(int top, int bottom, int clipTop, int clipBottom) {
+        return ViewportClipPolicy.intersects(top, bottom, clipTop, clipBottom);
+    }
+
+    private static boolean pointInsideClip(double x, double y, int left, int top, int right, int bottom) {
+        return ViewportClipPolicy.containsPoint(x, y, left, top, right, bottom);
+    }
+
+    /** The Spawn Zone pane's own top-of-scroll boundary, the twin of {@link #settingsClipTop()}. Extracted
+     *  so the row's hit-test and the screen's clip predicate cannot drift apart. */
+    private int spawnClipTop() {
+        return threeCol ? headerBandBottom() : rightViewportTop;
+    }
+
+    private boolean isInsideRulesPanel(double x, double y) {
+        if (tabbedMode && activeTab != 2) return false;
+        int left = Math.max(railX + 1, paneStripViewportLeft);
+        int right = Math.min(railX + railW - 1, paneStripViewportRight);
+        return pointInsideClip(x, y, left, panelTop, right, panelBottom);
+    }
+
+    private boolean isInsideRulesClip(double x, double y) {
+        int left = Math.max(railX + 1, paneStripViewportLeft);
+        int right = Math.min(railX + railW - 1, paneStripViewportRight);
+        return pointInsideClip(x, y, left, settingsClipTop(), right, settingsViewportBottom);
+    }
+
+    private boolean isInsideSpawnPanel(double x, double y) {
+        if (tabbedMode && activeTab != 1) return false;
+        int left = Math.max(rightX + 1, paneStripViewportLeft);
+        int right = Math.min(rightX + rightW - 1, paneStripViewportRight);
+        return pointInsideClip(x, y, left, panelTop, right, panelBottom);
+    }
+
+    private boolean isInsideSpawnClip(double x, double y) {
+        int left = Math.max(rightX + 1, paneStripViewportLeft);
+        int right = Math.min(rightX + rightW - 1, paneStripViewportRight);
+        return pointInsideClip(x, y, left, spawnClipTop(), right, rightViewportBottom);
+    }
+
+    private boolean handleSpawnZoneClippedClick(MouseButtonEvent click, boolean doubled) {
+        if (!isLatitudeWorld() || (tabbedMode && activeTab != 1)) {
+            return false;
+        }
+        int clipLeft = Math.max(rightX + 1, paneStripViewportLeft);
+        int clipRight = Math.min(rightX + rightW - 1, paneStripViewportRight);
+        int clipTop = spawnClipTop();
+        int clipBottom = rightViewportBottom;
+        for (ZoneRowWidget row : zoneRows) {
+            if (!row.visible || !row.active) {
+                continue;
+            }
+            if (ViewportClipPolicy.acceptsClippedWidgetClick(
+                    click.x(),
+                    click.y(),
+                    row.getX(),
+                    row.getY(),
+                    row.getX() + row.getWidth(),
+                    row.getY() + row.getHeight(),
+                    clipLeft,
+                    clipTop,
+                    clipRight,
+                    clipBottom
+            )) {
+                row.selectFromClippedMouseClick(click, doubled);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void clearStillButtonMouseFocus() {
+        if (stillBackgroundBtn != null) {
+            stillBackgroundBtn.setFocused(false);
+            if (this.getFocused() == stillBackgroundBtn) {
+                this.setFocused(null);
+            }
+        }
+    }
+
     private void switchTab(int tab) {
         if (tab == activeTab) return;
         activeTab = tab;
+        // Without this, a focused widget on the old tab (e.g. the seed field) stays focused while
+        // invisible: its own key handling still fires, and Tab-cycling can land back on it.
+        clearFocus();
         applyTabbedVisibility();
     }
 
@@ -1091,8 +1565,7 @@ public class LatitudeCreateWorldScreen extends Screen {
         boolean visible = (!tabbedMode || activeTab == 2)
                 && left.getX() < paneStripViewportRight
                 && right.getX() + right.getWidth() > paneStripViewportLeft
-                && y + height > settingsClipTop()
-                && y < settingsViewportBottom;
+                && intersectsClip(y, y + height, settingsClipTop(), settingsViewportBottom);
         left.visible = visible;
         right.visible = visible;
         left.active = visible;
@@ -1107,8 +1580,7 @@ public class LatitudeCreateWorldScreen extends Screen {
         boolean visible = (!tabbedMode || activeTab == 2)
                 && button.getX() < paneStripViewportRight
                 && button.getX() + button.getWidth() > paneStripViewportLeft
-                && y + height > settingsClipTop()
-                && y < settingsViewportBottom;
+                && intersectsClip(y, y + height, settingsClipTop(), settingsViewportBottom);
         button.visible = visible;
         button.active = visible;
     }
@@ -1143,6 +1615,104 @@ public class LatitudeCreateWorldScreen extends Screen {
         this.minecraft.setScreenAndShow(new LatitudeHudStudioScreen(this));
     }
 
+    /**
+     * The ONE place the mode selector becomes a {@link GameType}.
+     *
+     * <p>Both the escape hatch and Create World read it. Two copies of {@code selectedModeIdx == 2} would
+     * diverge silently the first time either was edited, and a world made through the hatch would arrive
+     * in the wrong mode.</p>
+     */
+    private GameType selectedGameType() {
+        return selectedModeIdx == 2 ? GameType.CREATIVE : GameType.SURVIVAL;
+    }
+
+    private boolean selectedHardcore() {
+        return selectedModeIdx == 1;
+    }
+
+    /** Hardcore forces Hard; otherwise whatever difficulty the carried state actually held. */
+    private Difficulty effectiveDifficulty() {
+        return selectedHardcore() ? Difficulty.HARD : selectedDifficulty;
+    }
+
+    private void openOtherWorldTypes() {
+        if (this.minecraft == null) return;
+        this.worldNameInput = this.worldNameField == null ? this.worldNameInput : this.worldNameField.getValue();
+        this.seedInput = this.seedField == null ? this.seedInput : this.seedField.getValue();
+        // Reads back whatever the vanilla screen is currently holding before returning to it.
+        //
+        // The carry on the way OUT is a snapshot taken once, at the moment this row is pressed -- it
+        // cannot see anything the player changes afterwards on that screen's own mode/difficulty
+        // controls. Without this, a player who toggles Hardcore there and presses "Back to Latitude"
+        // finds it reverted (maintainer report, 2026-08-27: "Hardcore does not survive; have to change
+        // it again when you go back").
+        //
+        // `current` is read at RUN time, not capture time: vanilla's own popScreen() calls this Runnable
+        // BEFORE replacing the screen, so the vanilla screen is still gui.screen() when this executes --
+        // capturing it eagerly here would read the state at the moment the player LEFT Latitude, which
+        // defeats the whole point.
+        Runnable returnToLatitude = () -> {
+            Screen current = this.minecraft.gui.screen();
+            if (current instanceof CreateWorldScreen) {
+                // NOT a cast to the @Mixin class itself -- that compiles but crashes at runtime with
+                // IllegalClassLoadError the first time this code actually runs (caught live, not
+                // assumed). VanillaCreateWorldUiStateCarrier is a plain interface the mixin implements,
+                // which is the form ordinary code is allowed to cast to.
+                WorldCreationUiState vanillaState =
+                        ((VanillaCreateWorldUiStateCarrier) (Object) current).globe$getUiState();
+                this.selectedModeIdx = switch (vanillaState.getGameMode()) {
+                    case HARDCORE -> 1;
+                    case CREATIVE -> 2;
+                    default -> 0;
+                };
+                this.selectedDifficulty = vanillaState.getDifficulty();
+                this.allowCommands = vanillaState.isAllowCommands();
+                this.worldNameInput = vanillaState.getName();
+                this.seedInput = vanillaState.getSeed();
+            }
+            this.minecraft.setScreenAndShow(this);
+        };
+        // Pressed on the vanilla screen, this abandons the whole flow in one click instead of making the
+        // player cancel there and again here (maintainer report, 2026-08-26). The screen showing at click
+        // time is the vanilla one, so it -- not this screen -- is what "nothing took over yet" means.
+        Runnable exitCreateFlow = () ->
+                leaveCreateFlowFrom(this.minecraft == null ? null : this.minecraft.gui.screen());
+        VanillaCreateWorldHandoff.armNext(
+                returnToLatitude, this.worldNameInput, this.seedInput, exitCreateFlow);
+        try {
+            // Reuse the context already held instead of making vanilla load one again. Measured on this
+            // line: vanilla's fresh-open path blocks the render thread for ~2.4s building a PackRepository
+            // and running WorldLoader, and the hatch was paying that a SECOND time for data already in
+            // memory. createFromExisting does none of it.
+            //
+            // Safe to reuse specifically because this screen only ever READS the held context; Latitude's
+            // own dimensions are built at creation time in LatitudeWorldLauncher and never written back
+            // into it, so the vanilla screen opens on the same vanilla preset the fresh path would have
+            // resolved.
+            //
+            // Name, seed, mode and difficulty carry across rather than resetting: the hatch is a detour
+            // inside one act of world creation, not a fresh start.
+            String carriedName = this.worldNameInput == null ? "" : this.worldNameInput.trim();
+            LevelSettings carried = new LevelSettings(
+                    carriedName.isEmpty() ? "New World" : carriedName,
+                    selectedGameType(),
+                    new LevelSettings.DifficultySettings(effectiveDifficulty(), selectedHardcore(), false),
+                    this.allowCommands,
+                    this.holder.dataConfiguration());
+            // null temp-datapack dir is valid: vanilla's getOrCreateTempDataPackDir creates on demand.
+            CreateWorldScreen vanillaScreen = CreateWorldScreen.createFromExisting(
+                    this.minecraft, returnToLatitude, carried, this.holder, null);
+            this.minecraft.setScreenAndShow(vanillaScreen);
+        } catch (RuntimeException exception) {
+            // Opening can throw before ever showing a screen (e.g. a resource-reload failure); without
+            // this the handoff would sit armed for its full two-minute TTL and could be claimed by an
+            // unrelated later screen opened through the same callback shape.
+            VanillaCreateWorldHandoff.cancelNext();
+            this.minecraft.setScreenAndShow(this);
+            throw exception;
+        }
+    }
+
     // ── Begin Expedition ──
 
     private void beginExpedition() {
@@ -1151,9 +1721,9 @@ public class LatitudeCreateWorldScreen extends Screen {
         if (worldName.isEmpty()) worldName = "New World";
         String seed = this.seedField.getValue(); // raw — no client-side trim
 
-        GameType gameMode = selectedModeIdx == 2 ? GameType.CREATIVE : GameType.SURVIVAL;
-        boolean hardcore = selectedModeIdx == 1;
-        Difficulty difficulty = hardcore ? Difficulty.HARD : Difficulty.NORMAL;
+        GameType gameMode = selectedGameType();
+        boolean hardcore = selectedHardcore();
+        Difficulty difficulty = effectiveDifficulty();
 
         // Always log the selection state at the create click — TEST 29 produced a world whose zone
         // didn't match what the player believed was selected, and the log had nothing to distinguish
@@ -1170,7 +1740,7 @@ public class LatitudeCreateWorldScreen extends Screen {
         }
 
         LatitudeWorldLauncher.beginExpedition(this.minecraft, this, this.holder,
-                worldName, seed, this.selectedSize, spawnZone, currentWorldShape(),
+                worldName, seed, this.selectedSize, spawnZone, this.randomZone, currentWorldShape(),
                 gameMode, hardcore, difficulty, allowCommands, startWithCompass, bonusChest,
                 generateStructures, this.gameRules, this.worldTypeIdx);
     }
@@ -1212,9 +1782,24 @@ public class LatitudeCreateWorldScreen extends Screen {
 
     @Override
     public void onClose() {
+        leaveCreateFlowFrom(this);
+    }
+
+    /**
+     * Leaves the whole create-world flow, exactly as Cancel on this screen does.
+     *
+     * <p>Shared with the escape hatch so the one-click exit on the vanilla screen cannot drift from a real
+     * Cancel here (issue #19 follow-up). {@code expectedCurrent} is the screen the caller believes is
+     * still showing: {@code this} for an ordinary Cancel, and the vanilla create screen when the exit is
+     * pressed over there. The guard exists so an {@code onClose} callback that already navigated somewhere
+     * is not stomped by a second {@code setScreen} -- it asks "did anything take over?", and the answer
+     * differs by caller only in which screen counts as "nothing took over yet".</p>
+     */
+    private void leaveCreateFlowFrom(@Nullable Screen expectedCurrent) {
         this.onClose.run();
-        if (this.minecraft != null && (this.minecraft.gui.screen() == this || this.minecraft.gui.screen() == null)) {
-            this.minecraft.setScreenAndShow(this.parent);
+        if (this.minecraft != null
+                && (this.minecraft.gui.screen() == expectedCurrent || this.minecraft.gui.screen() == null)) {
+            this.minecraft.gui.setScreen(this.parent);
         }
     }
 
@@ -1226,14 +1811,14 @@ public class LatitudeCreateWorldScreen extends Screen {
                 && mouseX < paneStripViewportRight
                 && mouseY >= panelTop
                 && mouseY < panelBottom) {
-            applyPaneStripScroll(paneStripScroll - (int) Math.signum(horizontalAmount) * 28);
+            applyPaneStripScroll(paneStripScroll - (int) Math.signum(horizontalAmount) * scaledUi(28));
             return true;
         }
         if ((!tabbedMode || activeTab == 0) && mouseX >= Math.max(leftX, paneStripViewportLeft) && mouseX < Math.min(leftX + leftW, paneStripViewportRight) && mouseY >= panelTop && mouseY < panelBottom) {
             int viewportHeight = Math.max(0, leftViewportBottom - leftViewportTop);
             int maxScroll = Math.max(0, leftContentHeight - viewportHeight);
             if (maxScroll > 0 && verticalAmount != 0.0D) {
-                leftScroll -= (int) Math.signum(verticalAmount) * 18;
+                leftScroll -= (int) Math.signum(verticalAmount) * scaledUi(18);
                 if (leftScroll < 0) leftScroll = 0;
                 if (leftScroll > maxScroll) leftScroll = maxScroll;
                 updateLeftLayout();
@@ -1244,7 +1829,7 @@ public class LatitudeCreateWorldScreen extends Screen {
             int viewportHeight = Math.max(0, rightViewportBottom - rightViewportTop);
             int maxScroll = Math.max(0, rightContentHeight - viewportHeight);
             if (maxScroll > 0 && verticalAmount != 0.0D) {
-                rightScroll -= (int) Math.signum(verticalAmount) * 18;
+                rightScroll -= (int) Math.signum(verticalAmount) * scaledUi(18);
                 if (rightScroll < 0) rightScroll = 0;
                 if (rightScroll > maxScroll) rightScroll = maxScroll;
                 updateRightLayout();
@@ -1255,7 +1840,7 @@ public class LatitudeCreateWorldScreen extends Screen {
             int viewportHeight = Math.max(0, settingsViewportBottom - settingsViewportTop);
             int maxScroll = Math.max(0, settingsContentHeight - viewportHeight);
             if (maxScroll > 0 && verticalAmount != 0.0D) {
-                settingsScroll -= (int) Math.signum(verticalAmount) * 18;
+                settingsScroll -= (int) Math.signum(verticalAmount) * scaledUi(18);
                 if (settingsScroll < 0) settingsScroll = 0;
                 if (settingsScroll > maxScroll) settingsScroll = maxScroll;
                 updateSettingsLayout();
@@ -1268,7 +1853,7 @@ public class LatitudeCreateWorldScreen extends Screen {
                 && mouseY >= paneStripScrollbarY - 2
                 && mouseY < paneStripScrollbarY + paneStripScrollbarH + 2
                 && verticalAmount != 0.0D) {
-            applyPaneStripScroll(paneStripScroll - (int) Math.signum(verticalAmount) * 28);
+            applyPaneStripScroll(paneStripScroll - (int) Math.signum(verticalAmount) * scaledUi(28));
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
@@ -1276,9 +1861,38 @@ public class LatitudeCreateWorldScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent click, boolean doubled) {
-        if (click.button() == 0 && handleTabClick(click.x(), click.y())) {
+        lastInputWasMouse = true;
+        if (introActive()) {
+            skipIntro();
             return true;
         }
+        // Zone rows scroll under the panel edge but keep their full rectangle, so vanilla dispatches
+        // against geometry the player cannot see: a click on Cancel went to whichever row overlapped it,
+        // visibly selecting a climate instead of closing the screen. The overlap grows with GUI scale,
+        // where the panel bottom crowds the button row. The panel-bounded guards in the dispatch below
+        // cannot catch this -- the button row sits BENEATH panelBottom, outside every panel -- so the
+        // click reaches vanilla dispatch and the row outranks the button. A row has no claim on any point
+        // outside its own clip, so mute the rows for those clicks and let the real widget take them.
+        if (!isInsideSpawnClip(click.x(), click.y())) {
+            List<ZoneRowWidget> muted = new ArrayList<>();
+            for (ZoneRowWidget row : zoneRows) {
+                if (row.active) {
+                    row.active = false;
+                    muted.add(row);
+                }
+            }
+            try {
+                return globe$dispatchClick(click, doubled);
+            } finally {
+                for (ZoneRowWidget row : muted) {
+                    row.active = true;
+                }
+            }
+        }
+        return globe$dispatchClick(click, doubled);
+    }
+
+    private boolean globe$dispatchClick(MouseButtonEvent click, boolean doubled) {
         if (click.button() == 0
                 && getPaneStripMaxScroll() > 0
                 && click.x() >= paneStripScrollbarX
@@ -1289,7 +1903,32 @@ public class LatitudeCreateWorldScreen extends Screen {
             setPaneStripScrollFromMouse(click.x());
             return true;
         }
+        if (click.button() == 0 && handleSpawnZoneClippedClick(click, doubled)) {
+            return true;
+        }
+        // Widgets may intersect the viewport so their visible portion renders continuously. Consume clicks
+        // in the clipped-off heading/footer area before Screen dispatches against the full rectangle.
+        if (isInsideRulesPanel(click.x(), click.y()) && !isInsideRulesClip(click.x(), click.y())) {
+            return true;
+        }
+        if (isInsideSpawnPanel(click.x(), click.y()) && !isInsideSpawnClip(click.x(), click.y())) {
+            return true;
+        }
         return super.mouseClicked(click, doubled);
+    }
+
+    @Override
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent input) {
+        lastInputWasMouse = false;
+        if (introActive()) {
+            skipIntro();
+            return true;
+        }
+        if (tabbedMode && input.key() == InputConstants.KEY_TAB && input.hasControlDown()) {
+            switchTab(CreateWorldScreenUiPolicy.cyclePanel(activeTab, TAB_LABELS.length, input.hasShiftDown()));
+            return true;
+        }
+        return super.keyPressed(input);
     }
 
     @Override
@@ -1342,10 +1981,38 @@ public class LatitudeCreateWorldScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        // Advance the intro one rendered frame before anything reads introActive(). Unconditional (NOT
+        // gated on tabbedMode) so the shared clock can never be left frozen mid-animation by a
+        // three-column run, which would make the NEXT create-world attempt inherit a stale mid-fade.
+        CreateWorldIntroClock.advance(Util.getMillis());
+        if (stillBackgroundBtn != null
+                && !CreateWorldScreenUiPolicy.shouldRetainButtonFocus(
+                        lastInputWasMouse, stillBackgroundBtn.isMouseOver(mouseX, mouseY))) {
+            // Rendering always has the current pointer position, even when SDL does not deliver a separate
+            // mouseMoved event. Mouse navigation is hover-only; keyboard focus is retained.
+            clearStillButtonMouseFocus();
+        }
+        if (LatitudeConfig.createWorldStillBackground) {
+            // Do NOT rewrite Minecraft's global panorama preference for one screen. Cover it with a stable
+            // Latitude backdrop instead, so toggling off restores the scenic view instantly.
+            context.fill(0, 0, this.width, this.height, STILL_BACKGROUND_COLOR);
+        }
         advanceScrollAnimation(delta);
         updateLeftLayout();
         updateRightLayout();
         updateSettingsLayout();
+        applyIntroVisibility();
+        if (introActive()) {
+            // Nothing but the title while the intro plays. Every widget is already hidden and inert by
+            // applyIntroVisibility above; skipping the panel chrome too is what makes the reveal a reveal
+            // rather than a title floating over a finished screen.
+            renderIntroTitle(context);
+            super.extractRenderState(context, mouseX, mouseY, delta);
+            return;
+        }
+        // Tabbed mode never draws the permanent header: the wordmark appears there as the brief intro
+        // overlay instead, and the collapsed headerToPanel gap leaves no real room for it.
+        if (!tabbedMode) {
         int titlePaneX = threeCol ? rightX : 12;
         int titlePaneW = threeCol ? rightW : Math.max(1, this.width - 24);
         int headerBottom = tabbedMode ? tabStripY - 2 : panelTop;
@@ -1361,6 +2028,7 @@ public class LatitudeCreateWorldScreen extends Screen {
             headerLineY += uiFontHeight() + 4;
         }
         drawWrappedTextBlock(context, "Prepare your journey across the globe", new UiRect(headerRect.x, headerLineY, headerRect.w, Math.max(0, headerRect.bottom() - headerLineY)), MUTED, false, 2, true, true);
+        } // end permanent header (three-column only)
 
         if (tabbedMode) {
             drawTabStrip(context, mouseX, mouseY);
@@ -1426,7 +2094,7 @@ public class LatitudeCreateWorldScreen extends Screen {
         }
         int rightClipLeft = Math.max(rightX + 1, paneStripViewportLeft);
         int rightClipRight = Math.min(rightX + rightW - 1, paneStripViewportRight);
-        int rightClipTop = threeCol ? headerBandBottom() : rightViewportTop;
+        int rightClipTop = spawnClipTop();
         if (rightClipRight > rightClipLeft) {
         context.enableScissor(rightClipLeft, rightClipTop, rightClipRight, rightViewportBottom);
         if (!threeCol) {
@@ -1449,7 +2117,7 @@ public class LatitudeCreateWorldScreen extends Screen {
             int bandColor = BAND_COLORS[i];
             if (sel) {
                 // Selected zone: keep the gold edge, but fill the interior with the Atlas selected-band glow
-                // crest sweeping left→right within this segment only (Peetsa: give the zone bar the same
+                // crest sweeping left→right within this segment only (the maintainer: give the zone bar the same
                 // Gaussian shimmer the Atlas selected band already has). Other segments stay static below.
                 context.fill(segX, rightBarY, segXEnd, rightBarY + rightBarH, GOLD);
                 if (reduceMotion) {
@@ -1463,7 +2131,7 @@ public class LatitudeCreateWorldScreen extends Screen {
             }
         }
         // Random spawn zone: one crest travels the full bar left→right, taking on each segment's own color as it
-        // passes (Peetsa; mirrors the Atlas Random sweep's per-band color pickup, here horizontal). Overlaid on
+        // passes (the maintainer; mirrors the Atlas Random sweep's per-band color pickup, here horizontal). Overlaid on
         // the dim segments drawn above, so segments the crest isn't over keep their exact static look.
         if (randomZone) {
             int barLeft = rightX + barInset;
@@ -1548,8 +2216,9 @@ public class LatitudeCreateWorldScreen extends Screen {
             maybeDrawWorldTypeTooltip(context, mouseX, mouseY);
             drawSettingsRowLabel(context, "Game Mode", settLabelX, modeRowY, MUTED);
             drawSettingsStepperValue(context, MODE_NAMES[selectedModeIdx], MODE_COLORS[selectedModeIdx], modeRowY);
-            // World Type + Game Mode keep the classic label-above-stepper layout. The six rows below
-            // (Commands / Compass / Structures / Bonus Chest / HUD Studio / Game Rules) are now iconography
+            // World Type + Game Mode keep the classic label-above-stepper layout. The seven rows below
+            // (Commands / Compass / HUD Studio / Structures / Bonus Chest / Game Rules / Other World
+            // Types) are iconography
             // rows that draw their OWN icon + label + On/Off state inline, so no separate row labels here.
             // Draw them INSIDE this same scissor so they clip at the viewport edges (partial "half rows")
             // exactly like the stepper labels above, instead of popping. They are addWidget'd (not auto-
@@ -1564,7 +2233,78 @@ public class LatitudeCreateWorldScreen extends Screen {
             drawHorizontalScrollbar(context);
         }
 
+        // Drawn after every panel so its top edge can merge into the panel above it.
+        drawStillTab(context, mouseX, mouseY);
+        renderCreateVersionLabel(context);
+
+        if (tabbedMode) {
+            renderIntroTitle(context);
+        }
         super.extractRenderState(context, mouseX, mouseY, delta);
+    }
+
+    /** Full-screen-centred title overlay for the tabbed-mode intro -- independent of the (collapsed)
+     *  header strip, so it can use as much room as it wants for the brief moment it is shown. Delegates
+     *  to CreateWorldIntroTitle so the pixels live beside the shared clock that times them. */
+    private void renderIntroTitle(GuiGraphicsExtractor context) {
+        CreateWorldIntroTitle.render(context, this.font, this.width, this.height);
+    }
+
+    private void renderCreateVersionLabel(GuiGraphicsExtractor context) {
+        if (CREATE_VERSION_LABEL.isEmpty()) {
+            return;
+        }
+        int width = Math.round(uiTextWidth(CREATE_VERSION_LABEL) * CREATE_VERSION_LABEL_SCALE);
+        int height = Math.round(uiFontHeight() * CREATE_VERSION_LABEL_SCALE);
+        int x = context.guiWidth() - width - scaledUi(5);
+        int y = context.guiHeight() - height - scaledUi(5);
+        drawScaledText(context, CREATE_VERSION_LABEL, x, y, CREATE_VERSION_LABEL_SCALE, MUTED, false);
+    }
+
+    private static Component stillBackgroundLabel() {
+        return Component.literal("Still: "
+                + (LatitudeConfig.createWorldStillBackground ? "ON" : "OFF"));
+    }
+
+    /**
+     * The Still control drawn as a tab hung from the panel's bottom-left edge, in the same bespoke style
+     * as the World / Spawn Zone / Rules tabs above: ON reads as the active tab (gold, merged into the
+     * panel), OFF as an inactive one. Keeping it attached to Latitude's own window makes it read as part
+     * of that window rather than a vanilla button beside Create World and Cancel (maintainer ruling,
+     * 2026-09-06). The widget beneath owns hitbox, focus, narration and activation; keyboard focus shows
+     * as the hovered look so it is never invisible.
+     */
+    private void drawStillTab(GuiGraphicsExtractor context, int mouseX, int mouseY) {
+        if (stillBackgroundBtn == null || !stillBackgroundBtn.visible) {
+            return;
+        }
+        int x = stillTabX;
+        int y = stillTabY;
+        int w = stillTabW;
+        int h = TAB_H;
+        boolean active = LatitudeConfig.createWorldStillBackground;
+        boolean hovered = !active
+                && ((mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + h)
+                        || stillBackgroundBtn.isFocused());
+        int bg = active || hovered ? PANEL_BG : TAB_INACTIVE_BG;
+        int border = active ? GOLD : PANEL_BORDER;
+        // Tab background, then side + bottom borders (the mirror of the top tabs)
+        context.fill(x, y, x + w, y + h, bg);
+        context.fill(x, y, x + 1, y + h, border);
+        context.fill(x + w - 1, y, x + w, y + h, border);
+        context.fill(x, y + h - 1, x + w, y + h, border);
+        if (active) {
+            // Active tab: no top border, and the panel's bottom border opens up so the two merge
+            context.fill(x + 1, y - 1, x + w - 1, y, PANEL_BG);
+        } else {
+            // Inactive tab: top border closes it off from the panel
+            context.fill(x, y, x + w, y + 1, PANEL_BORDER);
+        }
+        String label = stillBackgroundLabel().getString();
+        int labelColor = active ? GOLD : (hovered ? WARM_WHITE : MUTED);
+        int labelX = x + (w - uiTextWidth(label)) / 2;
+        int labelY = y + (h - uiFontHeight()) / 2;
+        drawUiText(context, label, labelX, labelY, labelColor, active);
     }
 
     // Single-line stepper value, vertically centered against the World Shape row's button height -- unlike
@@ -1587,7 +2327,7 @@ public class LatitudeCreateWorldScreen extends Screen {
 
         int nameCol = enabled ? WARM_WHITE : DISABLED_COLOR;
         int subCol = enabled ? MUTED : DISABLED_COLOR;
-        // Ginormous gets a little theatrical emphasis (Peetsa's ask): italic + an exclamation mark, since
+        // Ginormous gets a little theatrical emphasis (the maintainer's request): italic + an exclamation mark, since
         // it's the "a world that could take a lifetime to cross" biggest size.
         if (selectedSize == GlobeWorldSize.MASSIVE) {
             drawCenteredBoundedItalicText(context, shortName + "!", new UiRect(x, y, availW, uiFontHeight()), nameCol, true, true);
@@ -1626,7 +2366,7 @@ public class LatitudeCreateWorldScreen extends Screen {
         int maxRadiusByWidth = Math.max(18, (int) ((areaRight - areaLeft - maxLabelWidth - labelPad - rightPadding) / widthDivisor));
         int maxRadiusByHeight = Math.max(18, (areaBottom - areaTop - captionHeight - captionGap) / 2);
         int radius = Math.round(Math.min(maxRadiusByWidth, maxRadiusByHeight) * previewDiscFill(selectedSize));
-        // Classic (1:1) only, Mercator untouched (Peetsa 2026-07-08): a square's widthDivisor above is half
+        // Classic (1:1) only, Mercator untouched (the maintainer 2026-07-08): a square's widthDivisor above is half
         // Mercator's (2.0 vs 4.0), so for the same panel Classic's width budget is roughly DOUBLE Mercator's --
         // in practice that makes Classic almost always height-bound (maxRadiusByHeight wins the min() above),
         // so previewDiscFill's per-size grading barely mattered and even Itty Bitty rendered near the height
@@ -1968,7 +2708,7 @@ public class LatitudeCreateWorldScreen extends Screen {
         context.setTooltipForNextFrame(this.font, lines, sidePositioner, mouseX, mouseY, true);
     }
 
-    // ── Accessibility (Peetsa 2026-07-11) ──
+    // ── Accessibility (the maintainer 2026-07-11) ──
     // The Accessibility dropdown (LatitudeConfig.accessibilityMode, read live each frame) biases the whole
     // create screen toward legibility. All the color/alpha math is the pure, unit-tested
     // core.ui.AccessibilityPalette; these are the thin applications. HIGH_CONTRAST brightens the muted
@@ -2418,15 +3158,29 @@ public class LatitudeCreateWorldScreen extends Screen {
         }
     }
 
-    private void drawTabStrip(GuiGraphicsExtractor context, int mouseX, int mouseY) {
+    /** Tab widths, with the integer-division remainder given to the LAST tab so the strip's right edge
+     *  lands exactly on paneStripViewportRight. At three tabs that remainder is up to 2px, and the drawn
+     *  strip and the registered hitboxes must both read it from here or they drift by a rounding pixel. */
+    private int[] tabWidths() {
         int tabCount = TAB_LABELS.length;
-        int totalW = paneStripViewportWidth;
-        int tabW = (totalW - TAB_GAP * (tabCount - 1)) / tabCount;
-        int x = paneStripViewportLeft;
+        int totalW = paneStripViewportWidth
+                - CreateWorldScreenUiPolicy.TAB_GAP * (tabCount - 1);
+        int baseW = totalW / tabCount;
+        int[] widths = new int[tabCount];
         for (int i = 0; i < tabCount; i++) {
+            widths[i] = i == tabCount - 1 ? totalW - baseW * (tabCount - 1) : baseW;
+        }
+        return widths;
+    }
+
+    private void drawTabStrip(GuiGraphicsExtractor context, int mouseX, int mouseY) {
+        int[] tabWidths = tabWidths();
+        int x = paneStripViewportLeft;
+        for (int i = 0; i < tabWidths.length; i++) {
+            int tabW = tabWidths[i];
             boolean active = i == activeTab;
             boolean hovered = !active && mouseX >= x && mouseX < x + tabW && mouseY >= tabStripY && mouseY < tabStripY + TAB_H;
-            int bg = active ? PANEL_BG : (hovered ? 0xFF3A302A : 0xFF2A2420);
+            int bg = active || hovered ? PANEL_BG : TAB_INACTIVE_BG;
             int border = active ? GOLD : PANEL_BORDER;
             // Tab background
             context.fill(x, tabStripY, x + tabW, tabStripY + TAB_H, bg);
@@ -2448,25 +3202,8 @@ public class LatitudeCreateWorldScreen extends Screen {
             int labelX = x + (tabW - labelW) / 2;
             int labelY = tabStripY + (TAB_H - uiFontHeight()) / 2;
             drawUiText(context, label, labelX, labelY, labelColor, active);
-            x += tabW + TAB_GAP;
+            x += tabW + CreateWorldScreenUiPolicy.TAB_GAP;
         }
-    }
-
-    private boolean handleTabClick(double mouseX, double mouseY) {
-        if (!tabbedMode) return false;
-        if (mouseY < tabStripY || mouseY >= tabStripY + TAB_H) return false;
-        int tabCount = TAB_LABELS.length;
-        int totalW = paneStripViewportWidth;
-        int tabW = (totalW - TAB_GAP * (tabCount - 1)) / tabCount;
-        int x = paneStripViewportLeft;
-        for (int i = 0; i < tabCount; i++) {
-            if (mouseX >= x && mouseX < x + tabW) {
-                switchTab(i);
-                return true;
-            }
-            x += tabW + TAB_GAP;
-        }
-        return false;
     }
 
     private void drawHorizontalScrollbar(GuiGraphicsExtractor context) {
@@ -2556,6 +3293,84 @@ public class LatitudeCreateWorldScreen extends Screen {
         }
     }
 
+    private class TabHitboxWidget extends AbstractWidget {
+        private final int tabIndex;
+
+        TabHitboxWidget(int x, int y, int width, int height, int tabIndex) {
+            super(x, y, width, height, Component.literal(TAB_LABELS[tabIndex]));
+            this.tabIndex = tabIndex;
+        }
+
+        @Override
+        public void onClick(MouseButtonEvent click, boolean doubled) {
+            switchTab(tabIndex);
+        }
+
+        @Override
+        public boolean keyPressed(net.minecraft.client.input.KeyEvent input) {
+            if (!this.isActive() || !input.isSelection()) {
+                return false;
+            }
+            this.playDownSound(Minecraft.getInstance().getSoundManager());
+            switchTab(tabIndex);
+            return true;
+        }
+
+        @Override
+        protected void extractWidgetRenderState(
+                GuiGraphicsExtractor context, int mouseX, int mouseY, float deltaTicks) {
+            // The parent screen owns the hand-drawn tab appearance (drawTabStrip). This widget owns only
+            // the standard Minecraft hitbox, focus, narration, and activation path.
+            this.handleCursor(context);
+        }
+
+        @Override
+        protected void updateWidgetNarration(NarrationElementOutput builder) {
+            this.defaultButtonNarrationText(builder);
+        }
+    }
+
+    /** Hitbox, focus, narration and activation for the Still tab; the screen draws its look. */
+    private class StillTabWidget extends AbstractWidget {
+        StillTabWidget(int x, int y, int width, int height) {
+            super(x, y, width, height, stillBackgroundLabel());
+        }
+
+        private void toggle() {
+            LatitudeConfig.createWorldStillBackground = !LatitudeConfig.createWorldStillBackground;
+            this.setMessage(stillBackgroundLabel());
+            LatitudeConfig.saveCurrent();
+        }
+
+        @Override
+        public void onClick(MouseButtonEvent click, boolean doubled) {
+            toggle();
+        }
+
+        @Override
+        public boolean keyPressed(net.minecraft.client.input.KeyEvent input) {
+            if (!this.isActive() || !input.isSelection()) {
+                return false;
+            }
+            this.playDownSound(Minecraft.getInstance().getSoundManager());
+            toggle();
+            return true;
+        }
+
+        @Override
+        protected void extractWidgetRenderState(
+                GuiGraphicsExtractor context, int mouseX, int mouseY, float deltaTicks) {
+            // The parent screen draws the tab (drawStillTab); this widget owns only the standard
+            // Minecraft hitbox, focus, narration, and activation path.
+            this.handleCursor(context);
+        }
+
+        @Override
+        protected void updateWidgetNarration(NarrationElementOutput builder) {
+            this.defaultButtonNarrationText(builder);
+        }
+    }
+
     private class ZoneRowWidget extends AbstractWidget {
         /** The row's band, or null for the "Random" row (rolled to a concrete band at create time). */
         private final LatitudeBands.Band band;
@@ -2572,8 +3387,8 @@ public class LatitudeCreateWorldScreen extends Screen {
             // drawn -- the row's full un-clipped bounding box (checked by super) can extend above/below that
             // into the title or the panel edge once it's mid-scroll.
             if (!super.isMouseOver(mouseX, mouseY)) return false;
-            int rowClipTop = threeCol ? headerBandBottom() : rightViewportTop;
-            return mouseY >= rowClipTop && mouseY < rightViewportBottom;
+            return pointInsideClip(mouseX, mouseY,
+                    this.getX(), spawnClipTop(), this.getX() + this.getWidth(), rightViewportBottom);
         }
 
         private void select() {
@@ -2581,7 +3396,7 @@ public class LatitudeCreateWorldScreen extends Screen {
             if (this.band != null) {
                 selectedZone = this.band;
             }
-            // Peetsa (2026-07-20): "click on Polar, which is just barely off the screen -- have the panel
+            // the maintainer (2026-07-20): "click on Polar, which is just barely off the screen -- have the panel
             // automatically scroll smoothly so that Polar is centered, and AT THE SAME TIME the first panel
             // smoothly scrolls so the ATLAS map is centered." Both panels glide together on every select.
             centerZoneRowAndAtlas();
@@ -2614,6 +3429,12 @@ public class LatitudeCreateWorldScreen extends Screen {
             select();
         }
 
+        /** Entry point for a click the screen accepted on this row's VISIBLE (clipped) area, after vanilla
+         *  dispatch had already been told the row does not own the point. */
+        private void selectFromClippedMouseClick(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
+            this.onClick(click, doubled);
+        }
+
         @Override
         public boolean keyPressed(net.minecraft.client.input.KeyEvent input) {
             if (!this.isActive()) return false;
@@ -2641,7 +3462,7 @@ public class LatitudeCreateWorldScreen extends Screen {
             // In three-column mode start the clip below the reserved heading band so a row scrolling up renders
             // as a partial "half row" beneath the "Spawn Zone" title instead of over it (matches the main-panel
             // scissor). Tabbed mode has no in-panel heading, so clip from the viewport top as before.
-            int rowClipTop = threeCol ? headerBandBottom() : rightViewportTop;
+            int rowClipTop = spawnClipTop();
             boolean clipped = clipRight > clipLeft && rightViewportBottom > rowClipTop;
             if (clipped) {
                 context.enableScissor(clipLeft, rowClipTop, clipRight, rightViewportBottom);
@@ -2720,7 +3541,7 @@ public class LatitudeCreateWorldScreen extends Screen {
 
     /**
      * One row of the Rules sidebar rendered as icon + short label + state, replacing the old plain MC
-     * on/off buttons (Peetsa's iconography ask). Two flavors:
+     * on/off buttons (the maintainer's iconography request). Two flavors:
      * <ul>
      *   <li><b>Toggle</b> (Commands / Compass / Structures / Bonus Chest): reads and flips a backing
      *       boolean. ON = illuminated icon (full color + a gentle warm bloom) and the word "On"; OFF =
@@ -2734,7 +3555,7 @@ public class LatitudeCreateWorldScreen extends Screen {
      * feedback matches -- the same consistency the H5 zone-row fix restores).
      */
     private final class RulesIconRow extends AbstractWidget {
-        enum Kind { COMMANDS, COMPASS, STRUCTURES, BONUS_CHEST, HUD_STUDIO, GAME_RULES }
+        enum Kind { COMMANDS, COMPASS, STRUCTURES, BONUS_CHEST, HUD_STUDIO, GAME_RULES, OTHER_WORLD_TYPES }
 
         private static final int ICON_SIZE = 16;
         private static final long FLASH_MS = 240L; // brief brighten right after a toggle (feedback)
@@ -2870,6 +3691,7 @@ public class LatitudeCreateWorldScreen extends Screen {
                 case BONUS_CHEST -> RulesIcons.chest(context, iconX, iconY, ICON_SIZE, lit, now, !reduceMotion);
                 case HUD_STUDIO -> RulesIcons.hudStudio(context, iconX, iconY, ICON_SIZE);
                 case GAME_RULES -> RulesIcons.scroll(context, iconX, iconY, ICON_SIZE);
+                case OTHER_WORLD_TYPES -> RulesIcons.worldTypes(context, iconX, iconY, ICON_SIZE);
             }
 
             // Label (short) beside the icon, vertically centered.

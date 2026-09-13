@@ -289,4 +289,34 @@ final class RulesIcons {
             ctx.fill(leftX + 2, ly, rightX - 2, ly + 1, ink);
         }
     }
+
+    /**
+     * Other World Types (action): a plain globe with a doorway cut through it -- Latitude's own world,
+     * with the way out of it.
+     *
+     * <p>Reads as "leave this world type", which is what the row does: it hands the player over to
+     * Minecraft's own create-world screen for Superflat, datapack worlds and other mods' types. Drawn in
+     * the same two-tone gold as the other action glyphs (HUD Studio, Game Rules) so the rail's last row
+     * does not read as a different kind of control from the two above it.</p>
+     */
+    static void worldTypes(GuiGraphicsExtractor ctx, int ox, int oy, int s) {
+        int cx = px(ox, 0.5f, s);
+        int cy = px(oy, 0.5f, s);
+        int r = Math.round(0.40f * s);
+        // Globe: ring plus one equator and one meridian, so it reads as a sphere rather than a coin.
+        strokeRing(ctx, cx, cy, r, 2, GOLD);
+        ctx.fill(cx - r, cy, cx + r + 1, cy + 1, GOLD_DK);
+        ctx.fill(cx, cy - r, cx + 1, cy + r + 1, GOLD_DK);
+        // Doorway: a dark arch on the right limb with a lit frame -- the exit cut through the globe.
+        int doorLeft = px(ox, 0.52f, s);
+        int doorRight = px(ox, 0.88f, s);
+        int doorTop = px(oy, 0.34f, s);
+        int doorBot = px(oy, 0.90f, s);
+        ctx.fill(doorLeft, doorTop, doorRight, doorBot, SCREEN_DK);
+        strokeRect(ctx, doorLeft, doorTop, doorRight, doorBot, GOLD);
+        // Handle, on the hinge-opposite side.
+        int handleX = doorRight - Math.max(2, Math.round(0.10f * s));
+        int handleY = cy + Math.max(1, Math.round(0.08f * s));
+        ctx.fill(handleX, handleY, handleX + 1, handleY + 2, GOLD);
+    }
 }

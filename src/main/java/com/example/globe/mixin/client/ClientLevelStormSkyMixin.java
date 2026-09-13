@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * B-4 item 4: STORM SKY at the poles. Peetsa's complaint -- near the pole the sky stayed blue with a
+ * B-4 item 4: STORM SKY at the poles. the maintainer's complaint -- near the pole the sky stayed blue with a
  * shining sun while snow fell, which reads wrong. Instead of hand-rolling sky/sun/precip overrides, we lift
  * the CLIENT level's rain level toward 1.0 over the polar ambient window [85,90] deg and let VANILLA do the
  * rest, consistently: {@code SkyRenderer.getRainLevel} greys the sky and fades the sun/moon, and
@@ -44,7 +44,7 @@ public abstract class ClientLevelStormSkyMixin {
         if (!eval.active()) {
             return; // off a globe world -- no storm sky
         }
-        // Interior-storm fix (Peetsa: "in interiors when looking out, the storm has vanished"). NOT gated on
+        // Interior-storm fix (the maintainer: "in interiors when looking out, the storm has vanished"). NOT gated on
         // eval.surfaceOk(): the storm SKY (greyed overcast + faded sun) and the vanilla snowfall this rain-level
         // lift drives are WORLD-SPACE -- vanilla renders precipitation per exterior column down to the terrain
         // heightmap, so a roof/wall already occludes it (a sheltered player sees the blizzard THROUGH an open
@@ -54,7 +54,7 @@ public abstract class ClientLevelStormSkyMixin {
         double absLatDeg = com.example.globe.util.LatitudeMath.absLatDegExact(
                 self.getWorldBorder(), mc.player.getZ());
         // B-4 round 3 item 3: STEEPENED. The old lift used the linear 85->90 ambientProgress, so at 86 deg
-        // it was only ~0.2 and the sun still shone (Peetsa's complaint). stormLevel reaches full overcast by
+        // it was only ~0.2 and the sun still shone (the maintainer's complaint). stormLevel reaches full overcast by
         // ~87.5 deg (0.4 already at 86 deg): the sky reads clearly stormy well before the pole, sun gone by 87.5.
         // S10c (TEST 99 "greyer skies earlier"): an EARLY-OVERCAST floor now leads that ramp -- 0 at 81 deg,
         // 0.35 by 85 (PolarFogLaw.earlyOvercast01), held poleward until the existing steep 85->87.5 stormLevel

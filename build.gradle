@@ -71,6 +71,12 @@ base {
     archivesName = project.archives_base_name
 }
 
+// Report every compile error, not javac's first 100 -- the 26.3 absorption punch list is long and a
+// truncated list hides which files still need porting.
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ['-Xmaxerrs', '5000']
+}
+
 loom {
 
     runs {
@@ -631,7 +637,7 @@ tasks.register('latitudeSodiumFogReachabilityTest', Exec) {
     group = 'verification'
     description = 'Verify the exact Sodium 0.9.1 FogData-to-culling bytecode chain and Latitude mixin order'
     inputs.file('tools/verify_sodium_fog_reachability.py')
-    inputs.file('src/main/java/com/example/globe/mixin/client/FogRendererEwMixin.java')
+    inputs.file('src/main/java/com/example/globe/mixin/client/FogRendererEwSetupMixin.java')
     inputs.file('src/main/resources/globe.mixins.json')
     inputs.files(configurations.latitudeSodiumFogVerifier)
 

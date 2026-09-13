@@ -37,7 +37,7 @@ public final class SwatchDropdown extends AbstractWidget {
     private static final int PANEL_BG = 0xFF3A302A;
     private static final int PANEL_BG_DARK = 0xFF2A2420;
 
-    // Accessibility (Peetsa 2026-07-11): the collapsed row and the open list obey the SAME shared palette as the
+    // Accessibility (the maintainer 2026-07-11): the collapsed row and the open list obey the SAME shared palette as the
     // rest of the Studio/HUD (core.ui.AccessibilityPalette) -- ONE rulebook, read live each frame. HIGH_CONTRAST
     // lifts dim entry/label text to a legible floor, floors backgrounds near-solid, brightens borders, and adds
     // a stronger selection cue; STANDARD/COLORBLIND are the identity (this control has no red/green signal).

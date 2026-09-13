@@ -42,7 +42,7 @@ public final class LatitudeConfigData {
      *  and reads cleanly inside a black outline. */
     public static final int OFF_WHITE_RGB = 0xF3ECDD;
 
-    // NORMAL briefly removed 2026-07-08, then RESTORED same day: Peetsa's "normal and uppercase are the
+    // NORMAL briefly removed 2026-07-08, then RESTORED same day: the maintainer's "normal and uppercase are the
     // same thing" report was correctly diagnosed but wrongly treated as a request to delete the option --
     // he wants "Tropical" (natural case) kept. The real bug was narrower: the HUD Studio's no-world SAMPLE
     // title was hardcoded ALL-CAPS ("TROPICS 12°S"), so NORMAL's no-op transform was indistinguishable
@@ -102,7 +102,7 @@ public final class LatitudeConfigData {
     // reinterpretation.
 
     /** Draw the title text with a crisp 1px outline (default black) behind the fill. Default = OFF (2026-07-11:
-     *  Peetsa tried the outline and preferred the plain fill; the feature/toggle/RGB picker stay available). */
+     *  the maintainer tried the outline and preferred the plain fill; the feature/toggle/RGB picker stay available). */
     @SerializedName(value = "zoneEnterTitleOutline", alternate = {"zoneEnterTitleOutlineValue"})
     public boolean zoneEnterTitleOutline = false;
 
@@ -119,22 +119,22 @@ public final class LatitudeConfigData {
 
     /** The title's depth treatment: a FADED soft DIRECTIONAL drop shadow (two tapering low-alpha black stamps
      *  offset down-right -- see {@link com.example.globe.core.ui.TitleStyle#DROP_SHADOW_OFFSETS_PX}), NOT the
-     *  stark hard vanilla single-pixel shadow. FRESH-config default flipped OFF -> ON 2026-07-11 (Peetsa:
+     *  stark hard vanilla single-pixel shadow. FRESH-config default flipped OFF -> ON 2026-07-11 (the maintainer:
      *  "change the default glow to a faded drop shadow") -- the out-of-box depth cue is now this soft shadow
      *  instead of the omnidirectional glow halo below.
      *  <p>KEY-PRESENCE ASYMMETRY (disclosed): this boolean key was ADDED EARLIER TODAY, so any config already
-     *  saved this session carries an explicit {@code false} that Gson keeps -- those users (including Peetsa's
+     *  saved this session carries an explicit {@code false} that Gson keeps -- those users (including the maintainer's
      *  own config) stay drop-shadow-OFF until they toggle it or Reset. Only a brand-new config file (no key on
      *  disk) adopts this {@code true} default. That is the correct always-present-key behavior, not a bug. */
     @SerializedName(value = "zoneEnterTitleDropShadow", alternate = {"zoneEnterTitleDropShadowValue"})
     public boolean zoneEnterTitleDropShadow = true;
 
     /** A soft dark halo radiating out behind the text (multi-ring low-alpha offsets), independent of the drop
-     *  shadow. FRESH-config default flipped ON -> OFF 2026-07-11 (Peetsa: "change the default glow to a faded
+     *  shadow. FRESH-config default flipped ON -> OFF 2026-07-11 (the maintainer: "change the default glow to a faded
      *  drop shadow" -- the depth cue moved to {@link #zoneEnterTitleDropShadow}); the glow stays fully
      *  available via this toggle + {@link #zoneEnterTitleGlowIntensity}.
      *  <p>KEY-PRESENCE ASYMMETRY (disclosed): this boolean key was ADDED EARLIER TODAY, so any config already
-     *  saved this session carries an explicit value that Gson keeps -- those users (including Peetsa's own
+     *  saved this session carries an explicit value that Gson keeps -- those users (including the maintainer's own
      *  config) keep whatever glow state they saved until they toggle it or Reset. Only a brand-new config file
      *  (no key on disk) adopts this {@code false} default. That is the correct always-present-key behavior. */
     @SerializedName(value = "zoneEnterTitleGlow", alternate = {"zoneEnterTitleGlowValue"})
@@ -142,7 +142,7 @@ public final class LatitudeConfigData {
 
     /** Glow halo intensity multiplier on the per-ring alphas (slider range 0.2..2.0). FRESH default 0.75 is
      *  deliberately GENTLE -- 0.75x the shipped ring alphas -- so the out-of-box glow is a soft whisper-halo,
-     *  not a heavy shadow (Peetsa's "a *gentle* glow should be default"). Sanitize-clamped; the renderer caps
+     *  not a heavy shadow (the maintainer's "a *gentle* glow should be default"). Sanitize-clamped; the renderer caps
      *  each ring at {@link com.example.globe.core.ui.TitleStyle#GLOW_RING_ALPHA_CAP} so even 2.0 stays a glow.
      *  NEW 2026-07-11. */
     @SerializedName(value = "zoneEnterTitleGlowIntensity", alternate = {"zoneEnterTitleGlowIntensityValue"})
@@ -158,17 +158,17 @@ public final class LatitudeConfigData {
      *  relative-contrast mechanism -- the off-crest baseline DIM and the crest white-POP together -- NOT a
      *  brighten-toward-target (1.0 reproduces the old v2 look; the crest can't out-brighten white, so extra
      *  strength deepens the dim the crest travels against). FRESH default 1.3 is deliberately STRONGER than 1.0
-     *  (Peetsa 2026-07-12: "a stronger glimmer on the title"). Sanitize-clamped; only applies while the Glimmer
+     *  (the maintainer 2026-07-12: "a stronger glimmer on the title"). Sanitize-clamped; only applies while the Glimmer
      *  toggle is ON and Reduce Motion is OFF. NEW 2026-07-12. */
     @SerializedName(value = "zoneEnterTitleGlimmerIntensity", alternate = {"zoneEnterTitleGlimmerIntensityValue"})
     public double zoneEnterTitleGlimmerIntensity = com.example.globe.core.ui.TitleStyle.GLIMMER_INTENSITY_DEFAULT;
 
-    // Fresh-config default changed NORMAL -> UPPERCASE (2026-07-11, Peetsa). Existing saved configs keep
+    // Fresh-config default changed NORMAL -> UPPERCASE (2026-07-11, the maintainer). Existing saved configs keep
     // their own case untouched (the key has always existed, so it's always present on disk).
     @SerializedName(value = "zoneEnterTitleCase", alternate = {"zoneEnterTitleCaseValue"})
     public TitleCaseMode zoneEnterTitleCase = TitleCaseMode.UPPERCASE;
 
-    /** Extra pixels between characters; negative = tighter. FRESH default 0 -> 1 (2026-07-11, Peetsa:
+    /** Extra pixels between characters; negative = tighter. FRESH default 0 -> 1 (2026-07-11, the maintainer:
      *  "default letter spacing +1") for a touch more breathing room out of the box; existing saved configs
      *  keep their own value (key has always existed). Sanitize-clamped to -4..16. */
     @SerializedName(value = "zoneEnterTitleLetterSpacing", alternate = {"zoneEnterTitleLetterSpacingValue"})
@@ -194,7 +194,7 @@ public final class LatitudeConfigData {
      *  duplicated-default-sites law: one constant, every site reads it, so the default can never drift. */
     public static final boolean BORDER_REPROMPT_GESTURE_DEFAULT = true;
 
-    /** Border Re-prompt Gesture (TEST 93, Peetsa): when ON, a disarmed player standing at the antimeridian wall
+    /** Border Re-prompt Gesture (TEST 93, the maintainer): when ON, a disarmed player standing at the antimeridian wall
      *  facing outward can re-summon the crossing prompt with a single USE (right-click) OR ATTACK (left-click)
      *  press, without walking out and back. Gates the WHOLE gesture (both buttons). Default ON. A General-tab
      *  toggle like {@link #reduceMotion} -- global-only, NOT preset-scoped (the General tab settings do not ride
@@ -231,12 +231,23 @@ public final class LatitudeConfigData {
      *  reads it. Default OFF so the full blizzard is the out-of-box experience; the comfort scale is opt-in. */
     public static final boolean REDUCE_POLAR_SNOW_PARTICLES_DEFAULT = false;
 
-    /** Accessibility comfort option (HUD Studio round 10, Peetsa): when ON, the polar snow storm's particle budget
+    /** Accessibility comfort option (HUD Studio round 10, the maintainer): when ON, the polar snow storm's particle budget
      *  is scaled down hard (a single multiplier in {@code GlobeModClient}'s snow-budget path) for players the
      *  blizzard might discomfort. A General-tab accessibility toggle like {@link #reduceMotion} -- global-only,
      *  NOT preset-scoped. Boolean, so no sanitize clamp; the default lives in the constant above. Default OFF. */
     @SerializedName(value = "reducePolarSnowParticles", alternate = {"reducePolarSnowParticlesValue"})
     public boolean reducePolarSnowParticles = REDUCE_POLAR_SNOW_PARTICLES_DEFAULT;
+
+    /** Accessibility comfort option on the bespoke create-world screen: when ON, the animated vanilla panorama
+     *  behind the screen is covered by a flat, still Latitude backdrop. It covers rather than rewrites
+     *  Minecraft's own global panorama preference, so toggling OFF restores the scenic view instantly.
+     *  Default OFF so the scenic panorama stays the out-of-box experience. The {@code alternate} name is the
+     *  on-disk key the 1.5 line wrote to this same {@code globe_latitude.json}, so an upgrading player keeps
+     *  the preference they already set. No migration and no config-version bump: a new field with an
+     *  initializer is exactly the case Gson's missing-key behaviour already covers
+     *  (maintainer ruling, 2026-09-12). */
+    @SerializedName(value = "createWorldStillBackground", alternate = {"createWorldStillBackgroundValue"})
+    public boolean createWorldStillBackground = false;
 
     /** Defaults + current version — the fresh-install state. */
     public static LatitudeConfigData fresh() {

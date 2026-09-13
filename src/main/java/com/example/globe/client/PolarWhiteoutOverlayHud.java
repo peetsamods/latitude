@@ -27,7 +27,7 @@ public final class PolarWhiteoutOverlayHud {
 
     // B-4 stormy cast: the fill lerps from a cold grey-blue STORM tint at low/mid intensity toward the
     // near-white WHITEOUT endpoint at the pole. Because the fill covers the whole screen this also dims
-    // the sunny/blue sky Peetsa complained about -- the approach reads as a gathering storm, not clear skies.
+    // the sunny/blue sky the maintainer complained about -- the approach reads as a gathering storm, not clear skies.
     private static final int STORM_R = 92;
     private static final int STORM_G = 108;
     private static final int STORM_B = 132;
@@ -52,11 +52,11 @@ public final class PolarWhiteoutOverlayHud {
         // not a HUD element, so it STAYS visible under F1. The mixin renders it from the F1 path too (vanilla
         // skips extractHotbarAndDecorations when the HUD is hidden); the visible HUD chrome is what F1 hides.
 
-        // Interior-storm split (Peetsa's "storm vanishes indoors" bug): this whiteout is a SCREEN-SPACE HUD
+        // Interior-storm split (the maintainer's "storm vanishes indoors" bug): this whiteout is a SCREEN-SPACE HUD
         // fill with no depth -- walls cannot occlude it, so painting it at full while a player is sealed in a
         // room would haze the interior itself rather than only the view out a window. It represents being
         // ENGULFED in the whiteout, which happens out in the open. TEST 78: instead of a HARD sky-exposure
-        // gate (which dropped the whiteout entirely under Peetsa's open arch), its alpha now SCALES by the
+        // gate (which dropped the whiteout entirely under the maintainer's open arch), its alpha now SCALES by the
         // graded enclosure estimate exposure01 -- ~full under the open arch, ~0 in a sealed room, partial at a
         // doorway. The wall-aware far haze is still carried separately by the depth-based render-distance fog
         // (FogRendererPolarSetupMixin), which correctly hazes only the far exterior past an opening.

@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Phase 5 Slice B-5-P2 (Hemisphere Passage) -- the APPROACH FOG (design amendment A2). Peetsa vetoed a flat
+ * Phase 5 Slice B-5-P2 (Hemisphere Passage) -- the APPROACH FOG (design amendment A2). the maintainer vetoed a flat
  * screen tint this session, so the E/W-edge approach drives Minecraft's OWN render-distance fog exactly like
  * the pole's {@link FogRendererPolarSetupMixin}: depth-correct and wall-aware. Geometry nearer than
  * {@code renderDistanceStart} takes zero fog (a shelter wall two blocks away stays crisp) while distant terrain

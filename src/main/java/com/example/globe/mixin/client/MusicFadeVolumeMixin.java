@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
 /**
- * Phase 5 Slice B-9/B-7 -- Peetsa stipulation S26 (2026-07-20): MUSIC FADES OUT AT THE DAMAGE LINE. The
+ * Phase 5 Slice B-9/B-7 -- the maintainer stipulation S26 (2026-07-20): MUSIC FADES OUT AT THE DAMAGE LINE. The
  * client volume seam: multiplies the {@code SoundSource.MUSIC} category volume by the live
  * {@link PolarMusicClient#factor01() music factor} so the game's music eases to silence at the first
  * cold-damage latitude and resumes (eased) inside caves / shelter.

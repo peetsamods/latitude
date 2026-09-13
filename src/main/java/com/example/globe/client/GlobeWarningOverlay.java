@@ -15,6 +15,14 @@ import net.minecraft.util.Mth;
 
 public final class GlobeWarningOverlay {
     private static long debugStartWorldTime = -1L;
+    // World identity + the last observed raw game clock. These separate the two things the old
+    // "worldTime < debugStartWorldTime" heuristic conflated: a genuine WORLD CHANGE (wipe everything, the
+    // previous world's zone and episodes must not resurrect) from a same-level CLOCK RESYNC (the integrated
+    // client free-runs its tick count while the server thread is blocked during teleport chunk-gen, then gets
+    // corrected BACKWARDS to the server's authoritative value -- nothing about the player's situation changed,
+    // so the active timelines should be shifted, not forgotten).
+    private static net.minecraft.client.multiplayer.ClientLevel lastWarningLevel;
+    private static long lastWarningWorldTime = Long.MIN_VALUE;
     private static String lastZoneKey;
 
     // Polar warning ladder. B-7 item 4 REWORKED the TEXT ladder from four rungs to FIVE (pure decision in
@@ -36,11 +44,11 @@ public final class GlobeWarningOverlay {
     // The ladder DEGREE constants (POLAR_STAGE_*) STAY PUT -- they are SHARED with the EW storm axis (B-3-P3
     // KEEP-SHARED coupling) -- so they do NOT move when the player-affecting hazard onset moves.
     //
-    // The four rungs tell ONE worsening hypothermia story (TEST 77 -- Peetsa asked WARN_2 to lead on
+    // The four rungs tell ONE worsening hypothermia story (TEST 77 -- the maintainer asked WARN_2 to lead on
     // hypothermia instead of "the cold will slow you"):
     //   WARN_1  (85 deg): snow begins.
     //   WARN_2  (87 deg): "hypothermia is setting in" -- onset.
-    //   DANGER  (89 deg): Peetsa's line, verbatim. [SUPERSEDED S13c 2026-07-17: owner-approved re-time to 88 deg
+    //   DANGER  (89 deg): the maintainer's line, verbatim. [SUPERSEDED S13c 2026-07-17: owner-approved re-time to 88 deg
     //           + present-tense reword; S16d 2026-07-18 dropped the trailing "Turn back."; S17d 2026-07-18
     //           (TEST 107) rewrote it verbatim -> now "DANGER! Extreme cold and reduced visibility." (see
     //           POLE_DANGER_TEXT). The SHARED POLAR_STAGE_* fog/vignette-severity constant stays 89; only the
@@ -108,14 +116,19 @@ public final class GlobeWarningOverlay {
     // beat rather than a 0.7 deg double-tap of the same red flash (pairs with LETHAL's deeper vignette).
     private static final float LETHAL_TEXT_SCALE = 1.15f;
 
-    // TEST 89: the E/W edge banner is now ONE white advisory (Peetsa retired the two-tier severe/yellow
-    // system). Shown on entering the band, plain white with the warning-family keyline, one wall-clock fade.
-    // Copy v3 per Peetsa (2026-07-13, verbatim: three sentences, NO em-dash -- replaces the old
-    // "Heavy fog ahead—proceed with care." em-dash version). "Antimeridian" is the 180-deg line (the Prime
-    // Meridian is 0 deg, which has its own crossing title). (The old direction-templated LEVEL_1/LEVEL_2 "Turn
-    // back." / whiteout / sandstorm strings -- and the PASSAGE_V2 rewords -- are gone with the second tier.)
-    private static final String EW_ADVISORY_TEXT =
-            "Approaching the Antimeridian. Heavy fog obscures the border. Proceed with caution.";
+    // TEST 89 (maintainer ruling, 2026-07-13): the E/W edge banner is ONE advisory, not the old two-tier
+    // severe/yellow system. It shows on ENTERING the band, plain white with the warning-family keyline, and
+    // plays one wall-clock fade. That envelope is unchanged here; only the words it carries have moved.
+    //
+    // Maintainer ruling, 2026-09-12 (east/west presentation): the banner copy now comes from the shared
+    // EwPresentationPolicy and NAMES THE EDGE the player is actually approaching, rather than a fixed
+    // sentence -- the same policy the depth fog and the storm particles read, so the words and the weather
+    // can never describe different sides of the world. The direction is derived from the real border
+    // coordinates (not the sign of X and not the view direction), so shifted and asymmetric borders are named
+    // correctly. See ewTextForStage below.
+    /** The dark 1px keyline behind the east/west banner -- its own constant beside the polar one so the two
+     *  warning families can be retuned independently. */
+    private static final int EW_KEYLINE_RGB = 0x080609;
 
     private static final boolean DEBUG_ENTRY_TITLES = Boolean.getBoolean("latitude.debugEntryTitles");
 
@@ -173,7 +186,7 @@ public final class GlobeWarningOverlay {
     private static int poleVignetteTier = 0;
     private static long poleVignetteStartMs = Long.MIN_VALUE;
     // The E/W banner is a direction-aware, single-tier fading advisory (TEST 89 retired the severe tier).
-    // Peetsa's feedback retired the old shape (LEVEL_2 persisted "annoyingly"; a walk-OUT re-showed the mild
+    // Maintainer feedback retired the old shape (LEVEL_2 persisted "annoyingly"; a walk-OUT re-showed the mild
     // tier; on his thin world the severe tier "stole" the mild tier's turn; on large worlds the mild tier
     // started absurdly far out). All of that logic is pure in core.EwBannerEnvelope; the overlay only holds
     // this ONE persisted state record and drives it off distance-to-edge each frame. Wall-clock timed
@@ -382,22 +395,30 @@ public final class GlobeWarningOverlay {
         Minecraft client = Minecraft.getInstance();
 
         if (client == null) {
-            return;
-        }
-
-        if (!LatitudeConfig.showWarningMessages) {
+            clearWarningWorldState();
             return;
         }
 
         if (client.player == null || client.level == null) {
+            clearWarningWorldState();
             return;
         }
 
         try {
             long worldTime = client.level.getGameTime();
-            if (debugStartWorldTime < 0L || worldTime < debugStartWorldTime) {
+            // A NEW LEVEL wipes the timelines; a same-level clock ROLLBACK only shifts them. Conflating the two
+            // (the old single "worldTime went backwards" test) meant a teleport hitch silently forgot the zone
+            // the player was standing in and re-announced it on the next sample.
+            boolean levelChanged = lastWarningLevel != client.level;
+            boolean timeRolledBack = lastWarningWorldTime != Long.MIN_VALUE
+                    && worldTime < lastWarningWorldTime;
+            if (levelChanged || debugStartWorldTime < 0L) {
                 resetWorldEntryState(worldTime);
+            } else if (timeRolledBack) {
+                resyncWorldClock(worldTime);
             }
+            lastWarningLevel = client.level;
+            lastWarningWorldTime = worldTime;
 
             var eval = GlobeClientState.evaluate(client);
 
@@ -508,6 +529,32 @@ public final class GlobeWarningOverlay {
                 maybeTriggerPoleWarning(client, eval.exposure01());
             }
 
+            // TEST 89 / edge-flow rework: the pure single-tier banner state machine (core.EwBannerEnvelope)
+            // arms ONE episode when the player APPROACHES into the band (a walk-out re-shows nothing), plays
+            // the wall-clock fade, and stays gone while lingering until a leave-and-re-enter. The band cap is
+            // advisoryDist (~176 deg) -- the OUTERMOST edge element -- so the advisory LEADS the fog onset
+            // (rampStartDist, ~177.5 deg) by 0.5 deg: a genuine heads-up before the fog, not simultaneous with
+            // it. Anchored to the intended X radius, so a lerping border cannot slide it and client and server
+            // agree. Leaving the band drives geometryTier back to NONE, which re-arms the next approach.
+            //
+            // ADVANCED UNCONDITIONALLY, before every visibility gate below: warnings switched off, the HUD
+            // hidden under F1, or the player sealed underground must all still CONSUME the episode. Otherwise
+            // switching warnings back on (or surfacing) replays an approach the player already walked through.
+            double ewDistToEdge = GlobeClientState.distanceToEwBorderBlocks(client.player.getX());
+            com.example.globe.core.EdgeGeometry.Resolved ewGeo =
+                    GlobeClientState.edgeGeometry(client.level.getWorldBorder());
+            long ewNowMs = System.currentTimeMillis();
+            com.example.globe.core.EwBannerEnvelope.Decision ewDecision =
+                    com.example.globe.core.EwBannerEnvelope.evaluate(
+                            ewBannerState, ewDistToEdge, ewGeo.advisoryDist(), ewNowMs);
+            ewBannerState = ewDecision.next();
+
+            // Warnings-off hides the warning BANNERS only. The zone/hemisphere titles above are a separate
+            // family with their own toggle, and all of the tracking has already run, so nothing is swallowed.
+            if (!LatitudeConfig.showWarningMessages) {
+                return;
+            }
+
             // B-4 round 3 item 6: F1 (hud hidden) suppresses the VISIBLE warning line, but the zone /
             // hemisphere / pole tracking above still runs every frame -- so a boundary crossed while the HUD
             // is hidden isn't silently swallowed, and re-showing the HUD can't replay a stale crossing.
@@ -534,45 +581,84 @@ public final class GlobeWarningOverlay {
                 return;
             }
 
-            // TEST 89: ONE white advisory (Peetsa retired the two-tier system). The pure banner state machine
-            // (core.EwBannerEnvelope) is single-tier now: it arms ONE episode when the player APPROACHES into
-            // the band (a walk-out re-shows nothing), plays the wall-clock fade, and stays gone while lingering
-            // until a leave+re-enter. Edge-flow rework: the band cap is now advisoryDist (~176 deg) -- the
-            // OUTERMOST edge element -- so the advisory LEADS the fog onset (rampStartDist, ~177.5 deg) by 0.5 deg
-            // (a genuine heads-up before the fog, not simultaneous with it). Anchored to the intended X radius, so
-            // a lerping border can't slide it; client + server agree. Leaving the band drives geometryTier back to
-            // NONE, which re-arms the next approach.
-            double ewDistToEdge = GlobeClientState.distanceToEwBorderBlocks(client.player.getX());
-            com.example.globe.core.EdgeGeometry.Resolved ewGeo =
-                    GlobeClientState.edgeGeometry(client.level.getWorldBorder());
-            long ewNowMs = System.currentTimeMillis();
-            com.example.globe.core.EwBannerEnvelope.Decision ewDecision =
-                    com.example.globe.core.EwBannerEnvelope.evaluate(
-                            ewBannerState, ewDistToEdge, ewGeo.advisoryDist(), ewNowMs);
-            ewBannerState = ewDecision.next();
             if (ewDecision.shownTier() == com.example.globe.core.EwBannerEnvelope.TIER_NONE) {
                 return; // past the cap, retreating, or faded-out-and-lingering: draw nothing.
             }
             float episodeAlpha = ewDecision.alpha();
 
-            // Plain WHITE advisory (Peetsa's verbatim copy). Same dark 1px keyline the polar warnings use so it
-            // reads on the fog; steady fill (no per-tick pulse) -- the only alpha modulation is the exposure
-            // gate and the wall-clock episode fade.
-            Component bestText = Component.literal(EW_ADVISORY_TEXT);
+            // The envelope above decided WHETHER to speak; the shared policy decides WHAT is said. Floor the
+            // stage at LEVEL_1 because the envelope's band (degree-anchored, ~176 deg) reaches further out
+            // than the policy's fixed 400-block copy envelope -- inside the band there is always something to
+            // say, and the copy escalates on its own once the player is inside 100 blocks.
+            var ewTextStage = GlobeClientState.computeEwTextStage(client.level, client.player);
+            if (ewTextStage == GlobeClientState.EwStormStage.NONE) {
+                ewTextStage = GlobeClientState.EwStormStage.LEVEL_1;
+            }
+            Component bestText = ewTextForStage(ewTextStage, client);
+            if (bestText == null) {
+                return;
+            }
             maybeLogWarningRender(client,
-                    new GlobeClientState.WarningState(GlobeClientState.WarningType.STORM,
-                            GlobeClientState.EwStormStage.LEVEL_1, 0),
+                    new GlobeClientState.WarningState(GlobeClientState.WarningType.STORM, ewTextStage, 0),
                     bestText);
-            float bannerAlpha = warnExposureAlpha * episodeAlpha;
+            // Confirmed shelter (EwPresentationPolicy.ShelterState) is folded in beside the graded polar
+            // exposure so the banner fades with the same evidence that fades the depth fog and the particles:
+            // deep, continuous, zero-sky enclosure -- never a single leaf overhead.
+            float bannerAlpha = warnExposureAlpha
+                    * episodeAlpha
+                    * GlobeClientState.ewPresentationVisibility();
             if (bannerAlpha <= 0.001f) {
                 return;
             }
             int a = (int) Mth.clamp(bannerAlpha * 255.0f, 0.0f, 255.0f);
             int color = (a << 24) | 0x00FFFFFF; // white fill
-            drawCenteredWarning(ctx, client.font, bestText, warnY, color, true, 1.0f);
+            drawCenteredEwWarning(ctx, client.font, bestText, warnY, color);
         } catch (Throwable t) {
             GlobeMod.LOGGER.error("GlobeWarningOverlay.render crashed", t);
         }
+    }
+
+    /**
+     * The east/west banner copy for a stage. Delegates to the shared {@link EwPresentationPolicy}, which names
+     * the world edge the player is actually nearest from the REAL border coordinates -- not the sign of X, and
+     * not the direction the camera happens to face -- so shifted and asymmetric borders read correctly.
+     * Deliberately non-bold: Minecraft fakes bold by drawing every glyph twice at a +1px offset, which doubles
+     * the keyline stamps into a smeared halo (the same finding that took bold off the polar lines).
+     */
+    private static Component ewTextForStage(GlobeClientState.EwStormStage stage, Minecraft client) {
+        if (stage == null || client.level == null || client.player == null) {
+            return null;
+        }
+        var border = client.level.getWorldBorder();
+        String text = EwPresentationPolicy.warningText(
+                ewRank(stage), border.getMinX(), border.getMaxX(), client.player.getX());
+        return text == null ? null : Component.literal(text);
+    }
+
+    private static int ewRank(GlobeClientState.EwStormStage stage) {
+        return switch (stage) {
+            case LEVEL_1 -> 1;
+            case LEVEL_2 -> 2;
+            default -> 0;
+        };
+    }
+
+    /** The east/west banner's own draw path: an explicit one-pixel keyline ring from
+     *  {@link EwPresentationPolicy#outlineOffsets()} under an unshadowed fill. Both stamps are drawn WITHOUT
+     *  the vanilla drop shadow -- the ring IS the dark backing, and a shadow would add a ninth offset stamp. */
+    private static void drawCenteredEwWarning(GuiGraphicsExtractor ctx, Font tr, Component text, int y,
+                                              int argbColor) {
+        int screenW = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+        int w = tr.width(text);
+        int x = Math.max(4, (screenW - w) / 2);
+        int keylineColor = (argbColor & 0xFF000000) | EW_KEYLINE_RGB;
+        // Styleless copy: Font honours the passed colour only when the component carries none of its own, and
+        // a styled copy would also inherit fake-bold's doubled stamps.
+        Component keylineText = Component.literal(text.getString());
+        for (int[] offset : EwPresentationPolicy.outlineOffsets()) {
+            ctx.text(tr, keylineText, x + offset[0], y + offset[1], keylineColor, false);
+        }
+        ctx.text(tr, text, x, y, argbColor, false);
     }
 
     // M2 (GUI-scale parity audit) -- wrap + center a warning line. A long pole/storm warning at a narrow
@@ -614,7 +700,7 @@ public final class GlobeWarningOverlay {
             //  1) COLOR: Font.getTextColor honors the passed color arg ONLY when the component has no style
             //     color; a component WITH one (the RED DANGER/LETHAL lines) uses its OWN color and keeps just
             //     the arg's ALPHA. So stamping the styled lineC with keyArgb drew a RED keyline around a RED
-            //     fill -- a red-on-red halo with no dark backing at all (the "smear" Peetsa saw, worse once
+            //     fill -- a red-on-red halo with no dark backing at all (the "smear" the maintainer saw, worse once
             //     the fill's own drop shadow was removed). A styleless literal has no color, so the near-black
             //     keyArgb is finally honored and the outline is actually dark.
             //  2) BOLD: MC fakes bold by drawing every glyph TWICE, offset +1px (BakedSheetGlyph.renderChar).
@@ -670,9 +756,65 @@ public final class GlobeWarningOverlay {
         ewBannerState = com.example.globe.core.EwBannerEnvelope.State.INITIAL;
         lastWarningDebugWorldTime = Long.MIN_VALUE;
         lastWarningDebugText = null;
+        // A world change must also discard the neighbouring overlays' in-flight state, or a title started in
+        // the old world keeps rendering over the new one and the previous world's shelter counters decide the
+        // first frames of this one.
+        ZoneEnterTitleOverlay.reset();
+        GlobeClientState.resetEwPresentationState();
         if (DEBUG_ENTRY_TITLES) {
             GlobeMod.LOGGER.info("[LAT][ENTRY_TITLE] action=reset worldTime={}", worldTime);
         }
+    }
+
+    /**
+     * SAME level, raw game clock corrected backwards. Nothing about the player's situation changed, so every
+     * tick-denominated timeline is SHIFTED by the correction instead of being forgotten -- deliberately
+     * without touching {@code lastZoneKey} or calling {@code resetWorldEntryState}, because forgetting the
+     * active zone here is exactly the bug this split exists to prevent (the next sample would re-announce a
+     * zone the player never left). The wall-clock timelines (the hemisphere cooldowns, the vignette, the E/W
+     * banner envelope, the zone title itself) need no shift at all: wall time never runs backwards.
+     */
+    private static void resyncWorldClock(long worldTime) {
+        long deltaTicks = worldTime - lastWarningWorldTime;
+        ZoneEnterTitleOverlay.shiftClock(deltaTicks);
+        if (debugStartWorldTime >= 0L) {
+            debugStartWorldTime += deltaTicks;
+        }
+        if (lastZoneUpdateWorldTime != Long.MIN_VALUE) {
+            lastZoneUpdateWorldTime += deltaTicks;
+        }
+        if (poleWarnStartTick != Long.MIN_VALUE) {
+            poleWarnStartTick += deltaTicks;
+        }
+        if (poleWarnEndTick != Long.MIN_VALUE) {
+            poleWarnEndTick += deltaTicks;
+        }
+        if (lastWarningDebugWorldTime != Long.MIN_VALUE) {
+            lastWarningDebugWorldTime += deltaTicks;
+        }
+        if (DEBUG_ENTRY_TITLES) {
+            GlobeMod.LOGGER.info(
+                    "[LAT][ENTRY_TITLE] action=clock_resync worldTime={} deltaTicks={}",
+                    worldTime,
+                    deltaTicks);
+        }
+    }
+
+    /** Render-time cleanup for "there is no client / no world any more". Cheap no-op once already cleared, so
+     *  it can sit on the two hot early-return paths without doing work every frame on the title screen. */
+    private static void clearWarningWorldState() {
+        if (lastWarningLevel == null && lastWarningWorldTime == Long.MIN_VALUE) {
+            return;
+        }
+        resetForDisconnect();
+    }
+
+    /** The explicit lifecycle reset, wired to the client disconnect event. Clears the static level identity and
+     *  clock as well as the per-world state, so nothing can survive into the next world on a static field. */
+    public static void resetForDisconnect() {
+        lastWarningLevel = null;
+        lastWarningWorldTime = Long.MIN_VALUE;
+        resetWorldEntryState(-1L);
     }
 
     // Fires the shared HEMISPHERE-TITLE channel on the two hemisphere crossings: N/S at the equator

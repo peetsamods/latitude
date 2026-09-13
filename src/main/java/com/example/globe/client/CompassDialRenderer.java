@@ -131,7 +131,7 @@ final class CompassDialRenderer {
         int len = radius - 4;
         int baseHalf = Math.max(1, radius / 8);
         // Cardinal diamonds: vertical pair (N/S) filled by row, horizontal pair (E/W) by column.
-        // TEST 117 round (Peetsa: "very flatly colored"): each arm is split lengthwise into a LIT half and
+        // TEST 117 round (the maintainer: "very flatly colored"): each arm is split lengthwise into a LIT half and
         // a SHADED half — the classic engraved-rose treatment — with both tones derived from the theme's
         // own muted color (lighten/darken), so every theme (and Custom) gains depth with zero new config.
         // Light reads from the upper-left: N and W take lit-left/lit-top, S and E the mirrored shade.
@@ -139,7 +139,7 @@ final class CompassDialRenderer {
         // the lengthwise lit/shade facets read as dither noise at real HUD scale (arms are ~4-11 px). Arms
         // return to the flat muted fill; the SUBTLE shading that survives is the 1px ring bevel in
         // drawDiscBase -- visible depth, zero busy-ness. (The faceted experiment lives in git history.)
-        // S34 revert (Peetsa 2026-07-21, TEST 124: "The compass rose is cut off... Put the compass back to
+        // S34 revert (the maintainer 2026-07-21, TEST 124: "The compass rose is cut off... Put the compass back to
         // how it was"): the S33 shortened-north-arm + red-outlined-N experiment is fully retired on the HUD
         // dial -- all four arms full length again, exactly the pre-S33 rose.
         for (int i = 0; i <= len; i++) {
@@ -344,7 +344,7 @@ final class CompassDialRenderer {
     }
 
     /** The radius-scaled "N" glyph (see the sizing rationale comment history in CompassHud @ U-A).
-     *  TEST 117 round (Peetsa: "the 'N' is sort of washed out"): the glyph now draws in a LIGHTENED
+     *  TEST 117 round (the maintainer: "the 'N' is sort of washed out"): the glyph now draws in a LIGHTENED
      *  needle tone over a full dark outline (four offset passes in a face-derived shadow tone, replacing
      *  the single baked-in drop shadow), so it pops off the face at every scale and in every theme. */
     private static void drawNorthLabel(GuiGraphicsExtractor ctx, Font font, int cx, int cy, int radius, DialColors colors) {

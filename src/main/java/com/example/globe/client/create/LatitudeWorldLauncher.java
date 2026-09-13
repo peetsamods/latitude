@@ -65,6 +65,7 @@ public final class LatitudeWorldLauncher {
                                        WorldCreationContext holder,
                                        String worldName, String seed,
                                        GlobeWorldSize size, LatitudeBands.Band spawnZone,
+                                       boolean randomSpawnZone,
                                        LatitudeBiomes.GlobeShape worldShape,
                                        GameType gameMode, boolean hardcore,
                                        Difficulty difficulty, boolean allowCommands,
@@ -93,7 +94,7 @@ public final class LatitudeWorldLauncher {
             // for BOTH axes and mislabeled a 40,000 x 20,000 world as "20,000 x 20,000". Matches the create
             // screen's worldDimsLabel() (Wide/Mercator = z*4 x z*2, Square/Legacy/Classic = z*2 x z*2).
             //
-            // Shape name added to the summary (Peetsa live feedback: saw "Regular \u00b7 40,000 \u00d7 20,000"
+            // Shape name added to the summary (the maintainer live feedback: saw "Regular \u00b7 40,000 \u00d7 20,000"
             // and asked "should be wide?" -- the dims alone don't say which shape they belong to). Sourced from
             // LatitudeCreateWorldScreen.WORLD_SHAPE_NAMES via worldShapeDisplayName() so the display string
             // isn't duplicated between the create screen and the loading summary.
@@ -256,6 +257,9 @@ public final class LatitudeWorldLauncher {
                     GlobePending.startWithCompass = startWithCompass;
                     GlobePending.pendingGlobeShape = LatitudeBiomes.shapeToString(worldShape);
                     LatitudeClientState.activateLatitudeLoading();
+                    // Known synchronously, no round trip needed: a concrete zone shows its label at once;
+                    // Random ("sealed orders") shows nothing until the world has actually been entered.
+                    LatitudeClientState.setLoadingZoneLabel(randomSpawnZone ? null : spawnZone.displayName());
                     LOGGER.info("[Latitude lifecycle] bespoke overlay activated — {}ms since beginExpedition",
                             LatitudeClientState.elapsedSinceExpeditionMs());
                 }

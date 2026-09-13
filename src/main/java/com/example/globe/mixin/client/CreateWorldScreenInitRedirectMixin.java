@@ -285,6 +285,7 @@ public abstract class CreateWorldScreenInitRedirectMixin {
 
         WorldCreationUiState initialState = self.getUiState();
         String recreatedPresetId = ((RecreatedWorldPresetCarrier) this).globe$getRecreatedWorldPresetId();
+        String recreatedGlobeShapeId = ((RecreatedWorldPresetCarrier) this).globe$getRecreatedGlobeShapeId();
         if (!LatitudeCreateWorldScreen.canRepresent(initialState, this.recreated, recreatedPresetId)) {
             if (DEBUG_CWPATH) {
                 LOGGER.info("[LAT][CWPATH] leaving unsupported create-world preset on vanilla screen: {}",
@@ -294,7 +295,8 @@ public abstract class CreateWorldScreenInitRedirectMixin {
         }
 
         LatitudeCreateWorldScreen.openLoaded(
-                client, returnToParent, parent, initialState, this.recreated, recreatedPresetId);
+                client, returnToParent, parent, initialState, this.recreated, recreatedPresetId,
+                recreatedGlobeShapeId);
         ci.cancel();
     }
 

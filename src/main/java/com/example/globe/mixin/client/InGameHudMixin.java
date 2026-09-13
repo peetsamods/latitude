@@ -1,7 +1,6 @@
 package com.example.globe.mixin.client;
 
 import com.example.globe.client.CompassHud;
-import com.example.globe.client.EwSandstormOverlayHud;
 import com.example.globe.client.GlobeWarningOverlay;
 import com.example.globe.client.LatitudeHudStudioScreen;
 import com.example.globe.client.ZoneEnterTitleOverlay;
@@ -20,15 +19,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Hud.class)
 public class InGameHudMixin {
     @Inject(method = "extractHotbarAndDecorations", at = @At("HEAD"))
-    private void globe$renderEwHazeBeforeHotbar(GuiGraphicsExtractor context, DeltaTracker tickCounter, CallbackInfo ci) {
+    private void globe$renderAtmosphereBeforeHotbar(GuiGraphicsExtractor context, DeltaTracker tickCounter, CallbackInfo ci) {
         Minecraft client = Minecraft.getInstance();
         if (client != null
                 && client.gui.screen() != null
                 && !(client.gui.screen() instanceof LatitudeHudStudioScreen)) {
             return;
         }
-        EwSandstormOverlayHud.render(context, tickCounter);
-        // B-3b: polar whiteout fill, same layer as the EW haze -- alpha ramps continuously 85->90 deg.
+        // The east/west storm no longer paints anything on this layer: maintainer ruling 2026-09-12 replaced
+        // the flat screen-space veil with genuine depth fog (client.FogRendererEwSetupMixin), so there is no
+        // full-screen east/west fill left to draw here.
+        // B-3b: polar whiteout fill -- alpha ramps continuously 85->90 deg.
         com.example.globe.client.PolarWhiteoutOverlayHud.render(context, tickCounter);
     }
 
@@ -42,14 +43,14 @@ public class InGameHudMixin {
         }
 
         // B-4 round 3 item 6: F1 (HUD hidden) must hide the compass / zone-biome-coords labels / zone &
-        // hemisphere titles / whispers, but the world-atmosphere overlays (fog / whiteout / EW haze) must
-        // STAY. Vanilla skips extractHotbarAndDecorations when the HUD is hidden, so the atmosphere that
-        // normally rides that method (globe$renderEwHazeBeforeHotbar) is NOT drawn under F1 -- render it
-        // here instead (this TAIL still runs when the HUD is hidden), then stop before any HUD chrome.
+        // hemisphere titles / whispers, but the world-atmosphere overlays (the polar whiteout here, and the
+        // depth fog, which is not on this layer at all) must STAY. Vanilla skips extractHotbarAndDecorations
+        // when the HUD is hidden, so the atmosphere that normally rides that method
+        // (globe$renderAtmosphereBeforeHotbar) is NOT drawn under F1 -- render it here instead (this TAIL
+        // still runs when the HUD is hidden), then stop before any HUD chrome.
         boolean hudHidden = client != null && client.gui != null && client.gui.hud != null
                 && client.gui.hud.isHidden();
         if (hudHidden) {
-            EwSandstormOverlayHud.render(context, tickCounter);
             com.example.globe.client.PolarWhiteoutOverlayHud.render(context, tickCounter);
             // Keep the zone/hemisphere/pole tracking alive under F1; its own draw self-suppresses.
             GlobeWarningOverlay.render(context, tickCounter);

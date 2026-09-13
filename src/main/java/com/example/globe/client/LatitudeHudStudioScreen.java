@@ -125,6 +125,7 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
     private AbstractWidget wBiomeDisplay;
     private AbstractWidget wBiomeFollow;
     private AbstractWidget wBiomeTextScale;
+    private AbstractWidget wBiomeSource;
     private AbstractWidget wZoneBiomeOrder;
     private AbstractWidget wCoordsFollow;
     private AbstractWidget wCoordsTextScale;
@@ -151,7 +152,7 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
 
     private AbstractWidget wResetHud;
     // Presets-tab undo/redo: empty-labelled buttons; the arrow glyph is drawn scaled on top (the vanilla
-    // button message renders the unicode arrow tiny — Peetsa: "comically small").
+    // button message renders the unicode arrow tiny — the maintainer: "comically small").
     private AbstractWidget wUndoLoad;
     private AbstractWidget wRedoLoad;
 
@@ -214,7 +215,7 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
     private AbstractWidget wSnapToggle;
 
     // Overwrite-confirm modal for the Presets tab: -1 == closed, otherwise the slot index awaiting confirmation
-    // (Peetsa: accidentally clicking a Save on an occupied slot overwrote it irreversibly). While open it is even
+    // (maintainer: accidentally clicking a Save on an occupied slot overwrote it irreversibly). While open it is even
     // more modal than openDropdown -- painted last, and it swallows ALL clicks/keys/scroll before the picker check
     // and super (see mouseClicked/keyPressed/mouseScrolled/tick). Reset in init() so no dialog survives a rebuild
     // (ghost-layer lesson: any screen-lifetime state must be cleared when the widget set is torn down).
@@ -318,6 +319,7 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
         this.wBiomeDisplay = null;
         this.wBiomeFollow = null;
         this.wBiomeTextScale = null;
+        this.wBiomeSource = null;
         this.wZoneBiomeOrder = null;
         this.wCoordsFollow = null;
         this.wCoordsTextScale = null;
@@ -676,6 +678,16 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
             trackSidebarWidget(this.wBiomeTextScale, y);
             y += rowH + rowGap;
 
+            this.wBiomeSource = this.addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "ON" : "OFF"), () -> cfg.showCustomBiomeSource)
+                    .withValues(true, false)
+                    .create(panelX, y, widgetW, rowH, Component.literal("Show Biome Source"), (btn, value) -> {
+                        cfg.showCustomBiomeSource = value;
+                        CompassHudConfig.saveCurrent();
+                    }));
+            tooltip(this.wBiomeSource, "Name the mod a biome came from, next to the biome itself (like \"Rainforest · BIOMES O' PLENTY\"). Vanilla biomes are never tagged, so this does nothing in a world with no biome mods.");
+            trackSidebarWidget(this.wBiomeSource, y);
+            y += rowH + rowGap;
+
             this.wZoneBiomeOrder = this.addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "Biome, Zone" : "Zone, Biome"), () -> cfg.biomeBeforeZone)
                     .withValues(false, true)
                     .create(panelX, y, widgetW, rowH, Component.literal("Zone/Biome Order"), (btn, value) -> {
@@ -800,6 +812,7 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
                         cfg.biomeGrowV = fresh.biomeGrowV;
                         cfg.biomeTextScale = fresh.biomeTextScale;
                         cfg.biomeBeforeZone = fresh.biomeBeforeZone;
+                        cfg.showCustomBiomeSource = fresh.showCustomBiomeSource;
                         cfg.coordsFollowsCompass = fresh.coordsFollowsCompass;
                         cfg.coordsHAnchor = fresh.coordsHAnchor;
                         cfg.coordsVAnchor = fresh.coordsVAnchor;
@@ -1047,7 +1060,7 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
             trackSidebarWidget(wImport, y);
             y += rowH + rowGap;
 
-            // Undo / redo as two compact arrow-icon buttons side by side (Peetsa: drop the verbose label).
+            // Undo / redo as two compact arrow-icon buttons side by side (maintainer: drop the verbose label).
             // Labels are empty here; the arrow glyph is drawn large in drawPresetHistoryIcons() because the
             // vanilla button message renders the unicode arrow far too small.
             int histGap = 3;
@@ -1095,7 +1108,7 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
                 trackSidebarWidget(wLoad, y);
 
                 var wSave = this.addRenderableWidget(Button.builder(Component.literal("Save"), b -> {
-                            // Saving into an OCCUPIED slot pops a confirm dialog first (Peetsa: an accidental click
+                            // Saving into an OCCUPIED slot pops a confirm dialog first (maintainer: an accidental click
                             // used to overwrite irreversibly). An EMPTY slot saves instantly -- no friction where
                             // there's nothing to lose. Same isOccupied() gate the Load/Clear buttons use.
                             if (CompassHudPresetSlots.isOccupied(s)) {
@@ -1185,7 +1198,7 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
             trackSidebarWidget(wPreviewText, y);
             y += rowH + rowGap;
 
-            // Accessibility group (Peetsa 2026-07-11): a divider-flanked "— Accessibility —" header, then the
+            // Accessibility group (maintainer ruling, 2026-07-11): a divider-flanked "— Accessibility —" header, then the
             // color-mode dropdown, then the Reduce Motion toggle DIRECTLY BENEATH it, so the pair reads as one
             // group. Reduce Motion stays its own orthogonal row (a player can want High Contrast AND reduced
             // animation) -- it's grouped WITH accessibility here, not folded into the mode enum, and no longer
@@ -1197,7 +1210,7 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
             LatitudeConfigData.AccessibilityMode[] a11yValues = LatitudeConfigData.AccessibilityMode.values();
             List<SwatchDropdown.Entry> a11yEntries = new ArrayList<>();
             for (LatitudeConfigData.AccessibilityMode v : a11yValues) a11yEntries.add(SwatchDropdown.Entry.text(accessibilityLabel(v)));
-            // Item (h): the dropdown itself is labelled "Color Schemes" (Peetsa: "this dropdown should be called
+            // Item (h): the dropdown itself is labelled "Color Schemes" (maintainer: "this dropdown should be called
             // color schemes") -- it picks the color/contrast scheme (Standard / High Contrast / Colorblind). The
             // divider-flanked SECTION header above stays "Accessibility".
             var wAccessibility = this.addRenderableWidget(new SwatchDropdown(panelX, y, widgetW, rowH, this.font, "Color Schemes",
@@ -1235,7 +1248,7 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
 
         this.sidebarContentHeight = Math.max(0, y - rowGap - panelY);
 
-        // Always-visible Snap-to-Grid toggle on the edit canvas (audit C2 / Peetsa item 6). Lives at top-right,
+        // Always-visible Snap-to-Grid toggle on the edit canvas (audit C2 / maintainer item 6). Lives at top-right,
         // clear of the sidebar and the usual preview area, so grid snapping is one click away no matter which
         // tab is open. Empty label; the grid glyph is drawn scaled on top in extractRenderState. It flips the
         // same LatitudeConfig.hudSnapEnabled the Labels "Grid Snap" row uses, then re-inits so the two stay in
@@ -1389,7 +1402,7 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
         // evaluable no matter what world lighting sits behind the open Studio (reported: "hard to see the
         // shadow/outline against a dark cave"). STUDIO-ONLY -- drawn here, immediately before the shared
         // static-title render, so the real gameplay ZoneEnterTitleOverlay.render() path is completely untouched.
-        // GATED to the Title tab only (Peetsa: the plate "can be misleading for someone thinking that's how it will
+        // GATED to the Title tab only (maintainer: the plate "can be misleading for someone thinking that's how it will
         // look in-game" -- so it appears only while you're actually adjusting title characteristics). The title
         // PREVIEW itself keeps rendering on every tab exactly as before; only this backdrop toggles with the tab.
         // Painted as a PHOTOSHOP-STYLE TRANSPARENCY CHECKERBOARD (alternating gray squares) -- the universal "this
@@ -1808,7 +1821,10 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
         var mc = Minecraft.getInstance();
         if (mc == null || mc.getWindow() == null) return;
 
-        boolean lDown = InputConstants.isKeyDown(mc.getWindow(), InputConstants.KEY_L);
+        // 26.3 drift: InputConstants.isKeyDown no longer takes a window handle -- it polls the one active
+        // window itself. The window null-check above is kept because getWindow() is still what tells us a
+        // client window exists at all.
+        boolean lDown = InputConstants.isKeyDown(InputConstants.KEY_L);
         // Suppressed while a modal (overwrite-confirm or rename) is up so its modality also covers the poll-based L
         // toggle -- and so an 'L' typed into the rename field toggles the sidebar instead of appearing in the name.
         if (lDown && !wasLDown && pendingOverwriteSlot < 0 && renamingSlot < 0) {
@@ -2600,6 +2616,7 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
         setLogicalShown(wZoneTextScale, cfg.displayZoneInHud);
         setLogicalShown(wBiomeFollow, cfg.displayBiomeInHud);
         setLogicalShown(wBiomeTextScale, cfg.displayBiomeInHud);
+        setLogicalShown(wBiomeSource, cfg.locationDetailMode().includesBiome());
         boolean bothAttached = cfg.displayZoneInHud && cfg.zoneFollowsCompass
                 && cfg.displayBiomeInHud && cfg.biomeFollowsCompass;
         setLogicalShown(wZoneBiomeOrder, bothAttached);
@@ -2808,6 +2825,7 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
         cfg.biomeOffsetY = fresh.biomeOffsetY;
         cfg.biomeTextScale = fresh.biomeTextScale;
         cfg.biomeBeforeZone = fresh.biomeBeforeZone;
+        cfg.showCustomBiomeSource = fresh.showCustomBiomeSource;
         cfg.coordsFollowsCompass = fresh.coordsFollowsCompass;
         cfg.coordsHAnchor = fresh.coordsHAnchor;
         cfg.coordsVAnchor = fresh.coordsVAnchor;
@@ -2891,7 +2909,7 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
      *  call site, which never checked the flag, so toggling it visibly did nothing in the Studio).
      *  Natural case ("Tropical", not "TROPICAL") in BOTH branches, including the no-world fallback -- an
      *  ALL-CAPS fallback made "Normal" indistinguishable from "UPPERCASE" in exactly the no-world Studio
-     *  preview Peetsa opens from the create-world screen (TEST 33: reported as "remove Normal, it's a
+     *  preview the maintainer opens from the create-world screen (TEST 33: reported as "remove Normal, it's a
      *  duplicate of Uppercase" before he clarified he wants Normal/"Tropical" kept -- the real bug was
      *  this fallback's casing, not the option itself). */
     private static String studioPreviewTitle(Minecraft mc) {
@@ -3103,10 +3121,10 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
     }
 
     // ------------------------------------------------------------------------------------------------
-    // Accessibility (Peetsa 2026-07-11). The player's Accessibility dropdown (LatitudeConfig.accessibilityMode,
+    // Accessibility (maintainer ruling, 2026-07-11). The player's Accessibility dropdown (LatitudeConfig.accessibilityMode,
     // read live each frame in the General tab) drives the Studio's OWN look through the same pure, unit-tested
     // core.ui.AccessibilityPalette used by the compass HUD and the world-creation screen -- ONE rulebook, no
-    // Studio-local contrast math. Flipping to High Contrast makes the very editor Peetsa is looking at change:
+    // Studio-local contrast math. Flipping to High Contrast makes the very editor the maintainer is looking at change:
     // every hand-drawn text/label/border/glyph below routes through these helpers.
     //   HIGH_CONTRAST -> panel/tab/dropdown text forced opaque and dim greys lifted to a legible floor, card &
     //                    dropdown backgrounds floored near-solid, borders/dividers/scrollbars brightened, the
@@ -3356,7 +3374,7 @@ public class LatitudeHudStudioScreen extends Screen implements SwatchDropdown.Ho
 
     /**
      * A speed slider whose DIRECTION is inverted from the raw value it persists (TEST 57: seconds-per-loop
-     * read backwards -- Peetsa: "lower should mean slower"). The knob's LEFT end is the slowest setting and
+     * read backwards -- the maintainer: "lower should mean slower"). The knob's LEFT end is the slowest setting and
      * the RIGHT end the fastest, matching the intuition "further right = faster" (and the rightward speed
      * ripple + lightning glyph drawn on the track). It still stores seconds-per-loop -- {@code minSeconds} =
      * fastest, {@code maxSeconds} = slowest -- so saved configs are byte-unchanged; only the knob mapping

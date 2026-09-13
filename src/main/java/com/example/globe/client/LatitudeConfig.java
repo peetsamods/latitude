@@ -64,6 +64,9 @@ public final class LatitudeConfig {
 
     public static boolean reducePolarSnowParticles;
 
+    /** Create-world screen accessibility: cover the animated panorama with a flat, still Latitude backdrop. */
+    public static boolean createWorldStillBackground;
+
     static {
         applyFrom(LatitudeConfigData.fresh()); // sane values even before load() runs
     }
@@ -169,6 +172,7 @@ public final class LatitudeConfig {
         accessibilityMode = d.accessibilityMode;
 
         reducePolarSnowParticles = d.reducePolarSnowParticles;
+        createWorldStillBackground = d.createWorldStillBackground;
     }
 
     /** Detached snapshot of the live static fields, for snapshot/restore (HUD Studio Cancel). Returns a
@@ -226,6 +230,7 @@ public final class LatitudeConfig {
 
         d.accessibilityMode = accessibilityMode;
         d.reducePolarSnowParticles = reducePolarSnowParticles;
+        d.createWorldStillBackground = createWorldStillBackground;
         d.sanitize();
         return d;
     }

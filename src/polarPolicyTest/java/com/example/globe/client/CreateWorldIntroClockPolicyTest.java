@@ -83,7 +83,9 @@ public final class CreateWorldIntroClockPolicyTest {
                     "the completed Latitude screen must not install vanilla's preparation message");
             assertTrue(createScreen.contains("new CreateWorldPreparingScreen()"),
                     "the direct Latitude loading path must install the title surface immediately");
-            assertTrue(createScreen.contains("recreatedPresetId, true"),
+            // The 2.0 screen threads the persisted world shape after the preset id (Re-Create restores
+            // Wide/Square), so the continue-fade flag now follows recreatedGlobeShapeId.
+            assertTrue(createScreen.contains("recreatedGlobeShapeId, true"),
                     "the completed screen must continue the earlier vanilla loading fade");
             assertTrue(preparingScreen.contains("CreateWorldIntroTitle.render"),
                     "the direct loading surface must draw the shared Latitude title");

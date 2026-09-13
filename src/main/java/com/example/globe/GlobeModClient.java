@@ -12,8 +12,8 @@ import com.example.globe.client.GlobeWarningOverlay;
 import com.example.globe.client.PolarWindSoundInstance;
 import com.example.globe.client.LatitudeClientState;
 import com.example.globe.client.LatitudeHudStudioScreen;
-import com.example.globe.client.EwStormWallRenderer;
 import com.example.globe.dev.DevCaptureKeybind;
+import com.example.globe.util.LatitudeBands;
 import com.example.globe.dev.client.SeamAuditClientBridge;
 import com.example.globe.dev.client.audit.SeamAuditHarness;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -36,33 +36,6 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public class GlobeModClient implements ClientModInitializer {
 
-    /**
-     * Slice B (audit P1-2 / Lane 8): the Sodium E-W section-culling compat mixin
-     * ({@code RenderSectionManagerVisibilityMixin}) targets Sodium's internal
-     * {@code RenderSectionManager.isSectionVisible(III)Z}, which Sodium 0.9.0+mc26.2 removed; the injection
-     * uses {@code require = 0} so a missing target degrades silently instead of crashing the client — but
-     * "silently" meant NOTHING anywhere said the optimization was off (a future "why is E-W culling not
-     * working" mystery). A mixin cannot log its own non-application, so this client-init reflection check
-     * carries the warn: if Sodium is loaded and the target method is absent, say so once.
-     */
-    private static void warnIfSodiumCullHookInactive() {
-        try {
-            if (!net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("sodium")) {
-                return;
-            }
-            Class<?> rsm = Class.forName("net.caffeinemc.mods.sodium.client.render.chunk.RenderSectionManager");
-            rsm.getDeclaredMethod("isSectionVisible", int.class, int.class, int.class);
-            // Method present -> the compat injection applied; the E-W culling optimization is active.
-        } catch (ClassNotFoundException | NoSuchMethodException e) {
-            GlobeMod.LOGGER.warn(
-                    "[Latitude] Sodium is installed but RenderSectionManager.isSectionVisible(III)Z is absent "
-                            + "on this Sodium version -- Latitude's E-W section-culling render-distance "
-                            + "optimization is INACTIVE (safely skipped; everything else unaffected). "
-                            + "Expected on Sodium >= 0.9.0.");
-        } catch (Throwable ignored) {
-            // Reflection failure here must never affect client init; the check is purely informational.
-        }
-    }
     private static final int PROMENADE_PALM_LEAVES_OPAQUE_TINT = 0xFF7DB22E;
     private static final String[] PROMENADE_PALM_TINT_BLOCKS = {
             "promenade:palm_leaves",
@@ -87,12 +60,15 @@ public class GlobeModClient implements ClientModInitializer {
         if (GlobeClientState.DEBUG_EW_FOG) {
             GlobeMod.LOGGER.info("[Latitude] debugEwFog=true");
         }
-        warnIfSodiumCullHookInactive();
 
         LatitudeConfig.get();
         ClientLifecycleEvents.CLIENT_STARTED.register(GlobeModClient::registerPromenadePalmTintCompat);
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            // Clear the warning overlay's episode state and every per-world evaluate/exposure cache first,
+            // so nothing from the last world can be read as the first frame of the next one.
+            GlobeWarningOverlay.resetForDisconnect();
+            GlobeClientState.resetForDisconnect();
             GlobeClientState.setGlobeWorld(false);
             com.example.globe.util.LatitudeMath.setLatitudeZRadius(0);
             com.example.globe.util.LatitudeMath.setIntendedXRadius(0);
@@ -113,6 +89,12 @@ public class GlobeModClient implements ClientModInitializer {
             if (payload.isGlobe()) {
                 // Flip the bespoke loading flag as soon as the handshake packet arrives (network thread).
                 LatitudeClientState.activateLatitudeLoading();
+                // The union payload's band id drives the loading overlay's zone line. Absent/unknown ids
+                // simply leave the label unset, so an older save that never persisted one is still fine.
+                LatitudeBands.Band band = LatitudeBands.fromCanonicalId(payload.loadingBandId());
+                if (band != null) {
+                    LatitudeClientState.setLoadingZoneLabel(band.displayName());
+                }
             } else if (LatitudeClientState.isLatitudeWorldLoading()) {
                 LatitudeClientState.clearLatitudeLoadingState();
             }
@@ -124,8 +106,9 @@ public class GlobeModClient implements ClientModInitializer {
                 // banner/arrival) so a lerping/vandalized live border can't slide those lines. (TEST 89 removed
                 // the EW dust particles, so they are no longer among the consumers.)
                 com.example.globe.util.LatitudeMath.setIntendedXRadius(payload.isGlobe() ? payload.intendedXRadius() : 0);
-                GlobeMod.LOGGER.info("S2C globe state: isGlobe={} latitudeZRadius={} intendedXRadius={}",
-                        payload.isGlobe(), payload.latitudeZRadius(), payload.intendedXRadius());
+                GlobeMod.LOGGER.info("S2C globe state: isGlobe={} latitudeZRadius={} intendedXRadius={} loadingBand={}",
+                        payload.isGlobe(), payload.latitudeZRadius(), payload.intendedXRadius(),
+                        payload.loadingBandId());
             });
         });
 
@@ -156,7 +139,16 @@ public class GlobeModClient implements ClientModInitializer {
         // Client-side `/latdev title` test command (previews the zone-enter title on demand). Registers only
         // outside dev and only for pre-release / -Dlatitude.devCommands builds; falls through to the server
         // /latdev tree for every other subcommand. See LatitudeClientDevCommands for the full rationale.
-        com.example.globe.client.LatitudeClientDevCommands.registerIfEnabled();
+        // The client dev tree lives in the release-excluded dev package; resolve it reflectively so a
+        // public artifact (which omits dev/) never references the class.
+        try {
+            Class.forName("com.example.globe.dev.client.LatitudeClientDevCommands")
+                    .getMethod("registerIfEnabled").invoke(null);
+        } catch (ClassNotFoundException absent) {
+            // release artifact: no dev commands
+        } catch (ReflectiveOperationException | RuntimeException failure) {
+            GlobeMod.LOGGER.warn("[Latitude] client dev commands not registered: {}", failure.toString());
+        }
         ClientTickEvents.END_CLIENT_TICK.register(GlobeModClient::polarCapClientTick);
         // B-5-P2 Hemisphere Passage: the approach/prompt + crossing-curtain state machine (flag-gated internally).
         ClientTickEvents.END_CLIENT_TICK.register(com.example.globe.client.HemispherePassageClient::clientTick);
@@ -277,7 +269,7 @@ public class GlobeModClient implements ClientModInitializer {
 
         // Everything below is LOCAL, player-anchored particle spawning (the ambient polar snow + the EW border
         // storm). TEST 78: instead of the old BINARY surfaceOk gate (which killed all local particles the
-        // instant a single block was over the player's head -- e.g. standing under Peetsa's open arch), the
+        // instant a single block was over the player's head -- e.g. standing under the maintainer's open arch), the
         // per-tick budgets SCALE by the graded enclosure estimate exposure01: full storm out in the open,
         // proportional at a doorway, exactly zero in a sealed room (so nothing falls through a real roof).
         // The world-scale storm seen THROUGH a window -- greyed overcast + real vanilla snowfall on exterior
@@ -305,7 +297,7 @@ public class GlobeModClient implements ClientModInitializer {
             double absLatDeg = com.example.globe.util.LatitudeMath.absLatDegExact(
                     client.level.getWorldBorder(), client.player.getZ());
             int snowCount = com.example.globe.core.PolarHazardWindow.snowCount(absLatDeg);
-            // Perf-scaling (Peetsa): honor the LIVE vanilla Particles video setting so the pole storm
+            // Perf-scaling (the maintainer): honor the LIVE vanilla Particles video setting so the pole storm
             // decreases in lock-step when a player turns particles down for performance. Read ONCE per
             // spawn-tick (cheap; re-read every tick so a mid-session settings change takes effect
             // immediately -- never cached long-term). Pure multiplicative scale of the FIXED per-tick
@@ -341,7 +333,7 @@ public class GlobeModClient implements ClientModInitializer {
             spawnTorchIceSparkle(client, absLatDeg, snowTier);
         }
 
-        // TEST 89: the EW border DUST/sand storm particles are REMOVED entirely (Peetsa: "remove the dust
+        // TEST 89: the EW border DUST/sand storm particles are REMOVED entirely (the maintainer: "remove the dust
         // particles altogether"). The edge's presentation is now the depth fog + the single white advisory
         // banner -- no player-anchored EW particle spawn at all. The ambient POLAR snow above is untouched.
         // (enableWarningParticles used to gate ONLY these EW particles -- it never gated the polar snow -- so
@@ -769,7 +761,7 @@ public class GlobeModClient implements ClientModInitializer {
         }
     }
 
-    // ---- S37 F2: ICE SPARKLES IN TORCHLIGHT (Peetsa: "ice should have the sparkles when bathed in the
+    // ---- S37 F2: ICE SPARKLES IN TORCHLIGHT (the maintainer: "ice should have the sparkles when bathed in the
     // light of a torch"). Extends the ambient GLINT sparkle (above) to torch-lit ice anywhere polar players
     // build -- underground, in a base, wherever an ice-family block sits next to BLOCK-lit air. Reuses the
     // SAME frost_glint particle + zero-drift spawn shape as spawnSnowSparkle, and the SAME
@@ -777,7 +769,7 @@ public class GlobeModClient implements ClientModInitializer {
     // gated on the glacial band, sky-openness, or any flag (cosmetic-only, per spec) -- just a cheap
     // latitude floor (60 deg, the SAME functional-band floor SnowSparkleLaw's extended onset uses) so the
     // sampling loop is a no-op everywhere but polar country. ----
-    /** Peak per-spawn-tick cluster budget BEFORE the shared Particles-tier scaling. S39 (Peetsa 2026-07-23:
+    /** Peak per-spawn-tick cluster budget BEFORE the shared Particles-tier scaling. S39 (the maintainer 2026-07-23:
      *  "I want more sparkle in the ice!!"): 2 -> 12. The original 2 was calibrated against the ambient
      *  snow-glint's sparseness, but that spawner samples a 2D snow SURFACE (near-100% hit rate) whereas this
      *  one samples a full 3D volume for an ice block WITH a lit exposed face -- most samples miss, so the
@@ -892,13 +884,13 @@ public class GlobeModClient implements ClientModInitializer {
     }
 
     // B-4 storm-snow: widened envelope (10->16) + a steady horizontal wind drift so the flakes streak
-    // sideways and READ as a blizzard, not gentle flurries (Peetsa saw no increase near the pole). The
+    // sideways and READ as a blizzard, not gentle flurries (the maintainer saw no increase near the pole). The
     // per-tick BUDGET (count) and the caller's isPaused/spawn-tick anti-backlog guards are UNCHANGED --
     // this only changes how each spawned flake looks/moves, never how many spawn or when.
     private static final double SNOW_ENVELOPE = 16.0;
 
     // TEST 78 storm VOLUME: the main pass used to spawn in a thin ~6-block band ABOVE the head (py+2..py+8),
-    // which read as a single diagonal SHEET (Peetsa: "only one thin layer that blows diagonally"). Now the main
+    // which read as a single diagonal SHEET (the maintainer: "only one thin layer that blows diagonally"). Now the main
     // pass fills a real vertical VOLUME from py-2 to py+14 (16 blocks tall) around the camera, weighted denser
     // near eye level by a triangular pick, so the snow visibly fills the AIR in every direction instead of
     // hanging as a curtain overhead. The dense low SECOND pass fills the near-ground band (py-1..py+6).
@@ -913,7 +905,7 @@ public class GlobeModClient implements ClientModInitializer {
     // TEST 77 round 2: the wind/fall MAGNITUDE curves moved into the pure, tested core.PolarHazardWindow
     // (blizzardWindMagnitude / blizzardFallSpeed) and were cranked hard -- SnowflakeParticle damps horizontal
     // velocity ~5%/tick and pins vertical to a ~0.081/tick terminal, so the old ceilings decayed to a gentle
-    // straight-down drift within a second (Peetsa: "slow, falls down, not sideways"). The second (low, hard-
+    // straight-down drift within a second (the maintainer: "slow, falls down, not sideways"). The second (low, hard-
     // driven) pass multiplies that already-larger wind so the pole reads as a wind-whipped ground blizzard.
     private static final double SNOW_SECOND_PASS_WIND_MULT = 1.9;  // low pass streaks even harder sideways
 

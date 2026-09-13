@@ -36,6 +36,16 @@ public final class CompassHudConfig {
     public static final int CURRENT_LAYOUT_VERSION = 1;
     public int layoutVersion = 0;
 
+    /** Fresh-config analog dial diameter in unscaled pixels. Both merged lines independently landed on 32,
+     *  so this names the value they agreed on rather than choosing between them. */
+    public static final float DEFAULT_ANALOG_SIZE = 32.0f;
+    /** The range the HUD Studio's size slider offers. A SAVED config is allowed to hold a larger value
+     *  ({@link #ANALOG_SIZE_SAVED_MAX}) so a dial sized by dragging its handle in the Studio is never
+     *  silently shrunk by a later load. */
+    public static final int ANALOG_SIZE_STUDIO_MIN = 16;
+    public static final int ANALOG_SIZE_STUDIO_MAX = 72;
+    public static final float ANALOG_SIZE_SAVED_MAX = 128.0f;
+
     // Master toggle
     public boolean enabled = true;
 
@@ -85,7 +95,7 @@ public final class CompassHudConfig {
     public int padding = 5;
 
     // Sizing (analog disc diameter, unscaled)
-    public float analogSize = 32.0f; // pixels
+    public float analogSize = DEFAULT_ANALOG_SIZE; // pixels
 
     // Analog styling. Lower = more transparent inner disc. Fresh-config default raised 0.50 -> 0.85
     // (2026-07-11): at 0.50 the Disc look's dark face was so translucent it read as an open Ring, so the two
@@ -94,7 +104,7 @@ public final class CompassHudConfig {
     public float analogInnerAlpha = 0.85f; // 0..1
 
     // Only used when analogTheme == RAINBOW ("Aurora" in the UI). Seconds for one full color-wheel loop --
-    // deliberately defaults slow and the slider's own range skews slow (2026-07-08, Peetsa's request: a
+    // deliberately defaults slow and the slider's own range skews slow (2026-07-08, the maintainer's request: a
     // fast-cycling dial reads as strobing and can give people a headache). Range narrowed same day
     // (10-40, was 12-90): past ~40s the difference is imperceptible, so the wider range just wasted most
     // of the slider's length on settings that all looked the same.
@@ -120,7 +130,7 @@ public final class CompassHudConfig {
     public double zoneOffYFrac = 0.0;
     public com.example.globe.core.ui.HudLayoutMath.GrowH zoneGrowH = com.example.globe.core.ui.HudLayoutMath.GrowH.CENTER;
     public com.example.globe.core.ui.HudLayoutMath.GrowV zoneGrowV = com.example.globe.core.ui.HudLayoutMath.GrowV.TOP;
-    // Independent text size (2026-07-08, Peetsa's request) -- parity with the Title tab's own Title Size
+    // Independent text size (2026-07-08, the maintainer's request) -- parity with the Title tab's own Title Size
     // slider. 1.0 = unchanged from every prior version, so old configs render identically after this field
     // is added.
     public float zoneTextScale = 1.0f;
@@ -141,6 +151,11 @@ public final class CompassHudConfig {
     // (band before biome); true = "Biome, Zone".
     public boolean biomeBeforeZone = false;
     public float biomeTextScale = 1.0f;
+    /** Appends the PROVIDER of a non-vanilla biome after its name ("Rainforest · BIOMES O' PLENTY"), so a
+     *  player running biome mods can see at a glance which one owns the ground they are standing on. Off by
+     *  default: for a vanilla world it would add a redundant tag to every single biome. Vanilla biomes are
+     *  never tagged even when this is on -- see {@link LocationDetailPolicy#customProviderLabel}. */
+    public boolean showCustomBiomeSource = false;
 
     // Coordinates (lat/lon) detachability. Previously always fused to the compass; now can ride with it
     // (default, unchanged behavior) or detach to its own anchor+offset like zone/biome. The actual lat/lon
@@ -265,6 +280,24 @@ public final class CompassHudConfig {
         return ((textAlpha & 0xFF) << 24) | (textRgb & 0xFFFFFF);
     }
 
+    /** The four-state location detail (Off / Biome / Zone / Biome + Zone) derived from the two persisted
+     *  booleans. Keeping it derived rather than stored is what makes old configs compatible: their existing
+     *  zone flag still maps false to Off and true to Zone, because the biome flag defaults to false when the
+     *  key is absent. No migration, no version bump. */
+    public LocationDetailPolicy.Mode locationDetailMode() {
+        return LocationDetailPolicy.fromPersistedFlags(displayBiomeInHud, displayZoneInHud);
+    }
+
+    public void setLocationDetailMode(LocationDetailPolicy.Mode mode) {
+        LocationDetailPolicy.Mode selected = mode == null ? LocationDetailPolicy.DEFAULT_MODE : mode;
+        displayBiomeInHud = selected.includesBiome();
+        displayZoneInHud = selected.includesZone();
+    }
+
+    public boolean hasLocationDetail() {
+        return locationDetailMode() != LocationDetailPolicy.Mode.OFF;
+    }
+
     public int backgroundArgb() {
         return ((backgroundAlpha & 0xFF) << 24) | (backgroundRgb & 0xFFFFFF);
     }
@@ -328,8 +361,8 @@ public final class CompassHudConfig {
         // Floor lowered to match the HUD Studio slider's new minimum (16) so that value isn't clamped back up;
         // ceiling left generous as a backstop for hand-edited configs even though the slider itself now tops
         // out at 72.
-        if (analogSize < 16.0f) analogSize = 16.0f;
-        if (analogSize > 128.0f) analogSize = 128.0f;
+        if (analogSize < ANALOG_SIZE_STUDIO_MIN) analogSize = ANALOG_SIZE_STUDIO_MIN;
+        if (analogSize > ANALOG_SIZE_SAVED_MAX) analogSize = ANALOG_SIZE_SAVED_MAX;
         if (analogInnerAlpha < 0.0f) analogInnerAlpha = 0.0f;
         if (analogInnerAlpha > 1.0f) analogInnerAlpha = 1.0f;
         if (zoneHAnchor == null) zoneHAnchor = HAnchor.CENTER;

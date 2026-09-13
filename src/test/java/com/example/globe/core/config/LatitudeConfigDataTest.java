@@ -50,6 +50,7 @@ class LatitudeConfigDataTest {
         assertTrue(d.borderRepromptGesture, "fresh default is ON");
         assertEquals(LatitudeConfigData.BORDER_REPROMPT_GESTURE_DEFAULT, d.borderRepromptGesture,
                 "fresh default tracks the single shared constant (duplicated-default-sites law)");
+        assertFalse(d.createWorldStillBackground, "fresh default keeps the scenic panorama");
     }
 
     /** A real pre-U-C file: legacy `...Value` keys, dead fields included, no version key. */
@@ -85,7 +86,8 @@ class LatitudeConfigDataTest {
                   "screenshotClipboardFallbackToDiskValue": true,
                   "screenshotAlsoSaveToDiskValue": false,
                   "screenshotClipboardWindowsPowerShellValue": false,
-                  "captureWriteCsvValue": true
+                  "captureWriteCsvValue": true,
+                  "createWorldStillBackgroundValue": true
                 }
                 """;
         LatitudeConfigData d = GSON.fromJson(legacy, LatitudeConfigData.class);
@@ -109,6 +111,10 @@ class LatitudeConfigDataTest {
         assertFalse(d.screenshotClipboardEnabled);
         assertFalse(d.screenshotAlsoSaveToDisk);
         assertTrue(d.captureWriteCsv);
+        // The 1.5 line wrote this preference under its own `...Value` key into the same file. The alternate
+        // name is what carries an upgrading player's choice across, so exercise that path rather than
+        // trusting it by inspection.
+        assertTrue(d.createWorldStillBackground, "the legacy still-background key must read through its alternate name");
     }
 
     @Test

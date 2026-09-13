@@ -8,7 +8,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 
 /**
- * Phase 5 Slice B-9/B-7 -- Peetsa stipulation S26 (2026-07-20): MUSIC FADES OUT AT THE DAMAGE LINE. Client
+ * Phase 5 Slice B-9/B-7 -- the maintainer stipulation S26 (2026-07-20): MUSIC FADES OUT AT THE DAMAGE LINE. Client
  * state holder for the polar MUSIC volume multiplier. Owns a single live {@code factor01} in {@code [0,1]}
  * that {@link com.example.globe.mixin.client.MusicFadeVolumeMixin} multiplies onto the
  * {@code SoundSource.MUSIC} category volume, and eases it once per client tick from the pure

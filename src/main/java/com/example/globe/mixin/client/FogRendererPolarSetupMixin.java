@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * TEST 77 round 2 item 1: DEPTH-BASED polar fog -- the genuine, wall-aware "heavy fog on the outside while
- * you look out from indoors" Peetsa asked for. Unlike {@code PolarWhiteoutOverlayHud} (a flat screen-space
+ * you look out from indoors" the maintainer asked for. Unlike {@code PolarWhiteoutOverlayHud} (a flat screen-space
  * fill with no depth, which is why it must stay sky-exposure-gated -- ungated it would haze the player's own
  * interior walls), this drives Minecraft's OWN fog. In 26.2 {@link FogRenderer#setupFog} builds a mutable
  * {@link FogData} (fields {@code renderDistanceStart/End}, {@code environmentalStart/End}, {@code color}, ...)

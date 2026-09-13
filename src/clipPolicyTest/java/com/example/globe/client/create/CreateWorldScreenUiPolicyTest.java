@@ -57,8 +57,10 @@ final class CreateWorldScreenUiPolicyTest {
     private static void stillBackgroundControlStaysOnTheMainScreenAndPersists() throws Exception {
         String screen = Files.readString(Path.of(
                 "src/main/java/com/example/globe/client/create/LatitudeCreateWorldScreen.java"));
+        // Repointed for the 2.0 line: the preference now lives on the versioned config record
+        // (core/config/LatitudeConfigData) rather than the client facade, which only mirrors it.
         String config = Files.readString(Path.of(
-                "src/main/java/com/example/globe/client/LatitudeConfig.java"));
+                "src/main/java/com/example/globe/core/config/LatitudeConfigData.java"));
         expectTrue(!screen.contains("BackgroundOpacitySlider"),
                 "world creation must not carry a one-use opacity slider");
         expectTrue(screen.contains("this.addRenderableWidget(this.stillBackgroundBtn)"),
@@ -67,7 +69,7 @@ final class CreateWorldScreenUiPolicyTest {
                 "accessibility changes must be remembered immediately");
         expectTrue(!config.contains("createWorldPanelOpacity"),
                 "panel opacity must remain a fixed design value, not saved configuration");
-        expectTrue(config.contains("private Boolean createWorldStillBackgroundValue = false;"),
+        expectTrue(config.contains("public boolean createWorldStillBackground = false;"),
                 "older configs must retain the scenic background by default");
     }
 

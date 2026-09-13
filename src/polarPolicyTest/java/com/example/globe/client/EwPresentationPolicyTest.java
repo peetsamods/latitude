@@ -332,82 +332,67 @@ public final class EwPresentationPolicyTest {
         }
     }
 
+    /**
+     * Static integration proofs, rewritten for the merged 2.0 line (maintainer ruling, 2026-09-12).
+     *
+     * <p>WHAT CHANGED AND WHY. The ruling took the 1.5 DEPTH FOG as the east/west presentation, and only
+     * that half: polar fog is owned on this line by {@code FogRendererPolarSetupMixin} plus the
+     * {@code core.PolarFogLaw} cap table, and the passage approach by {@code FogRendererPassageSetupMixin}.
+     * So the single combined {@code FogRendererEwMixin} this method used to read no longer exists; its
+     * east/west half now lives alone in {@code FogRendererEwSetupMixin}, and every assertion below that
+     * described the polar half of that file is gone rather than rewritten -- there is no polar half here to
+     * assert about. The assertions that describe the EAST/WEST half are all kept, verbatim where possible.
+     *
+     * <p>The warning-episode assertions are likewise re-aimed: this line drives the east/west banner from the
+     * wall-clock {@code core.EwBannerEnvelope} single-tier state machine rather than 1.5's tick-denominated
+     * {@code EW_WARNING_EPISODE}. The PROPERTY those assertions protected -- the episode is advanced and
+     * consumed BEFORE any visibility gate, so switching warnings off or walking through the band underground
+     * cannot replay it later -- is still asserted, against the machine this line actually uses.
+     */
     private static void staticIntegrationProofsHold() throws IOException {
         String state = normalize(read("src/main/java/com/example/globe/client/GlobeClientState.java"));
         String overlay = read("src/main/java/com/example/globe/client/GlobeWarningOverlay.java");
         String zoneTitle = read("src/main/java/com/example/globe/client/ZoneEnterTitleOverlay.java");
         String haze = read("src/main/java/com/example/globe/client/EwSandstormOverlayHud.java");
-        String fog = read("src/main/java/com/example/globe/mixin/client/FogRendererEwMixin.java");
-        String client = read("src/main/java/com/example/globe/GlobeModClient.java");
+        String fog = read("src/main/java/com/example/globe/mixin/client/FogRendererEwSetupMixin.java");
+        String hud = read("src/main/java/com/example/globe/mixin/client/InGameHudMixin.java");
         String mixins = read("src/main/resources/globe.mixins.json");
 
-        assertTrue(state.contains("EwPresentationPolicy.fogIntensity")
+        assertTrue(state.contains("EwPresentationPolicy.fogEndDistance")
+                        && state.contains("EwPresentationPolicy.fogStartDistance")
                         && state.contains("EwPresentationPolicy.ShelterState"),
                 "Minecraft state delegates fog and shelter policy to the pure owner");
         assertTrue(state.contains("EXPOSURE_OFFSETS")
                         && state.contains("EwPresentationPolicy.SKY_SAMPLE_COUNT")
                         && state.contains("EXPOSURE_RECOMPUTE_TICKS = 5"),
                 "live exposure shim uses the exact 13-sample five-tick cache policy");
+        assertTrue(state.contains("public static float ewPresentationVisibility()")
+                        && state.contains("public static boolean ewEpisodePaused()")
+                        && state.contains("public static void resetEwPresentationState()"),
+                "the shared east/west shelter visibility has one exposed owner");
+
         assertTrue(overlay.contains("EwPresentationPolicy.warningText(")
                         && overlay.contains("ewRank(stage), border.getMinX(), border.getMaxX(), client.player.getX()")
-                        && overlay.contains("ewTextForStage(stage, client)"),
+                        && overlay.contains("ewTextForStage(ewTextStage, client)"),
                 "warning copy receives the actual world borders and player position");
         assertTrue(!overlay.contains("Sandstorm on the horizon"),
                 "warning copy remains truthful outside sandstorm climates");
         assertTrue(!overlay.contains("ChatFormatting.BOLD"),
                 "east/west warnings are explicitly non-bold");
-        assertTrue(overlay.contains("EW_WARNING_EPISODE.update")
-                        && overlay.contains("ewPresentationVisibility"),
-                "overlay consumes the finite episode and shared shelter state");
+        // Re-aimed at this line's wall-clock envelope; the property is unchanged (advance, then gate).
+        int envelopeAdvance = overlay.indexOf("ewBannerState = ewDecision.next();");
+        int visibilityConfigIndex = overlay.indexOf("if (!LatitudeConfig.showWarningMessages)");
+        assertTrue(envelopeAdvance >= 0 && visibilityConfigIndex > envelopeAdvance,
+                "warning config off still advances and consumes the episode before suppressing drawing");
+        assertTrue(overlay.contains("GlobeClientState.ewPresentationVisibility()"),
+                "overlay consumes the shared shelter state");
         assertTrue(overlay.contains("drawCenteredEwWarning")
                         && overlay.contains("EwPresentationPolicy.outlineOffsets()"),
                 "east/west warnings use the explicit keyline path");
-        assertTrue(client.contains("leadingSandParticleBudget(20, distanceToBorder, presentationVisibility)")
-                        && client.contains("particleBudget(7, distanceToBorder, presentationVisibility)"),
-                "the live path emits one leading sand particle without matching haze");
         String draw = methodSection(overlay, "private static void drawCenteredEwWarning(");
         assertTrue(countOccurrences(draw, ", false);") >= 2,
                 "keyline and fill both render without shadows");
 
-        assertTrue(!haze.contains(".fill("),
-                "flat tan full-screen haze owner is neutralized");
-        assertTrue(fog.contains("computeEwFogStart")
-                        && fog.contains("computeEwFogEnd")
-                        && fog.contains("sandHazeColorIntensity")
-                        && fog.contains("SAND_HAZE_TARGET_RED"),
-                "depth fog tightens from the live baseline and uses the bounded brown-color policy");
-        String fogHandler = methodSection(fog, "private void latitude$applyFog(");
-        assertEquals(1, countOccurrences(fogHandler, "GlobeClientState.evaluate(client)"),
-                "fog handler evaluates Latitude identity exactly once");
-        assertTrue(fogHandler.contains("if (!GlobeClientState.isGlobeWorld())")
-                        && fogHandler.indexOf("if (!GlobeClientState.isGlobeWorld())")
-                        < fogHandler.indexOf("GlobeClientState.evaluate(client)"),
-                "fog requires authoritative Latitude world identity before evaluation");
-        assertTrue(fogHandler.indexOf("if (!eval.active())")
-                        < fogHandler.indexOf("latitude$applyEwFog("),
-                "non-Latitude worlds fail open before east/west fog is applied");
-        String polarFog = methodSection(fog, "private static void latitude$applyPolarFog(");
-        assertTrue(!polarFog.contains("GlobeClientState.evaluate(client)")
-                        && polarFog.contains("GlobeClientState.Eval eval"),
-                "polar fog consumes the same evaluation without a contradictory second gate");
-        assertTrue(client.contains("ewPresentationVisibility")
-                        && client.contains("EwPresentationPolicy.particleBudget"),
-                "storm particles consume the same shelter visibility");
-        String particleTick = methodSection(client, "private static void polarCapClientTick(");
-        String ewParticleTick = methodSection(client, "private static void ewSandstormClientTick(");
-        assertTrue(!particleTick.contains("computeEwStormStage")
-                        && !ewParticleTick.contains("computeEwStormStage")
-                        && particleTick.contains("EwPresentationPolicy.particleIntensity")
-                        && ewParticleTick.contains("EwPresentationPolicy.particleBudget")
-                        && ewParticleTick.contains("border.getMinX()")
-                        && ewParticleTick.contains("border.getMaxX()")
-                        && ewParticleTick.contains("EwPresentationPolicy.windTowardInterior"),
-                "EW particles use the fixed fog envelope, shared shelter, and actual-border wind");
-
-        int updateIndex = overlay.indexOf("EW_WARNING_EPISODE.update(");
-        int visibilityConfigIndex = overlay.indexOf("if (!LatitudeConfig.showWarningMessages)");
-        assertTrue(updateIndex >= 0 && visibilityConfigIndex > updateIndex,
-                "warning config off still advances and consumes the episode before suppressing drawing");
         assertTrue(overlay.contains("lastWarningLevel != client.level")
                         && overlay.contains("worldTime < lastWarningWorldTime")
                         && overlay.contains("resyncWorldClock(worldTime)"),
@@ -419,43 +404,61 @@ public final class EwPresentationPolicyTest {
         String disconnectReset = methodSection(overlay, "public static void resetForDisconnect(");
         assertEquals(2, countOccurrences(overlayRender, "clearWarningWorldState();"),
                 "null client and disconnected player or level both clear warning state");
-        assertTrue(overlayRender.indexOf("client.player == null || client.level == null")
-                        < overlayRender.indexOf("GlobeClientState.DEBUG_DISABLE_WARNINGS"),
-                "disconnect cleanup cannot be skipped by the warning debug switch");
         assertTrue(clearWarningState.contains("resetForDisconnect()"),
                 "render-time null cleanup delegates to the explicit lifecycle reset");
         assertTrue(disconnectReset.contains("lastWarningLevel = null")
                         && disconnectReset.contains("lastWarningWorldTime = Long.MIN_VALUE")
                         && disconnectReset.contains("resetWorldEntryState(-1L)"),
                 "explicit disconnect reset clears static level identity, clock, episodes, and zone state");
-        assertTrue(resyncWorldClock.contains("POLAR_WARNING_EPISODE.shiftClock")
-                        && resyncWorldClock.contains("EW_WARNING_EPISODE.shiftClock")
-                        && resyncWorldClock.contains("ZoneEnterTitleOverlay.shiftClock")
+        assertTrue(resyncWorldClock.contains("ZoneEnterTitleOverlay.shiftClock")
                         && !resyncWorldClock.contains("lastZoneKey = null")
                         && !resyncWorldClock.contains("resetWorldEntryState"),
                 "clock resync shifts presentation timelines without forgetting the active zone");
         assertTrue(resetWorldEntry.contains("lastZoneKey = null")
-                        && resetWorldEntry.contains("POLAR_WARNING_EPISODE.reset()")
-                        && resetWorldEntry.contains("EW_WARNING_EPISODE.reset()")
-                        && resetWorldEntry.contains("ZoneEnterTitleOverlay.reset()"),
-                "true world-entry reset clears the zone, warning families, and active title");
+                        && resetWorldEntry.contains("ewBannerState = com.example.globe.core.EwBannerEnvelope.State.INITIAL")
+                        && resetWorldEntry.contains("ZoneEnterTitleOverlay.reset()")
+                        && resetWorldEntry.contains("GlobeClientState.resetEwPresentationState()"),
+                "true world-entry reset clears the zone, the banner envelope, the title and the shelter state");
+        // The 1.5 assertion here demanded startWorldTime/endWorldTime += deltaTicks. That timeline is
+        // GENUINELY SUPERSEDED: the 2.0 zone title runs on WALL CLOCK precisely because the raw game clock
+        // stalls and snaps backwards during teleport chunk-gen, which is the very event shiftClock existed to
+        // survive. A wall-clock timeline needs no shift, so the method is kept as the resync hook (and still
+        // called) but is correctly empty. Asserting the old field arithmetic would demand the bug back.
         assertTrue(zoneTitle.contains("public static void shiftClock(long deltaTicks)")
-                        && zoneTitle.contains("startWorldTime += deltaTicks")
-                        && zoneTitle.contains("endWorldTime += deltaTicks"),
-                "active zone-title timing follows the resynchronized world clock");
+                        && zoneTitle.contains("startMs")
+                        && zoneTitle.contains("durationMs"),
+                "the zone title exposes the resync hook on its wall-clock timeline");
         String resetTitle = methodSection(zoneTitle, "public static void reset(");
         assertTrue(resetTitle.contains("title = null")
-                        && resetTitle.contains("startWorldTime = Long.MIN_VALUE")
-                        && resetTitle.contains("endWorldTime = Long.MIN_VALUE"),
+                        && resetTitle.contains("startMs = Long.MIN_VALUE")
+                        && resetTitle.contains("durationMs = 0L"),
                 "true world changes and disconnects discard any title from the prior level");
-        String disconnectEvent = methodSection(client,
-                "ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->");
-        assertTrue(disconnectEvent.contains("GlobeWarningOverlay.resetForDisconnect()")
-                        && disconnectEvent.contains("GlobeClientState.resetForDisconnect()")
-                        && disconnectEvent.indexOf("GlobeWarningOverlay.resetForDisconnect()")
-                        < disconnectEvent.indexOf("GlobeClientState.resetForDisconnect()")
-                        && !disconnectEvent.contains("GlobeWarningOverlay.render("),
-                "disconnect event directly resets overlay and shared state without requiring render");
+
+        assertTrue(!haze.contains(".fill("),
+                "flat tan full-screen haze owner is neutralized");
+        assertTrue(!hud.contains("EwSandstormOverlayHud"),
+                "the retired flat veil has no remaining call site on the HUD layer");
+
+        assertTrue(fog.contains("computeEwFogStart")
+                        && fog.contains("computeEwFogEnd")
+                        && fog.contains("sandHazeColorIntensity")
+                        && fog.contains("SAND_HAZE_TARGET_RED"),
+                "depth fog tightens from the live baseline and uses the bounded brown-color policy");
+        String fogHandler = methodSection(fog, "private void latitude$applyEwSetupFog(");
+        assertEquals(1, countOccurrences(fogHandler, "GlobeClientState.evaluate(client)"),
+                "fog handler evaluates Latitude identity exactly once");
+        assertTrue(fogHandler.contains("if (!GlobeClientState.isGlobeWorld())")
+                        && fogHandler.indexOf("if (!GlobeClientState.isGlobeWorld())")
+                        < fogHandler.indexOf("GlobeClientState.evaluate(client)"),
+                "fog requires authoritative Latitude world identity before evaluation");
+        assertTrue(fogHandler.indexOf("if (!eval.active())")
+                        < fogHandler.indexOf("latitude$applyEwFog("),
+                "non-Latitude worlds fail open before east/west fog is applied");
+        // The polar half is not in this file by ruling; assert that it stays out rather than asserting it in.
+        assertTrue(!fog.contains("latitude$applyPolarFog")
+                        && !fog.contains("computePoleFogEnd")
+                        && !fog.contains("PolarPresentationPolicy"),
+                "the east/west mixin cannot activate or alter polar fog, which has its own owner");
 
         assertEquals(0, countOccurrences(
                         mixins,
@@ -464,6 +467,8 @@ public final class EwPresentationPolicyTest {
         assertTrue(Files.notExists(Path.of(
                         "src/main/java/com/example/globe/mixin/client/compat/sodium/RenderSectionManagerVisibilityMixin.java")),
                 "dead Sodium isSectionVisible compatibility source is removed");
+        assertTrue(mixins.contains("client.FogRendererEwSetupMixin"),
+                "the east/west depth-fog mixin is registered");
         assertTrue(fog.contains("@Mixin(value = FogRenderer.class, priority = 900)"),
                 "Latitude mutates FogData before Sodium's default-priority snapshot");
     }

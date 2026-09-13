@@ -74,22 +74,19 @@ public final class ZoneEnterTitleOverlay {
     }
 
     /**
-     * Preserves an active title's age when the same client level resynchronizes
-     * its raw game clock. This must not create or retrigger a title.
+     * Preserves an active title's age when the same client level resynchronizes its raw game clock.
+     * This must not create or retrigger a title.
+     *
+     * <p>On this timeline that holds for free: the title's lifecycle is WALL-CLOCK
+     * ({@link #startMs} / {@link #durationMs}), and a raw game-clock resync moves no wall-clock value,
+     * so there is nothing to shift and the title keeps its true age across the resync. The method stays
+     * as this timeline's half of {@code GlobeWarningOverlay.resyncWorldClock}, beside the two tick-based
+     * warning episodes that genuinely do have to be shifted, so the resync hook is already in place if
+     * a tick-derived title element is ever added here. It deliberately touches neither {@code title} nor
+     * {@code scale}: a clock resync is not a world change.
      */
     public static void shiftClock(long deltaTicks) {
-        if (startWorldTime != Long.MIN_VALUE) {
-            startWorldTime += deltaTicks;
-        }
-        if (endWorldTime != Long.MIN_VALUE) {
-            endWorldTime += deltaTicks;
-        }
-    }
-
-    public static void reset() {
-        title = null;
-        startWorldTime = Long.MIN_VALUE;
-        endWorldTime = Long.MIN_VALUE;
+        // Intentionally empty -- see the javadoc above and the WALL-CLOCK note on startMs.
     }
 
     public static void render(GuiGraphicsExtractor ctx, int screenW, int screenH) {

@@ -47,7 +47,7 @@ public final class LatitudeWhisperOverlay {
      *  {@code warnY < 18} floor in GlobeWarningOverlay, so the two floors agree). */
     private static final int MIN_Y = 18;
 
-    // Whisper keyline (Peetsa TEST 83 "blurry!! outline it in black"): the warnings' near-black
+    // Whisper keyline (the maintainer TEST 83 "blurry!! outline it in black"): the warnings' near-black
     // (GlobeWarningOverlay.POLE_KEYLINE_RGB sibling) + the standard 1px 8-offset ring.
     private static final int WHISPER_KEYLINE_RGB = 0x080609;
     private static final int[][] KEYLINE_OFFSETS = {
@@ -132,7 +132,7 @@ public final class LatitudeWhisperOverlay {
         // TEST 113: bottom-anchored near the hotbar/health cluster (one line above the screenH-68 warning
         // band), floored so a tiny window can't push the line off the top.
         int y = Math.max(screenH - BOTTOM_OFFSET_Y, MIN_Y);
-        // Peetsa (TEST 83): "the whisper message is blurry!! outline it in black." Same disease the
+        // the maintainer (TEST 83): "the whisper message is blurry!! outline it in black." Same disease the
         // warnings had — the 5-arg text() defaults dropShadow=TRUE, so the faded italic line dragged a
         // misregistered shadow smear. Same cure: 1px 8-offset near-black keyline (italic is safe to keep
         // on the stamps — unlike bold it neither double-draws nor widens advances; the literal carries no

@@ -66,6 +66,7 @@
     "client.LatitudeLoadingClientTickMixin",
     "client.LevelLoadingScreenLatitudeOverlayMixin",
     "client.GenericMessageScreenLatitudeOverlayMixin",
+    "client.FogRendererEwSetupMixin",
     "client.FogRendererPolarSetupMixin",
     "client.FogRendererPassageSetupMixin",
     "client.EntityRenderDispatcherPolarCullMixin",

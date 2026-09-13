@@ -1281,7 +1281,8 @@ public final class CompassHud {
         var bp = player.blockPosition();
         long quad = (((long) (bp.getX() >> 2)) << 42) ^ (((long) (bp.getY() >> 2) & 0x1FFFFFL) << 21)
                 ^ ((long) (bp.getZ() >> 2) & 0x1FFFFFL);
-        int cfgH = java.util.Objects.hash(cfg.latitudeDecimals, cfg.displayZoneInHud, cfg.displayBiomeInHud);
+        int cfgH = java.util.Objects.hash(cfg.latitudeDecimals, cfg.displayZoneInHud, cfg.displayBiomeInHud,
+                cfg.showCustomBiomeSource);
         if (posQ == livePosQ && quad == liveBiomeQuad && cfgH == livePosCfgHash && liveLatStr != null) return;
         livePosQ = posQ;
         liveBiomeQuad = quad;
@@ -1293,7 +1294,7 @@ public final class CompassHud {
         if (cfg.displayBiomeInHud) {
             var biomeHolder = level.getBiome(bp);
             String biomeId = biomeHolder.unwrapKey().map(k -> k.identifier().toString()).orElse(null);
-            liveBiomeStr = BiomeSamplerTools.biomeDisplayName(biomeId);
+            liveBiomeStr = withBiomeSource(BiomeSamplerTools.biomeDisplayName(biomeId), biomeId, cfg);
         } else {
             liveBiomeStr = null;
         }
@@ -1325,7 +1326,7 @@ public final class CompassHud {
     private static String displayZoneName(String zoneKey) {
         // Canonical source: LatitudeBands.displayNameForZoneKey -- unifies this HUD onto the SAME word set
         // as the zone-enter title (GlobeWarningOverlay.zoneDisplayName), which used to disagree here
-        // ("Tropics"/"Subtropics" vs the title's "Tropical"/"Subtropical"; Temperate/Subpolar/Polar already
+        // (the former Tropics/Subtropics wording vs the title's Tropical/Subtropical; Temperate/Subpolar/Polar already
         // matched). The title's vocabulary won.
         return com.example.globe.util.LatitudeBands.displayNameForZoneKey(zoneKey);
     }
@@ -1341,6 +1342,22 @@ public final class CompassHud {
         return liveBiomeStr;
     }
 
+    /**
+     * Appends the biome's PROVIDER when the player asked to see it ("Rainforest · BIOMES O' PLENTY"). The
+     * whole decision -- including "vanilla biomes are never tagged", so a vanilla world gains nothing but
+     * noise from the toggle -- lives in the dependency-free {@link LocationDetailPolicy}, which is why the
+     * live label, the Studio preview and the tests can never disagree about what a biome is called. The
+     * DISPLAY NAME is still whatever {@code BiomeSamplerTools} resolved (it honours lang-file translations);
+     * only the source tag is derived from the raw id's namespace.
+     */
+    private static String withBiomeSource(String displayName, String biomeId, CompassHudConfig cfg) {
+        if (displayName == null || !cfg.showCustomBiomeSource) {
+            return displayName;
+        }
+        String provider = LocationDetailPolicy.customProviderLabel(biomeId);
+        return provider == null ? displayName : displayName + LocationDetailPolicy.COMBINED_SEPARATOR + provider;
+    }
+
     private static String sampleBiome(CompassHudConfig cfg) {
         if (!cfg.displayBiomeInHud) return null;
         Minecraft mc = Minecraft.getInstance();
@@ -1351,7 +1368,7 @@ public final class CompassHud {
                 if (mc != null && mc.player != null && mc.level != null) {
                     var biomeHolder = mc.level.getBiome(mc.player.blockPosition());
                     String biomeId = biomeHolder.unwrapKey().map(k -> k.identifier().toString()).orElse(null);
-                    String name = BiomeSamplerTools.biomeDisplayName(biomeId);
+                    String name = withBiomeSource(BiomeSamplerTools.biomeDisplayName(biomeId), biomeId, cfg);
                     if (name != null) yield name;
                 }
                 yield longestBiomeName(mc);
@@ -1679,7 +1696,7 @@ public final class CompassHud {
     }
 
     // ------------------------------------------------------------------------------------------------
-    // Accessibility (Peetsa 2026-07-11). The player's Accessibility dropdown (LatitudeConfig.accessibilityMode,
+    // Accessibility (maintainer ruling, 2026-07-11). The player's Accessibility dropdown (LatitudeConfig.accessibilityMode,
     // read live each frame) biases the compass toward legibility. All the actual color/alpha math is the pure,
     // unit-tested core.ui.AccessibilityPalette; these are the thin per-surface applications.
     //   HIGH_CONTRAST  -> text forced opaque, card/chip background floored near-solid, muted tones lifted, a

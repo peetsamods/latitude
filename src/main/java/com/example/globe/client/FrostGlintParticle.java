@@ -10,7 +10,7 @@ import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.RandomSource;
 
 /**
- * Phase 5 S27 (Peetsa, TEST 118 flight, 2026-07-20) — the CLIENT render factory for {@code globe:frost_glint}
+ * Phase 5 S27 (the maintainer, TEST 118 flight, 2026-07-20) — the CLIENT render factory for {@code globe:frost_glint}
  * (type registered in {@code content.GlobeParticles}). Owner: "go back to the amethyst sparkle, but instead
  * desaturate it so it's not purple." The amethyst sparkle IS the vanilla {@code GlowParticle} glow-star; its
  * {@code GlowParticle} constructor is {@code private} and its WAX_OFF provider bakes a LILAC

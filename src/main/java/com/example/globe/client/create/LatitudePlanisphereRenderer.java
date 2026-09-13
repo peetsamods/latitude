@@ -14,7 +14,7 @@ public final class LatitudePlanisphereRenderer {
     private LatitudePlanisphereRenderer() {}
 
     // ── Band native colors (ARGB, indexed by Band.ordinal()) ──
-    // Chosen for a clear climate progression with real value+hue contrast between adjacent bands (Peetsa TEST 7:
+    // Chosen for a clear climate progression with real value+hue contrast between adjacent bands (the maintainer TEST 7:
     // "bands don't have enough contrast, they all compete"): deep tropical green -> warm arid ochre ->
     // temperate green -> cool subpolar blue -> pale polar ice.
     private static final int[] BAND_COLORS = {
@@ -32,7 +32,7 @@ public final class LatitudePlanisphereRenderer {
     private static final int GOLD = 0xFFD4A74A;
     private static final int GRID_COLOR = 0x60FFFFFF; // semi-transparent white for latitude lines
 
-    // ── "Random" spawn-zone animated sweep (Peetsa) ── one glow pulse travels the equator→pole latitude
+    // ── "Random" spawn-zone animated sweep (the maintainer) ── one glow pulse travels the equator→pole latitude
     // range each period; SIGMA sets how many bands are lit at once (wider = softer, more overlap); the
     // front runs to POLE_FADE_DEG (past 90°) so the polar band fades out before the loop wraps back to the
     // equator. Purely cosmetic on the create screen; tune freely.
@@ -44,13 +44,13 @@ public final class LatitudePlanisphereRenderer {
     // Shared by the Random vertical sweep and the selected-band horizontal sweep below.
     private static final double SWEEP_FADE_FRAC = 0.22;
 
-    // ── Selected-band horizontal glow (Peetsa) ── a picked band's OWN highlight shimmers with a glow crest
+    // ── Selected-band horizontal glow (the maintainer) ── a picked band's OWN highlight shimmers with a glow crest
     // sweeping left→right across it, the same Gaussian idea as the Random sweep turned on its side. The band
     // never drops below SELECTED_BASE_GLOW so it always reads as clearly selected; the crest brightens it to
     // the full selected pop (glow == 1) as it passes. SIGMA is in fraction-of-width units.
     private static final long SELECTED_SWEEP_PERIOD_MS = 2600L;
     private static final double SELECTED_SWEEP_SIGMA = 0.18;
-    // Lowered floor + stronger peak so the crest reads BOLD like the Random sweep (Peetsa: the shimmer was
+    // Lowered floor + stronger peak so the crest reads BOLD like the Random sweep (the maintainer: the shimmer was
     // too subtle). Base 0.35 still keeps the band clearly selected between crests; the crest drives it to a
     // brighter, fully-opaque pop (bolder than Random's 1.30x/0xE6).
     private static final double SELECTED_BASE_GLOW = 0.35;
@@ -110,8 +110,8 @@ public final class LatitudePlanisphereRenderer {
         }
     }
 
-    // ── Shared zone-bar glow (Peetsa) ── the create screen's Spawn Zone tab draws a thin horizontal 5-segment
-    // color bar (tropical→polar). Peetsa asked for the same Gaussian glow treatment the Atlas already carries,
+    // ── Shared zone-bar glow (the maintainer) ── the create screen's Spawn Zone tab draws a thin horizontal 5-segment
+    // color bar (tropical→polar). the maintainer asked for the same Gaussian glow treatment the Atlas already carries,
     // so the crest math above is exposed here as two absolute-rect helpers the screen calls with ITS OWN
     // BAND_COLORS (the screen's bar palette differs from this renderer's atlas palette; keep them independent).
     // Both are wall-clock driven (same System.currentTimeMillis() idiom) and self-contained so the caller only
@@ -210,7 +210,7 @@ public final class LatitudePlanisphereRenderer {
         int cx = x + halfW;
         int cy = y + halfH;
         // Both shapes draw as rectangles: a wide 2:1 rectangle for Mercator, and a SQUARE for Legacy 1:1
-        // (where halfW == halfH). The atlas matches the world border shape — square for Legacy — per Peetsa's
+        // (where halfW == halfH). The atlas matches the world border shape — square for Legacy — per the maintainer's
         // TEST 1 feedback (finding A2). The square-vs-rectangle difference is carried entirely by the
         // width:height ratio, computed upstream in computePreviewLayout; band-boundary math stays halfH-based
         // (bands vary along the vertical/latitude axis in both shapes), only the horizontal extent (halfW)
@@ -223,13 +223,13 @@ public final class LatitudePlanisphereRenderer {
 
         // ── Continent outline ── stylized landmasses so the latitude bands read as a climate overlay on a
         // world map (not a flag). Deterministic blobs positioned by fraction of the atlas, clipped to bounds;
-        // scales with both shapes (Peetsa TEST 4 A1).
+        // scales with both shapes (the maintainer TEST 4 A1).
         drawContinents(context, cx, cy, halfW, halfH, left, top, right, bottom);
 
         // ── Latitude bands as a TRANSLUCENT climate wash over ocean + land ──
         LatitudeBands.Band[] bands = LatitudeBands.Band.values();
         // "Random" spawn zone (selectedBand == null) gets a playful animated flourish instead of a static
-        // wash: a glow pulse that starts at the equator and travels OUTWARD to both poles at once (Peetsa's
+        // wash: a glow pulse that starts at the equator and travels OUTWARD to both poles at once (the maintainer's
         // request). Because every band is drawn mirrored north+south, one advancing pulse reads as a double,
         // opposed outward scroll. frontDeg travels a little past the pole (to POLE_FADE_DEG) so the polar band
         // fully fades before the loop restarts back at the equator, keeping the wrap from popping. Wall-clock
@@ -247,10 +247,10 @@ public final class LatitudePlanisphereRenderer {
             frontDeg = phase * POLE_FADE_DEG;
             // Ease the whole pulse IN as it (re)starts at the equator and OUT as it clears the pole, so the
             // loop breathes at the seam instead of popping a fully-lit equator band the instant it wraps
-            // (Peetsa: visual harmony). Peak (env == 1) holds across the middle of the sweep.
+            // (the maintainer: visual harmony). Peak (env == 1) holds across the middle of the sweep.
             sweepEnv = smoothstep(0.0, SWEEP_FADE_FRAC, phase) * smoothstep(0.0, SWEEP_FADE_FRAC, 1.0 - phase);
         }
-        // A picked band gets a glow crest sweeping left→right across its own highlighted color (Peetsa) --
+        // A picked band gets a glow crest sweeping left→right across its own highlighted color (the maintainer) --
         // the Random idea turned on its side. The band holds a SELECTED_BASE_GLOW floor so it always reads
         // selected; the crest brightens it to the full pop as it passes. Same seam-fade envelope as above.
         double selFront = 0.0, selEnv = 0.0;
@@ -281,7 +281,7 @@ public final class LatitudePlanisphereRenderer {
             if (!randomSweep) {
                 // A specific zone IS selected: every OTHER band stays fully transparent so the atlas map
                 // graphic (ocean + continents + the faint latitude graticule) shows through cleanly -- only
-                // the picked band carries color (Peetsa). The selected band was already drawn above.
+                // the picked band carries color (the maintainer). The selected band was already drawn above.
                 continue;
             }
 
@@ -340,7 +340,7 @@ public final class LatitudePlanisphereRenderer {
         }
     }
 
-    // Frame the atlas with the VANILLA parchment map texture (Peetsa TEST 7: "grab the minecraft map graphic ...
+    // Frame the atlas with the VANILLA parchment map texture (the maintainer TEST 7: "grab the minecraft map graphic ...
     // don't invent one"). Drawn slightly larger than the atlas so the texture's decorative wooden border
     // surrounds the climate map; the parchment center is covered by the atlas drawn on top.
     private static final net.minecraft.resources.Identifier MAP_BG =
@@ -349,7 +349,7 @@ public final class LatitudePlanisphereRenderer {
     public static void drawAtlasFrame(GuiGraphicsExtractor ctx, int frameLeft, int frameTop, int frameW, int frameH) {
         // Fill the reserved box with the vanilla map texture; the climate map draws inset on top, leaving the
         // texture's decorative border showing as a frame. Keeps the frame INSIDE the layout box (no overflow /
-        // clipping), so the atlas sits centered in the frame (Peetsa TEST 9).
+        // clipping), so the atlas sits centered in the frame (the maintainer TEST 9).
         //
         // map_background.png is 64x64. Use the region-blit overload (destination size separate from source
         // region) to STRETCH the whole texture over the frame box, so the parchment border scales evenly on all
@@ -363,7 +363,7 @@ public final class LatitudePlanisphereRenderer {
 
     private static final long CONTINENT_SEED = 0x1A7D0BE59C4F3E21L;
 
-    // Organic continents from fractal value-noise instead of ovals (Peetsa TEST 7: "the continents are just
+    // Organic continents from fractal value-noise instead of ovals (the maintainer TEST 7: "the continents are just
     // ovals, looks dumb"). Land where the noise field, suppressed toward the atlas edges so seas surround the
     // landmasses, exceeds sea level. Filled as horizontal runs per row (few draw calls, not per-pixel).
     private static void drawContinents(GuiGraphicsExtractor ctx, int cx, int cy, int halfW, int halfH,

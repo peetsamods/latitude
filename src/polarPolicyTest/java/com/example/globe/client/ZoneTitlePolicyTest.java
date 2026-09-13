@@ -184,39 +184,57 @@ public final class ZoneTitlePolicyTest {
     }
 
     /**
-     * The overlay must derive identity from the policy and keep NO sticky segment of its own — a
-     * second, private copy of that state is exactly how the 48/52 defect was reintroduced.
+     * The overlay must derive zone identity EXACTLY and keep no sticky copy of it — a second, private,
+     * buffered copy of that state is how the 48/52 defect was reintroduced more than once.
+     *
+     * <p>Rewritten for the merged 2.0 line (maintainer ruling, 2026-09-12). This line reaches the same law
+     * by different names: identity is {@code canonicalTitleZoneKey}, which resolves the band straight from
+     * the exact absolute latitude with no buffer, and the re-announce hysteresis lives entirely in the pure
+     * {@code core.ZoneTitleBanding}, which decides only FULL-versus-whisper and never touches identity.
+     * {@code ZoneTitlePolicy} itself is retained and still proven by the pure cases above; the assertions
+     * below are re-aimed at the code this line actually runs, and the LAW they enforce is unchanged:
+     * identity is exact, unconditional, and stored before anything decides whether to speak.
      */
     private static void theOverlayUsesThePolicyAndKeepsNoStickyIdentity() throws Exception {
         String overlay = read("src/main/java/com/example/globe/client/GlobeWarningOverlay.java");
-        assertTrue(overlay.contains("ZoneTitlePolicy.segmentFor(absLatDeg)"),
-                "zone identity must come from the policy's exact, unbuffered resolver");
-        assertTrue(overlay.contains("ZoneTitlePolicy.shouldAnnounce("),
-                "the notification decision must come from the policy");
         assertFalse(overlay.contains("lastZoneSegment"),
                 "no sticky segment field may survive — identity is recomputed exactly every sample");
         assertFalse(overlay.contains("resolveZoneSegmentHysteretic"),
                 "the hysteretic identity resolver must be gone, not merely unused");
-        // Identity must be computed UNCONDITIONALLY and stored before the announce decision.
-        // Asserting the exact statement, not a substring: a teeth check that wrapped the same
-        // expression in a `lastZoneKey != null ? lastZoneKey : ...` fallback still satisfied a
-        // substring/ordering check while reintroducing the misreport. Fourth time this shape has
-        // slipped through in this campaign.
+        // The resolver itself must be the exact, unbuffered one. Asserting its BODY, not just its name:
+        // a buffered reimplementation behind the same method name is precisely the shape that has slipped
+        // through before.
+        int resolver = overlay.indexOf("private static String canonicalTitleZoneKey(");
+        assertTrue(resolver >= 0, "overlay resolves zone identity through one named resolver");
+        String resolverBody = overlay.substring(resolver, overlay.indexOf("\n    }", resolver));
+        assertTrue(resolverBody.contains("LatitudeBands.fromAbsoluteLatitudeDeg(absDeg)"),
+                "zone identity is the exact band for the latitude, with no buffer of its own");
+        assertFalse(resolverBody.contains("lastZoneKey"),
+                "the resolver may not carry a previous key forward — that is the misreport");
+
         String exactAssignment =
-                "String canonicalZoneKey = LatitudeBands.Band.values()"
-                        + "[ZoneTitlePolicy.segmentFor(absLatDeg)].name();";
+                "String canonicalZoneKey = canonicalTitleZoneKey(border, client.player.getZ());";
         assertTrue(overlay.contains(exactAssignment),
                 "zone identity must be this exact unconditional assignment — any fallback or "
                         + "carry-forward of a previous key reintroduces the misreported zone");
         int identity = overlay.indexOf(exactAssignment);
         int store = overlay.indexOf("lastZoneKey = canonicalZoneKey;");
-        int announce = overlay.indexOf("ZoneTitlePolicy.shouldAnnounce(");
+        int announce = overlay.indexOf("if (LatitudeConfig.zoneEnterTitleEnabled)");
         assertTrue(identity >= 0 && store > identity && announce > store,
                 "order must be resolve -> store -> decide, so a suppressed announcement can never "
                         + "leave the zone misreported");
+        assertTrue(overlay.contains("ZoneTitleBanding.evaluate("),
+                "the repeat-notification decision comes from the pure banding policy, not from identity");
     }
 
-    /** Resync adjusts a real title timestamp but must retain the never-announced sentinel. */
+    /**
+     * Resync adjusts real timestamps but must retain every never-happened sentinel.
+     *
+     * <p>Rewritten for the merged 2.0 line: the zone ANNOUNCEMENT timestamp this assertion used to name
+     * does not exist here, because the re-announce hysteresis is distance-based
+     * ({@code core.ZoneTitleBanding}) rather than cooldown-based, and the title itself is wall-clock. The
+     * tick-denominated timestamps that DO exist are asserted instead, and the sentinel rule is unchanged.
+     */
     private static void theOverlayResyncsZoneAnnouncementClockWithoutDestroyingTheSentinel()
             throws Exception {
         String overlay = read("src/main/java/com/example/globe/client/GlobeWarningOverlay.java");
@@ -226,10 +244,14 @@ public final class ZoneTitlePolicyTest {
                 resync, overlay.indexOf("private static void clearWarningWorldState", resync));
         assertTrue(resyncBody.contains("long deltaTicks = worldTime - lastWarningWorldTime;"),
                 "resync computes the original-to-current world-clock delta");
-        assertTrue(resyncBody.contains("if (lastZoneAnnounceWorldTime != Long.MIN_VALUE)"),
-                "resync must conditionally preserve the never-announced zone-title sentinel");
-        assertTrue(resyncBody.contains("lastZoneAnnounceWorldTime += deltaTicks;"),
-                "resync shifts the real last-zone announcement timestamp with the world clock");
+        assertTrue(resyncBody.contains("if (lastZoneUpdateWorldTime != Long.MIN_VALUE)")
+                        && resyncBody.contains("lastZoneUpdateWorldTime += deltaTicks;"),
+                "resync conditionally shifts the zone sample clock, preserving its never-sampled sentinel");
+        assertTrue(resyncBody.contains("if (poleWarnStartTick != Long.MIN_VALUE)")
+                        && resyncBody.contains("poleWarnEndTick += deltaTicks;"),
+                "resync shifts the active polar warning window instead of discarding it");
+        assertFalse(resyncBody.contains("lastZoneKey = null"),
+                "a clock resync must never forget which zone the player is standing in");
     }
 
     /**

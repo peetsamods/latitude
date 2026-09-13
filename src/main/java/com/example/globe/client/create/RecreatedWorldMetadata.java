@@ -31,6 +31,24 @@ public final class RecreatedWorldMetadata {
         return RecreatedWorldTypePolicy.presetIdForRadius(radius);
     }
 
+    /**
+     * The world's persisted globe shape id ({@code "mercator"} / {@code "classic"}), or {@code null} when
+     * the field was never stamped.
+     *
+     * <p>Null means "never stamped", NOT "Mercator": the save format records the axis as an optional field
+     * precisely so a world written before the shape existed is not retroactively declared to be one shape
+     * or the other. Callers decide what an unstamped world should default to; this reader must not decide
+     * for them (see the codec's own note on {@code globe_shape}).</p>
+     */
+    @Nullable
+    public static String lastKnownGlobeShape(Path worldRoot) throws IOException {
+        CompoundTag data = readLatitudeStateData(worldRoot);
+        if (data == null) {
+            return null;
+        }
+        return data.getString("globe_shape").orElse(null);
+    }
+
     /** Canonical id (e.g. "temperate") of the band a player was last known to occupy, if recorded. */
     @Nullable
     public static String lastKnownBandId(Path worldRoot) throws IOException {

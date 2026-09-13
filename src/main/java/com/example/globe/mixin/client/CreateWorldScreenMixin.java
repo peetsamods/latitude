@@ -23,6 +23,9 @@ public abstract class CreateWorldScreenMixin implements RecreatedWorldPresetCarr
     @Unique
     private String globe$recreatedWorldPresetId;
 
+    @Unique
+    private String globe$recreatedGlobeShapeId;
+
     @Shadow
     public abstract WorldCreationUiState getUiState();
 
@@ -42,6 +45,16 @@ public abstract class CreateWorldScreenMixin implements RecreatedWorldPresetCarr
     @Override
     public String globe$getRecreatedWorldPresetId() {
         return this.globe$recreatedWorldPresetId;
+    }
+
+    @Override
+    public void globe$setRecreatedGlobeShapeId(String globeShapeId) {
+        this.globe$recreatedGlobeShapeId = globeShapeId;
+    }
+
+    @Override
+    public String globe$getRecreatedGlobeShapeId() {
+        return this.globe$recreatedGlobeShapeId;
     }
 
     @Inject(method = "init", at = @At("HEAD"))
