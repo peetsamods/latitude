@@ -1,10 +1,19 @@
 # Latitude Porting Front Door
 
 `status: active front door`
-`updated: 2026-07-02`
-`current planning target: Minecraft 26.2`
+`updated: 2026-09-12`
+`current planning target: Minecraft 26.3`
 
 Read this before any Minecraft-version pivot, backport, forward-port, or version-family carryover.
+
+## 26.3 absorption status (2026-09-12)
+
+The 2.0 line now targets Minecraft `26.3` (maintainer ruling, 2026-09-12). Branch `port/2.0-26.3-fabric`
+merged the 1.5 line's 26.3 port (`537fe995`, a superset of every 1.5.1 fix through beta.5) into 2.0 as one
+three-way merge; pins are `26.3-rc-2` / Fabric API `0.160.4+26.3` / loader `0.19.5`, label
+`2.0-beta.2+26.3-rc-2`, to be refreshed to final 26.3 when it ships. `docs/porting/26.3-save-compatibility.md`
+(from the 1.5 port) describes what opening a 26.2 world on 26.3 does. The `26.2` pivot sections below are the
+historical record of the previous canonical move and are kept unchanged.
 
 ## Start Here
 
@@ -17,7 +26,7 @@ Read this before any Minecraft-version pivot, backport, forward-port, or version
 
 ## Canonical Rule
 
-Latitude 2.0 should pivot to Minecraft `26.2` before the earthlike-world overhaul begins. Do not build the large geography/climate rewrite on `26.1.2` and then port it later.
+Latitude 2.0 pivoted to Minecraft `26.2` before the earthlike-world overhaul began and moved to `26.3` on 2026-09-12; build the overhaul on the current canonical target. Do not build the large geography/climate rewrite on `26.1.2` and then port it later.
 
 The current 26.1.2 line remains a reference/proven baseline until the 26.2 pivot compiles and passes deterministic proof.
 

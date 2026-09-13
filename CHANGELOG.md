@@ -1,5 +1,63 @@
 # Changelog
 
+## Latitude 2.0-beta.2 (Minecraft 26.3)
+
+Latitude 2.0 catches up with everything shipped on the 1.5 line — 1.5.0 through 1.5.1-beta.5 — and moves
+its canonical Minecraft target from 26.2 to 26.3 (maintainer ruling, 2026-09-12). Built against Minecraft
+26.3 Release Candidate 2; it will be refreshed for the final 26.3 release. **Beta:** the 2.0 overhaul
+systems that were off by default in 2.0-beta.1 stay off by default here.
+
+### New
+
+- **Minecraft 26.3, and the Dappled Forest.** Terrain settings, features, carvers and the world-border
+  hook are on the 26.3 world-generation format, and Minecraft's new Dappled Forest joins the cool edge of
+  the temperate zone exactly as on the 1.5 line (see the 1.5.1-beta.4 entry below for the full rules,
+  including what happens to a 26.2 world that is opened on 26.3).
+- **A still background for the create-world screen.** A **Still** tab hangs under the bottom-left
+  corner of the Latitude panel, styled like the tabs above it. Switch it on to swap the moving panorama
+  for a flat dark backdrop; the choice is remembered between sessions, and a preference saved by
+  Latitude 1.5 is honoured.
+- **A way out to Minecraft's own world-creation screen.** An **Other World Types & Datapacks…** row at the
+  end of the Rules rail hands off to the vanilla screen with your world name, seed, game mode and
+  difficulty carried across, relabels vanilla's Cancel as **Back to Latitude**, and adds a one-click exit
+  from the whole flow. The world list also gets a **Vanilla…** button beside Create New World that opens
+  the plain vanilla screen directly. Worlds made there are ordinary Minecraft worlds; Latitude's own
+  preset is removed from that screen so there is no half-in, half-out state.
+
+### Improved
+
+- **Create-world screen layout.** Panels are see-through at a fixed 80 percent so the panorama shows
+  through, the margins match the 1.5 screen, the World / Spawn Zone / Rules tab headers are real buttons
+  you can reach from the keyboard (Ctrl+Tab and Ctrl+Shift+Tab cycle them; Minecraft's narrator announces
+  them), high GUI scales always use the tabbed layout, and a click that lands on Cancel where a spawn-zone
+  row overlaps it now closes the screen instead of picking a climate. The Latitude title plays a short
+  intro in the tabbed layout instead of permanently taking header space.
+- **Re-create is honest.** Re-creating a Latitude world restores its name, seed, size and world shape;
+  re-creating a world that is not a Latitude world stays on Minecraft's own screen instead of being
+  pulled into Latitude's. The difficulty you chose is used instead of always Normal.
+- **East-west storms use depth fog** instead of a flat full-screen veil, matching the 1.5 line's live
+  tuning: the haze now respects scene depth and shelter.
+- **Everything the 1.5 line fixed since 1.5.0** is in this build: ocean depth labels, the true 35°
+  temperate boundary, desert riverbanks that follow the water, rare-biome slots that never come up empty,
+  modded beaches staying beaches, structures judged by their whole footprint, `/locate` landing inside
+  the biome and on the structure, swamps only in genuinely wet regions, the smoother polar taiga
+  transition, east-or-west storm warnings, less repeat work during chunk decoration, upland coverage
+  anchored by measured height, and subpolar mountains recognised by measured height beside the raw
+  erosion read. Each is described under its 1.5 entry below.
+- **The 1.5 proof harness** (policy suites, the mixin target verifier and the headless exit gate) now
+  runs on the 2.0 line alongside its JUnit suite.
+
+### Known issues
+
+- This build targets 26.3 Release Candidate 2. Minecraft shows its own version-change warning when a
+  world made on one pre-release is opened on a later one.
+- The Dappled Forest variant of the Abandoned Camp has not yet been confirmed inside a Latitude Dappled
+  Forest (Minecraft's own biome tags decide where it can generate).
+- The 2.0 overhaul systems (geography and climate authority, the terrain wrapper) remain opt-in and
+  unproven live; their defaults did not change.
+
+World-generation changes apply to newly generated terrain. Existing chunks keep their current biomes.
+
 ## Planning - Latitude 2.0 Overhaul
 
 The comprehensive Latitude 2.0 overhaul plan now lives at `docs/LATITUDE_2_0_OVERHAUL.md`, with the research log at `docs/binder/longitude-earthlike-world-overhaul-20260702.md`.

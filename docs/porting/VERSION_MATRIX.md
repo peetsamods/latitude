@@ -1,7 +1,23 @@
 # Latitude Version Matrix
 
 `status: planning matrix`
-`updated: 2026-07-06`
+`updated: 2026-09-12`
+
+## Status update (2026-09-12, 26.3 absorption)
+
+**The 2.0 line targets Minecraft 26.3.** Branch `port/2.0-26.3-fabric` (worktree
+`.worktrees/fabric/26.3/2.0-beta.2`, label `2.0-beta.2+26.3-rc-2`) is one three-way merge of the 1.5 line's
+26.3 port tip `537fe995` into 2.0 `main` (`3db66bba`). It carries every 1.5.1 fix through beta.5, the 26.3
+data/hook port, the 1.5 proof harness (policy suites, mixin target verifier, headless exit gate) and the
+1.5 create-world screen work re-implemented on the 2.0 screen. Pins: Minecraft `26.3-rc-2`, Fabric API
+`0.160.4+26.3`, Fabric Loader `0.19.5`, Loom `1.17.20`, Gradle `9.5.1`, Java 25. Final 26.3 is not yet
+published upstream; refresh the pins when it is. Everything below this section is the historical 26.2 record.
+
+| Line | Minecraft | Role | Status |
+| --- | --- | --- | --- |
+| Latitude 2.0 (`port/2.0-26.3-fabric`) | 26.3-rc-2 | canonical target | absorption in progress; proof ladder per the 2026-09-12 plan |
+| Latitude 1.5 (`port/26.3-fabric` and chips) | 26.3-pre-2 | shipping line, port unreleased | design source for the absorption |
+| Latitude 1.5.1-beta.5 | 26.2, 26.1, 1.21.11, 1.21.1, 1.20.1 | published | fixed lines |
 
 ## Status update (2026-07-06, Fable 5 audit Slice A)
 

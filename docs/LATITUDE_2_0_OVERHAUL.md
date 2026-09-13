@@ -4,7 +4,13 @@
 `date: 2026-07-02`
 `active root: <home>/CascadeProjects/Latitude-custom-biome-expansion-26.1.2`
 `active branch at capture: feat/custom-biome-expansion-26.1.2`
-`planning target: Minecraft 26.2`
+`planning target: Minecraft 26.3` (maintainer ruling, 2026-09-12; the 2026-07-02 text below planned `26.2`)
+
+> **Supersession note (maintainer ruling, 2026-09-12).** The canonical Minecraft target of the 2.0 line is now
+> `26.3`, not `26.2`. The 1.5 line's 26.3 port and every 1.5.1 fix through beta.5 were absorbed into 2.0 on
+> branch `port/2.0-26.3-fabric` (label `2.0-beta.2+26.3-rc-2`). Wherever this document says the pivot target is
+> `26.2` or that `26.3` should stay in watcher status, read `26.3` as the current target; the 26.2 pivot
+> record below is history, not the active rule. See `docs/porting/VERSION_MATRIX.md`.
 
 This is the easy-access front door for the Latitude 2.0 overhaul. The dated external record note remains the chronological research log:
 
@@ -65,7 +71,7 @@ As of 2026-07-02:
 - Minecraft Java `26.2` is the stable target.
 - Fabric's 26.2 guidance points developers at Loom `1.17`, Gradle `9.5.1`, and stable Fabric Loader `0.19.3`.
 - Fabric API `0.154.0+26.2` is available.
-- `26.3` exists as snapshot work and should stay in watcher status until stable.
+- `26.3` exists as snapshot work and should stay in watcher status until stable. _(Superseded 2026-09-12: 26.3 is now the canonical target; see the supersession note at the top.)_
 
 Sources:
 
@@ -291,7 +297,7 @@ Potential problems:
 
 - Companion biome mods may lag 26.2.
 - Fabric API/Loader/Loom versions can move.
-- 26.3 snapshots can distract from stable 26.2.
+- 26.3 snapshots can distract from stable 26.2. _(Historical: as of 2026-09-12 the line targets 26.3.)_
 
 Commits/tags/pushes:
 
