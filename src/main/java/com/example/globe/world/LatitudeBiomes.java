@@ -1020,6 +1020,7 @@ public final class LatitudeBiomes {
         FILTERED_LAND_POOL_SOURCE_CACHE.clear();
         REROLL_LAND_POOL_REGISTRY_CACHE.clear();
         REROLL_LAND_POOL_SOURCE_CACHE.clear();
+        DAPPLED_EXCLUDED_TAG_ENTRY_CACHE.clear();
     }
 
     private static boolean providerTicketActive() {
