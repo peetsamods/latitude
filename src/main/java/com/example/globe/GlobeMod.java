@@ -82,6 +82,9 @@ public class GlobeMod implements ModInitializer {
     public static final int BORDER_RADIUS = 7500;
     public static final int POLE_BAND_START_ABS_Z = 12000;
     private static int activePoleBandStartAbsZ = POLE_BAND_START_ABS_Z;
+    // Compass choice for the world currently being served; taken from the create screen's pending
+    // value on first overworld load and reset when the server stops.
+    private static boolean activeStartWithCompass = true;
     public static final int POLE_WARNING_DISTANCE_BLOCKS = 256;
     public static final int POLE_LETHAL_DISTANCE_BLOCKS = 96;
     public static final int POLE_LETHAL_WARNING_DISTANCE = POLE_WARNING_DISTANCE_BLOCKS;
@@ -152,6 +155,8 @@ public class GlobeMod implements ModInitializer {
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             activeLatitudeOverworldGenerator = null;
             pendingInitialBonusChest = false;
+            activePoleBandStartAbsZ = POLE_BAND_START_ABS_Z;
+            activeStartWithCompass = true;
             LatitudeBiomes.clearWorldgenContext();
         });
 
@@ -191,7 +196,7 @@ public class GlobeMod implements ModInitializer {
                 GlobePending.consume();
             }
 
-            boolean startWithCompass = !server.isDedicatedServer() && GlobePending.startWithCompass;
+            boolean startWithCompass = !server.isDedicatedServer() && activeStartWithCompass;
             if (isGlobe && !server.isDedicatedServer() && !StartCompass.hasReceived(handler.player)) {
                 if (!startWithCompass) {
                     StartCompass.markReceived(handler.player);
@@ -292,6 +297,7 @@ public class GlobeMod implements ModInitializer {
 
         int pendingRadius = GlobePending.pendingGlobeRadius;
         GlobePending.pendingGlobeRadius = 0;
+        activeStartWithCompass = GlobePending.consumeStartWithCompass();
 
         // The create screen's own launch is the primary authority on whether this is a Latitude
         // world, exactly as on the shipped 26.1x line: record the pending radius BEFORE consulting
