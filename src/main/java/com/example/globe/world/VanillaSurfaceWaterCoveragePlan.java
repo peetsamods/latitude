@@ -378,6 +378,11 @@ public final class VanillaSurfaceWaterCoveragePlan {
         };
     }
 
+    /** Test seam: the planned island surface at a column, from its organic radial. */
+    double mushroomSurfaceForTest(Anchor anchor, int x, int z, double radial) {
+        return mushroomSurface(anchor, x, z, smoothstep(1.0 - radial));
+    }
+
     private double mushroomSurface(Anchor anchor, int x, int z, double interior) {
         double phaseX = unit(mix64(anchor.shapeSalt() ^ 0x510e527fade682d1L)) * Math.PI * 2.0;
         double phaseZ = unit(mix64(anchor.shapeSalt() ^ 0x1f83d9abfb41bd6bL)) * Math.PI * 2.0;
