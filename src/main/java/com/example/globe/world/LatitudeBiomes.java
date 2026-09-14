@@ -31,7 +31,6 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeResolver;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.biome.Climate;
-import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.RandomState;
@@ -8953,11 +8952,6 @@ public final class LatitudeBiomes {
                 || isBiomeId(candidate, "minecraft:ice_spikes");
     }
 
-    private static boolean isExtremePolarGroveLeak(Holder<Biome> candidate) {
-        return isBiomeId(candidate, "minecraft:grove")
-                || isBiomeId(candidate, "minecraft:cherry_grove");
-    }
-
     /**
      * True for biomes that must not appear in the extreme polar cap (>=74.5°, {@code
      * EXTREME_POLAR_CAP_MIN_DEG} — corrected 2026-08-10; this javadoc previously said 85° against
@@ -9868,19 +9862,6 @@ public final class LatitudeBiomes {
             }
         }
         return null;
-    }
-
-    private static boolean nearRiverLike(int blockX, int blockZ, Climate.Sampler sampler) {
-        if (sampler == null) {
-            return false;
-        }
-        int noiseX = blockX >> 2;
-        int noiseZ = blockZ >> 2;
-        Climate.TargetPoint point = sampler.sample(noiseX, SURFACE_CLASSIFY_Y >> 2, noiseZ);
-        double erosion = Climate.unquantizeCoord(point.erosion());
-        double weird = Climate.unquantizeCoord(point.weirdness());
-        // Rivers tend to follow flat, low-weirdness corridors.
-        return erosion > 0.25 && Math.abs(weird) < 0.08;
     }
 
     private static boolean shouldInviteMangrove(int blockX, int blockY, int blockZ, int bandIndex,
@@ -12035,60 +12016,6 @@ public final class LatitudeBiomes {
         audit.accept(d);
         auditFinal.accept(d, d.allow ? "ACCEPT" : "REJECT");
         return d;
-    }
-
-    private static ShorelineScan scanShorelineByBiome(LevelHeightAccessor heightView,
-                                                      int blockX,
-                                                      int blockZ,
-                                                      int seaLevel,
-                                                      int radius) {
-        if (!(heightView instanceof ChunkAccess chunk)) {
-            return ShorelineScan.invalid();
-        }
-        int minX = chunk.getPos().getMinBlockX();
-        int maxX = chunk.getPos().getMaxBlockX();
-        int minZ = chunk.getPos().getMinBlockZ();
-        int maxZ = chunk.getPos().getMaxBlockZ();
-        int waterCount = 0;
-        int landCount = 0;
-        int shallowWaterCount = 0;
-        int sampled = 0;
-        // Sample a simple 8-point ring plus center for stability.
-        int[][] offsets = {
-                {0, 0},
-                {radius, 0}, {-radius, 0}, {0, radius}, {0, -radius},
-                {radius, radius}, {radius, -radius}, {-radius, radius}, {-radius, -radius}
-        };
-        for (int[] off : offsets) {
-            int x = blockX + off[0];
-            int z = blockZ + off[1];
-            if (x < minX || x > maxX || z < minZ || z > maxZ) {
-                continue;
-            }
-            sampled++;
-            int quartX = x >> 2;
-            int quartZ = z >> 2;
-            int quartY = seaLevel >> 2;
-            Holder<Biome> biome;
-            try {
-                biome = chunk.getNoiseBiome(quartX, quartY, quartZ);
-            } catch (IllegalStateException ex) {
-                return ShorelineScan.invalid();
-            }
-            boolean isWater = biome.is(BiomeTags.IS_OCEAN) || biome.is(BiomeTags.IS_RIVER);
-            // Treat mangrove itself as land for the scan to avoid self-justification.
-            boolean isMangrove = biome.unwrapKey().map(k -> k.identifier().equals(Identifier.parse(MANGROVE_ID))).orElse(false);
-            if (isWater && !isMangrove) {
-                waterCount++;
-                shallowWaterCount++; // biome-based scan cannot tell depth; count as shallow
-            } else {
-                landCount++;
-            }
-        }
-        if (sampled == 0) {
-            return ShorelineScan.invalid();
-        }
-        return new ShorelineScan(waterCount, landCount, shallowWaterCount);
     }
 
     private record ShorelineScan(int waterCount, int landCount, int shallowWaterCount) {
