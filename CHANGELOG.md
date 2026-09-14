@@ -42,6 +42,12 @@ climate map.
 
 ### Improved
 
+- **Mushroom Fields are vanilla islands again.** Latitude no longer reserves a spot in the ocean
+  and builds an island there. Mushroom Fields now appears exactly where vanilla would put it: on
+  the low natural islands the terrain itself raises in the deepest ocean, in any climate band. The
+  flat sea-level apron and stepped terraces of the built island are gone with it. Small worlds may
+  have no Mushroom Fields at all, as in vanilla. Existing worlds keep any built island they have
+  already generated; unexplored ocean follows the vanilla rule.
 - **Smoother transitions into the polar region.** Taiga now thins out in patches across the subpolar
   edge instead of disappearing along a straight latitude line. The polar tree line is preserved.
   (Also in Beta 4 for Minecraft 26.2.)
