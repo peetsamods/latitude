@@ -49,7 +49,7 @@ Legend: check a box once coverage is verified in a new world.
 | [ ] | minecraft:stony_peaks | rare override from meadow/windswept_hills in `LatitudeBiomes` |
 | [ ] | minecraft:jagged_peaks | band tag: `lat_polar` |
 | [ ] | minecraft:frozen_peaks | band tag: `lat_subpolar`, `lat_polar` |
-| [ ] | minecraft:mushroom_fields | special-case override, genuine open ocean only (rare; 1.4.1 gates out inland deep-water) |
+| [x] | minecraft:mushroom_fields | vanilla placement: the donor source's own continentalness verdict, on vanilla's naturally raised islands (no reserved province) |
 
 ## shores_edges_only
 

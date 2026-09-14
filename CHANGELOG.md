@@ -50,6 +50,12 @@ example `-Dlatitude.aurora.enabled=false`):
 
 ### Improved
 
+- **Mushroom Fields are vanilla islands again.** Latitude no longer reserves a spot in the ocean
+  and builds an island there. Mushroom Fields now appears exactly where vanilla would put it: on
+  the low natural islands the terrain itself raises in the deepest ocean, in any climate band. The
+  flat sea-level apron and stepped terraces of the built island are gone with it. Small worlds may
+  have no Mushroom Fields at all, as in vanilla. Existing worlds keep any built island they have
+  already generated; unexplored ocean follows the vanilla rule.
 - **Create-world screen layout.** Panels are see-through at a fixed 80 percent so the panorama shows
   through, the margins match the 1.5 screen, the World / Spawn Zone / Rules tab headers are real buttons
   you can reach from the keyboard (Ctrl+Tab and Ctrl+Shift+Tab cycle them; Minecraft's narrator announces
