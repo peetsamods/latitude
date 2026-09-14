@@ -23,7 +23,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -1120,10 +1119,6 @@ public class GlobeMod implements ModInitializer {
     }
 
     private record SpawnChoice(String zoneId, BlockPos pos, int radius, boolean terrainValidated) {
-    }
-
-    private static double lerp(double a, double b, double t) {
-        return a + (b - a) * t;
     }
 
     private static double hash01(long seed, int x, int z, long salt) {

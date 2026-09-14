@@ -83,19 +83,6 @@ public final class GlobeWarningOverlay {
         };
     }
 
-    private static String biomeName(Minecraft client) {
-        if (client.level == null || client.player == null) {
-            return "Unknown";
-        }
-        var biomeEntry = client.level.getBiome(client.player.blockPosition());
-        var optKey = biomeEntry.unwrapKey();
-        if (optKey.isPresent()) {
-            String path = optKey.get().identifier().getPath();
-            return titleCase(path);
-        }
-        return "Unknown";
-    }
-
     private static String titleCase(String s) {
         String[] parts = s.split("[_/]");
         StringBuilder out = new StringBuilder();

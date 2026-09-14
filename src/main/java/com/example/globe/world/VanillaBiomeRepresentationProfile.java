@@ -425,13 +425,6 @@ public final class VanillaBiomeRepresentationProfile {
                 && role.candidates.contains(omission.representativeId());
     }
 
-    private static long stableOrder(long seed, WorldSize size, String id) {
-        long value = seed ^ ((long) size.ordinal() << 56) ^ id.hashCode() * 0x9e3779b97f4a7c15L;
-        value = (value ^ (value >>> 30)) * 0xbf58476d1ce4e5b9L;
-        value = (value ^ (value >>> 27)) * 0x94d049bb133111ebL;
-        return value ^ (value >>> 31);
-    }
-
     private static String chooseCherryRepresentative(BiomeSelectionProfile profile, long seed) {
         List<String> candidates = CHERRY_GAMEPLAY_COUNTERPARTS.entrySet().stream()
                 .filter(entry -> profile.contains(entry.getValue(), entry.getKey()))
