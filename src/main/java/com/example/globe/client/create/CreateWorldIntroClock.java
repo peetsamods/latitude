@@ -1,5 +1,7 @@
 package com.example.globe.client.create;
 
+import java.lang.ref.WeakReference;
+
 /**
  * Shared frame-driven clock for the create-world intro. A screen instance claims the clock once,
  * on its first init; repeated init passes of that same instance are a no-op, so widget rebuilds
@@ -21,12 +23,14 @@ public final class CreateWorldIntroClock {
 
     private static volatile long progressMs;
     private static volatile long lastFrameMs = -1L;
-    private static volatile Object owner;
+    // Held weakly: the live screen is strongly referenced by the client while it is displayed, and a
+    // screen that has been closed must not keep its world-creation context reachable through here.
+    private static volatile WeakReference<Object> owner;
 
     /** Restarts for a new owning screen instance; repeated claims by that instance are a no-op. */
     public static void beginForOwner(Object requester, long nowMs) {
-        if (owner != requester) {
-            owner = requester;
+        if (!isOwner(requester)) {
+            owner = new WeakReference<>(requester);
             reset(nowMs);
         }
     }
@@ -37,13 +41,19 @@ public final class CreateWorldIntroClock {
      * Repeated claims by the replacement screen remain a no-op after either path.
      */
     public static void continueForOwner(Object requester, long nowMs) {
-        if (owner == requester) {
+        if (isOwner(requester)) {
             return;
         }
         if (!active()) {
             reset(nowMs);
         }
-        owner = requester;
+        owner = new WeakReference<>(requester);
+    }
+
+    /** A collected owner reads as "someone else", exactly like a different screen instance. */
+    private static boolean isOwner(Object requester) {
+        WeakReference<Object> current = owner;
+        return current != null && current.get() == requester;
     }
 
     private static void reset(long nowMs) {
