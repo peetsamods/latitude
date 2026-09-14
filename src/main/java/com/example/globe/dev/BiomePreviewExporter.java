@@ -1,5 +1,6 @@
 package com.example.globe.dev;
 
+import com.example.globe.dev.BiomeSamplerDevTools;
 import com.example.globe.util.BiomeSamplerTools;
 import com.example.globe.util.BiomeColorUtil;
 import com.example.globe.util.LatitudeBands;
@@ -416,11 +417,11 @@ public final class BiomePreviewExporter {
         System.out.println("[LAT][ATLAS_TRACE] phase=export-complete ruggednessMode=constant-bypass");
 
         int inventoryDiscoveryStep = inventoryDiscoveryStep(stepBlocks);
-        BiomeSamplerTools.InventoryReport inventoryReport = needsBiomeSampling
-                ? BiomeSamplerTools.discoverInventory(BiomeSamplerTools.createTemplate(world), seed, radiusBlocks, inventoryDiscoveryStep, y)
-                : new BiomeSamplerTools.InventoryReport(seed, radiusBlocks, inventoryDiscoveryStep, y, List.of());
+        BiomeSamplerDevTools.InventoryReport inventoryReport = needsBiomeSampling
+                ? BiomeSamplerDevTools.discoverInventory(BiomeSamplerTools.createTemplate(world), seed, radiusBlocks, inventoryDiscoveryStep, y)
+                : new BiomeSamplerDevTools.InventoryReport(seed, radiusBlocks, inventoryDiscoveryStep, y, List.of());
         Path inventoryPath = outputDir.resolve("world_biome_inventory.json");
-        BiomeSamplerTools.writeInventoryJson(inventoryPath, inventoryReport);
+        BiomeSamplerDevTools.writeInventoryJson(inventoryPath, inventoryReport);
 
         Path summaryPath = outputDir.resolve("biomes.txt");
         long totalSamples = (long) width * height;
@@ -573,8 +574,8 @@ public final class BiomePreviewExporter {
         private boolean samplingStartLogged;
         private int lastSamplingHeartbeatZ = -1;
         private static final int ATLAS_SAMPLING_HEARTBEAT_ROWS = 32;
-        private BiomeSamplerTools.InventoryScanProcessor inventoryProcessor;
-        private BiomeSamplerTools.InventoryReport inventoryReport;
+        private BiomeSamplerDevTools.InventoryScanProcessor inventoryProcessor;
+        private BiomeSamplerDevTools.InventoryReport inventoryReport;
         private EnumMap<Layer, Path> layerPaths;
         private Map<BiomeMaskLayer, Path> maskPaths;
         private Path outputDir;
@@ -887,7 +888,7 @@ public final class BiomePreviewExporter {
             if (phase == Phase.INVENTORY && inventoryProcessor != null) {
                 long remainingMs = remainingBudgetMs(deadline);
                 if (remainingMs > 0L) {
-                    BiomeSamplerTools.InventoryReport report = inventoryProcessor.processBudget(remainingMs);
+                    BiomeSamplerDevTools.InventoryReport report = inventoryProcessor.processBudget(remainingMs);
                     if (report != null) {
                         inventoryReport = report;
                         finishExportArtifacts();
@@ -921,7 +922,7 @@ public final class BiomePreviewExporter {
             try {
                 writeImageArtifacts();
                 int inventoryDiscoveryStep = inventoryDiscoveryStep(stepBlocks);
-                inventoryProcessor = BiomeSamplerTools.createInventoryScanProcessor(
+                inventoryProcessor = BiomeSamplerDevTools.createInventoryScanProcessor(
                         template,
                         atlasSeed,
                         radiusBlocks,
@@ -1020,7 +1021,7 @@ public final class BiomePreviewExporter {
                     throw new IOException("Export output directory was not prepared");
                 }
                 Path inventoryPath = outputDir.resolve("world_biome_inventory.json");
-                BiomeSamplerTools.writeInventoryJson(inventoryPath, inventoryReport);
+                BiomeSamplerDevTools.writeInventoryJson(inventoryPath, inventoryReport);
 
                 summaryPath = outputDir.resolve("biomes.txt");
                 long totalSamples = (long) width * height;
@@ -1322,7 +1323,7 @@ public final class BiomePreviewExporter {
                                      long durationMs,
                                      Map<String, Integer> biomeCounts,
                                      Map<String, Integer> authorityBandCounts,
-                                     BiomeSamplerTools.InventoryReport inventoryReport,
+                                     BiomeSamplerDevTools.InventoryReport inventoryReport,
                                      Path inventoryPath) throws IOException {
         List<Map.Entry<String, Integer>> top = new ArrayList<>(biomeCounts.entrySet());
         top.sort(Comparator.comparingInt((Map.Entry<String, Integer> e) -> e.getValue()).reversed());
@@ -1387,7 +1388,7 @@ public final class BiomePreviewExporter {
                                              int width,
                                              int height,
                                              long totalSamples,
-                                             BiomeSamplerTools.InventoryReport inventoryReport,
+                                             BiomeSamplerDevTools.InventoryReport inventoryReport,
                                              Map<String, Integer> biomeCounts,
                                              Map<String, Integer> selectedBandCounts,
                                              Map<String, BiomeAuditRecord> biomeAuditRows,
