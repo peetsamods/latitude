@@ -2,7 +2,7 @@ package com.example.globe.world;
 
 import com.example.globe.client.create.RecreatedWorldTypePolicy;
 import com.example.globe.client.create.RecreatedWorldMetadata;
-import com.example.globe.util.BiomeSamplerTools;
+import com.example.globe.dev.BiomeSamplerDevTools;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -74,7 +74,7 @@ public final class WorldgenAuthorityPolicyTest {
 
     private static void inventoryReportsFinalLandBandAsPlacementAuthority() throws Exception {
         Path output = Files.createTempFile("latitude-inventory-band-authority", ".json");
-        BiomeSamplerTools.InventoryBiome biome = new BiomeSamplerTools.InventoryBiome(
+        BiomeSamplerDevTools.InventoryBiome biome = new BiomeSamplerDevTools.InventoryBiome(
                 "minecraft:forest",
                 "Forest",
                 0x4A7B4D,
@@ -87,9 +87,9 @@ public final class WorldgenAuthorityPolicyTest {
                 "temperate",
                 32,
                 1);
-        BiomeSamplerTools.writeInventoryJson(
+        BiomeSamplerDevTools.writeInventoryJson(
                 output,
-                new BiomeSamplerTools.InventoryReport(0L, 1000, 32, 64, List.of(biome)));
+                new BiomeSamplerDevTools.InventoryReport(0L, 1000, 32, 64, List.of(biome)));
 
         JsonObject json = JsonParser.parseString(Files.readString(output)).getAsJsonObject();
         JsonObject row = json.getAsJsonArray("biomes").get(0).getAsJsonObject();
