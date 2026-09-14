@@ -23,7 +23,6 @@ public final class GlobeClientState {
 
     private static long lastEwFogLogTick = Long.MIN_VALUE;
     private static long lastEwStateLogTick = Long.MIN_VALUE;
-    private static int baseViewDistanceChunks = -1;
     private static int lastAppliedViewDistanceChunks = -1;
     private static float currentViewDistanceF = -1f;
     private static long lastViewDistanceApplyMs = 0L;
@@ -88,10 +87,6 @@ public final class GlobeClientState {
         double radius = com.example.globe.util.LatitudeMath.halfSize(border);
         double normalized = Math.abs(z - border.getCenterZ()) / radius;
         return Math.max(0.0, Math.min(90.0, normalized * 90.0));
-    }
-
-    private static int borderRadiusBlocks(ClientLevel world) {
-        return (int) Math.round(com.example.globe.util.LatitudeMath.halfSize(world.getWorldBorder()));
     }
 
     private static PolarStage polarStageForProgress(WorldBorder border, double z, double progress) {
