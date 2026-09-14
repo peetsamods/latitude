@@ -34,6 +34,16 @@ public final class GlobeWarningOverlay {
     private static final int POLAR_KEYLINE_RGB = 0x080609;
 
     private static final int EW_KEYLINE_RGB = 0x080609;
+    // The policies hand out defensive copies; take one each at class init instead of nine array
+    // allocations per rendered frame.
+    private static final int[][] EW_OUTLINE = EwPresentationPolicy.outlineOffsets();
+    private static final int[][] POLAR_OUTLINE = PolarPresentationPolicy.outlineOffsets();
+    // Warning text and its keyline only change when the stage or direction changes, which happens on
+    // tick boundaries, so both are cached against the text they were built from.
+    private static String lastEwTextSource;
+    private static Component lastEwText;
+    private static String lastKeylineSource;
+    private static Component lastKeyline;
 
     // render() runs every frame; cap the crash log so a persistent fault can't flood at frame rate.
     private static final int RENDER_CRASH_LOG_LIMIT = 10;
@@ -114,7 +124,14 @@ public final class GlobeWarningOverlay {
         var border = client.level.getWorldBorder();
         String text = EwPresentationPolicy.warningText(
                 ewRank(stage), border.getMinX(), border.getMaxX(), client.player.getX());
-        return text == null ? null : Component.literal(text);
+        if (text == null) {
+            return null;
+        }
+        if (!text.equals(lastEwTextSource)) {
+            lastEwTextSource = text;
+            lastEwText = Component.literal(text);
+        }
+        return lastEwText;
     }
 
     public static void render(GuiGraphics ctx, DeltaTracker tickCounter) {
@@ -268,9 +285,14 @@ public final class GlobeWarningOverlay {
         int x = Math.max(4, (screenW - w) / 2);
         int alpha = argbColor & 0xFF000000;
         int keylineColor = alpha | EW_KEYLINE_RGB;
-        Component keylineText = Component.literal(text.getString());
+        String keylineSource = text.getString();
+        if (!keylineSource.equals(lastKeylineSource)) {
+            lastKeylineSource = keylineSource;
+            lastKeyline = Component.literal(text.getString());
+        }
+        Component keylineText = lastKeyline;
 
-        for (int[] offset : EwPresentationPolicy.outlineOffsets()) {
+        for (int[] offset : EW_OUTLINE) {
             ctx.drawString(tr, keylineText, x + offset[0], y + offset[1], keylineColor, false);
         }
         ctx.drawString(tr, text, x, y, argbColor, false);
@@ -282,9 +304,14 @@ public final class GlobeWarningOverlay {
         int x = Math.max(4, (screenW - w) / 2);
         int alpha = argbColor & 0xFF000000;
         int keylineColor = alpha | POLAR_KEYLINE_RGB;
-        Component keylineText = Component.literal(text.getString());
+        String keylineSource = text.getString();
+        if (!keylineSource.equals(lastKeylineSource)) {
+            lastKeylineSource = keylineSource;
+            lastKeyline = Component.literal(text.getString());
+        }
+        Component keylineText = lastKeyline;
 
-        for (int[] offset : PolarPresentationPolicy.outlineOffsets()) {
+        for (int[] offset : POLAR_OUTLINE) {
             ctx.drawString(tr, keylineText, x + offset[0], y + offset[1], keylineColor, false);
         }
         ctx.drawString(tr, text, x, y, argbColor, false);
