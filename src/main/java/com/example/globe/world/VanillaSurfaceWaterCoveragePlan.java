@@ -35,6 +35,12 @@ public final class VanillaSurfaceWaterCoveragePlan {
         TEMPERATE_RIVER(Family.RIVER, 0.18, 0.54),
         COLD_RIVER(Family.RIVER, 0.60, 0.90),
         WARM_COASTAL_MANGROVE(Family.MANGROVE, 0.06, 0.27),
+        /**
+         * Legacy only. Beta 4/5 reserved a Mushroom Fields province and raised it with a density
+         * hook; since 2026-09-14 Mushroom Fields follows vanilla (the donor source's own
+         * continentalness verdict on vanilla's naturally raised islands). The constant stays so
+         * saved representation profiles that still carry this row decode; it is never required.
+         */
         ISOLATED_MUSHROOM_ISLAND(Family.MUSHROOM, 0.38, 0.54);
 
         private final Family family;
@@ -100,8 +106,6 @@ public final class VanillaSurfaceWaterCoveragePlan {
     public record SearchStats(int centerEligible, int topologyEligible, int overlapRejected) {}
 
     private final List<Anchor> anchors;
-    // Resolved once: the density hook asks for this anchor on every generated block.
-    private final Anchor mushroomAnchor;
     private final List<String> missingBiomeIds;
     private final Map<String, SearchStats> missingDiagnostics;
     private final int seaLevel;
@@ -110,7 +114,6 @@ public final class VanillaSurfaceWaterCoveragePlan {
                                              Map<String, SearchStats> missingDiagnostics,
                                              int seaLevel) {
         this.anchors = List.copyOf(anchors);
-        this.mushroomAnchor = findMushroomAnchor(this.anchors);
         this.missingBiomeIds = List.copyOf(missingBiomeIds);
         this.missingDiagnostics = Map.copyOf(missingDiagnostics);
         this.seaLevel = seaLevel;
@@ -201,45 +204,6 @@ public final class VanillaSurfaceWaterCoveragePlan {
         return nearest;
     }
 
-    /** Adds a smooth compact island to the reserved Mushroom Fields province only. */
-    public double mushroomDensity(double originalDensity, int blockX, int blockY, int blockZ) {
-        Anchor anchor = mushroomAnchor();
-        if (anchor == null) return originalDensity;
-        // Runs for every block the terrain generator produces, world-wide: reject by the square
-        // before the sqrt, atan2 and three sines that the organic radial costs.
-        if (!anchor.withinOuterBox(blockX, blockZ)) return originalDensity;
-        double radial = organicRadialDistance(anchor, blockX, blockZ);
-        if (radial >= 1.0) return originalDensity;
-        double interior = smoothstep(1.0 - radial);
-        double targetSurface = mushroomSurface(anchor, blockX, blockZ, interior);
-        double islandDensity = (targetSurface - blockY) / 14.0;
-        return Math.max(originalDensity, islandDensity);
-    }
-
-    public boolean isMushroomLand(int blockX, int blockZ) {
-        Anchor anchor = mushroomAnchor();
-        if (anchor == null) return false;
-        if (!anchor.withinOuterBox(blockX, blockZ)) return false;
-        double radial = organicRadialDistance(anchor, blockX, blockZ);
-        if (radial >= 1.0) return false;
-        double interior = smoothstep(1.0 - radial);
-        // Keep at least one entirely solid block above sea level. A biome label at the exact
-        // waterline recreates the submerged Mushroom Fields failure this plan replaces.
-        return mushroomSurface(anchor, blockX, blockZ, interior) >= seaLevel + 2.0;
-    }
-
-    /** Whether the live chunk writer must materialize solid island terrain at this block. */
-    public boolean isMushroomSolid(int blockX, int blockY, int blockZ) {
-        Anchor anchor = mushroomAnchor();
-        if (anchor == null) return false;
-        if (!anchor.withinOuterBox(blockX, blockZ)) return false;
-        double radial = organicRadialDistance(anchor, blockX, blockZ);
-        if (radial >= 1.0) return false;
-        double interior = smoothstep(1.0 - radial);
-        double targetSurface = mushroomSurface(anchor, blockX, blockZ, interior);
-        return targetSurface >= seaLevel + 2.0 && blockY <= Math.floor(targetSurface);
-    }
-
     public List<Anchor> anchors() { return anchors; }
     public List<String> missingBiomeIds() { return missingBiomeIds; }
     public Map<String, SearchStats> missingDiagnostics() { return missingDiagnostics; }
@@ -257,17 +221,6 @@ public final class VanillaSurfaceWaterCoveragePlan {
         }
         for (String missing : missingBiomeIds) out.append("|missing:").append(missing);
         return out.toString();
-    }
-
-    private Anchor mushroomAnchor() {
-        return mushroomAnchor;
-    }
-
-    private static Anchor findMushroomAnchor(List<Anchor> anchors) {
-        for (Anchor anchor : anchors) {
-            if (anchor.route().family() == Family.MUSHROOM) return anchor;
-        }
-        return null;
     }
 
     private static Anchor findAnchor(int worldRadius, long worldSeed, int provinceRadius,
@@ -378,20 +331,6 @@ public final class VanillaSurfaceWaterCoveragePlan {
         };
     }
 
-    /** Test seam: the planned island surface at a column, from its organic radial. */
-    double mushroomSurfaceForTest(Anchor anchor, int x, int z, double radial) {
-        return mushroomSurface(anchor, x, z, smoothstep(1.0 - radial));
-    }
-
-    private double mushroomSurface(Anchor anchor, int x, int z, double interior) {
-        double phaseX = unit(mix64(anchor.shapeSalt() ^ 0x510e527fade682d1L)) * Math.PI * 2.0;
-        double phaseZ = unit(mix64(anchor.shapeSalt() ^ 0x1f83d9abfb41bd6bL)) * Math.PI * 2.0;
-        double undulation = 2.2 * Math.sin((x - anchor.blockX()) / 43.0 + phaseX)
-                + 1.6 * Math.sin((z - anchor.blockZ()) / 59.0 + phaseZ)
-                + 1.1 * Math.sin((x + z) / 89.0 + phaseX - phaseZ);
-        return seaLevel - 5.0 + interior * (20.0 + undulation);
-    }
-
     /** Package-private so the policy suite can prove the bounding-box reject is conservative. */
     static double organicRadialDistance(Anchor anchor, int x, int z) {
         double dx = x - (double) anchor.blockX();
@@ -426,7 +365,6 @@ public final class VanillaSurfaceWaterCoveragePlan {
         out.put("minecraft:river", Route.TEMPERATE_RIVER);
         out.put("minecraft:frozen_river", Route.COLD_RIVER);
         out.put("minecraft:mangrove_swamp", Route.WARM_COASTAL_MANGROVE);
-        out.put("minecraft:mushroom_fields", Route.ISOLATED_MUSHROOM_ISLAND);
         return Collections.unmodifiableMap(out.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .collect(java.util.stream.Collectors.toMap(
@@ -435,10 +373,6 @@ public final class VanillaSurfaceWaterCoveragePlan {
     }
 
     private static int align16(int value) { return Math.floorDiv(value, 16) * 16; }
-    private static double smoothstep(double value) {
-        double t = Math.max(0.0, Math.min(1.0, value));
-        return t * t * (3.0 - 2.0 * t);
-    }
     private static double unit(long value) { return (value >>> 11) * 0x1.0p-53; }
     private static long mix64(long value) {
         value = (value ^ (value >>> 30)) * 0xbf58476d1ce4e5b9L;

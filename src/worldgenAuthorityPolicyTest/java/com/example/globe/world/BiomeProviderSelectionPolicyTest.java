@@ -1656,8 +1656,11 @@ final class BiomeProviderSelectionPolicyTest {
         Set<String> classifiedSurface = new HashSet<>(VanillaBiomeCoveragePlan.requiredRoutes().keySet());
         classifiedSurface.addAll(VanillaSurfaceWaterCoveragePlan.requirements().keySet());
         classifiedSurface.add("minecraft:pale_garden");
+        // Mushroom Fields is vanilla-placed (the donor source's own continentalness verdict, on
+        // vanilla's naturally raised islands); it is deliberately not a reserved identity.
+        classifiedSurface.add("minecraft:mushroom_fields");
         assertEquals(51, classifiedSurface.size(),
-                "all 51 vanilla Overworld surface identities are classified by land, water, or Pale Garden authority");
+                "all 51 vanilla Overworld surface identities are classified by land, water, Pale Garden, or vanilla mushroom authority");
         assertEquals(Set.of("minecraft:deep_dark", "minecraft:dripstone_caves",
                         "minecraft:lush_caves"),
                 VanillaBiomeRepresentationProfile.nativeUndergroundIds(),
@@ -2060,7 +2063,7 @@ final class BiomeProviderSelectionPolicyTest {
                 "minecraft:lukewarm_ocean", "minecraft:deep_lukewarm_ocean",
                 "minecraft:warm_ocean", "minecraft:beach", "minecraft:snowy_beach",
                 "minecraft:stony_shore", "minecraft:river", "minecraft:frozen_river",
-                "minecraft:mangrove_swamp", "minecraft:mushroom_fields");
+                "minecraft:mangrove_swamp");
         assertEquals(exactRequired, VanillaSurfaceWaterCoveragePlan.requirements().keySet(),
                 "V2 surface/water contract owns exactly the requested vanilla identities");
         assertTrue(VanillaSurfaceWaterCoveragePlan.verifiedCounterparts().isEmpty(),
@@ -2109,74 +2112,17 @@ final class BiomeProviderSelectionPolicyTest {
                 }
                 assertEquals(exactRequired, ids, "no required exact ID is omitted");
 
-                VanillaSurfaceWaterCoveragePlan.Anchor mushroom = plan.anchors().stream()
-                        .filter(a -> a.route().family() == VanillaSurfaceWaterCoveragePlan.Family.MUSHROOM)
-                        .findFirst().orElseThrow();
-                VanillaSurfaceWaterCoveragePlan.Anchor plannedLocate = plan.nearestAnchorFor(
-                        Set.of("minecraft:mushroom_fields"),
-                        -mushroom.blockX(),
-                        -mushroom.blockZ());
-                assertEquals(mushroom, plannedLocate,
-                        "a required planned biome remains directly locatable even when its compact province "
-                                + "falls outside the ordinary bounded scan");
-                assertTrue(plan.nearestAnchorFor(Set.of("minecraft:the_void"), 0, 0) == null,
-                        "planned locate cannot invent an unreserved biome identity");
-                assertTrue(plan.mushroomDensity(-1.0, mushroom.blockX(), 64, mushroom.blockZ()) > -1.0,
-                        "reserved Mushroom Fields gains real above-water density");
-                assertTrue(plan.isMushroomSolid(mushroom.blockX(), 64, mushroom.blockZ()),
-                        "reserved Mushroom Fields materializes a solid block above sea level");
-                assertTrue(!plan.isMushroomSolid(mushroom.blockX(), 256, mushroom.blockZ()),
-                        "reserved Mushroom Fields does not fill air above its planned surface");
-                assertEquals(-1.0, plan.mushroomDensity(-1.0,
-                                mushroom.blockX() + mushroom.radiusBlocks() * 2, 64, mushroom.blockZ()),
-                        "density outside the reserved island remains byte-for-byte unchanged");
-                assertMushroomBoxIsConservative(mushroom);
-                assertMushroomIslandUnchangedByBoxReject(plan, mushroom);
 
                 VanillaSurfaceWaterCoveragePlan compactPlan = VanillaSurfaceWaterCoveragePlan.build(
                         radius, seed, 63, VanillaSurfaceWaterCoveragePlan.requirements(),
                         radius <= 7_500, evaluator);
                 assertTrue(compactPlan.complete(),
                         "V3 compact surface targets fit without weakening exact identities");
-                VanillaSurfaceWaterCoveragePlan.Anchor compactMushroom = compactPlan.anchors().stream()
-                        .filter(a -> a.route().family() == VanillaSurfaceWaterCoveragePlan.Family.MUSHROOM)
-                        .findFirst().orElseThrow();
-                assertEquals(radius <= 7_500
-                                ? 128 : Math.max(192, Math.min(384, radius / 18)),
-                        compactMushroom.radiusBlocks(),
-                        "V3 uses the compact substantial Mushroom Fields footprint only in compact worlds");
                 for (VanillaSurfaceWaterCoveragePlan.Anchor anchor : compactPlan.anchors()) {
                     if (radius <= 7_500
                             && anchor.route().family() == VanillaSurfaceWaterCoveragePlan.Family.OCEAN) {
                         assertEquals(96, anchor.radiusBlocks(),
                                 "compact ocean variants use a substantial twelve-chunk diameter");
-                    }
-                }
-                double minimumLandEdge = Double.POSITIVE_INFINITY;
-                double maximumLandEdge = Double.NEGATIVE_INFINITY;
-                for (int bearing = 0; bearing < 24; bearing++) {
-                    double angle = bearing * Math.PI * 2.0 / 24.0;
-                    double edge = 0.0;
-                    for (int distance = 0; distance <= mushroom.radiusBlocks(); distance += 2) {
-                        int x = mushroom.blockX() + (int) Math.round(Math.cos(angle) * distance);
-                        int z = mushroom.blockZ() + (int) Math.round(Math.sin(angle) * distance);
-                        if (plan.isMushroomLand(x, z)) edge = distance;
-                    }
-                    minimumLandEdge = Math.min(minimumLandEdge, edge);
-                    maximumLandEdge = Math.max(maximumLandEdge, edge);
-                }
-                assertTrue(maximumLandEdge - minimumLandEdge >= mushroom.radiusBlocks() * 0.08,
-                        "Mushroom Fields shoreline must be visibly organic, not a circular density stamp");
-                for (int dz = -mushroom.radiusBlocks(); dz <= mushroom.radiusBlocks(); dz += 8) {
-                    for (int dx = -mushroom.radiusBlocks(); dx <= mushroom.radiusBlocks(); dx += 8) {
-                        int x = mushroom.blockX() + dx;
-                        int z = mushroom.blockZ() + dz;
-                        if (plan.isMushroomLand(x, z)) {
-                            assertTrue(plan.mushroomDensity(-100.0, x, 64, z) > 0.0,
-                                    "every Mushroom Fields label has solid terrain above sea level");
-                            assertTrue(plan.isMushroomSolid(x, 64, z),
-                                    "every Mushroom Fields label reaches the live solid-block authority");
-                        }
                     }
                 }
             }
@@ -2187,8 +2133,10 @@ final class BiomeProviderSelectionPolicyTest {
                 "shore coverage executes before the beach early return");
         assertTrue(source.indexOf("Family.RIVER") < source.indexOf("return out;", source.indexOf("Family.RIVER")),
                 "river coverage executes before the river early return");
-        assertTrue(source.contains("if (ACTIVE_SURFACE_WATER_COVERAGE_PLAN == null)"),
-                "legacy random Mushroom Fields behavior is retained only when V2 has no plan");
+        assertTrue(occurrences(source, "isBiomeId(base, \"minecraft:mushroom_fields\")") == 2
+                        && !source.contains("mushroomIslandOverride")
+                        && !source.contains("mushroomIslandDensity"),
+                "Mushroom Fields is vanilla-placed in both pickers: the donor verdict is kept, nothing reserves or raises it");
         assertTrue(LatitudeBiomes.rockyShoreClimateSignal(-0.30, 0.35),
                 "low-erosion coastline with strong terrain signal is eligible for Stony Shore");
         assertTrue(!LatitudeBiomes.rockyShoreClimateSignal(-0.10, 0.35),
@@ -2199,20 +2147,17 @@ final class BiomeProviderSelectionPolicyTest {
                 "negative locate coordinate returns the exact quart center evaluated by population");
         assertEquals(102, LatitudeLocateBudgetPolicy.quartCenterBlock(100),
                 "vertical locate coordinate returns the exact quart center evaluated by population");
-        String densityMixin = Files.readString(
-                Path.of("src/main/java/com/example/globe/mixin/NoiseChunkMushroomIslandDensityMixin.java"));
         String authorityMixin = Files.readString(
                 Path.of("src/main/java/com/example/globe/mixin/NoiseChunkGeneratorWorldgenAuthorityMixin.java"));
         String mixins = Files.readString(Path.of("src/main/resources/globe.mixins.json"));
-        assertTrue(densityMixin.contains("LatitudeWorldgenScope.isActive()"),
-                "Mushroom island density is dimension/generator scoped");
-        assertTrue(densityMixin.contains("getInterpolatedState()Lnet/minecraft/world/level/block/state/BlockState;"),
-                "Mushroom island authority reaches the live chunk block-writing path");
+        assertTrue(!Files.exists(Path.of("src/main/java/com/example/globe/mixin/NoiseChunkMushroomIslandDensityMixin.java"))
+                        && !mixins.contains("NoiseChunkMushroomIslandDensityMixin"),
+                "no density hook raises a Mushroom Fields island; vanilla's terrain shaper owns the island");
+        assertTrue(!VanillaSurfaceWaterCoveragePlan.requirements().containsKey("minecraft:mushroom_fields"),
+                "Mushroom Fields is not a reserved surface/water identity");
         for (String owner : List.of("doFill", "getBaseHeight", "getBaseColumn")) {
             assertTrue(authorityMixin.contains(owner), "density authority covers " + owner);
         }
-        assertTrue(mixins.contains("NoiseChunkMushroomIslandDensityMixin"),
-                "Mushroom island density hook is registered");
         String locateSource = Files.readString(
                 Path.of("src/main/java/com/example/globe/world/LatitudeBiomeSource.java"));
         assertTrue(locateSource.contains("findPlannedSurfaceWaterCoverage("),
@@ -3075,6 +3020,13 @@ final class BiomeProviderSelectionPolicyTest {
             // or the coverage plan queries a route the roster no longer lists the biome under.
             VanillaBiomeRepresentationProfile currentRepresentation =
                     VanillaBiomeRepresentationProfile.capture(10_000, 131L, current);
+            String legacyMushroomRow = currentRepresentation.encode().replaceFirst(
+                    "\nWATER\\|", "\nWATER|ISOLATED_MUSHROOM_ISLAND|minecraft:mushroom_fields\nWATER|");
+            assertTrue(!legacyMushroomRow.equals(currentRepresentation.encode()),
+                    "fixture inserts a Beta 4/5 reserved Mushroom Fields row");
+            assertEquals(currentRepresentation.surfaceWaterTargets(),
+                    VanillaBiomeRepresentationProfile.decode(legacyMushroomRow).surfaceWaterTargets(),
+                    "a saved profile's reserved Mushroom Fields row is dropped on read, everything else kept");
             String agedRepresentation = currentRepresentation.encode();
             for (String id : windswept) {
                 agedRepresentation = agedRepresentation.replace(
@@ -4806,71 +4758,4 @@ final class BiomeProviderSelectionPolicyTest {
 
     @FunctionalInterface
     private interface ThrowingRunnable { void run() throws Exception; }
-
-    /**
-     * The per-block density hook rejects columns outside a square before evaluating the organic
-     * radial. That is output-neutral only if every column outside the square has radial >= 1.0.
-     * Walk the ring just outside the square (all four sides) and every grid point inside it.
-     */
-    private static void assertMushroomBoxIsConservative(VanillaSurfaceWaterCoveragePlan.Anchor mushroom) {
-        int outer = 0;
-        while (mushroom.withinOuterBox(mushroom.blockX() + outer, mushroom.blockZ())) {
-            outer++;
-        }
-        assertTrue(outer > mushroom.radiusBlocks(), "outer box must enclose the nominal radius");
-        for (int t = -outer; t <= outer; t++) {
-            int[][] ring = {
-                    {mushroom.blockX() + outer, mushroom.blockZ() + t},
-                    {mushroom.blockX() - outer, mushroom.blockZ() + t},
-                    {mushroom.blockX() + t, mushroom.blockZ() + outer},
-                    {mushroom.blockX() + t, mushroom.blockZ() - outer}};
-            for (int[] p : ring) {
-                assertTrue(!mushroom.withinOuterBox(p[0], p[1]), "ring point must be outside the box");
-                assertTrue(VanillaSurfaceWaterCoveragePlan.organicRadialDistance(mushroom, p[0], p[1]) >= 1.0,
-                        "a column outside the bounding box must be outside the wobbled island");
-            }
-        }
-        for (int dz = -outer + 1; dz < outer; dz += 3) {
-            for (int dx = -outer + 1; dx < outer; dx += 3) {
-                int x = mushroom.blockX() + dx;
-                int z = mushroom.blockZ() + dz;
-                boolean inside = VanillaSurfaceWaterCoveragePlan.organicRadialDistance(mushroom, x, z) <= 1.0;
-                assertTrue(mushroom.contains(x, z) == inside, "contains() must agree with the organic radial inside the box");
-            }
-        }
-    }
-
-    /**
-     * Differential check against the pre-bounding-box formulas: over a dense grid covering the
-     * island, its rim and a margin outside the square, every density, land and solid answer must
-     * equal what the direct trig evaluation gives. This is the regression net for row 1.
-     */
-    private static void assertMushroomIslandUnchangedByBoxReject(VanillaSurfaceWaterCoveragePlan plan,
-                                                                  VanillaSurfaceWaterCoveragePlan.Anchor mushroom) {
-        int span = (int) Math.round(mushroom.radiusBlocks() * 1.3);
-        int checked = 0;
-        for (int dz = -span; dz <= span; dz += 2) {
-            for (int dx = -span; dx <= span; dx += 2) {
-                int x = mushroom.blockX() + dx;
-                int z = mushroom.blockZ() + dz;
-                double radial = VanillaSurfaceWaterCoveragePlan.organicRadialDistance(mushroom, x, z);
-                for (int y : new int[] {40, 58, 63, 66, 72, 80, 96}) {
-                    double expected = radial >= 1.0 ? -0.25 : Math.max(-0.25, (plan.mushroomSurfaceForTest(mushroom, x, z, radial) - y) / 14.0);
-                    assertEquals(expected, plan.mushroomDensity(-0.25, x, y, z),
-                            "island density must equal the direct evaluation at " + x + "," + y + "," + z);
-                    boolean expectedSolid = radial < 1.0
-                            && plan.mushroomSurfaceForTest(mushroom, x, z, radial) >= plan.seaLevel() + 2.0
-                            && y <= Math.floor(plan.mushroomSurfaceForTest(mushroom, x, z, radial));
-                    assertTrue(plan.isMushroomSolid(x, y, z) == expectedSolid,
-                            "island solid must equal the direct evaluation at " + x + "," + y + "," + z);
-                }
-                boolean expectedLand = radial < 1.0
-                        && plan.mushroomSurfaceForTest(mushroom, x, z, radial) >= plan.seaLevel() + 2.0;
-                assertTrue(plan.isMushroomLand(x, z) == expectedLand,
-                        "island land must equal the direct evaluation at " + x + "," + z);
-                checked++;
-            }
-        }
-        assertTrue(checked > 10_000, "differential grid must be dense");
-    }
 }
