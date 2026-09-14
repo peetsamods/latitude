@@ -2232,6 +2232,7 @@ final class BiomeProviderSelectionPolicyTest {
                 assertEquals(-1.0, plan.mushroomDensity(-1.0,
                                 mushroom.blockX() + mushroom.radiusBlocks() * 2, 64, mushroom.blockZ()),
                         "density outside the reserved island remains byte-for-byte unchanged");
+                assertMushroomBoxIsConservative(mushroom);
 
                 VanillaSurfaceWaterCoveragePlan compactPlan = VanillaSurfaceWaterCoveragePlan.build(
                         radius, seed, 63, VanillaSurfaceWaterCoveragePlan.requirements(),
@@ -3390,4 +3391,37 @@ final class BiomeProviderSelectionPolicyTest {
 
     @FunctionalInterface
     private interface ThrowingRunnable { void run() throws Exception; }
+
+    /**
+     * The per-block density hook rejects columns outside a square before evaluating the organic
+     * radial. That is output-neutral only if every column outside the square has radial >= 1.0.
+     * Walk the ring just outside the square (all four sides) and every grid point inside it.
+     */
+    private static void assertMushroomBoxIsConservative(VanillaSurfaceWaterCoveragePlan.Anchor mushroom) {
+        int outer = 0;
+        while (mushroom.withinOuterBox(mushroom.blockX() + outer, mushroom.blockZ())) {
+            outer++;
+        }
+        assertTrue(outer > mushroom.radiusBlocks(), "outer box must enclose the nominal radius");
+        for (int t = -outer; t <= outer; t++) {
+            int[][] ring = {
+                    {mushroom.blockX() + outer, mushroom.blockZ() + t},
+                    {mushroom.blockX() - outer, mushroom.blockZ() + t},
+                    {mushroom.blockX() + t, mushroom.blockZ() + outer},
+                    {mushroom.blockX() + t, mushroom.blockZ() - outer}};
+            for (int[] p : ring) {
+                assertTrue(!mushroom.withinOuterBox(p[0], p[1]), "ring point must be outside the box");
+                assertTrue(VanillaSurfaceWaterCoveragePlan.organicRadialDistance(mushroom, p[0], p[1]) >= 1.0,
+                        "a column outside the bounding box must be outside the wobbled island");
+            }
+        }
+        for (int dz = -outer + 1; dz < outer; dz += 3) {
+            for (int dx = -outer + 1; dx < outer; dx += 3) {
+                int x = mushroom.blockX() + dx;
+                int z = mushroom.blockZ() + dz;
+                boolean inside = VanillaSurfaceWaterCoveragePlan.organicRadialDistance(mushroom, x, z) <= 1.0;
+                assertTrue(mushroom.contains(x, z) == inside, "contains() must agree with the organic radial inside the box");
+            }
+        }
+    }
 }
