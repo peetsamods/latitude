@@ -78,7 +78,6 @@ public class LatitudeCreateWorldScreen extends Screen {
     private static final int MIN_COMFORTABLE_THREE_COL_WIDTH = 720;
     /** The wider of the two Still labels sizes the tab, so toggling never changes its width. */
     private static final String STILL_TAB_WIDEST_LABEL = "Still: OFF";
-    private static final double[] PREVIEW_LABEL_DEGREES = {0.0, 23.5, 35.0, 50.0, 66.5, 90.0};
 
     private static final GlobeWorldSize DEFAULT_SIZE = GlobeWorldSize.REGULAR;
     private static final long ATLAS_SIZE_TRANSITION_MS = 180L;
@@ -236,7 +235,6 @@ public class LatitudeCreateWorldScreen extends Screen {
     private int settingsViewportTop;
     private int settingsViewportBottom;
     private int settingsContentHeight;
-    private int menuScaleRowY;
     private int worldTypeRowY;
     private int modeRowY;
     private int commandsRowY;
@@ -510,10 +508,6 @@ public class LatitudeCreateWorldScreen extends Screen {
                 client.setScreen(parent);
             }
         }
-    }
-
-    private boolean isCompact() {
-        return this.width < 480;
     }
 
     private static boolean shouldUseTabbedLayout(int viewportWidth, int guiScale) {
@@ -890,10 +884,6 @@ public class LatitudeCreateWorldScreen extends Screen {
 
     private int smallWorldWarningLineHeight() {
         return Math.max(1, Math.round(uiFontHeight() * smallWorldWarningScale()));
-    }
-
-    private int computeZoneListTop() {
-        return panelTop + scaledUi(22) + wrappedTextHeight("Choose the climate where your journey begins", Math.max(80, rightW - scaledUi(20) - SCROLLBAR_GUTTER)) + scaledUi(10);
     }
 
     private int computeZoneRowHeight(int rowWidth) {
@@ -2122,105 +2112,6 @@ public class LatitudeCreateWorldScreen extends Screen {
         drawCenteredBoundedText(context, label, new UiRect(boxLeft + pad, boxTop + pad, boxRight - boxLeft - pad * 2, uiFontHeight()), DISABLED_COLOR, false, true);
     }
 
-    private PreviewLayout computePreviewLayout(int areaLeft, int areaTop, int areaRight, int areaBottom,
-                                               int radius, float labelScale, float captionScale, String caption) {
-        int globeDiameter = radius * 2;
-        int labelWidth = 0;
-        for (double deg : PREVIEW_LABEL_DEGREES) {
-            labelWidth = Math.max(labelWidth, scaledTextWidth(formatDegree(deg), labelScale));
-        }
-        int labelPad = Math.max(6, Math.round(radius * 0.07f));
-        int compositionWidth = globeDiameter + labelPad + labelWidth;
-        if (compositionWidth > areaRight - areaLeft) {
-            return null;
-        }
-
-        int captionHeight = scaledFontHeight(captionScale);
-        int captionGap = Math.max(4, Math.round(radius * 0.06f));
-        int compositionHeight = globeDiameter + captionGap + captionHeight;
-        if (compositionHeight > areaBottom - areaTop) {
-            return null;
-        }
-
-        int compositionLeft = areaLeft + (areaRight - areaLeft - compositionWidth) / 2;
-        int globeLeft = compositionLeft;
-        int globeTop = areaTop + (areaBottom - areaTop - compositionHeight) / 2;
-        int globeCenterY = globeTop + radius;
-        int labelX = globeLeft + globeDiameter + labelPad;
-        int labelHeight = scaledFontHeight(labelScale);
-        int[] labelYs = computePreviewLabelYs(globeCenterY, radius, labelHeight);
-        int lastLabelBottom = labelYs[labelYs.length - 1] + labelHeight;
-        int captionY = Math.max(globeTop + globeDiameter + captionGap, lastLabelBottom + 4);
-        if (captionY + captionHeight > areaBottom) {
-            return null;
-        }
-
-        int captionX = compositionLeft + (compositionWidth - scaledTextWidth(caption, captionScale)) / 2;
-        return new PreviewLayout(globeLeft, globeTop, globeDiameter, labelX, labelYs, captionX, captionY, labelScale, captionScale);
-    }
-
-    private int[] computePreviewLabelYs(int globeCenterY, int radius, int labelHeight) {
-        int[] labelYs = new int[PREVIEW_LABEL_DEGREES.length];
-        for (int i = 0; i < PREVIEW_LABEL_DEGREES.length; i++) {
-            double deg = PREVIEW_LABEL_DEGREES[i];
-            int yOff = (int) Math.round(radius * deg / 90.0);
-            labelYs[i] = globeCenterY + yOff - labelHeight / 2;
-        }
-
-        int minGap = isTinyPreview(selectedSize) ? Math.max(labelHeight, 9) : Math.max(labelHeight - 1, 7);
-        for (int i = 1; i < labelYs.length; i++) {
-            if (labelYs[i] < labelYs[i - 1] + minGap) {
-                labelYs[i] = labelYs[i - 1] + minGap;
-            }
-        }
-        return labelYs;
-    }
-
-    private boolean isTinyPreview(GlobeWorldSize size) {
-        return size == GlobeWorldSize.ITTY_BITTY || size == GlobeWorldSize.TINY;
-    }
-
-    private float previewLabelScale(GlobeWorldSize size) {
-        return switch (size) {
-            case ITTY_BITTY -> 0.58f;
-            case TINY -> 0.66f;
-            case SMALL -> 0.78f;
-            case REGULAR -> 0.88f;
-            case LARGE -> 0.94f;
-            case MASSIVE -> 0.96f;
-        };
-    }
-
-    private float previewCaptionScale(GlobeWorldSize size) {
-        return switch (size) {
-            case ITTY_BITTY -> 0.62f;
-            case TINY -> 0.70f;
-            case SMALL -> 0.82f;
-            case REGULAR -> 0.90f;
-            case LARGE -> 0.94f;
-            case MASSIVE -> 0.96f;
-        };
-    }
-
-    private float previewDiscFill(GlobeWorldSize size) {
-        return switch (size) {
-            case ITTY_BITTY -> 0.48f;
-            case TINY -> 0.58f;
-            case SMALL -> 0.73f;
-            case REGULAR -> 0.84f;
-            case LARGE -> 0.91f;
-            case MASSIVE -> 0.96f;
-        };
-    }
-
-    private int scaledTextWidth(String text, float scale) {
-        return Math.round(this.font.width(text) * scale);
-    }
-
-    private int scaledFontHeight(float scale) {
-        return Math.max(5, Math.round(this.font.lineHeight * scale));
-    }
-
     private void drawSettingsRowLabel(GuiGraphics context, String label, int x, int width, int rowY, int color) {
         int labelY = rowY - scaledUi(10);
         if (labelY + uiFontHeight() <= settingsClipTop() || labelY >= settingsViewportBottom) {
@@ -2263,10 +2154,6 @@ public class LatitudeCreateWorldScreen extends Screen {
         }
     }
 
-    private void drawCenteredUiText(GuiGraphics context, String text, int cx, int y, int color, boolean shadow) {
-        drawUiText(context, text, cx - uiTextWidth(text) / 2, y, color, shadow);
-    }
-
     private boolean fitsWidth(String text, int width) {
         return uiTextWidth(text) <= Math.max(0, width);
     }
@@ -2307,54 +2194,6 @@ public class LatitudeCreateWorldScreen extends Screen {
         int drawY = clampToRect(rect.y, uiFontHeight(), rect.y, rect.bottom());
         drawUiText(context, fitted, drawX, drawY, color, shadow);
         return true;
-    }
-
-    private boolean drawBoundedStyledText(GuiGraphics context, Component text, UiRect rect, int color, boolean shadow, boolean ellipsize) {
-        if (!fitsHeight(rect.h)) {
-            return false;
-        }
-        String fitted = ellipsize ? ellipsizeToWidth(text.getString(), rect.w) : text.getString();
-        if (fitted.isEmpty() || (!ellipsize && !fitsWidth(fitted, rect.w))) {
-            return false;
-        }
-        int drawX = clampToRect(rect.x, uiTextWidth(fitted), rect.x, rect.right());
-        int drawY = clampToRect(rect.y, uiFontHeight(), rect.y, rect.bottom());
-        context.drawString(this.font, Component.literal(fitted).setStyle(text.getStyle().withItalic(true)), drawX, drawY, color, shadow);
-        return true;
-    }
-
-    private int drawWrappedStyledTextBlock(GuiGraphics context, Component text, UiRect rect, int color, boolean shadow, int maxLines, boolean center, boolean optional) {
-        if (rect.w <= 0 || rect.h < uiFontHeight()) {
-            return 0;
-        }
-        int maxVisibleLines = Math.min(maxLines, Math.max(1, rect.h / uiFontHeight()));
-        List<net.minecraft.network.chat.FormattedText> wrapped = wrapUiLines(text.getString(), rect.w);
-        if (wrapped.isEmpty()) {
-            return 0;
-        }
-        int drawCount = Math.min(maxVisibleLines, wrapped.size());
-        if (optional && drawCount <= 0) {
-            return 0;
-        }
-        int y = rect.y;
-        for (int i = 0; i < drawCount; i++) {
-            String line = wrapped.get(i).getString();
-            if (i == drawCount - 1 && wrapped.size() > drawCount) {
-                line = ellipsizeToWidth(line, rect.w);
-            }
-            Component lineText = Component.literal(line).setStyle(text.getStyle());
-            if (center) {
-                String fitted = ellipsizeToWidth(lineText.getString(), rect.w);
-                if (!fitted.isEmpty()) {
-                    int drawX = rect.x + Math.max(0, (rect.w - uiTextWidth(fitted)) / 2);
-                    context.drawString(this.font, Component.literal(fitted).setStyle(lineText.getStyle().withItalic(true)), drawX, y, color, shadow);
-                }
-            } else {
-                drawBoundedStyledText(context, lineText, new UiRect(rect.x, y, rect.w, uiFontHeight()), color, shadow, true);
-            }
-            y += uiFontHeight();
-        }
-        return drawCount * uiFontHeight();
     }
 
     private boolean drawCenteredBoundedText(GuiGraphics context, String text, UiRect rect, int color, boolean shadow, boolean ellipsize) {
@@ -2463,14 +2302,6 @@ public class LatitudeCreateWorldScreen extends Screen {
         drawScaledText(context, CREATE_VERSION_LABEL, x, y, CREATE_VERSION_LABEL_SCALE, MUTED, false);
     }
 
-    private static boolean isOnSelectedEdge(double deg, LatitudeBands.Band band) {
-        return Math.abs(deg - band.lowDeg()) < 0.01 || Math.abs(deg - band.highDeg()) < 0.01;
-    }
-
-    private String currentWorldTypeName() {
-        return WORLD_TYPE_NAMES[Math.max(0, Math.min(worldTypeIdx, WORLD_TYPE_NAMES.length - 1))];
-    }
-
     private static Component stillBackgroundLabel() {
         return Component.literal("Still: "
                 + (LatitudeConfig.createWorldStillBackground ? "ON" : "OFF"));
@@ -2506,11 +2337,6 @@ public class LatitudeCreateWorldScreen extends Screen {
         for (int gx = GRID_STEP; gx < w; gx += GRID_STEP) {
             context.fill(x + gx, y, x + gx + 1, y + h, GRID_COLOR);
         }
-    }
-
-    private void drawCenteredString(GuiGraphics context, String text, int cx, int y, int color, boolean shadow) {
-        int textW = this.font.width(text);
-        context.drawString(this.font, text, cx - textW / 2, y, color, shadow);
     }
 
     private void drawViewportClippedPanel(GuiGraphics context, int x, int y, int w, int h) {

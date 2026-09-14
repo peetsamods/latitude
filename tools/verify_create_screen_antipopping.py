@@ -183,9 +183,8 @@ def main() -> int:
         "COMPACT_GRID_COLOR": "quiet compact latitude framework",
         "COMPACT_RING_COLOR": "compact disc outline",
         "drawCircleOutline(context, cx, cy, radius, COMPACT_RING_COLOR)": "balanced compact disc perimeter",
-        "case REGULAR -> 0.84f": "regular-world preview fill",
-        "case LARGE -> 0.91f": "large-world preview fill",
-        "case MASSIVE -> 0.96f": "massive-world preview fill",
+        # The per-size preview fill table lived in a private helper that nothing called; it was removed
+        # with the other unreferenced create-screen helpers (maintainer ruling, 2026-09-13).
     }
     for fragment, label in planisphere_fragments.items():
         haystack = planisphere if "COMPACT_" in fragment or "drawCircleOutline" in fragment else source
