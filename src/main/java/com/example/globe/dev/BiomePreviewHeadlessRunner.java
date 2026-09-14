@@ -2,7 +2,7 @@ package com.example.globe.dev;
 
 import com.example.globe.GlobeMod;
 import com.example.globe.mixin.NoiseChunkGeneratorAccessor;
-import com.example.globe.util.BiomeSamplerTools;
+import com.example.globe.dev.BiomeSamplerDevTools;
 import com.example.globe.world.LatitudeBiomeSource;
 import com.example.globe.world.LatitudeBiomes;
 import com.mojang.datafixers.util.Pair;
@@ -572,7 +572,7 @@ public final class BiomePreviewHeadlessRunner {
                     : server.getServerDirectory().toAbsolutePath().normalize().resolve("seed-search");
             Path outputDir = outputRoot.resolve(SEARCH_TIMESTAMP.format(generatedAt));
             GitStamp gitStamp = currentGitStamp();
-            BiomeSamplerTools.SearchOptions options = new BiomeSamplerTools.SearchOptions(
+            BiomeSamplerDevTools.SearchOptions options = new BiomeSamplerDevTools.SearchOptions(
                     config.seedStart,
                     Math.max(1, config.seedCount),
                     config.targetBiomes,
@@ -596,13 +596,13 @@ public final class BiomePreviewHeadlessRunner {
                     outputDir);
             GlobeMod.LOGGER.info(startMessage);
 
-            BiomeSamplerTools.SearchReport report = BiomeSamplerTools.searchSeeds(
+            BiomeSamplerDevTools.SearchReport report = BiomeSamplerDevTools.searchSeeds(
                     world,
                     options,
                     gitStamp.branch(),
                     gitStamp.commit(),
                     generatedAt);
-            BiomeSamplerTools.writeSearchReportFiles(outputDir, report);
+            BiomeSamplerDevTools.writeSearchReportFiles(outputDir, report);
 
             String finishMessage = String.format(
                     Locale.ROOT,
@@ -654,14 +654,14 @@ public final class BiomePreviewHeadlessRunner {
                 GlobeMod.LOGGER.info("[latdev][audit] scanning window {}° seed={} radius={} step={} y={}",
                         tag, effectiveSeed, radius, config.stepBlocks, y);
 
-                BiomeSamplerTools.BandAuditReport report = BiomeSamplerTools.bandAudit(
+                BiomeSamplerDevTools.BandAuditReport report = BiomeSamplerDevTools.bandAudit(
                         world, effectiveSeed, radius, config.stepBlocks, y,
                         minDeg, maxDeg, watched, control);
 
                 String fileName = String.format(Locale.ROOT, "band-audit_%s_seed%d_R%d.txt",
                         tag, effectiveSeed, radius);
                 Path outFile = outputDir.resolve(fileName);
-                BiomeSamplerTools.writeBandAuditReport(outFile, report);
+                BiomeSamplerDevTools.writeBandAuditReport(outFile, report);
 
                 GlobeMod.LOGGER.info("[latdev][audit] window {}°: {} samples, report={}",
                         tag, report.totalSamplesInWindow(), outFile);
