@@ -4,8 +4,8 @@ A globe-style world + latitude-based biome bands with a customizable compass HUD
 
 ## Status
 
-This checkout tracks the Latitude `1.5.1-beta.1+26.2` line (Minecraft 26.2), branch
-`codex/port/1.5.1-beta.1-26.2-forward`. See `CHANGELOG.md` for what's new in this release.
+This checkout tracks the Latitude `1.5.1-beta.6+26.2` line (Minecraft 26.2), branch
+`perf/26.2-fabric/1.5.1-beta.6-audit-wave`. See `CHANGELOG.md` for what's new in this release.
 
 ## Features
 
