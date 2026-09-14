@@ -79,11 +79,19 @@ public final class VanillaSurfaceWaterCoveragePlan {
             }
         }
 
-        public boolean contains(int x, int z) {
+        /**
+         * Cheap reject. The wobbled boundary never exceeds radius * (1 + BOUNDARY_WOBBLE), so any
+         * column outside that square is outside the island without evaluating the trig.
+         */
+        public boolean withinOuterBox(int x, int z) {
             long dx = (long) x - blockX;
             long dz = (long) z - blockZ;
             long outer = Math.round(radiusBlocks * (1.0 + BOUNDARY_WOBBLE));
-            if (Math.abs(dx) > outer || Math.abs(dz) > outer) return false;
+            return Math.abs(dx) <= outer && Math.abs(dz) <= outer;
+        }
+
+        public boolean contains(int x, int z) {
+            if (!withinOuterBox(x, z)) return false;
             return organicRadialDistance(this, x, z) <= 1.0;
         }
     }
@@ -92,6 +100,8 @@ public final class VanillaSurfaceWaterCoveragePlan {
     public record SearchStats(int centerEligible, int topologyEligible, int overlapRejected) {}
 
     private final List<Anchor> anchors;
+    // Resolved once: the density hook asks for this anchor on every generated block.
+    private final Anchor mushroomAnchor;
     private final List<String> missingBiomeIds;
     private final Map<String, SearchStats> missingDiagnostics;
     private final int seaLevel;
@@ -100,6 +110,7 @@ public final class VanillaSurfaceWaterCoveragePlan {
                                              Map<String, SearchStats> missingDiagnostics,
                                              int seaLevel) {
         this.anchors = List.copyOf(anchors);
+        this.mushroomAnchor = findMushroomAnchor(this.anchors);
         this.missingBiomeIds = List.copyOf(missingBiomeIds);
         this.missingDiagnostics = Map.copyOf(missingDiagnostics);
         this.seaLevel = seaLevel;
@@ -194,6 +205,9 @@ public final class VanillaSurfaceWaterCoveragePlan {
     public double mushroomDensity(double originalDensity, int blockX, int blockY, int blockZ) {
         Anchor anchor = mushroomAnchor();
         if (anchor == null) return originalDensity;
+        // Runs for every block the terrain generator produces, world-wide: reject by the square
+        // before the sqrt, atan2 and three sines that the organic radial costs.
+        if (!anchor.withinOuterBox(blockX, blockZ)) return originalDensity;
         double radial = organicRadialDistance(anchor, blockX, blockZ);
         if (radial >= 1.0) return originalDensity;
         double interior = smoothstep(1.0 - radial);
@@ -205,6 +219,7 @@ public final class VanillaSurfaceWaterCoveragePlan {
     public boolean isMushroomLand(int blockX, int blockZ) {
         Anchor anchor = mushroomAnchor();
         if (anchor == null) return false;
+        if (!anchor.withinOuterBox(blockX, blockZ)) return false;
         double radial = organicRadialDistance(anchor, blockX, blockZ);
         if (radial >= 1.0) return false;
         double interior = smoothstep(1.0 - radial);
@@ -217,6 +232,7 @@ public final class VanillaSurfaceWaterCoveragePlan {
     public boolean isMushroomSolid(int blockX, int blockY, int blockZ) {
         Anchor anchor = mushroomAnchor();
         if (anchor == null) return false;
+        if (!anchor.withinOuterBox(blockX, blockZ)) return false;
         double radial = organicRadialDistance(anchor, blockX, blockZ);
         if (radial >= 1.0) return false;
         double interior = smoothstep(1.0 - radial);
@@ -244,6 +260,10 @@ public final class VanillaSurfaceWaterCoveragePlan {
     }
 
     private Anchor mushroomAnchor() {
+        return mushroomAnchor;
+    }
+
+    private static Anchor findMushroomAnchor(List<Anchor> anchors) {
         for (Anchor anchor : anchors) {
             if (anchor.route().family() == Family.MUSHROOM) return anchor;
         }
@@ -367,7 +387,8 @@ public final class VanillaSurfaceWaterCoveragePlan {
         return seaLevel - 5.0 + interior * (20.0 + undulation);
     }
 
-    private static double organicRadialDistance(Anchor anchor, int x, int z) {
+    /** Package-private so the policy suite can prove the bounding-box reject is conservative. */
+    static double organicRadialDistance(Anchor anchor, int x, int z) {
         double dx = x - (double) anchor.blockX();
         double dz = z - (double) anchor.blockZ();
         double distance = Math.sqrt(dx * dx + dz * dz);
