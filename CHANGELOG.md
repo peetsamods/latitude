@@ -32,6 +32,8 @@ vanilla island. **Beta:** shipped for testing before the 1.5.1 stable tag.
 - When a `/locate` search is already running, the second player is now told whose search it is and
   that only one runs at a time, instead of being promised a result that never arrives.
 - Development-only and unreachable code no longer ships inside the public jar.
+- Reopening an existing Latitude world shows Latitude's loading screen from the start again instead
+  of Minecraft's until the last second.
 
 World-generation changes apply to newly generated terrain. Existing chunks keep their current biomes.
 
