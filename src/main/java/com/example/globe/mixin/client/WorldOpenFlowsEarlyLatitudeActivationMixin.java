@@ -54,14 +54,15 @@ public abstract class WorldOpenFlowsEarlyLatitudeActivationMixin {
     private void globe$activateEarlyForResumedLatitudeWorld(String levelId, Runnable onFail, CallbackInfo ci) {
         try {
             Path worldRoot = levelSource.getLevelPath(levelId);
-            String presetId = RecreatedWorldMetadata.latitudePresetId(worldRoot);
+            // One read of the compressed state file instead of two, at the head of every world open.
+            RecreatedWorldMetadata.LatitudeState state = RecreatedWorldMetadata.read(worldRoot);
+            String presetId = state == null ? null : state.presetId();
             if (presetId == null) {
                 return;
             }
             LatitudeClientState.beginExpedition(System.currentTimeMillis());
             LatitudeClientState.activateLatitudeLoading();
-            LatitudeBands.Band band =
-                    LatitudeBands.fromCanonicalId(RecreatedWorldMetadata.lastKnownBandId(worldRoot));
+            LatitudeBands.Band band = LatitudeBands.fromCanonicalId(state.lastKnownBandId());
             if (band != null) {
                 LatitudeClientState.setLoadingZoneLabel(band.displayName());
             }

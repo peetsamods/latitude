@@ -14,6 +14,16 @@ public final class GlobePending {
      */
     public static volatile int pendingGlobeRadius = 0;
 
+    /**
+     * Reads the create screen's compass choice and restores the default in the same step, so a
+     * choice made for one world can never be applied to a world opened later in the session.
+     */
+    public static boolean consumeStartWithCompass() {
+        boolean value = startWithCompass;
+        startWithCompass = true;
+        return value;
+    }
+
     public static void set(String zoneId) {
         pendingSpawnZone = zoneId;
     }
