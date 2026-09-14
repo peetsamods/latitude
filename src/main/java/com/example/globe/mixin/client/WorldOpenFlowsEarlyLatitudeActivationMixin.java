@@ -101,15 +101,16 @@ public abstract class WorldOpenFlowsEarlyLatitudeActivationMixin {
             // version in the supported range, so the same resolve is spelled out here: the same
             // base directory, the same single path resolve, and still no file touched.
             Path worldRoot = levelSource.getBaseDir().resolve(levelId);
-            String presetId = RecreatedWorldMetadata.latitudePresetId(worldRoot);
+            // One read of the compressed state file instead of two, at the head of every world open.
+            RecreatedWorldMetadata.LatitudeState state = RecreatedWorldMetadata.read(worldRoot);
+            String presetId = state == null ? null : state.presetId();
             if (presetId == null) {
                 return;
             }
             globe$activatedLevelId = levelId;
             LatitudeClientState.beginExpedition(System.currentTimeMillis());
             LatitudeClientState.activateLatitudeLoading();
-            LatitudeBands.Band band =
-                    LatitudeBands.fromCanonicalId(RecreatedWorldMetadata.lastKnownBandId(worldRoot));
+            LatitudeBands.Band band = LatitudeBands.fromCanonicalId(state.lastKnownBandId());
             if (band != null) {
                 LatitudeClientState.setLoadingZoneLabel(band.displayName());
             }
