@@ -1,7 +1,6 @@
 package com.example.globe.mixin;
 
 import com.example.globe.GlobeMod;
-import com.example.globe.util.LatitudeBands;
 import com.example.globe.world.LatitudeBiomeSource;
 import com.example.globe.world.PaintedBiomeSiting;
 import com.example.globe.world.LatitudeBiomes;
@@ -537,19 +536,6 @@ public abstract class ChunkGeneratorPopulateBiomesMixin {
     }
 
     @Unique
-    private static Holder<Biome> pickLatitudeFallback(Registry<Biome> biomes, Holder<Biome> base,
-                                                             int blockX, int blockZ, int borderRadiusBlocks) {
-        int radius = Math.max(1, borderRadiusBlocks);
-        LatitudeBands.Band band = LatitudeBands.fromAbsoluteLatitudeDeg(Math.abs((double) blockZ) * 90.0 / radius);
-        return switch (band) {
-            case SUBPOLAR, POLAR -> pickFallback(biomes, base, "minecraft:snowy_plains", "minecraft:taiga", "minecraft:snowy_taiga");
-            case TEMPERATE -> pickFallback(biomes, base, "minecraft:plains", "minecraft:forest", "minecraft:birch_forest");
-            case SUBTROPICAL -> pickFallback(biomes, base, "minecraft:savanna", "minecraft:sparse_jungle", "minecraft:jungle");
-            case TROPICAL -> pickFallback(biomes, base, "minecraft:jungle", "minecraft:savanna", "minecraft:plains");
-        };
-    }
-
-    @Unique
     private static Holder<Biome> pickSafeFallback(Registry<Biome> biomes, int blockZ) {
         boolean farNorth = Math.abs(blockZ) > 8000;
         ResourceLocation id = new ResourceLocation("minecraft", farNorth ? "snowy_plains" : "plains");
@@ -569,16 +555,6 @@ public abstract class ChunkGeneratorPopulateBiomesMixin {
             }
         }
         return base != null ? base : biomes.getHolder(ResourceKey.create(Registries.BIOME, new ResourceLocation("minecraft", "plains"))).orElse(null);
-    }
-
-    @Unique
-    private static boolean isBiomeId(Registry<Biome> biomes, Holder<Biome> entry, String id) {
-        ResourceLocation target = new ResourceLocation(id);
-        ResourceLocation actual = biomes.getKey(entry.value());
-        if (actual != null) {
-            return actual.equals(target);
-        }
-        return entry.unwrapKey().map(key -> key.location().equals(target)).orElse(false);
     }
 
     @Unique
