@@ -13,6 +13,7 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -139,14 +140,14 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
         int total = PHRASES.length;
         int featuredStart = Math.max(0, total - FEATURED_PHRASE_COUNT);
         if (featuredStart < total) {
-            return featuredStart + (int) (Math.random() * (total - featuredStart));
+            return featuredStart + (int) (globe$RANDOM.nextDouble() * (total - featuredStart));
         }
-        return (int) (Math.random() * total);
+        return (int) (globe$RANDOM.nextDouble() * total);
     }
 
     @Unique
     private static int globe$pickNewSeedIndex() {
-        return (int) (Math.random() * NEW_PHRASES.length);
+        return (int) (globe$RANDOM.nextDouble() * NEW_PHRASES.length);
     }
 
     /**
@@ -167,6 +168,9 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
         return PHRASES[(int) ((globe$phraseSeedIdx + oldOrdinal) % PHRASES.length)];
     }
 
+    // Cosmetic only (phrase seeds and the needle wander), but an owned source so that shipped code
+    // never reaches for the JDK's shared generator and "no unseeded RNG" stays grep-checkable.
+    @Unique private static final RandomSource globe$RANDOM = RandomSource.create();
     @Unique private static final long PHRASE_CYCLE_MS = 4800;
     @Unique private static final long FAIL_SAFE_CLEAR_MS = 10 * 60 * 1000L;
     @Unique private long globe$overlayStartMs = 0L;
@@ -406,9 +410,9 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
         if (now - globe$lastDirectionChangeMs > DIRECTION_CHANGE_INTERVAL_MS) {
             globe$lastDirectionChangeMs = now;
             // Pick a new random target angle (full 360°)
-            globe$needleTarget += (Math.PI * 0.4) + (Math.random() * Math.PI * 1.2);
+            globe$needleTarget += (Math.PI * 0.4) + (globe$RANDOM.nextDouble() * Math.PI * 1.2);
             // Randomly reverse direction sometimes
-            if (Math.random() < 0.35) {
+            if (globe$RANDOM.nextDouble() < 0.35) {
                 globe$needleTarget = globe$needleAngle - (globe$needleTarget - globe$needleAngle);
             }
         }
@@ -420,22 +424,33 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
         globe$needleAngle += diff * 0.03 * delta;
     }
 
+    /** Half-width of the scanline at {@code dy} inside a disc of {@code radius}, or -1 outside it. */
+    @Unique
+    private static int globe$spanHalf(int radius, int dy) {
+        int remaining = radius * radius - dy * dy;
+        return remaining < 0 ? -1 : (int) Math.sqrt(remaining);
+    }
+
     @Unique
     private void globe$drawCompass(GuiGraphicsExtractor context, int cx, int cy, int radius) {
         // Compass face — dark circle with gold ring
-        int r2 = radius * radius;
+        // One span per scanline instead of a 1x1 fill per pixel (about 2,450 draw submissions per
+        // frame at the default radius). Pixel-identical: the disc is |dx| <= floor(sqrt(r^2 - dy^2)),
+        // the dark face is the same test against (r - 2), and the gold ring is the difference.
+        int inner = radius - 2;
         for (int dy = -radius; dy <= radius; dy++) {
-            for (int dx = -radius; dx <= radius; dx++) {
-                int dist2 = dx * dx + dy * dy;
-                if (dist2 <= r2) {
-                    int px = cx + dx;
-                    int py = cy + dy;
-                    if (dist2 > (radius - 2) * (radius - 2)) {
-                        context.fill(px, py, px + 1, py + 1, GOLD);
-                    } else {
-                        context.fill(px, py, px + 1, py + 1, 0xFF1A1410);
-                    }
-                }
+            int outerHalf = globe$spanHalf(radius, dy);
+            if (outerHalf < 0) {
+                continue;
+            }
+            int py = cy + dy;
+            int innerHalf = globe$spanHalf(inner, dy);
+            if (innerHalf < 0) {
+                context.fill(cx - outerHalf, py, cx + outerHalf + 1, py + 1, GOLD);
+            } else {
+                context.fill(cx - outerHalf, py, cx - innerHalf, py + 1, GOLD);
+                context.fill(cx - innerHalf, py, cx + innerHalf + 1, py + 1, 0xFF1A1410);
+                context.fill(cx + innerHalf + 1, py, cx + outerHalf + 1, py + 1, GOLD);
             }
         }
 
