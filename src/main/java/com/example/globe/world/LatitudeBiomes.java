@@ -6624,8 +6624,7 @@ public final class LatitudeBiomes {
     }
 
     private static Holder<Biome> biome(Registry<Biome> biomes, String id) {
-        ResourceLocation ident = ResourceLocation.parse(id);
-        return biomes.getHolder(ident).orElseThrow();
+        return biomes.getHolder(parsedBiomeId(id)).orElseThrow();
     }
 
     private static Holder<Biome> pickFrom(Registry<Biome> biomes, int blockX, int blockZ, int bandIndex, String... options) {
@@ -10017,8 +10016,17 @@ public final class LatitudeBiomes {
         if (entry == null) {
             return false;
         }
-        ResourceLocation target = ID_PARSE_CACHE.computeIfAbsent(id, ResourceLocation::parse);
+        ResourceLocation target = parsedBiomeId(id);
         return hasBiomeIdentifier(entry, target);
+    }
+
+    /**
+     * The one place a literal biome id is parsed for the private selection helpers. Every private
+     * caller passes a literal or ledger-static id, so the cache is bounded by that set; the public
+     * dynamic helper and entryById deliberately stay uncached because their keys are not.
+     */
+    private static ResourceLocation parsedBiomeId(String id) {
+        return ID_PARSE_CACHE.computeIfAbsent(id, ResourceLocation::parse);
     }
 
     private static boolean hasBiomeIdentifier(Holder<Biome> entry, ResourceLocation target) {
