@@ -94,7 +94,9 @@ public final class LatitudeBiomes {
                     LAT_ARID_PRIMARY, LAT_ARID_SECONDARY, LAT_ARID_ACCENT);
         };
         Holder<Biome> out = softenSubtropicalBadlands(biomes, base, pick);
-        recordWarmDryPath("TROPICAL_GRADIENT", base, out, blockX, blockZ, BAND_SUBTROPICAL, warmProvinceClass(blockX, blockZ, BAND_SUBTROPICAL));
+        if (DEBUG_WARM_DRY_PATHS) {
+            recordWarmDryPath("TROPICAL_GRADIENT", base, out, blockX, blockZ, BAND_SUBTROPICAL, warmProvinceClass(blockX, blockZ, BAND_SUBTROPICAL));
+        }
         return out;
     }
 
@@ -145,7 +147,9 @@ public final class LatitudeBiomes {
                     LAT_ARID_PRIMARY, LAT_ARID_SECONDARY, LAT_ARID_ACCENT);
         };
         Holder<Biome> out = softenSubtropicalBadlands(biomes, base, pick);
-        recordWarmDryPath("TROPICAL_GRADIENT", base, out, blockX, blockZ, BAND_SUBTROPICAL, warmProvinceClass(blockX, blockZ, BAND_SUBTROPICAL));
+        if (DEBUG_WARM_DRY_PATHS) {
+            recordWarmDryPath("TROPICAL_GRADIENT", base, out, blockX, blockZ, BAND_SUBTROPICAL, warmProvinceClass(blockX, blockZ, BAND_SUBTROPICAL));
+        }
         return out;
     }
 
@@ -8157,7 +8161,9 @@ public final class LatitudeBiomes {
             maybeLogBandLeak(blockX, blockZ, t, bandIndex, candidate);
             List<Holder<Biome>> rerollPool = rerollLandPoolForBand(biomes, bandIndex, mountainLike);
             out = pickFromAllowedLandPool(rerollPool, blockX, blockZ, bandIndex);
-            recordWarmDryPath("DIRECT_POOL_PICK", candidate, out, blockX, blockZ, bandIndex, warmProvinceClass(blockX, blockZ, bandIndex));
+            if (DEBUG_WARM_DRY_PATHS) {
+                recordWarmDryPath("DIRECT_POOL_PICK", candidate, out, blockX, blockZ, bandIndex, warmProvinceClass(blockX, blockZ, bandIndex));
+            }
         } else {
             setAllowedPoolAdmissionIfNeeded(candidate, "enforce_land_band_pool");
         }
@@ -8179,7 +8185,9 @@ public final class LatitudeBiomes {
             maybeLogBandLeak(blockX, blockZ, t, bandIndex, candidate);
             List<Holder<Biome>> rerollPool = rerollLandPoolForBand(biomes, bandIndex, mountainLike);
             out = pickFromAllowedLandPool(rerollPool, blockX, blockZ, bandIndex);
-            recordWarmDryPath("DIRECT_POOL_PICK", candidate, out, blockX, blockZ, bandIndex, warmProvinceClass(blockX, blockZ, bandIndex));
+            if (DEBUG_WARM_DRY_PATHS) {
+                recordWarmDryPath("DIRECT_POOL_PICK", candidate, out, blockX, blockZ, bandIndex, warmProvinceClass(blockX, blockZ, bandIndex));
+            }
         } else {
             setAllowedPoolAdmissionIfNeeded(candidate, "enforce_land_band_pool");
         }
@@ -11177,7 +11185,9 @@ public final class LatitudeBiomes {
                 out = base;
             }
         }
-        recordWarmDryPath("WARM_DRY_SELECTOR", base, out, 0, 0, BAND_SUBTROPICAL, warmProvinceClass(0, 0, BAND_SUBTROPICAL));
+        if (DEBUG_WARM_DRY_PATHS) {
+            recordWarmDryPath("WARM_DRY_SELECTOR", base, out, 0, 0, BAND_SUBTROPICAL, warmProvinceClass(0, 0, BAND_SUBTROPICAL));
+        }
         return out;
     }
 
@@ -11189,7 +11199,9 @@ public final class LatitudeBiomes {
         if (out == null) {
             out = base;
         }
-        recordWarmDryPath("WARM_DRY_SELECTOR", base, out, 0, 0, BAND_SUBTROPICAL, warmProvinceClass(0, 0, BAND_SUBTROPICAL));
+        if (DEBUG_WARM_DRY_PATHS) {
+            recordWarmDryPath("WARM_DRY_SELECTOR", base, out, 0, 0, BAND_SUBTROPICAL, warmProvinceClass(0, 0, BAND_SUBTROPICAL));
+        }
         return out;
     }
 
@@ -12958,7 +12970,9 @@ public final class LatitudeBiomes {
                     LAT_ARID_PRIMARY, LAT_ARID_SECONDARY, LAT_ARID_ACCENT);
         };
         Holder<Biome> out = softenSubtropicalBadlands(biomes, base, pick);
-        recordWarmDryPath("TROPICAL_GRADIENT", base, out, blockX, blockZ, BAND_SUBTROPICAL, warmProvinceClass(blockX, blockZ, BAND_SUBTROPICAL));
+        if (DEBUG_WARM_DRY_PATHS) {
+            recordWarmDryPath("TROPICAL_GRADIENT", base, out, blockX, blockZ, BAND_SUBTROPICAL, warmProvinceClass(blockX, blockZ, BAND_SUBTROPICAL));
+        }
         return out;
     }
 
@@ -12998,7 +13012,9 @@ public final class LatitudeBiomes {
                     LAT_ARID_PRIMARY, LAT_ARID_SECONDARY, LAT_ARID_ACCENT);
         };
         Holder<Biome> out = softenSubtropicalBadlands(biomes, base, pick);
-        recordWarmDryPath("TROPICAL_GRADIENT", base, out, blockX, blockZ, BAND_SUBTROPICAL, warmProvinceClass(blockX, blockZ, BAND_SUBTROPICAL));
+        if (DEBUG_WARM_DRY_PATHS) {
+            recordWarmDryPath("TROPICAL_GRADIENT", base, out, blockX, blockZ, BAND_SUBTROPICAL, warmProvinceClass(blockX, blockZ, BAND_SUBTROPICAL));
+        }
         return out;
     }
 
