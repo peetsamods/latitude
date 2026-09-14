@@ -287,6 +287,10 @@ public final class LocationDetailPolicyTest {
 
         String studio = normalize(read("src/main/java/com/example/globe/client/LatitudeHudStudioScreen.java"));
         assertTrue(
+                studio.contains("CompassHud.anchoredZoneX(") && studio.contains("CompassHud.anchoredZoneY(")
+                        && !studio.contains("private static int anchoredZoneX("),
+                "HUD Studio positions the zone unit through the HUD's own anchor helper, not a copy");
+        assertTrue(
                 studio.contains("CycleButton.<LocationDetailPolicy.Mode>builder")
                         && studio.contains(".withValues(LocationDetailPolicy.Mode.values())")
                         && studio.contains("Component.literal(\"Location Detail\")"),

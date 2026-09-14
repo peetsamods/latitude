@@ -681,8 +681,8 @@ public class LatitudeHudStudioScreen extends Screen {
             targetX = clamp(targetX, 0, Math.max(0, screenW - boxW));
             targetY = clamp(targetY, 0, Math.max(0, screenH - boxH));
 
-            int baseX = anchoredZoneX(cfg, screenW, boxW);
-            int baseY = anchoredZoneY(cfg, screenH, boxH);
+            int baseX = CompassHud.anchoredZoneX(cfg, screenW, boxW);
+            int baseY = CompassHud.anchoredZoneY(cfg, screenH, boxH);
             cfg.zoneOffsetX = targetX - baseX;
             cfg.zoneOffsetY = targetY - baseY;
 
@@ -958,21 +958,6 @@ public class LatitudeHudStudioScreen extends Screen {
         return Math.max(lo, Math.min(hi, v));
     }
 
-    private static int anchoredZoneX(CompassHudConfig cfg, int screenW, int boxW) {
-        return switch (cfg.zoneHAnchor) {
-            case LEFT -> 4;
-            case CENTER -> (screenW - boxW) / 2;
-            case RIGHT -> screenW - boxW - 4;
-        };
-    }
-
-    private static int anchoredZoneY(CompassHudConfig cfg, int screenH, int boxH) {
-        return switch (cfg.zoneVAnchor) {
-            case TOP -> 4;
-            case CENTER -> (screenH - boxH) / 2;
-            case BOTTOM -> screenH - boxH - 4;
-        };
-    }
 
     private static String themeLabel(CompassHudConfig.AnalogCompassTheme theme) {
         return switch (theme) {
