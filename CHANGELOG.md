@@ -1,3 +1,38 @@
+## Latitude 1.5.1-beta.6 (Minecraft 1.20.1–1.20.4)
+
+A performance pass and one world-generation change on top of Beta 5.1: Latitude does less repeated
+work while chunks generate and while the HUD is on screen, and Mushroom Fields goes back to being a
+vanilla island. **Beta:** shipped for testing before the 1.5.1 stable tag.
+
+### Improved
+
+- **Less repeated work while chunks generate and while the HUD is on screen.** A check for the
+  Mushroom Fields island no longer runs heavy trigonometry for every block in the world, several
+  per-column debug values are no longer computed when their debug switch is off, biome lookups on
+  the compass HUD are cached per tick, and the loading-screen compass is drawn in far fewer draw
+  calls. Apart from the Mushroom Fields change below, worlds generate exactly the same terrain and
+  biomes: the same seed gives the same map, cell for cell.
+- **Mushroom Fields are vanilla islands again.** Latitude no longer reserves a spot in the ocean
+  and builds an island there. Mushroom Fields now appears exactly where vanilla would put it: on
+  the low natural islands the terrain itself raises in the deepest ocean, in any climate band. The
+  flat sea-level apron and stepped terraces of the built island are gone with it. Small worlds may
+  have no Mushroom Fields at all, as in vanilla. Existing worlds keep any built island they have
+  already generated; unexplored ocean follows the vanilla rule.
+
+### Fixed
+
+- The create-world screen's "start with compass" choice no longer carries over into other saves
+  opened later in the same session.
+- Cycling the world size with the arrows no longer rebuilds the screen and steals keyboard focus
+  from the world-name field.
+- A closed create-world screen no longer stays in memory, together with the world data it loaded,
+  until the game exits.
+- When a `/locate` biome search is already running, the second player is now told whose search it
+  is and that only one runs at a time, instead of being promised a result that never arrives.
+- Development-only and unreachable code no longer ships inside the public jar.
+
+World-generation changes apply to newly generated terrain. Existing chunks keep their current biomes.
+
 ## Latitude 1.5.1-beta.5.1 (Minecraft 1.20.1–1.20.4)
 
 The first Latitude release for Minecraft 1.20 since 1.3.0, and it is a big jump: everything from 1.4
