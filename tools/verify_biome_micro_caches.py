@@ -168,16 +168,18 @@ def main() -> int:
         private_helper = extract_method(
             source, "private static boolean isBiomeId(Holder<Biome> entry, String id)"
         )
+        parse_helper = extract_method(source, "private static Identifier parsedBiomeId(String id)")
         check(
             "private_hot_path_uses_cache",
-            "ID_PARSE_CACHE.computeIfAbsent(id, Identifier::parse)" in private_helper,
-            "private isBiomeId",
+            "parsedBiomeId(id)" in private_helper
+            and "ID_PARSE_CACHE.computeIfAbsent(id, Identifier::parse)" in parse_helper,
+            "private isBiomeId parses through the cached helper",
         )
         check(
             "private_null_semantics_preserved",
             private_helper.find("if (entry == null)") >= 0
             and private_helper.find("if (entry == null)")
-            < private_helper.find("ID_PARSE_CACHE.computeIfAbsent"),
+            < private_helper.find("parsedBiomeId(id)"),
             "null entry returns before parsing",
         )
     except ValueError as error:
