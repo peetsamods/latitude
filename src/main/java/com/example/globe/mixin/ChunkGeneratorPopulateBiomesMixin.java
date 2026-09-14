@@ -229,7 +229,11 @@ public abstract class ChunkGeneratorPopulateBiomesMixin {
                 : originalSupplier;
 
         BiomeResolver wrapped = new LatitudeBiomeResolver(sourceSupplier, (delegate, x, y, z) -> {
-            globe$logPopBio("LATITUDE_RESOLVER", "chunk=" + pos.x() + "," + pos.z() + " noise=" + x + "," + y + "," + z);
+            if (DEBUG_WORLDGEN_PATH) {
+                // The sink is flag-guarded too, but the argument string would still be built here
+                // for every quart of every chunk; guard the concatenation itself.
+                globe$logPopBio("LATITUDE_RESOLVER", "chunk=" + pos.x() + "," + pos.z() + " noise=" + x + "," + y + "," + z);
+            }
             // x/z are "noise biome coords" (4-block). Convert to block coords for your latitude math.
             int blockX = (x << 2) + 2;
             int blockZ = (z << 2) + 2;

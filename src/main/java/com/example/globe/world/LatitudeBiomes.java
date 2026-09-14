@@ -666,7 +666,8 @@ public final class LatitudeBiomes {
     private static final String PATH_TAG_PICK = "tag-based pick";
     private static final String PATH_FALLBACK_PICK = "explicit fallback list pick";
     private static final String PATH_RETURN_BASE = "return base";
-    private static boolean TAG_LOGGED = false;
+    // Once-only guard read on a multi-threaded path: an atomic flag, not a plain boolean.
+    private static final AtomicBoolean TAG_LOGGED = new AtomicBoolean(false);
 
     private enum BiomeAdmissionKind {
         LATITUDE_TAG,
@@ -13439,8 +13440,7 @@ public final class LatitudeBiomes {
     }
 
     private static void logTagPools(Collection<Holder<Biome>> biomes) {
-        if (TAG_LOGGED) return;
-        TAG_LOGGED = true;
+        if (!TAG_LOGGED.compareAndSet(false, true)) return;
 
         logTagPool(biomes, LAT_EQUATOR_PRIMARY);
         logTagPool(biomes, LAT_EQUATOR_SECONDARY);
