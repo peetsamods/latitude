@@ -1253,10 +1253,6 @@ public class GlobeMod implements ModInitializer {
     private record SpawnChoice(String zoneId, BlockPos pos, int radius) {
     }
 
-    private static double lerp(double a, double b, double t) {
-        return a + (b - a) * t;
-    }
-
     private static double hash01(long seed, int x, int z, long salt) {
         long h = seed ^ salt;
         h ^= (long) x * 0x9E3779B97F4A7C15L;
