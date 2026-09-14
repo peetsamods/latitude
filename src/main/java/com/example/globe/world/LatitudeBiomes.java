@@ -1211,9 +1211,8 @@ public final class LatitudeBiomes {
                     && band <= BAND_SUBTROPICAL
                     && evaluateMangrove(blockX, blockZ, 0, 0, 0,
                             sampler, true, false, null).allow();
-            case ISOLATED_MUSHROOM_ISLAND -> isOcean(donor) && deep
-                    && band == BAND_TEMPERATE
-                    && isGenuineOpenOcean(blockX, blockZ, sampler);
+            // Retired route: Mushroom Fields is vanilla-placed, nothing reserves it any more.
+            case ISOLATED_MUSHROOM_ISLAND -> false;
         };
     }
 
@@ -1312,8 +1311,7 @@ public final class LatitudeBiomes {
         VanillaSurfaceWaterCoveragePlan plan = ACTIVE_SURFACE_WATER_COVERAGE_PLAN;
         if (plan == null) return fallback;
         VanillaSurfaceWaterCoveragePlan.Anchor anchor = plan.match(family, blockX, blockZ);
-        if (anchor == null || (anchor.route().family() == VanillaSurfaceWaterCoveragePlan.Family.MUSHROOM
-                && !plan.isMushroomLand(blockX, blockZ))
+        if (anchor == null
                 || !surfaceWaterRouteEligible(anchor.biomeId(), anchor.route(), donor,
                         blockX, blockZ, sampler)) return fallback;
         try {
@@ -1336,26 +1334,13 @@ public final class LatitudeBiomes {
         VanillaSurfaceWaterCoveragePlan plan = ACTIVE_SURFACE_WATER_COVERAGE_PLAN;
         if (plan == null) return fallback;
         VanillaSurfaceWaterCoveragePlan.Anchor anchor = plan.match(family, blockX, blockZ);
-        if (anchor == null || (anchor.route().family() == VanillaSurfaceWaterCoveragePlan.Family.MUSHROOM
-                && !plan.isMushroomLand(blockX, blockZ))
+        if (anchor == null
                 || !surfaceWaterRouteEligible(anchor.biomeId(), anchor.route(), donor,
                         blockX, blockZ, sampler)) return fallback;
         Holder<Biome> target = resolveVanillaCoverageBiome(biomes, anchor.biomeId());
         if (target == null) return fallback;
         setAdmission(BiomeAdmissionKind.VANILLA_FALLBACK, "vanilla_surface_water_coverage_v2", target);
         return target;
-    }
-
-    public static double mushroomIslandDensity(double originalDensity,
-                                                int blockX, int blockY, int blockZ) {
-        VanillaSurfaceWaterCoveragePlan plan = ACTIVE_SURFACE_WATER_COVERAGE_PLAN;
-        return plan != null ? plan.mushroomDensity(originalDensity, blockX, blockY, blockZ)
-                : originalDensity;
-    }
-
-    public static boolean isMushroomIslandSolid(int blockX, int blockY, int blockZ) {
-        VanillaSurfaceWaterCoveragePlan plan = ACTIVE_SURFACE_WATER_COVERAGE_PLAN;
-        return plan != null && plan.isMushroomSolid(blockX, blockY, blockZ);
     }
 
     /** Constant-cost locate fallback for exact land identities reserved by the fresh-world plan. */
@@ -4076,12 +4061,14 @@ public final class LatitudeBiomes {
             return contiguousPaleGarden;
         }
 
-        Holder<Biome> v2MushroomIsland = applyV2SurfaceWaterCoverage(
-                biomeRegistry, VanillaSurfaceWaterCoveragePlan.Family.MUSHROOM,
-                base, base, blockX, blockZ, sampler);
-        if (v2MushroomIsland != base) {
-            debugPick(blockX, blockZ, effectiveRadius, t, band, base, v2MushroomIsland, false, false, null);
-            return v2MushroomIsland;
+        // Mushroom Fields follows vanilla exactly: the donor source already answers mushroom_fields
+        // wherever continentalness sits in vanilla's mushroom span, and vanilla's terrain shaper
+        // (which Latitude's noise settings reuse) raises those same columns into low natural
+        // islands. No reserved province and no density hook (maintainer ruling, 2026-09-14).
+        if (isBiomeId(base, "minecraft:mushroom_fields")) {
+            setAdmission(BiomeAdmissionKind.VANILLA_FALLBACK, "vanilla_mushroom_continentalness", base);
+            debugPick(blockX, blockZ, effectiveRadius, t, band, base, base, false, false, null);
+            return base;
         }
 
         boolean raisedMountainRiver = base.is(BiomeTags.IS_RIVER)
@@ -4130,9 +4117,6 @@ public final class LatitudeBiomes {
             Holder<Biome> out = applyV2SurfaceWaterCoverage(
                     biomeRegistry, VanillaSurfaceWaterCoveragePlan.Family.OCEAN,
                     oceanBase, oceanPick, blockX, blockZ, sampler);
-            if (ACTIVE_SURFACE_WATER_COVERAGE_PLAN == null) {
-                out = mushroomIslandOverride(biomeRegistry, out, blockX, blockZ, sampler);
-            }
             debugPick(blockX, blockZ, effectiveRadius, t, band, base, out, false, false, null);
             return out;
         }
@@ -4903,12 +4887,14 @@ public final class LatitudeBiomes {
             return contiguousPaleGarden;
         }
 
-        Holder<Biome> v2MushroomIsland = applyV2SurfaceWaterCoverage(
-                biomePool, VanillaSurfaceWaterCoveragePlan.Family.MUSHROOM,
-                base, base, blockX, blockZ, sampler);
-        if (v2MushroomIsland != base) {
-            debugPick(blockX, blockZ, effectiveRadius, t, band, base, v2MushroomIsland, false, false, null);
-            return v2MushroomIsland;
+        // Mushroom Fields follows vanilla exactly: the donor source already answers mushroom_fields
+        // wherever continentalness sits in vanilla's mushroom span, and vanilla's terrain shaper
+        // (which Latitude's noise settings reuse) raises those same columns into low natural
+        // islands. No reserved province and no density hook (maintainer ruling, 2026-09-14).
+        if (isBiomeId(base, "minecraft:mushroom_fields")) {
+            setAdmission(BiomeAdmissionKind.VANILLA_FALLBACK, "vanilla_mushroom_continentalness", base);
+            debugPick(blockX, blockZ, effectiveRadius, t, band, base, base, false, false, null);
+            return base;
         }
 
         boolean raisedMountainRiver = base.is(BiomeTags.IS_RIVER)
@@ -4946,9 +4932,6 @@ public final class LatitudeBiomes {
             Holder<Biome> out = applyV2SurfaceWaterCoverage(
                     biomePool, VanillaSurfaceWaterCoveragePlan.Family.OCEAN,
                     oceanBase, oceanPick, blockX, blockZ, sampler);
-            if (ACTIVE_SURFACE_WATER_COVERAGE_PLAN == null) {
-                out = mushroomIslandOverride(biomePool, out, blockX, blockZ, sampler);
-            }
             debugPick(blockX, blockZ, effectiveRadius, t, band, base, out, false, false, null);
             return out;
         }
@@ -6299,38 +6282,6 @@ public final class LatitudeBiomes {
         return pickFromFallbacks(biomes, base, fallbackId);
     }
 
-    private static Holder<Biome> mushroomIslandOverride(Registry<Biome> biomes, Holder<Biome> oceanPick, int blockX, int blockZ, Climate.Sampler sampler) {
-        if (!isDeepOcean(oceanPick) || !isGenuineOpenOcean(blockX, blockZ, sampler)) {
-            return oceanPick;
-        }
-
-        int chunkX = blockX >> 4;
-        int chunkZ = blockZ >> 4;
-        long roll = hash64(chunkX, chunkZ, 0x5F3759DF);
-        if (Long.remainderUnsigned(roll, 2000L) != 0L) {
-            return oceanPick;
-        }
-
-        try {
-            return biome(biomes, "minecraft:mushroom_fields");
-        } catch (Throwable ignored) {
-            return oceanPick;
-        }
-    }
-
-    /**
-     * True only where the column is genuinely deep-ocean continentalness (ocean-distance field == 0),
-     * so the mushroom-island override fires in real open ocean and never on an inland deep-ocean
-     * pocket whose terrain generated high/rocky (the "mushroom splotch on land" bug). A null sampler
-     * (e.g. atlas fast-path) returns false -> no override, which is the safe default.
-     */
-    private static boolean isGenuineOpenOcean(int blockX, int blockZ, Climate.Sampler sampler) {
-        if (sampler == null) {
-            return false;
-        }
-        return oceanDistanceBlocks(blockX, blockZ, sampler) <= 0;
-    }
-
     private static Holder<Biome> firstPresentOcean(Registry<Biome> biomes) {
         String[] ids = new String[]{
                 "minecraft:frozen_ocean",
@@ -6357,22 +6308,6 @@ public final class LatitudeBiomes {
 
     private static Holder<Biome> polarShelfOceanFallback(Registry<Biome> biomes) {
         return firstPresentOcean(biomes);
-    }
-
-    private static Holder<Biome> mushroomIslandOverride(Collection<Holder<Biome>> biomes, Holder<Biome> oceanPick, int blockX, int blockZ, Climate.Sampler sampler) {
-        if (!isDeepOcean(oceanPick) || !isGenuineOpenOcean(blockX, blockZ, sampler)) {
-            return oceanPick;
-        }
-
-        int chunkX = blockX >> 4;
-        int chunkZ = blockZ >> 4;
-        long roll = hash64(chunkX, chunkZ, 0x5F3759DF);
-        if (Long.remainderUnsigned(roll, 2000L) != 0L) {
-            return oceanPick;
-        }
-
-        Holder<Biome> entry = entryById(biomes, "minecraft:mushroom_fields");
-        return entry != null ? entry : oceanPick;
     }
 
     private static Holder<Biome> polarShelfOceanFallback(Collection<Holder<Biome>> biomes) {
