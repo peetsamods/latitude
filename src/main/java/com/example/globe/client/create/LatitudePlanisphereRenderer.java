@@ -22,6 +22,9 @@ public final class LatitudePlanisphereRenderer {
 
     private static final int OCEAN_COLOR = 0xFF162A3F;
     private static final int GOLD = 0xFFD4A74A;
+    // Hoisted out of the per-frame square-map pass: values() clones the enum array on every call.
+    private static final LatitudeBands.Band[] BANDS = LatitudeBands.Band.values();
+    private static final double[] COMPACT_GUIDE_DEGREES = {0.0, 23.5, 35.0, 50.0, 66.5};
     private static final int COMPACT_GRID_COLOR = 0x36D9E2E8;
     /** Exactly ten percent opacity: the Regular-world underlay must never read as the selection. */
     static final int REGULAR_WORLD_UNDERLAY_ALPHA = 0x1A;
@@ -64,7 +67,7 @@ public final class LatitudePlanisphereRenderer {
         if (size < 8) return;
 
         context.fill(x, y, x + size, y + size, multiplyAlpha(OCEAN_COLOR, alpha));
-        LatitudeBands.Band[] bands = LatitudeBands.Band.values();
+        LatitudeBands.Band[] bands = BANDS;
         for (int i = 0; i < bands.length; i++) {
             LatitudeBands.Band band = bands[i];
             boolean selected = showSelection && band == selectedBand;
@@ -76,7 +79,7 @@ public final class LatitudePlanisphereRenderer {
         }
 
         int guideColor = multiplyAlpha(COMPACT_GRID_COLOR, alpha);
-        for (double deg : new double[]{0.0, 23.5, 35.0, 50.0, 66.5}) {
+        for (double deg : COMPACT_GUIDE_DEGREES) {
             int northY = latitudeY(y, size, deg);
             context.fill(x, northY, x + size, northY + 1, guideColor);
             if (deg > 0.0) {

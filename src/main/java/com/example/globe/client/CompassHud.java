@@ -964,7 +964,8 @@ public final class CompassHud {
         };
     }
 
-    private static int anchoredZoneX(CompassHudConfig cfg, int screenW, int boxW) {
+    /** Shared with the HUD Studio so the editor places the zone unit exactly where the HUD draws it. */
+    static int anchoredZoneX(CompassHudConfig cfg, int screenW, int boxW) {
         return switch (cfg.zoneHAnchor) {
             case LEFT -> 4;
             case CENTER -> (screenW - boxW) / 2;
@@ -972,7 +973,7 @@ public final class CompassHud {
         };
     }
 
-    private static int anchoredZoneY(CompassHudConfig cfg, int screenH, int boxH) {
+    static int anchoredZoneY(CompassHudConfig cfg, int screenH, int boxH) {
         return switch (cfg.zoneVAnchor) {
             case TOP -> 4;
             case CENTER -> (screenH - boxH) / 2;
