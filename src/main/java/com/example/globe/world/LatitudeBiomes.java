@@ -7882,9 +7882,11 @@ public final class LatitudeBiomes {
         if (candidateId == null) {
             return false;
         }
+        // Holder.is(Identifier) compares the registered key's identifier directly (a direct holder
+        // answers false, as the previous null-key branch did); the old form allocated an Optional
+        // and a lambda per pool entry on every land column and every /locate probe.
         for (Holder<Biome> allowed : allowedPool) {
-            ResourceLocation allowedId = allowed.unwrapKey().map(key -> key.location()).orElse(null);
-            if (candidateId.equals(allowedId)) {
+            if (allowed.is(candidateId)) {
                 return true;
             }
         }
