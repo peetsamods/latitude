@@ -273,6 +273,7 @@ public final class LatitudeWorldLauncher {
                         LOGGER.error("Failed to start new world", e);
                         GlobePending.consume();
                         GlobePending.pendingGlobeRadius = 0;
+                        GlobePending.startWithCompass = true;
                         GlobeWorldSizeSelection.set(GlobeWorldSize.REGULAR);
                         if (isLatitude) {
                             LatitudeClientState.clearLatitudeLoadingState();

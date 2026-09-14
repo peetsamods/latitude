@@ -134,8 +134,8 @@ public final class LatitudeToolsCommand {
                                                 .suggests((context, builder) -> SharedSuggestionProvider.suggest(EDGE_NAMES, builder))
                                                 .executes(ctx -> tpBand(ctx, true)))))
                         .then(Commands.literal("probe")
-                                .then(Commands.argument("radiusBlocks", IntegerArgumentType.integer())
-                                        .then(Commands.argument("samples", IntegerArgumentType.integer())
+                                .then(Commands.argument("radiusBlocks", IntegerArgumentType.integer(32, 8192))
+                                        .then(Commands.argument("samples", IntegerArgumentType.integer(10, 5000))
                                                 .executes(LatitudeToolsCommand::probe)))));
     }
 

@@ -29,6 +29,23 @@ public final class RecreatedWorldMetadata {
     private RecreatedWorldMetadata() {
     }
 
+    /** Both persisted fields the client reads at world open, from a single pass over the state file. */
+    public record LatitudeState(@Nullable String presetId, @Nullable String lastKnownBandId) {
+    }
+
+    /** Reads the state file once; null when the world carries no Latitude state at all. */
+    @Nullable
+    public static LatitudeState read(Path worldRoot) throws IOException {
+        CompoundTag data = readLatitudeStateData(worldRoot);
+        if (data == null) {
+            return null;
+        }
+        return new LatitudeState(
+                RecreatedWorldTypePolicy.presetIdForRadius(
+                        data.contains("globe_radius") ? data.getInt("globe_radius") : 0),
+                data.contains("last_known_band") ? data.getString("last_known_band") : null);
+    }
+
     @Nullable
     public static String latitudePresetId(Path worldRoot) throws IOException {
         CompoundTag data = readLatitudeStateData(worldRoot);
