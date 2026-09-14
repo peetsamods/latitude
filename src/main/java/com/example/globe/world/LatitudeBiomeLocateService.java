@@ -89,8 +89,12 @@ public final class LatitudeBiomeLocateService {
 
         MinecraftServer server = source.getServer();
         if (ACTIVE_JOBS.containsKey(server)) {
+            BiomeLocateJob running = ACTIVE_JOBS.get(server);
+            // One search at a time is deliberate: a job may spend its whole tick budget. Say whose
+            // it is; the earlier wording promised this requester a result that never came.
             source.sendFailure(Component.literal(
-                    "A Latitude biome search is already running. Its result will appear in chat."));
+                    "A Latitude biome search is already running for " + running.requesterLabel()
+                            + ". Only one runs at a time; try again when its progress bar finishes."));
             return true;
         }
 
@@ -204,6 +208,11 @@ public final class LatitudeBiomeLocateService {
 
         final boolean belongsTo(ServerPlayer player) {
             return requester == player;
+        }
+
+        /** Who the running search belongs to, so the next requester gets an honest refusal. */
+        String requesterLabel() {
+            return requester != null ? requester.getName().getString() : "another command source";
         }
 
         final boolean deadlineExceeded(long tickStarted) {

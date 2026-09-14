@@ -205,8 +205,10 @@ public final class LatitudeStructureLocateService {
         // any extra synchronous preparation here that can block the server tick thread.
         MinecraftServer server = source.getServer();
         if (ACTIVE_JOBS.containsKey(server)) {
+            StructureLocateJob running = ACTIVE_JOBS.get(server);
             source.sendFailure(Component.literal(
-                    "A Latitude structure search is already running. Its result will appear in chat."));
+                    "A Latitude structure search is already running for " + running.requesterLabel()
+                            + ". Only one runs at a time; try again when its progress bar finishes."));
             return true;
         }
 
@@ -320,6 +322,11 @@ public final class LatitudeStructureLocateService {
 
         private boolean belongsTo(ServerPlayer player) {
             return requester == player;
+        }
+
+        /** Who the running search belongs to, so the next requester gets an honest refusal. */
+        private String requesterLabel() {
+            return requester != null ? requester.getName().getString() : "another command source";
         }
 
         private boolean isDone() {
