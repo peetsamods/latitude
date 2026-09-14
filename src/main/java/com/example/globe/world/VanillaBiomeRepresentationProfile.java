@@ -301,7 +301,14 @@ public final class VanillaBiomeRepresentationProfile {
                 }
                 case "WATER" -> {
                     if (parts.length != 3) throw new IllegalArgumentException("malformed WATER row");
-                    putUnique(water, parts[2], VanillaSurfaceWaterCoveragePlan.Route.valueOf(parts[1]));
+                    VanillaSurfaceWaterCoveragePlan.Route route =
+                            VanillaSurfaceWaterCoveragePlan.Route.valueOf(parts[1]);
+                    // Beta 4/5 profiles reserved a Mushroom Fields province; that route is retired
+                    // (Mushroom Fields is vanilla-placed now) and the saved row is dropped on read.
+                    if (route == VanillaSurfaceWaterCoveragePlan.Route.ISOLATED_MUSHROOM_ISLAND) {
+                        continue;
+                    }
+                    putUnique(water, parts[2], route);
                 }
                 case "OMIT" -> {
                     if (parts.length != 4) throw new IllegalArgumentException("malformed OMIT row");
