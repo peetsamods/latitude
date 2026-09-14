@@ -2,9 +2,11 @@ package com.example.globe.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
@@ -37,6 +39,22 @@ public final class CompassHud {
 
     private static long lastCheckWorldTime = Long.MIN_VALUE;
     private static boolean cachedHasCompass = false;
+
+    // Location detail: the biome under the player is looked up once per game tick, and the composed
+    // label is rebuilt only when that biome (or the custom-source toggle) actually changes.
+    private static long lastDetailWorldTime = Long.MIN_VALUE;
+    private static Holder<Biome> lastDetailBiome;
+    private static boolean lastDetailShowCustom;
+    private static String cachedDetailLabel = "Unknown";
+
+    // Digital-layout metrics are memoised on their inputs so the bounds pass and the render pass
+    // share one text measurement per frame instead of each walking the font.
+    private static DigitalContent lastMetricsContent;
+    private static float lastMetricsPadding;
+    private static float lastMetricsScale;
+    private static float lastMetricsLocationScale;
+    private static Object lastMetricsFont;
+    private static DigitalMetrics lastMetrics;
 
     public record HudBounds(int x, int y, int w, int h) {
         public boolean contains(double mx, double my) {
@@ -140,20 +158,13 @@ public final class CompassHud {
         boolean isHoldingCompass = client.player.getMainHandItem().is(Items.COMPASS)
                 || client.player.getOffhandItem().is(Items.COMPASS);
 
-        long t = client.level.getGameTime();
-        if (t != lastCheckWorldTime) {
-            lastCheckWorldTime = t;
-            cachedHasCompass = hasCompassAnywhere(client.player);
-        }
-
-        boolean hasCompassAnywhere = cachedHasCompass;
-
         if (!forceVisible) {
             switch (cfg.showMode) {
                 case ALWAYS -> {
                 }
                 case COMPASS_PRESENT -> {
-                    if (!hasCompassAnywhere) return;
+                    // The inventory scan is only needed in this mode; it stays cached per game tick.
+                    if (!hasCompassAnywhereThisTick(client)) return;
                 }
                 case HOLDING_COMPASS -> {
                     if (!isHoldingCompass) return;
@@ -633,6 +644,10 @@ public final class CompassHud {
             Minecraft client,
             CompassHudConfig cfg,
             DigitalContent content) {
+        if (content.equals(lastMetricsContent) && cfg.padding == lastMetricsPadding && cfg.scale == lastMetricsScale
+                && cfg.locationTextScale == lastMetricsLocationScale && client.font == lastMetricsFont) {
+            return lastMetrics;
+        }
         int padding = (int) Math.ceil(cfg.padding * cfg.scale);
         int directionWidth = scaledTextWidth(client, content.direction(), cfg.scale);
         int latitudeWidth = scaledTextWidth(client, content.latitudeSegment(), cfg.locationTextScale);
@@ -652,7 +667,7 @@ public final class CompassHud {
                 content.detailSegment() == null ? 0 : client.font.width(content.detailSegment()),
                 cfg.locationTextScale);
         int boxHeight = padding * 2 + textHeight;
-        return new DigitalMetrics(
+        DigitalMetrics metrics = new DigitalMetrics(
                 padding,
                 directionWidth,
                 latitudeWidth,
@@ -660,6 +675,13 @@ public final class CompassHud {
                 textHeight,
                 boxWidth,
                 boxHeight);
+        lastMetricsContent = content;
+        lastMetricsPadding = cfg.padding;
+        lastMetricsScale = cfg.scale;
+        lastMetricsLocationScale = cfg.locationTextScale;
+        lastMetricsFont = client.font;
+        lastMetrics = metrics;
+        return metrics;
     }
 
     private static String analogSampleLatitude(CompassHudConfig cfg) {
@@ -854,6 +876,15 @@ public final class CompassHud {
         return Math.max(lo, Math.min(hi, v));
     }
 
+    private static boolean hasCompassAnywhereThisTick(Minecraft client) {
+        long t = client.level.getGameTime();
+        if (t != lastCheckWorldTime) {
+            lastCheckWorldTime = t;
+            cachedHasCompass = hasCompassAnywhere(client.player);
+        }
+        return cachedHasCompass;
+    }
+
     private static boolean hasCompassAnywhere(Player player) {
         var inv = player.getInventory();
         for (int i = 0; i < inv.getContainerSize(); i++) {
@@ -1010,12 +1041,22 @@ public final class CompassHud {
     }
 
     private static String biomeLabel(Minecraft client, CompassHudConfig cfg) {
-        var biome = client.level.getBiome(client.player.blockPosition());
-        return biome.unwrapKey()
-                .map(key -> LocationDetailPolicy.biomeLabel(
-                        key.location().toString(),
-                        cfg.showCustomBiomeSource))
-                .orElse("Unknown");
+        long t = client.level.getGameTime();
+        Holder<Biome> biome = lastDetailBiome;
+        if (t != lastDetailWorldTime || biome == null) {
+            lastDetailWorldTime = t;
+            biome = client.level.getBiome(client.player.blockPosition());
+        }
+        if (biome != lastDetailBiome || cfg.showCustomBiomeSource != lastDetailShowCustom) {
+            lastDetailBiome = biome;
+            lastDetailShowCustom = cfg.showCustomBiomeSource;
+            cachedDetailLabel = biome.unwrapKey()
+                    .map(key -> LocationDetailPolicy.biomeLabel(
+                            key.location().toString(),
+                            cfg.showCustomBiomeSource))
+                    .orElse("Unknown");
+        }
+        return cachedDetailLabel;
     }
 
     private static String displayZoneName(String zoneKey) {
