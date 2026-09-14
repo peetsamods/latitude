@@ -14,6 +14,18 @@ to this line. **Beta:** shipped for testing before the 1.5.1 stable tag.
 
 ### Improved
 
+- **Mushroom Fields are vanilla islands again.** Latitude no longer reserves a spot in the ocean
+  and builds an island there. Mushroom Fields now appears exactly where vanilla would put it: on
+  the low natural islands the terrain itself raises in the deepest ocean, in any climate band. The
+  flat sea-level apron and stepped terraces of the built island are gone with it. Small worlds may
+  have no Mushroom Fields at all, as in vanilla. Existing worlds keep any built island they have
+  already generated; unexplored ocean follows the vanilla rule.
+- **Smoother transitions into the polar region.** Taiga now thins out in patches across the subpolar
+  edge instead of disappearing along a straight latitude line. The polar tree line is preserved.
+  (Also in Beta 4 for Minecraft 26.2.)
+- Edge storm warnings now say whether the storm is to the east or west. (Also in Beta 4 for 26.2.)
+- **Less repeat work while exploring new terrain.** Latitude no longer repeats a custom-biome scan
+  that was only needed for disabled diagnostics during chunk decoration. (Also in Beta 4 for 26.2.)
 - **Create-world screen layout.** Panels sit tighter with less empty space, the World and Settings
   tab headers are now real buttons you can reach and activate from the keyboard (and Minecraft's
   narrator announces them), and panel backgrounds are slightly see-through so the panorama behind
