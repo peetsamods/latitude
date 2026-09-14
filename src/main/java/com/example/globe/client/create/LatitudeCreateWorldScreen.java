@@ -796,10 +796,9 @@ public class LatitudeCreateWorldScreen extends Screen {
         atlasTransitionFromDiameter = animatedAtlasDiameter(now);
         atlasTransitionStartedMs = now;
         selectedSize = sizes[idx];
-        if (this.worldNameField != null) {
-            worldNameInput = this.worldNameField.getValue();
-        }
-        this.rebuildWidgets();
+        // No widget rebuild: nothing in init() reads the selected size, and the preview, caption
+        // and small-world warning are all recomputed per frame. Rebuilding also stole keyboard
+        // focus from the name field on every arrow press.
     }
 
     // ── Mode stepper ──

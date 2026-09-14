@@ -1,5 +1,7 @@
 package com.example.globe.client.create;
 
+import java.lang.ref.WeakReference;
+
 /**
  * Shared frame-driven clock for the create-world intro. The preparing screen starts it and the
  * Latitude create screen may continue the same active animation.
@@ -16,12 +18,14 @@ public final class CreateWorldIntroClock {
 
     private static volatile long progressMs;
     private static volatile long lastFrameMs = -1L;
-    private static volatile Object owner;
+    // Held weakly: the live screen is strongly referenced by the client while it is displayed, and a
+    // screen that has been closed must not keep its world-creation context reachable through here.
+    private static volatile WeakReference<Object> owner;
 
     /** Restarts for a new preparing-screen instance; repeated renders of that screen are a no-op. */
     public static void beginForOwner(Object requester, long nowMs) {
-        if (owner != requester) {
-            owner = requester;
+        if (!isOwner(requester)) {
+            owner = new WeakReference<>(requester);
             reset(nowMs);
         }
     }
@@ -32,6 +36,12 @@ public final class CreateWorldIntroClock {
             owner = null;
             reset(nowMs);
         }
+    }
+
+    /** A collected owner reads as "someone else", exactly like a different screen instance. */
+    private static boolean isOwner(Object requester) {
+        WeakReference<Object> current = owner;
+        return current != null && current.get() == requester;
     }
 
     private static void reset(long nowMs) {
