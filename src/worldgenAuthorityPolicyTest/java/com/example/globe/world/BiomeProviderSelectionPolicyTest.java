@@ -2224,6 +2224,7 @@ final class BiomeProviderSelectionPolicyTest {
                                 mushroom.blockX() + mushroom.radiusBlocks() * 2, 64, mushroom.blockZ()),
                         "density outside the reserved island remains byte-for-byte unchanged");
                 assertMushroomBoxIsConservative(mushroom);
+                assertMushroomIslandUnchangedByBoxReject(plan, mushroom);
 
                 VanillaSurfaceWaterCoveragePlan compactPlan = VanillaSurfaceWaterCoveragePlan.build(
                         radius, seed, 63, VanillaSurfaceWaterCoveragePlan.requirements(),
@@ -3414,5 +3415,39 @@ final class BiomeProviderSelectionPolicyTest {
                 assertTrue(mushroom.contains(x, z) == inside, "contains() must agree with the organic radial inside the box");
             }
         }
+    }
+
+    /**
+     * Differential check against the pre-bounding-box formulas: over a dense grid covering the
+     * island, its rim and a margin outside the square, every density, land and solid answer must
+     * equal what the direct trig evaluation gives. This is the regression net for row 1.
+     */
+    private static void assertMushroomIslandUnchangedByBoxReject(VanillaSurfaceWaterCoveragePlan plan,
+                                                                  VanillaSurfaceWaterCoveragePlan.Anchor mushroom) {
+        int span = (int) Math.round(mushroom.radiusBlocks() * 1.3);
+        int checked = 0;
+        for (int dz = -span; dz <= span; dz += 2) {
+            for (int dx = -span; dx <= span; dx += 2) {
+                int x = mushroom.blockX() + dx;
+                int z = mushroom.blockZ() + dz;
+                double radial = VanillaSurfaceWaterCoveragePlan.organicRadialDistance(mushroom, x, z);
+                for (int y : new int[] {40, 58, 63, 66, 72, 80, 96}) {
+                    double expected = radial >= 1.0 ? -0.25 : Math.max(-0.25, (plan.mushroomSurfaceForTest(mushroom, x, z, radial) - y) / 14.0);
+                    assertEquals(expected, plan.mushroomDensity(-0.25, x, y, z),
+                            "island density must equal the direct evaluation at " + x + "," + y + "," + z);
+                    boolean expectedSolid = radial < 1.0
+                            && plan.mushroomSurfaceForTest(mushroom, x, z, radial) >= plan.seaLevel() + 2.0
+                            && y <= Math.floor(plan.mushroomSurfaceForTest(mushroom, x, z, radial));
+                    assertTrue(plan.isMushroomSolid(x, y, z) == expectedSolid,
+                            "island solid must equal the direct evaluation at " + x + "," + y + "," + z);
+                }
+                boolean expectedLand = radial < 1.0
+                        && plan.mushroomSurfaceForTest(mushroom, x, z, radial) >= plan.seaLevel() + 2.0;
+                assertTrue(plan.isMushroomLand(x, z) == expectedLand,
+                        "island land must equal the direct evaluation at " + x + "," + z);
+                checked++;
+            }
+        }
+        assertTrue(checked > 10_000, "differential grid must be dense");
     }
 }
