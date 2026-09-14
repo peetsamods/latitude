@@ -1,6 +1,7 @@
 package com.example.globe.client;
 
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * Dependency-free policy for the optional biome/zone detail rendered as one HUD unit.
@@ -8,6 +9,8 @@ import java.util.Locale;
 public final class LocationDetailPolicy {
     public static final Mode DEFAULT_MODE = Mode.OFF;
     public static final String COMBINED_SEPARATOR = " \u00b7 ";
+    // String.split has no fast path for a multi-character class, so it would compile this every call.
+    private static final Pattern WORD_SPLIT = Pattern.compile("[_\\-/\\s]+");
 
     public enum Mode {
         OFF("Off", false, false),
@@ -85,7 +88,7 @@ public final class LocationDetailPolicy {
         String trimmed = biomeId.trim();
         int namespaceSeparator = trimmed.indexOf(':');
         String path = namespaceSeparator >= 0 ? trimmed.substring(namespaceSeparator + 1) : trimmed;
-        String[] words = path.split("[_\\-/\\s]+");
+        String[] words = WORD_SPLIT.split(path);
         StringBuilder result = new StringBuilder();
         for (String word : words) {
             if (word.isEmpty()) {
