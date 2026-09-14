@@ -918,7 +918,7 @@ def verify_public_entries(
     # NOTE: b"flyspeed" and b"tpLat" were removed from this denylist on 2026-08-04. They are
     # permitted operator commands that now ship in com.example.globe.tools by owner directive.
     # Every needle below was measured absent from a real release jar before being added; do NOT
-    # add b"budgetMs" (present in BiomeSamplerTools$InventoryScanProcessor as a parameter name)
+    # add b"budgetMs" (it was a parameter name in the sampler inventory processor, now dev-only BiomeSamplerDevTools$InventoryScanProcessor)
     # or bare generic words like b"pause"/b"stop"/b"regen" (they occur across data/globe/tags).
     # The excluded-subcommand surface is covered fail-closed by the exact-literal-set assertions
     # in verify_tools_sources() and by ShippingToolsPolicyTest, not by generic substrings.
