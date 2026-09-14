@@ -53,6 +53,26 @@ public final class LatitudeClientState {
         return latitudeWorldLoading;
     }
 
+    /**
+     * Normalised save-directory path of the world the early world-open hook pre-activated the
+     * overlay for after reading Latitude's own state file, or null. Consumed by the world-load
+     * hook so a save that Latitude wrote is trusted even when the generator settings Minecraft
+     * hands back on reload cannot be matched to a Latitude preset (seen on 26.1: the overlay was
+     * cleared again and vanilla's screen showed until the last second).
+     */
+    private static volatile String preActivatedWorldRoot;
+
+    public static void markPreActivatedWorld(String normalisedWorldRoot) {
+        preActivatedWorldRoot = normalisedWorldRoot;
+    }
+
+    /** True once per pre-activation, and only for the same save it was made for. */
+    public static synchronized boolean consumePreActivatedWorld(String normalisedWorldRoot) {
+        String pending = preActivatedWorldRoot;
+        preActivatedWorldRoot = null;
+        return pending != null && pending.equals(normalisedWorldRoot);
+    }
+
     /** Sets the loading screen's zone label. Pass null to show no zone line for this load. */
     public static void setLoadingZoneLabel(String label) {
         loadingZoneLabel = label;
@@ -82,6 +102,7 @@ public final class LatitudeClientState {
         expeditionStartMs = 0L;
         latitudeLoadingProgress = 0f;
         loadingZoneLabel = null;
+        preActivatedWorldRoot = null;
         return sinceExpedition;
     }
 
