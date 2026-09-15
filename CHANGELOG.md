@@ -2,7 +2,7 @@
 
 ## Latitude 1.5.1-beta.5 (Minecraft 26.3)
 
-First Latitude release for Minecraft 26.3, built against 26.3 Pre-Release 2. It carries everything
+First Latitude release for Minecraft 26.3, built against the final 26.3 release. It carries everything
 from Beta 4 and Beta 5 on Minecraft 26.2 and adds Minecraft's new Dappled Forest to Latitude's
 climate map.
 **Beta:** shipped for testing before the 1.5.1 stable tag.
@@ -46,8 +46,8 @@ climate map.
   Mushroom Fields island no longer runs heavy trigonometry for every block in the world, several
   per-column debug values are no longer computed when their debug switch is off, biome lookups on
   the compass HUD are cached per tick, and the loading-screen compass is drawn in far fewer draw
-  calls. Worlds generate exactly the same terrain and biomes: the same seed gives the same map,
-  cell for cell.
+  calls. Apart from the Mushroom Fields change below, worlds generate exactly the same terrain and
+  biomes: the same seed gives the same map, cell for cell.
 - **Mushroom Fields are vanilla islands again.** Latitude no longer reserves a spot in the ocean
   and builds an island there. Mushroom Fields now appears exactly where vanilla would put it: on
   the low natural islands the terrain itself raises in the deepest ocean, in any climate band. The
@@ -79,8 +79,6 @@ climate map.
 
 ### Known issues
 
-- This build targets 26.3 Pre-Release 2 and will be refreshed for the final 26.3 release. Minecraft
-  shows its own version-change warning when a world made on one pre-release is opened on a later one.
 - Minecraft's own biome tags decide where the Dappled Forest variant of the Abandoned Camp can
   generate. Latitude never places camps itself; it can only turn a structure down when it would
   straddle the wrong biome or sit in the border danger zone. A camp inside a Latitude Dappled Forest
