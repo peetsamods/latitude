@@ -27,6 +27,14 @@ were matched before; descriptors were not, so a handler whose parameter list dri
 passed here and then threw InvalidInjectionException at class load. Explicit descriptors in
 `method = "name(...)"` are resolved exactly rather than reduced to the name.
 
+Constructor and static-initialiser selectors (`<init>`, `<clinit>`) are resolved like any other
+method: against what the target class itself DECLARES, since neither is inherited. A constructor
+injector counts as a target method and its handler is checked as (constructor arguments...,
+CallbackInfo) -> void; a descriptor that no constructor carries is a hard failure, and so is a
+`<clinit>` on a class with no static initialiser. Not modelled: Mixin's rule that a constructor
+injection point must sit after the super() call unless the @At is marked `unsafe`, the
+static-modifier match between handler and target, and the shape of a redirected constructor call.
+
 It is not a substitute for a boot: it cannot prove an injection point exists *inside* a method
 (a `@At("INVOKE")` whose target call was removed). Run it first, then boot. And assert the boot
 actually reached the screen -- "zero mixin errors" from a run that never loaded the class is
@@ -57,8 +65,14 @@ INJECTOR_ANNOTATIONS = ("@Inject", "@Redirect", "@ModifyArg", "@ModifyArgs",
                         "@ModifyVariable", "@ModifyConstant", "@WrapOperation", "@WrapWithCondition",
                         "@ModifyReturnValue", "@ModifyExpressionValue", "@WrapMethod")
 
-# Injectors whose `method` names Latitude owns rather than Minecraft (handler names, not targets).
-IGNORED_METHOD_TARGETS = {"<init>", "<clinit>"}
+# The JVM's two special method names: `<init>` is a constructor, `<clinit>` the static initialiser.
+# Neither is inherited, and `javap -p` prints neither under its JVM name (a constructor prints as
+# the class name, the static initialiser as `static {}`), so the inherited-name set the ordinary
+# lane consults never contains them; both lanes resolve them through the descriptor index instead.
+# They used to be skipped outright as "names Latitude owns", which was wrong on both counts: the
+# selector names Minecraft's constructor, and skipping it left every constructor injector uncounted.
+SPECIAL_METHOD_NAMES = {"<init>", "<clinit>"}
+SPECIAL_METHOD_LABELS = {"<init>": "constructor", "<clinit>": "static initialiser"}
 
 
 class Failure(RuntimeError):
@@ -269,7 +283,8 @@ def mixin_targets(header: str, source: str) -> list[str]:
 
 
 def injector_methods(source: str) -> list[str]:
-    """Every Minecraft method name an injector claims to target."""
+    """Every Minecraft method name an injector claims to target, `<init>` and `<clinit>` included;
+    the caller resolves those two through `special_method_owners` rather than the inherited set."""
     names: list[str] = []
     for annotation in INJECTOR_ANNOTATIONS:
         for block in re.findall(rf"{re.escape(annotation)}\s*\((.*?)\)\s*(?:\n|$)", source, re.DOTALL):
@@ -283,7 +298,7 @@ def injector_methods(source: str) -> list[str]:
                 if name.strip() == "*":
                     continue
                 bare = name.split("(")[0].split("*")[0].strip()
-                if bare and bare not in IGNORED_METHOD_TARGETS:
+                if bare:
                     names.append(bare)
     return names
 
@@ -467,8 +482,9 @@ def strip_generics(text: str) -> str:
 def parse_javap_signatures(output: str, binary_name: str) -> tuple[dict[str, list[MethodSig]], list[str]]:
     """({method name: [MethodSig...]} declared by the class, [supertypes]) from `javap -s -p`.
 
-    Constructors come back under the JVM name `<init>`. Fields are skipped: a `descriptor:` line
-    is only paired with the member line above it when that line carries a parameter list.
+    Constructors come back under the JVM name `<init>`, and the static initialiser, which javap
+    prints as `static {};`, under `<clinit>`. Fields are skipped: a `descriptor:` line is only
+    paired with the member line above it when that line carries a parameter list.
     """
     declared: dict[str, list[MethodSig]] = {}
     supertypes: list[str] = []
@@ -492,7 +508,9 @@ def parse_javap_signatures(output: str, binary_name: str) -> tuple[dict[str, lis
             continue
         descriptor = re.match(r"^descriptor:\s*(\S+)$", stripped)
         if descriptor:
-            if pending is not None and "(" in pending and descriptor.group(1).startswith("("):
+            if pending == "static {};" and descriptor.group(1) == "()V":
+                declared.setdefault("<clinit>", []).append(MethodSig(binary_name, "<clinit>", "()V", True))
+            elif pending is not None and "(" in pending and descriptor.group(1).startswith("("):
                 prefix = pending.split("(", 1)[0]
                 name_match = re.search(r"([A-Za-z_$][\w$]*)\s*$", prefix)
                 if name_match:
@@ -553,6 +571,17 @@ class SignatureIndex:
             if inherited:
                 return inherited
         return []
+
+
+def special_method_owners(method: str, classes: list[str], index: SignatureIndex) -> list[str]:
+    """Which of `classes` declare the special method `method` (`<init>` or `<clinit>`).
+
+    Every class declares at least one constructor, so for `<init>` this only rules out an
+    interface or an unreadable class; the exact descriptor is the signature lane's job. A static
+    initialiser exists only when the class has one, so for `<clinit>` this is the whole check:
+    Mixin reports no targets matching `<clinit>` at apply time otherwise."""
+    return [binary_name for binary_name in classes
+            if method in (index.declared(binary_name) or {})]
 
 
 # ── Source side: injector annotations and their handler methods ─────────────────────────────
@@ -892,6 +921,8 @@ def invoked_shape(site: InjectorSite, index: SignatureIndex) -> tuple[list[TypeR
     if owner is None:
         return f"@At target {target!r} names no owner class"
     if value == "INVOKE":
+        if name == "<init>":
+            return f"@At target {owner}.<init> is a constructor call; a redirected NEW is not modelled here"
         candidates = index.find(owner, name)
         if candidates is None:
             return f"@At owner {owner} is not on the classpath"
@@ -1157,13 +1188,16 @@ def resolve_targets(label: str, selectors: list[str], targets: list[str],
                 exact = [overload for overload in overloads if overload.descriptor == descriptor]
                 if not exact:
                     available = ", ".join(sorted(overload.descriptor for overload in overloads)) or "none"
-                    inherited = index.find(target, name) or []
+                    inherited = [] if name in SPECIAL_METHOD_NAMES else (index.find(target, name) or [])
                     hint = f"; {target} only inherits it from {inherited[0].owner}" if inherited and not overloads else ""
                     problems.append(f"{label}: method '{name}{descriptor}' is not declared on {target} "
                                     f"(declared descriptors for '{name}': {available}{hint})")
                 candidates.extend(exact)
             else:
-                if not overloads:
+                if not overloads and name in SPECIAL_METHOD_NAMES:
+                    problems.append(f"{label}: method '{name}' names a {SPECIAL_METHOD_LABELS[name]}, "
+                                    f"which {target} does not declare")
+                elif not overloads:
                     inherited = index.find(target, name) or []
                     if inherited:
                         problems.append(f"{label}: method '{name}' is inherited by {target} from "
@@ -1410,7 +1444,12 @@ def main() -> int:
 
         for method in injector_methods(body):
             checked_methods += 1
-            if method not in resolved_members:
+            if method in SPECIAL_METHOD_NAMES:
+                if not special_method_owners(method, targets, signature_index):
+                    problems.append(
+                        f"{entry}: injector targets '{method}', but {', '.join(targets)} declares "
+                        f"no {SPECIAL_METHOD_LABELS[method]}")
+            elif method not in resolved_members:
                 problems.append(
                     f"{entry}: injector targets '{method}', absent from {', '.join(targets)}")
 
@@ -1430,6 +1469,10 @@ def main() -> int:
                 found = members(owner)
                 if found is None:
                     problems.append(f"{entry}: @At target class not found: {owner}")
+                elif method in SPECIAL_METHOD_NAMES:
+                    if not special_method_owners(method, [owner], signature_index):
+                        problems.append(f"{entry}: @At targets '{owner}.{method}', but {owner} "
+                                        f"declares no {SPECIAL_METHOD_LABELS[method]}")
                 elif method not in found:
                     problems.append(f"{entry}: @At targets '{owner}.{method}', which does not exist")
 

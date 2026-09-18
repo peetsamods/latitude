@@ -81,6 +81,23 @@ public class a.b.Sub extends a.b.Helper {
     descriptor: ()V
 }
 ''',
+    "a.b.Registry": '''Compiled from "Registry.java"
+public class a.b.Registry {
+  public static final int SIZE;
+    descriptor: I
+  public a.b.Registry();
+    descriptor: ()V
+
+  static {};
+    descriptor: ()V
+}
+''',
+    "a.b.Hook": '''Compiled from "Hook.java"
+public interface a.b.Hook {
+  public abstract void run(a.b.Foo);
+    descriptor: (La/b/Foo;)V
+}
+''',
 }
 
 IMPORTS = """package com.example.globe.mixin;
@@ -511,6 +528,11 @@ class ParsingTest(unittest.TestCase):
         self.assertEqual(len(declared["render"]), 2)
         self.assertNotIn("state", declared)
         self.assertIn("items", declared)
+        self.assertNotIn("<clinit>", declared)
+        registry, _ = vmt.parse_javap_signatures(CLASSES["a.b.Registry"], "a.b.Registry")
+        self.assertEqual([m.descriptor for m in registry["<clinit>"]], ["()V"])
+        self.assertTrue(registry["<clinit>"][0].is_static)
+        self.assertEqual([m.descriptor for m in registry["<init>"]], ["()V"])
 
     def test_descriptor_types(self) -> None:
         arguments, return_type = vmt.descriptor_types("(La/b/Pos;[IJ)Ljava/util/List;")
@@ -571,6 +593,151 @@ class ParsingTest(unittest.TestCase):
         self.assertEqual(len(report.trace), 3)
         self.assertEqual(sorted(line.split()[0] for line in report.trace), ["MISMATCH", "OK", "UNVERIFIABLE"])
         self.assertEqual(report.verified + report.unverifiable + len(report.problems), 3)
+
+
+class ConstructorAndStaticInitialiserTest(unittest.TestCase):
+    """`<init>` and `<clinit>` selectors resolve against what the target class declares.
+
+    Both used to be dropped from the name lane as "names Latitude owns", so a constructor injector
+    was never counted; the descriptor lane resolved `<init>` all along but had no negative test,
+    and could not see `<clinit>` at all because javap prints it as `static {}`.
+    """
+
+    def test_constructor_descriptor_that_no_constructor_carries_fails(self) -> None:
+        # a.b.Foo declares only Foo(Source); the drifted descriptor must be a hard problem.
+        report = verify('''
+    @Inject(method = "<init>(La/b/Source;I)V", at = @At("TAIL"))
+    private void onInit(Source source, int flags, CallbackInfo ci) {}
+''')
+        self.assertEqual(report.verified, 0)
+        self.assertEqual(report.unverifiable, 0)
+        self.assertEqual(len(report.problems), 1)
+        self.assertIn("'<init>(La/b/Source;I)V' is not declared on a.b.Foo", report.problems[0])
+        self.assertIn("declared descriptors for '<init>': (La/b/Source;)V", report.problems[0])
+        self.assertNotIn("inherits", report.problems[0])
+
+    def test_constructor_handler_takes_the_constructor_arguments_then_callback_info(self) -> None:
+        report = verify('''
+    @Inject(method = "<init>(La/b/Source;)V", at = @At("TAIL"))
+    private void onInit(Gui gui, CallbackInfo ci) {}
+''')
+        self.assertEqual(report.verified, 0)
+        self.assertEqual(len(report.problems), 1)
+        self.assertIn("parameter 1 is Gui but the target's argument 1 is Source", report.problems[0])
+        self.assertIn("expected (Source, CallbackInfo) -> void", report.problems[0])
+
+    def test_bare_init_selects_every_declared_constructor(self) -> None:
+        report = verify('''
+    @Inject(method = "<init>", at = @At("TAIL"))
+    private void onInit(Source source, CallbackInfo ci) {}
+''')
+        self.assertEqual(report.problems, [])
+        self.assertEqual(report.verified, 1)
+
+    def test_bare_init_on_an_interface_is_a_problem_not_unverifiable(self) -> None:
+        report = verify('''
+    @Inject(method = "<init>", at = @At("TAIL"))
+    private void onInit(CallbackInfo ci) {}
+''', targets=("a.b.Hook",))
+        self.assertEqual(report.unverifiable, 0)
+        self.assertEqual(len(report.problems), 1)
+        self.assertIn("'<init>' names a constructor, which a.b.Hook does not declare", report.problems[0])
+
+    def test_static_initialiser_resolves_as_clinit_only_where_one_exists(self) -> None:
+        body = '''
+    @Inject(method = "<clinit>", at = @At("TAIL"))
+    private static void onClinit(CallbackInfo ci) {}
+'''
+        present = verify(body, targets=("a.b.Registry",))
+        self.assertEqual(present.problems, [])
+        self.assertEqual(present.verified, 1)
+        absent = verify(body, targets=("a.b.Foo",))
+        self.assertEqual(absent.verified, 0)
+        self.assertEqual(absent.unverifiable, 0)
+        self.assertEqual(len(absent.problems), 1)
+        self.assertIn("'<clinit>' names a static initialiser, which a.b.Foo does not declare", absent.problems[0])
+
+    def test_special_method_owners_never_follow_the_hierarchy(self) -> None:
+        index = FakeIndex()
+        self.assertEqual(vmt.special_method_owners("<init>", ["a.b.Foo", "a.b.Hook"], index), ["a.b.Foo"])
+        self.assertEqual(vmt.special_method_owners("<clinit>", ["a.b.Foo", "a.b.Registry"], index), ["a.b.Registry"])
+        # a.b.Sub extends a.b.Helper, which has a constructor; constructors are not inherited but
+        # Sub declares its own, and a missing class declares nothing.
+        self.assertEqual(vmt.special_method_owners("<init>", ["a.b.Sub"], index), ["a.b.Sub"])
+        self.assertEqual(vmt.special_method_owners("<init>", ["a.b.Missing"], index), [])
+
+    def test_name_lane_keeps_special_names_and_counts_them(self) -> None:
+        source = mixin_source('''
+    @Inject(method = "<init>(La/b/Source;)V", at = @At("TAIL"))
+    private void onInit(Source source, CallbackInfo ci) {}
+
+    @Inject(method = {"<clinit>", "tick"}, at = @At("HEAD"))
+    private static void onStatic(CallbackInfo ci) {}
+
+    @Inject(method = "*", at = @At("HEAD"))
+    private void any(CallbackInfo ci) {}
+''')
+        self.assertEqual(vmt.injector_methods(source), ["<init>", "<clinit>", "tick"])
+
+    def test_redirected_constructor_call_is_unverifiable_not_mismatched(self) -> None:
+        report = verify('''
+    @Redirect(method = "tick", at = @At(value = "INVOKE", target = "La/b/Foo;<init>(La/b/Source;)V"))
+    private Foo make(Source source) { return null; }
+''')
+        self.assertEqual(report.problems, [])
+        self.assertEqual(report.unverifiable, 1)
+        self.assertTrue(any("constructor call" in w for w in report.warnings))
+
+
+@unittest.skipUnless(hasattr(vmt, "Expectations"),
+                     "the expected-absent lane (tools/mixin_target_expectations.json) is not on this line")
+class ConstructorExpectationTest(unittest.TestCase):
+    """On a line that serves several Minecraft versions from one jar, a constructor arm of a
+    version split is listed in the expectations file exactly like a method arm: its absent
+    descriptor becomes a note, an unlisted one stays a problem, and a listed arm whose constructor
+    turns out to exist is stale. Skipped where that lane does not exist; it runs unchanged once the
+    file is forward-ported to a line that has it.
+    """
+
+    HANDLER = "FooMixin::onInitOldShape"
+    BODY = '''
+    @Inject(method = "<init>(La/b/Source;I)V", at = @At("TAIL"), require = 0, expect = 0)
+    private void onInitOldShape(Source source, int flags, CallbackInfo ci) {}
+'''
+
+    @staticmethod
+    def verify(body: str, expectations) -> vmt.SignatureReport:
+        source = mixin_source(body)
+        return vmt.verify_handler_signatures("FooMixin", source, source, ["a.b.Foo"], FakeIndex(),
+                                             expectations)
+
+    def test_listed_constructor_arm_with_an_absent_descriptor_becomes_a_note(self) -> None:
+        expectations = vmt.Expectations([self.HANDLER], version="1.20.1")
+        report = self.verify(self.BODY, expectations)
+        self.assertEqual(report.problems, [])
+        self.assertEqual(len(report.expected_absent), 1)
+        self.assertIn("'<init>(La/b/Source;I)V' is not declared on a.b.Foo", report.expected_absent[0])
+        self.assertEqual(expectations.stale(), [])
+        self.assertEqual(report.unverifiable, 0)
+        self.assertEqual(report.verified, 0)
+
+    def test_unlisted_constructor_arm_is_still_a_problem(self) -> None:
+        expectations = vmt.Expectations([], version="1.20.1")
+        report = self.verify(self.BODY, expectations)
+        self.assertEqual(report.expected_absent, [])
+        self.assertEqual(len(report.problems), 1)
+        self.assertIn("'<init>(La/b/Source;I)V' is not declared on a.b.Foo", report.problems[0])
+
+    def test_listed_arm_whose_constructor_exists_is_a_stale_expectation(self) -> None:
+        expectations = vmt.Expectations([self.HANDLER], version="1.20.1")
+        report = self.verify('''
+    @Inject(method = "<init>(La/b/Source;)V", at = @At("TAIL"), require = 0, expect = 0)
+    private void onInitOldShape(Source source, CallbackInfo ci) {}
+''', expectations)
+        self.assertEqual(report.problems, [])
+        self.assertEqual(report.expected_absent, [])
+        self.assertEqual(report.verified, 1)
+        self.assertEqual(expectations.stale(), [self.HANDLER])
 
 
 if __name__ == "__main__":
