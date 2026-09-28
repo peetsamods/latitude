@@ -1,5 +1,32 @@
 # Changelog
 
+## Latitude 1.5.1-beta.7 (Minecraft 26.1, 26.1.1, 26.1.2)
+
+A fix release on top of Beta 6, bringing over fixes already shipped for Minecraft 26.3: your first
+spawn and the upland planner read the biome the world actually paints, and subpolar mountains count
+as mountains under biome packs that reshape the terrain. **Beta:** shipped for testing before the
+1.5.1 stable tag.
+
+### Fixed
+
+- **Your first spawn is judged on the biome you see.** The spawn search used to ask a terrain-blind
+  copy of Latitude's biome rules whether a column was land, so at coasts and on raised ground it
+  could disagree with the world it was choosing a spawn in. It now asks the same painted biome view
+  that world generation and structure placement use. (Also in Beta 5 for Minecraft 26.3.)
+- **Meadows, groves and peaks with biome packs installed.** Terralith reshapes the terrain noise
+  Latitude reads, which used to leave the planner unable to reserve a spot for meadow and its
+  mountain neighbours, with a red "coverage plan is incomplete" line in the log. The planner now
+  judges uplands by measured height, the same way the painter does. This can nudge where a few
+  upland biomes sit, so in a world you already started, some meadow, grove or peak areas you have
+  not explored yet may come out a little differently. (Also in Beta 5 for Minecraft 26.3.)
+- **Windswept hills can now grow on subpolar mountains with Terralith installed.** Latitude asked
+  the raw terrain noise whether a subpolar column was a mountain, and Terralith rewrites that noise,
+  so its spires and ridges never counted and the windswept family was ruled out on all of them. The
+  subpolar band now also accepts measured height, the same evidence the temperate and polar bands
+  already use. (Also in Beta 5 for Minecraft 26.3.)
+
+World-generation changes apply to newly generated terrain. Existing chunks keep their current biomes.
+
 ## Latitude 1.5.1-beta.6 (Minecraft 26.1, 26.1.1, 26.1.2)
 
 A performance pass and one world-generation change on top of Beta 5: Latitude does less repeated
