@@ -1,5 +1,36 @@
 # Changelog
 
+## Latitude 1.5.1-beta.7 (Minecraft 1.21.11)
+
+A fix release on top of Beta 6. Structures, your first spawn and the upland planner read the biome
+the world actually paints, and a trip through Minecraft's own world screen keeps your structures
+choice. **Beta:** shipped for testing before the 1.5.1 stable tag.
+
+### Fixed
+
+- **Structures land in the biome you see.** With biome packs installed, a woodland mansion could
+  pass its dark-forest check on ground that was then painted as flower forest or a pack biome.
+  Structure placement now reads the same biome resolver that paints the world. (Also in Beta 5.1 for
+  Minecraft 1.20.1.)
+- **Your first spawn is judged on the biome you see.** The spawn search used to ask a terrain-blind
+  copy of Latitude's biome rules whether a column was land, so at coasts and on raised ground it
+  could disagree with the world it was choosing a spawn in. It now asks the same painted biome view
+  that world generation and structure placement use. (Also in Beta 5.1 for Minecraft 1.20.1.)
+- **Meadows, groves and peaks with biome packs installed.** Terralith reshapes the terrain noise
+  Latitude reads, which used to leave the planner unable to reserve a spot for meadow and its
+  mountain neighbours, with a red "coverage plan is incomplete" line in the log. The planner now
+  judges uplands by measured height, the same way the painter does. This can nudge where a few
+  upland biomes sit, so in a world you already started, some meadow, grove or peak areas you have
+  not explored yet may come out a little differently. (Also in Beta 5.1 for Minecraft 1.20.1.)
+- **Generate Structures keeps your choice through Minecraft's own world screen.** Turning structures
+  off and then going through "Other World Types & Datapacks" could quietly switch them back on by
+  the time the world was created. The setting now carries across in both directions.
+- **The world list's buttons fit their labels again.** "Play Selected World" and "Create New World"
+  were being cut short to make room for the "Vanilla..." button; that button now takes only the
+  width its own label needs.
+
+World-generation changes apply to newly generated terrain. Existing chunks keep their current biomes.
+
 ## Latitude 1.5.1-beta.6 (Minecraft 1.21.11)
 
 A performance pass and one world-generation change on top of Beta 5: Latitude does less repeated
