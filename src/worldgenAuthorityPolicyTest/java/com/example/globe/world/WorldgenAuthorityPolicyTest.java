@@ -39,6 +39,7 @@ public final class WorldgenAuthorityPolicyTest {
             throw new IllegalArgumentException("expected no arguments, polar-transition, humid-coverage, or warm-upland");
         }
         contextLifecycleIsExplicitAndClearsAllAuthority();
+        zeroSeedIsInitializedWithoutReusingAnotherWorld();
         ordinarySettersDoNotActivateGlobalGuards();
         inlineGeneratorAuthorityIsBoundToTheExactOverworld();
         oldWorldStateDefaultsAreConservativeAndVanillaReadsAreNonCreating();
@@ -1253,6 +1254,44 @@ public final class WorldgenAuthorityPolicyTest {
         assertTrue(
                 preservedBase * 0.88 > 0.0,
                 "the scaled star-shaped core keeps a positive radius in every direction");
+    }
+
+    private static void zeroSeedIsInitializedWithoutReusingAnotherWorld() {
+        LatitudeBiomes.clearWorldgenContext();
+        try {
+            LatitudeBiomes.setRadius(7_500);
+            assertNull(LatitudeBiomes.getProvinceAuthority(),
+                    "a radius alone must not invent an initialized world seed");
+            LatitudeBiomes.setWorldSeed(0L);
+            assertNotNull(LatitudeBiomes.getProvinceAuthority(),
+                    "numeric seed zero must initialize the province authority");
+            assertTrue(LatitudeBiomes.getProvinceAuthority().seed() == 0L,
+                    "zero-seed authority must retain the actual zero seed");
+
+            LatitudeBiomes.setWorldSeed(77L);
+            ProvinceAuthority previousWorld = LatitudeBiomes.getProvinceAuthority();
+            LatitudeBiomes.setWorldSeed(0L);
+            assertTrue(LatitudeBiomes.getProvinceAuthority() != previousWorld
+                            && LatitudeBiomes.getProvinceAuthority().seed() == 0L,
+                    "switching to seed zero must replace the previous world's province authority");
+            LatitudeBiomes.setRadius(0);
+            assertNull(LatitudeBiomes.getProvinceAuthority(),
+                    "clearing the active radius must discard stale province authority");
+
+            LatitudeBiomes.activateWorldgenContext(7_500, 0L);
+            assertTrue(LatitudeBiomes.hasActiveWorldgenAuthority(),
+                    "a zero-seed Latitude world activates normally");
+            assertNotNull(LatitudeBiomes.getProvinceAuthority(),
+                    "world activation must publish zero-seed province authority");
+            assertTrue(LatitudeBiomes.getProvinceAuthority().seed() == 0L,
+                    "world activation must retain seed zero");
+            LatitudeBiomes.clearWorldgenContext();
+            LatitudeBiomes.setRadius(7_500);
+            assertNull(LatitudeBiomes.getProvinceAuthority(),
+                    "cleared world context must forget that a seed was supplied");
+        } finally {
+            LatitudeBiomes.clearWorldgenContext();
+        }
     }
 
     private static void contextLifecycleIsExplicitAndClearsAllAuthority() {
