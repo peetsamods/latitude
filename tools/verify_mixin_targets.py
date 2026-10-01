@@ -82,8 +82,9 @@ INJECTOR_ANNOTATIONS = ("@Inject", "@Redirect", "@ModifyArg", "@ModifyArgs",
                         "@ModifyVariable", "@ModifyConstant", "@WrapOperation", "@WrapWithCondition",
                         "@ModifyReturnValue", "@ModifyExpressionValue", "@WrapMethod")
 
-# Injectors whose `method` names Latitude owns rather than Minecraft (handler names, not targets).
-IGNORED_METHOD_TARGETS = {"<init>", "<clinit>"}
+# Constructors and static initializers must be declared by the target; they are not inherited.
+SPECIAL_METHOD_NAMES = {"<init>", "<clinit>"}
+SPECIAL_METHOD_LABELS = {"<init>": "constructor", "<clinit>": "static initialiser"}
 
 
 class Failure(RuntimeError):
@@ -346,7 +347,8 @@ def mixin_targets(header: str, source: str) -> list[str]:
 
 
 def injector_methods(source: str) -> list[str]:
-    """Every Minecraft method name an injector claims to target."""
+    """Every Minecraft method name an injector claims to target, `<init>` and `<clinit>` included;
+    the caller resolves those two through `special_method_owners` rather than the inherited set."""
     names: list[str] = []
     for annotation in INJECTOR_ANNOTATIONS:
         for block in re.findall(rf"{re.escape(annotation)}\s*\((.*?)\)\s*(?:\n|$)", source, re.DOTALL):
@@ -360,7 +362,7 @@ def injector_methods(source: str) -> list[str]:
                 if name.strip() == "*":
                     continue
                 bare = name.split("(")[0].split("*")[0].strip()
-                if bare and bare not in IGNORED_METHOD_TARGETS:
+                if bare:
                     names.append(bare)
     return names
 
@@ -544,8 +546,9 @@ def strip_generics(text: str) -> str:
 def parse_javap_signatures(output: str, binary_name: str) -> tuple[dict[str, list[MethodSig]], list[str]]:
     """({method name: [MethodSig...]} declared by the class, [supertypes]) from `javap -s -p`.
 
-    Constructors come back under the JVM name `<init>`. Fields are skipped: a `descriptor:` line
-    is only paired with the member line above it when that line carries a parameter list.
+    Constructors come back under the JVM name `<init>`, and the static initialiser, which javap
+    prints as `static {};`, under `<clinit>`. Fields are skipped: a `descriptor:` line is only
+    paired with the member line above it when that line carries a parameter list.
     """
     declared: dict[str, list[MethodSig]] = {}
     supertypes: list[str] = []
@@ -569,7 +572,9 @@ def parse_javap_signatures(output: str, binary_name: str) -> tuple[dict[str, lis
             continue
         descriptor = re.match(r"^descriptor:\s*(\S+)$", stripped)
         if descriptor:
-            if pending is not None and "(" in pending and descriptor.group(1).startswith("("):
+            if pending == "static {};" and descriptor.group(1) == "()V":
+                declared.setdefault("<clinit>", []).append(MethodSig(binary_name, "<clinit>", "()V", True))
+            elif pending is not None and "(" in pending and descriptor.group(1).startswith("("):
                 prefix = pending.split("(", 1)[0]
                 name_match = re.search(r"([A-Za-z_$][\w$]*)\s*$", prefix)
                 if name_match:
@@ -633,6 +638,16 @@ class SignatureIndex:
 
 
 # ── Source side: injector annotations and their handler methods ─────────────────────────────
+
+def special_method_owners(method: str, classes: list[str], index: SignatureIndex) -> list[str]:
+    """Which of `classes` declare the special method `method` (`<init>` or `<clinit>`).
+
+    Every class declares at least one constructor, so for `<init>` this only rules out an
+    interface or an unreadable class; the exact descriptor is the signature lane's job. A static
+    initialiser exists only when the class has one, so for `<clinit>` this is the whole check:
+    Mixin reports no targets matching `<clinit>` at apply time otherwise."""
+    return [binary_name for binary_name in classes
+            if method in (index.declared(binary_name) or {})]
 
 def balanced_span(text: str, open_index: int, open_char: str = "(", close_char: str = ")") -> int:
     """Index of the bracket closing the one at `open_index`, ignoring brackets inside strings."""
@@ -886,7 +901,7 @@ def injector_method_targets(block: str) -> list[tuple[str | None, str]]:
             if selector.strip() == "*" or is_intermediary_selector(selector):
                 continue
             bare = selector.split("(")[0].split("*")[0].strip()
-            if bare and bare not in IGNORED_METHOD_TARGETS:
+            if bare:
                 pairs.append((handler, bare))
     return pairs
 
@@ -1008,6 +1023,8 @@ def invoked_shape(site: InjectorSite, index: SignatureIndex) -> tuple[list[TypeR
     if owner is None:
         return f"@At target {target!r} names no owner class"
     if value == "INVOKE":
+        if name == "<init>":
+            return f"@At target {owner}.<init> is a constructor call; a redirected NEW is not modelled here"
         candidates = index.find(owner, name)
         if candidates is None:
             return f"@At owner {owner} is not on the classpath"
@@ -1273,13 +1290,16 @@ def resolve_targets(label: str, selectors: list[str], targets: list[str],
                 exact = [overload for overload in overloads if overload.descriptor == descriptor]
                 if not exact:
                     available = ", ".join(sorted(overload.descriptor for overload in overloads)) or "none"
-                    inherited = index.find(target, name) or []
+                    inherited = [] if name in SPECIAL_METHOD_NAMES else (index.find(target, name) or [])
                     hint = f"; {target} only inherits it from {inherited[0].owner}" if inherited and not overloads else ""
                     problems.append(f"{label}: method '{name}{descriptor}' is not declared on {target} "
                                     f"(declared descriptors for '{name}': {available}{hint})")
                 candidates.extend(exact)
             else:
-                if not overloads:
+                if not overloads and name in SPECIAL_METHOD_NAMES:
+                    problems.append(f"{label}: method '{name}' names a {SPECIAL_METHOD_LABELS[name]}, "
+                                    f"which {target} does not declare")
+                elif not overloads:
                     inherited = index.find(target, name) or []
                     if inherited:
                         problems.append(f"{label}: method '{name}' is inherited by {target} from "
@@ -1566,9 +1586,15 @@ def main() -> int:
 
         for handler, method in injector_method_targets(body):
             checked_methods += 1
-            if method in resolved_members:
+            if method in SPECIAL_METHOD_NAMES:
+                if special_method_owners(method, targets, signature_index):
+                    continue
+                report_line = (f"{entry}: injector targets '{method}', but {', '.join(targets)} "
+                               f"declares no {SPECIAL_METHOD_LABELS[method]}")
+            elif method in resolved_members:
                 continue
-            report_line = f"{entry}: injector targets '{method}', absent from {', '.join(targets)}"
+            else:
+                report_line = f"{entry}: injector targets '{method}', absent from {', '.join(targets)}"
             if expectations.expected(entry, handler):
                 expected_absent.append(report_line)
             else:
@@ -1593,6 +1619,10 @@ def main() -> int:
                 found = members(owner)
                 if found is None:
                     problems.append(f"{entry}: @At target class not found: {owner}")
+                elif method in SPECIAL_METHOD_NAMES:
+                    if not special_method_owners(method, [owner], signature_index):
+                        problems.append(f"{entry}: @At targets '{owner}.{method}', but {owner} "
+                                        f"declares no {SPECIAL_METHOD_LABELS[method]}")
                 elif method not in found:
                     problems.append(f"{entry}: @At targets '{owner}.{method}', which does not exist")
 
