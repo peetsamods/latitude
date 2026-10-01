@@ -1,5 +1,23 @@
 # Changelog
 
+## Latitude 1.5.2-beta (Minecraft 26.3)
+
+### Improved
+
+- All maintained Fabric builds use the shared `1.5.2-beta` version.
+
+### Fixed
+
+- World creation keeps structures, bonus chests, and game rules when switching through Minecraft’s world screen.
+- Latitude warnings and border presentation stay confined to Latitude Overworlds.
+- Worlds with seed zero initialize their climate regions correctly.
+- First-spawn checks respect collision shapes, fluids, and hazardous blocks.
+- Structure checks use the same resolved biomes as world generation.
+- World-list button labels fit better at normal and narrow window sizes.
+- Resumed Latitude worlds retain their matching loading overlay.
+
+World-generation fixes apply to newly generated terrain. Existing chunks keep their current biomes.
+
 ## Latitude 1.5.1-beta.5 (Minecraft 26.3)
 
 First Latitude release for Minecraft 26.3, built against the final 26.3 release. It carries everything
