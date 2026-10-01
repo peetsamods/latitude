@@ -6,6 +6,7 @@ import com.example.globe.GlobeMod;
 import com.example.globe.util.LatitudeBands;
 import com.example.globe.world.LatitudeBiomes;
 import com.example.globe.world.LatitudeBiomeSource;
+import com.example.globe.world.PaintedBiomeSiting;
 import com.example.globe.world.LatitudeWorldgenScope;
 import com.example.globe.world.StructureSitingPolicy;
 import com.example.globe.world.VillageTerrainSuitabilityPolicy;
@@ -79,6 +80,9 @@ public abstract class ExtremePolarVillageStartGuardMixin {
             try {
                 int radius = GlobeMod.borderRadiusForNoiseGenerator(noise);
                 Registry<Biome> biomeRegistry = registryAccess.lookupOrThrow(Registries.BIOME);
+                if (chunkGenerator instanceof PaintedBiomeSiting siting) {
+                    siting.globe$adoptPaintedBiomeSource(biomeRegistry, randomState, heightAccessor);
+                }
                 structureBiomeSource = LatitudeBiomeSource.forStructure(
                         biomeSource,
                         biomeRegistry,
@@ -125,24 +129,12 @@ public abstract class ExtremePolarVillageStartGuardMixin {
                     if (!VillageTerrainSuitabilityPolicy.isSuitable(terrainHeights)) {
                         return StructureStart.INVALID_START;
                     }
-                    Holder<Biome> baseBiome = biomeSource.getNoiseBiome(
+                    // Apply the village law to the same final surface biome used by structure
+                    // generation and chunk painting, without a separate preview pick.
+                    Holder<Biome> finalBiome = structureBiomeSource.getNoiseBiome(
                             Math.floorDiv(blockX, 4),
                             Math.floorDiv(LatitudeBiomes.SURFACE_CLASSIFY_Y, 4),
-                            Math.floorDiv(blockZ, 4),
-                            randomState.sampler());
-                    Holder<Biome> pickedBiome = LatitudeBiomes.pick(
-                            biomeRegistry,
-                            baseBiome,
-                            blockX,
-                            blockZ,
-                            LatitudeBiomes.SURFACE_CLASSIFY_Y,
-                            radius,
-                            randomState.sampler(),
-                            "VILLAGE_START",
-                            noise,
-                            randomState,
-                            heightAccessor);
-                    Holder<Biome> finalBiome = pickedBiome != null ? pickedBiome : baseBiome;
+                            Math.floorDiv(blockZ, 4), randomState.sampler());
                     Identifier finalBiomeId = biomeRegistry.getKey(finalBiome.value());
                     if (finalBiomeId != null
                             && LatitudeBiomes.villageVariantVsBiomeMismatch(
