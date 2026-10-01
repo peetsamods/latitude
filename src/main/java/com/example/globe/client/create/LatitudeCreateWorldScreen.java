@@ -51,6 +51,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class LatitudeCreateWorldScreen extends Screen {
 
@@ -1450,22 +1451,11 @@ public class LatitudeCreateWorldScreen extends Screen {
         if (this.minecraft == null) return;
         this.worldNameInput = this.worldNameField == null ? this.worldNameInput : this.worldNameField.getValue();
         this.seedInput = this.seedField == null ? this.seedInput : this.seedField.getValue();
-        // Read vanilla's LIVE state on the way back, not a snapshot taken now. The outbound carry
-        // below cannot see anything the player changes on vanilla's own controls afterwards, so
-        // without this the round trip is one-way and their edits are silently discarded -- reported
-        // live on the sibling line as "Hardcore does not survive; have to change it again when you
-        // go back".
-        //
-        // Safe to read here because CreateWorldScreen.popScreen() is
-        //     this.onClose.run(); this.removeTempDataPackDir();
-        // -- it runs this callback FIRST and never replaces the screen itself, so vanilla's screen
-        // is still minecraft.screen at this point. The interface cast is deliberate: casting to the
-        // @Mixin class instead compiles clean and throws IllegalClassLoadError the first time it
-        // runs, because a registered mixin class cannot be classloaded from ordinary code.
+        // Vanilla returns through a Screen wrapper, which is already current when this callback
+        // runs. Retain its live state object so edits made after opening vanilla survive the return.
+        AtomicReference<WorldCreationUiState> returnState = new AtomicReference<>();
         Runnable returnToLatitude = () -> {
-            if (this.minecraft.screen instanceof VanillaCreateWorldUiStateCarrier carrier) {
-                absorbVanillaCreateState(carrier.globe$getVanillaUiState());
-            }
+            absorbVanillaCreateState(returnState.get());
             this.minecraft.setScreen(this);
         };
         // Abandons the whole flow from wherever vanilla's screen is showing when the exit button is
@@ -1506,6 +1496,7 @@ public class LatitudeCreateWorldScreen extends Screen {
                     this.minecraft, returnScreen, carried, this.holder, null);
             WorldCreationUiState outboundState =
                     ((VanillaCreateWorldUiStateCarrier) (Object) vanillaScreen).globe$getVanillaUiState();
+            returnState.set(outboundState);
             outboundState.setGenerateStructures(this.generateStructures);
             outboundState.setBonusChest(this.bonusChest);
             outboundState.setGameRules(this.gameRules);
