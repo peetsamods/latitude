@@ -155,10 +155,16 @@ final class EscapeHatchSourcePolicyTest {
         String code = strip(read(DOOR));
         expectTrue(code.contains("GLOBE_GAP = 10") && code.contains("GLOBE_INNER_GAP = 8"),
                 "the door must keep a wider separation than the neighbours' own spacing");
-        expectTrue(matches(code, "sharedWidthForThree\\(\\w+, GLOBE_INNER_GAP, GLOBE_GAP\\)"),
+        expectTrue(matches(code, "doorWidthForThree\\(\\w+, GLOBE_INNER_GAP, GLOBE_GAP"),
                 "the gap must actually be applied to the layout, not merely declared. Matched by "
                         + "SHAPE, not verbatim: the claim is that both gap constants reach the "
                         + "width split, and it must not go red merely because a local was renamed");
+        expectTrue(matches(code, "font\\.width\\(GLOBE_VANILLA_LABEL\\)"),
+                "the door's width must be measured from its rendered label, not hard-coded -- a "
+                        + "constant would quietly re-ellipsize under any relabel or translation");
+        expectTrue(matches(code, "mainWidthForThree\\("),
+                "what the door gives up must return to Play and Create through the policy, which "
+                        + "is the half of the 2026-08-30 report that made the long label fit again");
         expectFalse(code.contains("fitsWithAppendedButton"),
                 "the door must not append-and-refuse -- that is what made it absent at higher GUI "
                         + "scales, where Minecraft's internal width shrinks below the window's look");
