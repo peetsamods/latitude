@@ -1,3 +1,21 @@
+## Latitude 1.5.2-beta (Minecraft 1.20.1–1.20.4)
+
+### Improved
+
+- All maintained Fabric builds use the shared `1.5.2-beta` version.
+- Biome searches prefer a nearby interior patch over a thin boundary sliver.
+
+### Fixed
+
+- World creation keeps structures, bonus chests, and game rules when switching through Minecraft’s world screen.
+- Latitude warnings and border presentation stay confined to Latitude Overworlds.
+- Worlds with seed zero initialize their climate regions correctly.
+- First-spawn checks respect collision shapes, fluids, and hazardous blocks.
+- First spawn can search farther along the selected climate zone for safe land.
+- World-list button labels fit better at normal and narrow window sizes.
+
+World-generation fixes apply to newly generated terrain. Existing chunks keep their current biomes.
+
 ## Latitude 1.5.1-beta.6 (Minecraft 1.20.1–1.20.4)
 
 A performance pass and one world-generation change on top of Beta 5.1: Latitude does less repeated

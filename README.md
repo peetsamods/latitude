@@ -2,9 +2,11 @@
 
 A globe-style world + latitude-based biome bands with a customizable compass HUD and warnings.
 
-## Current release line
+## Current version
 
-Latitude `1.5.1-beta.6+1.20.1` targets Minecraft `1.20.1` through `1.20.4` on Fabric and requires Java 17 or newer. It is a beta: back up important worlds before testing, especially before using the optional retrofit command on an older world.
+This checkout builds Latitude `1.5.2-beta+1.20.1` for Minecraft **1.20.1–1.20.4** on **Fabric**,
+using Java 17 or newer. See [the changelog](CHANGELOG.md) for this version's changes and
+[version naming](docs/versioning.md) for the shared release contract.
 
 ## Features
 
