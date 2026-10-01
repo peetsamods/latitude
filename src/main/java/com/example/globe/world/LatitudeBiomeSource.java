@@ -222,7 +222,7 @@ public final class LatitudeBiomeSource extends BiomeSource {
             Climate.Sampler sampler) {
         LatitudeBiomeSource painted = this.paintedDelegate;
         if (painted != null) {
-            return painted.getNoiseBiome(x, y, z, sampler);
+            return painted.resolveNoiseBiome(originalResolver, x, y, z, sampler);
         }
         Holder<Biome> current = originalResolver.getNoiseBiome(x, y, z);
         Holder<Biome> base = originalResolver.getNoiseBiome(

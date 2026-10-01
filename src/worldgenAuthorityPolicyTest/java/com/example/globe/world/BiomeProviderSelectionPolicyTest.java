@@ -88,7 +88,24 @@ final class BiomeProviderSelectionPolicyTest {
         net.minecraft.server.Bootstrap.bootStrap();
         MappedRegistry<Biome> registry = testBiomeRegistry();
         Holder<Biome> plains = testBiomeHolder(registry, "minecraft:plains");
-        var raw = new net.minecraft.world.level.biome.FixedBiomeSource(plains);
+        var preparations = new java.util.concurrent.atomic.AtomicInteger();
+        var raw = new net.minecraft.world.level.biome.BiomeSource() {
+            @Override
+            protected com.mojang.serialization.MapCodec<? extends net.minecraft.world.level.biome.BiomeSource> codec() {
+                return net.minecraft.world.level.biome.FixedBiomeSource.CODEC;
+            }
+
+            @Override
+            protected java.util.stream.Stream<Holder<Biome>> collectPossibleBiomes() {
+                return java.util.stream.Stream.of(plains);
+            }
+
+            @Override
+            public net.minecraft.world.level.biome.BiomeResolver createResolver(Climate.Sampler ignored) {
+                preparations.incrementAndGet();
+                return (x, y, z) -> plains;
+            }
+        };
         var captured = new LatitudeBiomeSource(raw, List.of(plains), 7500);
         var painted = LatitudeBiomeSource.forStructure(raw, registry, 7500, null, null, null);
         Climate.Sampler sampler = coverageSampler(null);
@@ -107,9 +124,12 @@ final class BiomeProviderSelectionPolicyTest {
             for (int x = -600; x <= 600; x += 100) {
                 for (int z = -1700; z <= 1700; z += 100) {
                     Holder<Biome> expected = painted.getNoiseBiome(x, 16, z, sampler);
+                    int before = preparations.get();
                     Holder<Biome> actual = capturedResolver.getNoiseBiome(x, 16, z);
                     assertTrue(expected == capturedChunkResolver.getNoiseBiome(x, 16, z),
                             "a resolver captured for a chunk must also see adoption");
+                    assertTrue(preparations.get() == before,
+                            "adoption must reuse the prepared raw resolver instead of rebuilding it per coordinate");
                     assertTrue(expected == actual,
                             "captured structure source must answer with the painted biome: "
                                     + LatitudeBiomes.biomeIdPublic(expected) + " != "
