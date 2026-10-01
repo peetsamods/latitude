@@ -4,10 +4,10 @@ package com.example.globe.client.create;
  * Narrowing the escape-hatch footer must reproduce vanilla's own geometry, never exceed it, and
  * still fit at the narrowest GUI scale.
  */
-public final class VanillaFooterLayoutPolicyTest {
+public final class VanillaFooterBoundsPolicyTest {
     private static int assertions;
 
-    private VanillaFooterLayoutPolicyTest() {
+    private VanillaFooterBoundsPolicyTest() {
     }
 
     public static void run() {
@@ -19,7 +19,7 @@ public final class VanillaFooterLayoutPolicyTest {
         rowLeftAgreesWithTheEnvelopeClampAndStillHoldsWithoutIt();
         rowIsCenteredAroundTheGivenPoint();
         rejectsNonPositiveCount();
-        System.out.println("PASS VanillaFooterLayoutPolicyTest assertions=" + assertions);
+        System.out.println("PASS VanillaFooterBoundsPolicyTest assertions=" + assertions);
     }
 
     /**
