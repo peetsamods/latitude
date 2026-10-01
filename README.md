@@ -58,7 +58,7 @@ On Windows, use `.\gradlew.bat clean build`.
 
 The remapped runtime JAR is:
 
-- `build/libs/latitude-1.5.1-beta.3+1.21.11.jar`
+- `build/libs/latitude-1.5.2-beta+1.21.11.jar`
 
 Do not upload development or sources JARs as the playable release file.
 
