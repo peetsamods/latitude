@@ -125,6 +125,9 @@ public final class BiomePreviewHeadlessRunner {
             int radius = resolvePreviewRadius(world, config);
             int firstStep = !config.steps().isEmpty() ? config.steps().get(0) : 64;
             long effectiveSeed = config.seedOverride != null ? config.seedOverride : worldSeed;
+            if (refuseIfLiveContextDiffers("headless", world, radius, effectiveSeed, 1)) {
+                return;
+            }
             String runLabel = BiomePreviewExporter.resolveRunLabel(config.runLabel);
             Path outputDir = config.outDir != null ? config.outDir : defaultOutDir(server.getServerDirectory());
 
@@ -193,6 +196,10 @@ public final class BiomePreviewHeadlessRunner {
             int radius = config.radiusBlocks != null
                     ? Math.max(1, config.radiusBlocks)
                     : radiusFromSizeOrWorld(config.sizePreset, world);
+            if (refuseIfLiveContextDiffers(
+                    "search", world, radius, config.seedStart, Math.max(1, config.seedCount))) {
+                return;
+            }
             Instant generatedAt = Instant.now();
             Path outputRoot = config.outDir != null
                     ? config.outDir
@@ -260,6 +267,9 @@ public final class BiomePreviewHeadlessRunner {
                     : radiusFromSizeOrWorld(config.sizePreset, world);
             long worldSeed = world.getSeed();
             long effectiveSeed = config.seedOverride != null ? config.seedOverride : worldSeed;
+            if (refuseIfLiveContextDiffers("audit", world, radius, effectiveSeed, 1)) {
+                return;
+            }
 
             LatitudeBiomes.setWorldSeed(effectiveSeed);
             LatitudeBiomes.setActiveRadiusBlocks(radius);
@@ -330,6 +340,15 @@ public final class BiomePreviewHeadlessRunner {
                     ? Math.max(1, config.radiusBlocks)
                     : radiusFromSizeOrWorld(config.sizePreset, world);
             long effectiveSeed = config.seedOverride != null ? config.seedOverride : worldSeed;
+            if (refuseIfLiveContextDiffers("locate-boundary", world, radius, effectiveSeed, 1)) {
+                writeLocateBoundaryProof(proofFile, List.of(
+                        "status=fail",
+                        "error=live_overworld_context_differs_from_recipe",
+                        "live_radius=" + liveLatitudeOverworldRadius(),
+                        "radius=" + radius,
+                        "verdict=fail"));
+                return;
+            }
 
             LatitudeBiomes.setWorldSeed(effectiveSeed);
             LatitudeBiomes.setActiveRadiusBlocks(radius);
@@ -950,6 +969,32 @@ public final class BiomePreviewHeadlessRunner {
             return Mth.clamp(activeRadius, 1, Math.max(1, borderRadius));
         }
         return Math.max(1, borderRadius);
+    }
+
+    private static int liveLatitudeOverworldRadius() {
+        return LatitudeBiomes.hasActiveWorldgenAuthority() ? LatitudeBiomes.getActiveRadiusBlocks() : 0;
+    }
+
+    /** Preview setters cannot rebuild the loaded world's captured coverage plans. */
+    private static boolean refuseIfLiveContextDiffers(
+            String jobTag, ServerLevel world, int recipeRadius, long recipeSeed, int seedCount) {
+        int liveRadius = liveLatitudeOverworldRadius();
+        long liveSeed = world.getSeed();
+        if (HeadlessWorldContextPolicy.canUseRecipe(
+                liveRadius > 0, liveRadius, liveSeed, recipeRadius, recipeSeed, seedCount)) {
+            return false;
+        }
+        if (liveRadius != recipeRadius) {
+            GlobeMod.LOGGER.error(
+                    "[latdev][{}] REFUSED: live overworld radius {} differs from recipe radius {}",
+                    jobTag, liveRadius, recipeRadius);
+        } else {
+            GlobeMod.LOGGER.error(
+                    "[latdev][{}] REFUSED: recipe seed range does not match the loaded Latitude world "
+                            + "(liveSeed={} recipeSeed={} seedCount={})",
+                    jobTag, liveSeed, recipeSeed, seedCount);
+        }
+        return true;
     }
 
     private static Config parseConfig() {

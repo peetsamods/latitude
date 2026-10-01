@@ -35,8 +35,9 @@ from pathlib import Path
 FAILURE_MARKERS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("server start failure", re.compile(r"Failed to start the minecraft server")),
     ("server crash", re.compile(r"Encountered an unexpected exception")),
-    ("headless job failure", re.compile(r"\[latdev\]\[[\w-]+\] (?:export|seed search|audit|proof) failed")),
+    ("headless job failure", re.compile(r"\[latdev\]\[[\w-]+\] (?:export|seed search|audit|proof|spawn probe) failed")),
     ("headless job failure", re.compile(r"\[latdev\]\[[\w-]+\] no overworld available")),
+    ("headless job refused", re.compile(r"\[latdev\]\[[\w-]+\] REFUSED:")),
     ("headless job failure", re.compile(r"\[Latitude\] (?:structure atlas export|distribution census) failed")),
     ("headless job refused", re.compile(r"\[Latitude\] structure atlas REFUSED")),
 )
