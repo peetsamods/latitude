@@ -1,41 +1,24 @@
 # Changelog
 
-## Latitude 1.5.1-beta.7 (Minecraft 1.21.1)
+## Latitude 1.5.2-beta (Minecraft 1.21.1)
 
-A fix release on top of Beta 6. Choosing a climate zone now puts you in it on ocean-heavy seeds, and
-structures, your first spawn and the upland planner all read the biome the world actually paints.
-**Beta:** shipped for testing before the 1.5.1 stable tag.
+### Improved
+
+- All maintained Fabric builds use the shared `1.5.2-beta` version.
+- Biome searches prefer a nearby interior patch over a thin boundary sliver.
 
 ### Fixed
 
-- **Choosing a climate zone now puts you in it, even on seeds where the middle of that zone is open
-  sea.** The spawn search used to look at one small patch of the zone's latitude, straight north or
-  south of the world's centre, and give up when every one of its nine landing spots was water — so
-  on those seeds (Subtropical with seed 1, for one) you quietly started at the equator instead. It
-  now walks along that latitude until it finds solid land, and it no longer refuses a perfectly good
-  landing spot just because a snow layer or a flower was in the way. Subtropical and Polar starts
-  were the ones most often affected.
-- **Structures land in the biome you see.** With biome packs installed, a woodland mansion could
-  pass its dark-forest check on ground that was then painted as flower forest or a pack biome.
-  Structure placement now reads the same biome resolver that paints the world. (Also in Beta 5.1 for
-  Minecraft 1.20.1.)
-- **Your first spawn is judged on the biome you see.** The spawn search used to ask a terrain-blind
-  copy of Latitude's biome rules whether a column was land, so at coasts and on raised ground it
-  could disagree with the world it was choosing a spawn in. It now asks the same painted biome view
-  that world generation and structure placement use. (Also in Beta 5.1 for Minecraft 1.20.1.)
-- **Meadows, groves and peaks with biome packs installed.** Terralith reshapes the terrain noise
-  Latitude reads, which used to leave the planner unable to reserve a spot for meadow and its
-  mountain neighbours, with a red "coverage plan is incomplete" line in the log. The planner now
-  judges uplands by measured height, the same way the painter does. This can nudge where a few
-  upland biomes sit, so in a world you already started, some meadow, grove or peak areas you have
-  not explored yet may come out a little differently. (Also in Beta 5.1 for Minecraft 1.20.1.)
-- **HUD Studio's previews are no longer blurred when you open it from the create-world screen**, or
-  darkened twice when you open it in a world. The menu background was being drawn over the previews
-  after they were painted; the studio now draws its own background first.
-- A harmless startup warning about a missing reference map (`globe.refmap.json`) no longer appears
-  in the log.
+- World creation keeps structures, bonus chests, and game rules when switching through Minecraft’s world screen.
+- Latitude warnings and border presentation stay confined to Latitude Overworlds.
+- Worlds with seed zero initialize their climate regions correctly.
+- First-spawn checks respect collision shapes, fluids, and hazardous blocks.
+- First-spawn and upland planning use the painted biome and measured terrain, including biome-pack mountains.
+- Structure checks use the same resolved biomes as world generation.
+- World-list button labels fit better at normal and narrow window sizes.
+- HUD Studio draws its background before its previews.
 
-World-generation changes apply to newly generated terrain. Existing chunks keep their current biomes.
+World-generation fixes apply to newly generated terrain. Existing chunks keep their current biomes.
 
 ## Latitude 1.5.1-beta.6 (Minecraft 1.21.1)
 
