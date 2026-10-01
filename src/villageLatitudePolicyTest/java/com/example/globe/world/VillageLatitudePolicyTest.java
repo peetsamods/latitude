@@ -643,11 +643,11 @@ public final class VillageLatitudePolicyTest {
                         "LatitudeBiomes.villageClimateVsBandMismatch(structureId.getPath(), band)"),
                 "generation-time owner applies the existing climate policy before start registration");
         assertTrue(
-                startGuard.contains("biomeSource.getNoiseBiome(")
-                        && startGuard.contains("LatitudeBiomes.pick(")
+                startGuard.contains("Holder<Biome> finalBiome = structureBiomeSource.getNoiseBiome(")
+                        && !startGuard.contains("LatitudeBiomes.pick(")
                         && startGuard.contains(
                         "LatitudeBiomes.villageVariantVsBiomeMismatch( structureId.getPath(), finalBiomeId.toString())"),
-                "generation-time owner compares the named village variant with Latitude's final biome");
+                "generation-time village admission uses the final structure biome without a separate preview pick");
         assertTrue(
                 biomes.contains("VillageBiomeAdmissionPolicy.isVillageFreeBiome(biomeId)")
                         && startGuard.contains("LatitudeBiomes.villageVariantVsBiomeMismatch("),
