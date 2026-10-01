@@ -16,6 +16,7 @@ public final class DevToolPolicyTest {
     }
 
     public static void main(String[] args) throws Exception {
+        HeadlessWorldContextPolicyTest.run();
         atlasBandCatalogNamesDappledAndPreservesExemptions();
         sanitizationIsStableAndTraversalSafe();
         packagedTestIdentityAndProbePolicyFailClosed();
