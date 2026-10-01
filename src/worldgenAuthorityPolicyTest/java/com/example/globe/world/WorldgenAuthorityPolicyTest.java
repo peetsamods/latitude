@@ -70,7 +70,27 @@ public final class WorldgenAuthorityPolicyTest {
         BiomeProviderSelectionPolicyTest.run();
         registeredHookIntegrationIsClosed();
         structureAdmissionUsesResolvedLatitudeBiomeSource();
+        BiomeProviderSelectionPolicyTest.paintedSourceKeepsCapturedReferences();
+        paintedStructureWiringIsShared();
         System.out.println("WORLDGEN_AUTHORITY_POLICY_TEST_PASS");
+    }
+
+    private static void paintedStructureWiringIsShared() throws Exception {
+        String source = read("src/main/java/com/example/globe/mixin/ChunkGeneratorBiomeSourceMixin.java");
+        assertTrue(source.contains("exposed.adoptPainted(painted)"),
+                "generator adoption must preserve already-captured source identity");
+        assertTrue(source.contains("LevelHeightAccessor.create(heightView.getMinY(), heightView.getHeight())"),
+                "persistent sources must retain immutable bounds instead of a chunk");
+        String guard = read("src/main/java/com/example/globe/mixin/ExtremePolarVillageStartGuardMixin.java");
+        assertTrue(guard.contains("globe$adoptPaintedBiomeSource(")
+                        && guard.contains("Holder<Biome> finalBiome = structureBiomeSource")
+                        && !guard.contains("\"VILLAGE_START\""),
+                "village admission must use the final structure source, not an independent preview");
+        String painter = read("src/main/java/com/example/globe/mixin/ChunkGeneratorPopulateBiomesMixin.java");
+        String locate = read("src/main/java/com/example/globe/world/LatitudeStructureLocateService.java");
+        assertTrue(painter.contains("globe$adoptPaintedBiomeSource(biomes, noiseConfig, chunk)")
+                        && locate.contains("globe$adoptPaintedBiomeSource(biomeRegistry, randomState, level)"),
+                "painting and locate must both initialize the captured source");
     }
 
     private static void inventoryReportsFinalLandBandAsPlacementAuthority() throws Exception {

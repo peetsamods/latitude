@@ -83,6 +83,44 @@ final class BiomeProviderSelectionPolicyTest {
         vanillaCoverageIsV2OnlyAndClearsWithContext();
     }
 
+    static void paintedSourceKeepsCapturedReferences() throws Exception {
+        net.minecraft.SharedConstants.tryDetectVersion();
+        net.minecraft.server.Bootstrap.bootStrap();
+        MappedRegistry<Biome> registry = testBiomeRegistry();
+        Holder<Biome> plains = testBiomeHolder(registry, "minecraft:plains");
+        var raw = new net.minecraft.world.level.biome.FixedBiomeSource(plains);
+        var captured = new LatitudeBiomeSource(raw, List.of(plains), 7500);
+        var painted = LatitudeBiomeSource.forStructure(raw, registry, 7500, null, null, null);
+        Climate.Sampler sampler = coverageSampler(null);
+        var capturedResolver = captured.createResolver(sampler);
+        var capturedChunkResolver = captured.createResolverForChunk(sampler, -600, 16, -1700, 1201, 1, 3401);
+        LatitudeBiomes.setWorldSeed(1L);
+        try {
+            assertTrue(!captured.adoptPainted(null), "null cannot replace the source");
+            assertTrue(!captured.adoptPainted(captured), "a source cannot delegate to itself");
+            var other = new net.minecraft.world.level.biome.FixedBiomeSource(plains);
+            assertTrue(!captured.adoptPainted(LatitudeBiomeSource.forStructure(
+                    other, registry, 7500, null, null, null)), "a different raw source cannot be adopted");
+            assertTrue(captured.adoptPainted(painted), "the captured source adopts the painter");
+            assertTrue(!captured.adoptPainted(painted), "adoption happens only once");
+            assertTrue(!painted.adoptPainted(captured), "the painted source never delegates back");
+            for (int x = -600; x <= 600; x += 100) {
+                for (int z = -1700; z <= 1700; z += 100) {
+                    Holder<Biome> expected = painted.getNoiseBiome(x, 16, z, sampler);
+                    Holder<Biome> actual = capturedResolver.getNoiseBiome(x, 16, z);
+                    assertTrue(expected == capturedChunkResolver.getNoiseBiome(x, 16, z),
+                            "a resolver captured for a chunk must also see adoption");
+                    assertTrue(expected == actual,
+                            "captured structure source must answer with the painted biome: "
+                                    + LatitudeBiomes.biomeIdPublic(expected) + " != "
+                                    + LatitudeBiomes.biomeIdPublic(actual));
+                }
+            }
+        } finally {
+            LatitudeBiomes.clearWorldgenContext();
+        }
+    }
+
     static void polarTaigaTransitionPreservesShouldersAndTreeLine() throws Exception {
         net.minecraft.SharedConstants.tryDetectVersion();
         net.minecraft.server.Bootstrap.bootStrap();
