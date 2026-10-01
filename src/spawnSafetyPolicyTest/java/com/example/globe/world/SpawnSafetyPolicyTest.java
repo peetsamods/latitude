@@ -13,6 +13,7 @@ public final class SpawnSafetyPolicyTest {
     private static final int WARNING_PADDING = 64;
 
     public static void main(String[] args) throws Exception {
+        SpawnCellShapePolicyTest.run();
         searchBoundsStayInsideTerrainAndWarningMargins();
         spawnLatitudesSitAtTheMidpointOfTheirOwnBand();
         initialSpawnStaysInRequestedLatitudeWithBoundedFallback();
