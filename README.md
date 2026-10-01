@@ -27,8 +27,10 @@ See: docs/design-spec.md
 
 ## Dependencies
 
-- Fabric Loader (Minecraft 26.2)
+- Minecraft 26.1–26.1.2
+- Fabric Loader 0.17.3 or newer
 - Fabric API
+- Java 25 or newer
 
 ## Biome tag integration
 
@@ -52,9 +54,11 @@ Compass HUD configuration is stored in:
 
 (Windows: `gradlew.bat clean build`.)
 
-The release jar to upload is in:
+The remapped runtime JAR is:
 
-- `build/libs/` (the remapped main jar, not `-dev` / `-sources`)
+- `build/libs/latitude-1.5.2-beta+26.1.jar`
+
+Do not upload development or sources JARs as the playable release file.
 
 ## Support
 
