@@ -48,7 +48,11 @@ public abstract class MinecraftClientStartIntegratedMixin {
                                                          boolean safeMode,
                                                          CallbackInfo ci) {
         boolean detectedLatitudeWorld = globe$isLatitudeWorld(worldStem);
-        if (!detectedLatitudeWorld) {
+        // The early world-open hook already read Latitude's own state file for this save. That is the
+        // stronger witness: on 26.1 the generator settings handed back on reload do not match the
+        // preset keys, and without this the overlay was cleared again and vanilla's screen showed.
+        boolean preActivatedFromSave = LatitudeClientState.consumePreActivatedWorld(globe$worldRootKey(session));
+        if (!detectedLatitudeWorld && !preActivatedFromSave) {
             // Existing vanilla/superflat worlds use Minecraft's normal loading lifecycle. Clear any stale
             // Latitude flag from a prior failed launch so our overlay can never delay or trap their screen.
             if (LatitudeClientState.isLatitudeWorldLoading()) {
@@ -56,6 +60,9 @@ public abstract class MinecraftClientStartIntegratedMixin {
             }
             GLOBE_LOGGER.info("[Latitude lifecycle] integrated-world loading overlay skipped (latitudeWorldDetected=false)");
             return;
+        }
+        if (!detectedLatitudeWorld) {
+            GLOBE_LOGGER.info("[Latitude lifecycle] integrated-world loading overlay kept from the save's Latitude state (generator settings not matched on this version)");
         }
 
         if (!LatitudeClientState.isLatitudeWorldLoading()) {
@@ -82,6 +89,15 @@ public abstract class MinecraftClientStartIntegratedMixin {
             }
         } catch (Exception e) {
             GLOBE_LOGGER.warn("[Latitude lifecycle] could not read last-known band for the loading screen", e);
+        }
+    }
+
+    @Unique
+    private static String globe$worldRootKey(LevelStorageSource.LevelStorageAccess session) {
+        try {
+            return session.getLevelPath(LevelResource.ROOT).toAbsolutePath().normalize().toString();
+        } catch (Exception e) {
+            return null;
         }
     }
 

@@ -62,6 +62,7 @@ public abstract class WorldOpenFlowsEarlyLatitudeActivationMixin {
             }
             LatitudeClientState.beginExpedition(System.currentTimeMillis());
             LatitudeClientState.activateLatitudeLoading();
+            LatitudeClientState.markPreActivatedWorld(worldRoot.toAbsolutePath().normalize().toString());
             LatitudeBands.Band band = LatitudeBands.fromCanonicalId(state.lastKnownBandId());
             if (band != null) {
                 LatitudeClientState.setLoadingZoneLabel(band.displayName());
