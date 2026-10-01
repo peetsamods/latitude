@@ -17,6 +17,7 @@ public final class PolarPresentationPolicyTest {
         directLethalEntryArmsWithoutChangingNormalApproach();
         warningArbitrationFallsThroughToCanonicalEwText();
         outlineIsAnExplicitOnePixelRing();
+        clientPresentationRequiresLatitudeOverworld();
         staticIntegrationProofsHold();
         EwPresentationPolicyTest.runAll();
         ZoneTitlePolicyTest.runAll();
@@ -239,6 +240,35 @@ public final class PolarPresentationPolicyTest {
                         && !overlay.contains("EW_SAND_DANGER_TEMPLATE")
                         && !overlay.contains("String.format(base.getString()"),
                 "east/west warning rendering has no unresolved direction placeholders");
+    }
+
+    private static void clientPresentationRequiresLatitudeOverworld() throws IOException {
+        assertTrue(ClientWorldIdentityPolicy.shouldPresent(true, true),
+                "Latitude presentation belongs in its Overworld");
+        assertTrue(!ClientWorldIdentityPolicy.shouldPresent(true, false),
+                "a Latitude save must not activate presentation in another dimension");
+        assertTrue(!ClientWorldIdentityPolicy.shouldPresent(false, true),
+                "an ordinary Overworld must not activate Latitude presentation");
+        assertTrue(!ClientWorldIdentityPolicy.shouldPresent(false, false),
+                "an unrelated dimension must not activate Latitude presentation");
+
+        String source = read("src/main/java/com/example/globe/client/GlobeClientState.java");
+        String identity = normalize(methodSection(source, "public static boolean isGlobeWorld("));
+        assertTrue(identity.contains("ClientWorldIdentityPolicy.shouldPresent(globeWorld,")
+                        && identity.contains("client.level.dimension()")
+                        && identity.contains("Level.OVERWORLD"),
+                "the live identity check must combine server save identity with the current dimension");
+        String evaluate = normalize(methodSection(source, "public static Eval evaluate("));
+        int identityCheck = evaluate.indexOf("!isGlobeWorld()");
+        int cachedReturn = evaluate.indexOf("return cachedEval;");
+        assertTrue(identityCheck >= 0 && identityCheck < cachedReturn,
+                "dimension changes must be checked before a cached warning evaluation is returned");
+        assertTrue(!evaluate.contains("Math.abs(half -"),
+                "a matching vanilla border size must never activate Latitude warnings");
+        String border = normalize(read(
+                "src/main/java/com/example/globe/mixin/client/WorldRendererWorldBorderMixin.java"));
+        assertTrue(border.contains("|| !GlobeClientState.isGlobeWorld()) return;"),
+                "vanilla border suppression must be limited to Latitude's Overworld");
     }
 
     private static void staticIntegrationProofsHold() throws IOException {
