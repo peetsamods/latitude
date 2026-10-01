@@ -1130,3 +1130,20 @@ tasks.named('runBandAudit').configure {
         }
     }
 }
+
+// Checks static test-class wiring; the native suites prove execution.
+tasks.register('verifyPolicySuiteRegistry') {
+    group = 'verification'
+    description = 'Reject duplicate identities and unwired policy-test classes'
+    doLast {
+        def proc = new ProcessBuilder('python3', 'tools/verify_policy_suite_registry.py')
+                .directory(projectDir).redirectErrorStream(true).start()
+        logger.lifecycle(proc.inputStream.text.trim())
+        if (proc.waitFor() != 0) {
+            throw new GradleException('Policy-suite registry validation failed')
+        }
+    }
+}
+tasks.named('check').configure {
+    dependsOn tasks.named('verifyPolicySuiteRegistry')
+}
