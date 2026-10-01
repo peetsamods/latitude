@@ -33,6 +33,17 @@ CLEAN_RUN = [
 
 
 class ClassifyTest(unittest.TestCase):
+    def test_recipe_context_refusal_overrides_completion(self) -> None:
+        for job in ("headless", "search", "audit", "locate-boundary"):
+            with self.subTest(job=job):
+                lines = list(CLEAN_RUN) + [
+                    f"[12:00:40] [Server thread/ERROR]: [latdev][{job}] REFUSED: recipe seed range does not match the loaded Latitude world"
+                ]
+                verdict, detail = gate.classify(lines)
+                self.assertEqual(verdict, "FAIL")
+                self.assertIn("refused", detail)
+
+
     def test_server_start_failure_is_fail(self) -> None:
         verdict, detail = gate.classify(START_FAILURE)
         self.assertEqual(verdict, "FAIL")
