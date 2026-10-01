@@ -57,24 +57,18 @@ public final class VanillaHandoffCostPolicyTest {
         System.out.println("PASS VanillaHandoffCostPolicyTest assertions=" + assertions);
     }
 
-    /**
-     * The round trip must be two-way. The outbound carry is a snapshot taken when the button is
-     * pressed and cannot see anything the player changes on vanilla's own controls afterwards, so
-     * without a read-back their edits are silently discarded on return -- reported live as
-     * "Hardcore does not survive". Reading must happen in the return callback, where vanilla's
-     * screen is still showing, not eagerly at capture time.
-     */
+    /** The return wrapper must read the edited vanilla state after it becomes current. */
     private static void returnPathReadsVanillaStateBackLive() throws IOException {
         String hatch = methodSection(read(SCREEN), "private void openOtherWorldTypes()");
         assertTrue(hatch.contains("absorbVanillaCreateState("),
                 "the return path takes vanilla's state back");
-        assertTrue(hatch.contains("instanceof VanillaCreateWorldUiStateCarrier"),
-                "it reaches that state through the carrier interface");
+        String callback = methodSection(hatch, "Runnable returnToLatitude = () ->");
+        assertTrue(!callback.contains("minecraft.screen"),
+                "the return wrapper is already current, so read-back must retain vanilla's state");
         int read = hatch.indexOf("absorbVanillaCreateState(");
         int handBack = hatch.indexOf("setScreen(this)");
         assertTrue(read >= 0 && handBack > read,
-                "the read-back happens BEFORE control returns to Latitude, while vanilla's screen "
-                        + "is still the live one");
+                "the read-back happens before control returns to Latitude");
 
         String absorb = methodSection(read(SCREEN), "private void absorbVanillaCreateState(");
         for (String field : new String[]{
