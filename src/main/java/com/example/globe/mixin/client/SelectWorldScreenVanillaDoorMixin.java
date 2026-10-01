@@ -210,8 +210,10 @@ public abstract class SelectWorldScreenVanillaDoorMixin {
                 self.width, VanillaFooterLayoutPolicy.EDGE_MARGIN);
         int rowLeft = VanillaFooterLayoutPolicy.clampedRowLeft(
                 self.width, envelope, VanillaFooterLayoutPolicy.EDGE_MARGIN);
-        int width = VanillaFooterLayoutPolicy.sharedWidthForThree(envelope, GLOBE_INNER_GAP, GLOBE_GAP);
-        int[] xs = VanillaFooterLayoutPolicy.threeButtonXs(rowLeft, width, GLOBE_INNER_GAP, GLOBE_GAP);
+        int doorWidth = VanillaFooterLayoutPolicy.doorWidthForThree(envelope, GLOBE_INNER_GAP, GLOBE_GAP,
+                client.font.width(GLOBE_VANILLA_LABEL) + 12);
+        int width = VanillaFooterLayoutPolicy.mainWidthForThree(envelope, GLOBE_INNER_GAP, GLOBE_GAP, doorWidth);
+        int[] xs = VanillaFooterLayoutPolicy.threeButtonXsWeighted(rowLeft, width, doorWidth, GLOBE_INNER_GAP, GLOBE_GAP);
 
         for (int i = 0; i < row.size(); i++) {
             Button button = row.get(i);
@@ -222,7 +224,7 @@ public abstract class SelectWorldScreenVanillaDoorMixin {
         int doorX = xs[2];
         if (this.globe$door == null) {
             Button door = Button.builder(GLOBE_VANILLA_LABEL, button -> globe$openVanillaDirectly(client, self))
-                    .bounds(doorX, create.getY(), width, create.getHeight())
+                    .bounds(doorX, create.getY(), doorWidth, create.getHeight())
                     .tooltip(Tooltip.create(GLOBE_VANILLA_TOOLTIP))
                     .build();
             door.setAlpha(GLOBE_DOOR_ALPHA);
@@ -235,7 +237,7 @@ public abstract class SelectWorldScreenVanillaDoorMixin {
             // resize, and re-registering it would leak a widget per resize.
             this.globe$door.setX(doorX);
             this.globe$door.setY(create.getY());
-            this.globe$door.setWidth(width);
+            this.globe$door.setWidth(doorWidth);
             this.globe$door.visible = true;
             this.globe$door.active = true;
         }

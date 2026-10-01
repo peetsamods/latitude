@@ -145,4 +145,24 @@ public final class VanillaFooterLayoutPolicy {
         }
         return count * width + (count - 1) * SPACING;
     }
+
+    /** Gives the short door label only the width it needs, capped at an equal share. */
+    public static int doorWidthForThree(int envelope, int innerGap, int doorGap, int desiredWidth) {
+        if (innerGap < 0 || doorGap < 0) throw new IllegalArgumentException("negative gap");
+        int equalShare = Math.max(1, (envelope - innerGap - doorGap) / 3);
+        return Math.max(1, Math.min(desiredWidth, equalShare));
+    }
+
+    /** Returns the remaining width equally to the two main actions. */
+    public static int mainWidthForThree(int envelope, int innerGap, int doorGap, int doorWidth) {
+        if (innerGap < 0 || doorGap < 0 || doorWidth <= 0) throw new IllegalArgumentException("invalid layout");
+        return Math.max(1, (envelope - innerGap - doorGap - doorWidth) / 2);
+    }
+
+    public static int[] threeButtonXsWeighted(int rowLeft, int mainWidth, int doorWidth, int innerGap, int doorGap) {
+        if (mainWidth <= 0 || doorWidth <= 0 || innerGap < 0 || doorGap < 0)
+            throw new IllegalArgumentException("invalid layout");
+        return new int[]{rowLeft, rowLeft + mainWidth + innerGap,
+                rowLeft + 2 * mainWidth + innerGap + doorGap};
+    }
 }
