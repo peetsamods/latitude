@@ -17,11 +17,9 @@ file and this gate reads it afterwards. It answers three ways, never two:
            or a job that refused to run on the world it was given
   INVALID  neither -- the run left no completion evidence, which is not a pass
 
-A refusal is a failure, not a skip. BiomePreviewHeadlessRunner refuses an export whose recipe
-radius differs from the radius the live Latitude overworld seeded the worldgen context with (a run
-dir left holding a world of another size); that export completed and passed here before, with a
-map 17% different from the clean-run-dir map. The refusal line is the only console evidence, so
-it must fail the run.
+A refusal is a failure, not a skip. A loaded Latitude world's captured coverage plans cannot
+be reused for a different radius, a different seed, or a range of seeds. Every refusal must
+fail the run even if another completion marker appears in the same console capture.
 
 Only PASS exits 0. Wired in build.gradle: the headless run tasks capture their console under
 build/latitude-headless/ and run this gate in doLast, so the task fails when the run did.

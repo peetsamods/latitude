@@ -130,11 +130,11 @@ public final class BiomePreviewHeadlessRunner {
         try {
             int y = Mth.clamp(config.y, 0, 320);
             int radius = resolvePreviewRadius(world, config);
-            if (refuseIfLiveRadiusDiffers("headless", radius) > 0) {
-                return;
-            }
             int firstStep = !config.steps().isEmpty() ? config.steps().get(0) : 64;
             long effectiveSeed = config.seedOverride != null ? config.seedOverride : worldSeed;
+            if (refuseIfLiveContextDiffers("headless", world, radius, effectiveSeed, 1)) {
+                return;
+            }
             String runLabel = BiomePreviewExporter.resolveRunLabel(config.runLabel);
             Path outputDir = config.outDir != null ? config.outDir : defaultOutDir(server.getServerDirectory());
 
@@ -203,7 +203,8 @@ public final class BiomePreviewHeadlessRunner {
             int radius = config.radiusBlocks != null
                     ? Math.max(1, config.radiusBlocks)
                     : radiusFromSizeOrWorld(config.sizePreset, world);
-            if (refuseIfLiveRadiusDiffers("search", radius) > 0) {
+            if (refuseIfLiveContextDiffers(
+                    "search", world, radius, config.seedStart, Math.max(1, config.seedCount))) {
                 return;
             }
             Instant generatedAt = Instant.now();
@@ -271,11 +272,11 @@ public final class BiomePreviewHeadlessRunner {
             int radius = config.radiusBlocks != null
                     ? Math.max(1, config.radiusBlocks)
                     : radiusFromSizeOrWorld(config.sizePreset, world);
-            if (refuseIfLiveRadiusDiffers("audit", radius) > 0) {
-                return;
-            }
             long worldSeed = world.getSeed();
             long effectiveSeed = config.seedOverride != null ? config.seedOverride : worldSeed;
+            if (refuseIfLiveContextDiffers("audit", world, radius, effectiveSeed, 1)) {
+                return;
+            }
 
             LatitudeBiomes.setWorldSeed(effectiveSeed);
             LatitudeBiomes.setActiveRadiusBlocks(radius);
@@ -345,17 +346,16 @@ public final class BiomePreviewHeadlessRunner {
             int radius = config.radiusBlocks != null
                     ? Math.max(1, config.radiusBlocks)
                     : radiusFromSizeOrWorld(config.sizePreset, world);
-            int refusedLiveRadius = refuseIfLiveRadiusDiffers("locate-boundary", radius);
-            if (refusedLiveRadius > 0) {
+            long effectiveSeed = config.seedOverride != null ? config.seedOverride : worldSeed;
+            if (refuseIfLiveContextDiffers("locate-boundary", world, radius, effectiveSeed, 1)) {
                 writeLocateBoundaryProof(proofFile, List.of(
                         "status=fail",
-                        "error=live_overworld_radius_differs_from_recipe",
-                        "live_radius=" + refusedLiveRadius,
+                        "error=live_overworld_context_differs_from_recipe",
+                        "live_radius=" + liveLatitudeOverworldRadius(),
                         "radius=" + radius,
                         "verdict=fail"));
                 return;
             }
-            long effectiveSeed = config.seedOverride != null ? config.seedOverride : worldSeed;
 
             LatitudeBiomes.setWorldSeed(effectiveSeed);
             LatitudeBiomes.setActiveRadiusBlocks(radius);
@@ -986,40 +986,29 @@ public final class BiomePreviewHeadlessRunner {
         return LatitudeBiomes.hasActiveWorldgenAuthority() ? LatitudeBiomes.getActiveRadiusBlocks() : 0;
     }
 
-    /**
-     * Refuses a job whose recipe radius differs from the live Latitude overworld's.
-     *
-     * <p>Every job re-seeds {@link LatitudeBiomes} with the recipe's seed and radius, and that
-     * rebuilds the province authority. It does not rebuild the rest of what
-     * {@link LatitudeBiomes#activateWorldgenContext} derived from the live world's radius: the
-     * vanilla, surface-water and cave coverage plans, and the size-aware representation profile
-     * captured when that world was created. A run dir left holding a Latitude world of another
-     * size therefore exported a map that was neither that world's nor a fresh world's (47 biomes
-     * instead of 50 at identical band counts, 17% of samples different) under a green run gate,
-     * with nothing in the console to show for it. Rebuilding that state faithfully would mean
-     * re-deriving a birth profile and coverage plans for a world that was never created, so the
-     * job refuses instead. A clean run dir is the reference input: a Latitude world that does
-     * match the recipe passes this guard but still exports through that world's own policy and
-     * coverage plans, which measured ~17% away from the clean-run-dir map at the same radius and
-     * seed. Whether that case should refuse too is a maintainer ruling; this guard closes the
-     * case that passed silently.
-     *
-     * <p>The log line is a failure marker for {@code tools/verify_headless_run.py}; keep its shape.
-     *
-     * @return the live radius when it differs from {@code recipeRadius} (the job must stop), else 0
-     */
-    private static int refuseIfLiveRadiusDiffers(String jobTag, int recipeRadius) {
+    /** Preview setters cannot rebuild the loaded world's captured coverage plans. */
+    private static boolean refuseIfLiveContextDiffers(
+            String jobTag, ServerLevel world, int recipeRadius, long recipeSeed, int seedCount) {
         int liveRadius = liveLatitudeOverworldRadius();
-        if (liveRadius <= 0 || liveRadius == recipeRadius) {
-            return 0;
+        long liveSeed = world.getSeed();
+        if (HeadlessWorldContextPolicy.canUseRecipe(
+                liveRadius > 0, liveRadius, liveSeed, recipeRadius, recipeSeed, seedCount)) {
+            return false;
         }
-        GlobeMod.LOGGER.error(
-                "[latdev][{}] REFUSED: live overworld radius {} differs from recipe radius {}"
-                        + " (the run dir holds a Latitude world of another size, whose coverage plans"
-                        + " would shape the output silently; export from a clean run dir)",
-                jobTag, liveRadius, recipeRadius);
-        return liveRadius;
+        if (liveRadius != recipeRadius) {
+            GlobeMod.LOGGER.error(
+                    "[latdev][{}] REFUSED: live overworld radius {} differs from recipe radius {}",
+                    jobTag, liveRadius, recipeRadius);
+        } else {
+            GlobeMod.LOGGER.error(
+                    "[latdev][{}] REFUSED: recipe seed range does not match the loaded Latitude world "
+                            + "(liveSeed={} recipeSeed={} seedCount={})",
+                    jobTag, liveSeed, recipeSeed, seedCount);
+        }
+        return true;
     }
+
+
 
     private static Config parseConfig() {
         Map<String, String> kv = new HashMap<>();
