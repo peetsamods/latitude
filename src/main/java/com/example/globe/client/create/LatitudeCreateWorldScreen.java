@@ -1535,6 +1535,9 @@ public class LatitudeCreateWorldScreen extends Screen {
                 this.allowCommands = vanillaState.isAllowCommands();
                 this.worldNameInput = vanillaState.getName();
                 this.seedInput = vanillaState.getSeed();
+                this.generateStructures = vanillaState.isGenerateStructures();
+                this.bonusChest = vanillaState.isBonusChest();
+                this.gameRules = vanillaState.getGameRules();
             }
             this.minecraft.setScreenAndShow(this);
         };
@@ -1570,6 +1573,11 @@ public class LatitudeCreateWorldScreen extends Screen {
             // null temp-datapack dir is valid: vanilla's getOrCreateTempDataPackDir creates on demand.
             CreateWorldScreen vanillaScreen = CreateWorldScreen.createFromExisting(
                     this.minecraft, returnToLatitude, carried, this.holder, null);
+            WorldCreationUiState outboundState =
+                    ((VanillaCreateWorldUiStateCarrier) (Object) vanillaScreen).globe$getUiState();
+            outboundState.setGenerateStructures(this.generateStructures);
+            outboundState.setBonusChest(this.bonusChest);
+            outboundState.setGameRules(this.gameRules);
             this.minecraft.setScreenAndShow(vanillaScreen);
         } catch (RuntimeException exception) {
             // Opening can throw before ever showing a screen (e.g. resource reload failure);
