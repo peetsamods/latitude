@@ -19,7 +19,7 @@ public class WorldRendererWorldBorderMixin {
     // alongside Latitude's presentation, never a crash.
     @Inject(method = "renderWorldBorder", at = @At("HEAD"), cancellable = true, require = 0, expect = 1)
     private void globe$cancelVanillaWorldBorder(Camera camera, CallbackInfo ci) {
-        if (!GlobeClientState.SUPPRESS_VANILLA_EW_BORDER) return;
+        if (!GlobeClientState.SUPPRESS_VANILLA_EW_BORDER || !GlobeClientState.isGlobeWorld()) return;
         ci.cancel();
     }
 }

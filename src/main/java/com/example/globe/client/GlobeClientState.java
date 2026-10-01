@@ -283,7 +283,10 @@ public final class GlobeClientState {
     }
 
     public static boolean isGlobeWorld() {
-        return globeWorld;
+        Minecraft client = Minecraft.getInstance();
+        return ClientWorldIdentityPolicy.shouldPresent(globeWorld,
+                client != null && client.level != null
+                        && client.level.dimension().location().equals(Level.OVERWORLD.location()));
     }
 
     public static void setGlobeWorld(boolean value) {
@@ -310,7 +313,7 @@ public final class GlobeClientState {
     }
 
     public static Eval evaluate(Minecraft client) {
-        if (client.player == null || client.level == null) {
+        if (client == null || client.player == null || client.level == null || !isGlobeWorld()) {
             cachedEvalWorldTime = Long.MIN_VALUE;
             cachedEval = null;
             return Eval.INACTIVE;
@@ -329,27 +332,6 @@ public final class GlobeClientState {
 
         boolean surfaceOk = isSurfaceOk(client, pos);
         updateEwShelterState(client, pos, worldTime);
-
-        boolean active = globeWorld;
-        if (!active) {
-            double half = com.example.globe.util.LatitudeMath.halfSize(client.level.getWorldBorder());
-            active = Math.abs(half - 3750.0) < 1.0
-                    || Math.abs(half - 5000.0) < 1.0
-                    || Math.abs(half - 7500.0) < 1.0
-                    || Math.abs(half - 10000.0) < 1.0
-                    || Math.abs(half - 15000.0) < 1.0
-                    || Math.abs(half - 20000.0) < 1.0;
-        }
-
-        // If server says it's a globe world, trust it explicitly and ignore client-side registry key quirks.
-        if (!globeWorld && !client.level.dimension().location().equals(Level.OVERWORLD.location())) {
-            active = false;
-        }
-
-        if (!active) {
-            cachedEval = new Eval(false, surfaceOk, absX, absZ, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, false, false);
-            return cachedEval;
-        }
 
         var world = client.level;
         var player = client.player;
