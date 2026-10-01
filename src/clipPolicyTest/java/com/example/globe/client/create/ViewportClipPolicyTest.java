@@ -7,6 +7,7 @@ public final class ViewportClipPolicyTest {
     }
 
     public static void main(String[] args) throws Exception {
+        VanillaCreateOptionsCarryTest.run();
         acceptsFullyVisibleWidgetClick();
         acceptsVisiblePartOfTopClippedWidget();
         acceptsVisiblePartOfBottomClippedWidget();
