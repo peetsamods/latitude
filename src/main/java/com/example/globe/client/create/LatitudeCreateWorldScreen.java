@@ -1504,6 +1504,11 @@ public class LatitudeCreateWorldScreen extends Screen {
             // no extracted world folder to carry over.
             CreateWorldScreen vanillaScreen = CreateWorldScreen.createFromExisting(
                     this.minecraft, returnScreen, carried, this.holder, null);
+            WorldCreationUiState outboundState =
+                    ((VanillaCreateWorldUiStateCarrier) (Object) vanillaScreen).globe$getVanillaUiState();
+            outboundState.setGenerateStructures(this.generateStructures);
+            outboundState.setBonusChest(this.bonusChest);
+            outboundState.setGameRules(this.gameRules);
             this.minecraft.setScreen(vanillaScreen);
         } catch (RuntimeException exception) {
             // Never leave a payload armed for a screen that failed to open; the next create-world
