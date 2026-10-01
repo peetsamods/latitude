@@ -25,7 +25,7 @@ See [`docs/design-spec.md`](docs/design-spec.md).
 
 ## Dependencies
 
-- Minecraft 1.21.11
+- Minecraft 1.21.1
 - Fabric Loader 0.17.3 or newer
 - Fabric API
 - Java 21 or newer
@@ -58,7 +58,7 @@ On Windows, use `.\gradlew.bat clean build`.
 
 The remapped runtime JAR is:
 
-- `build/libs/latitude-1.5.1-beta.3+1.21.11.jar`
+- `build/libs/latitude-1.5.2-beta+1.21.1.jar`
 
 Do not upload development or sources JARs as the playable release file.
 

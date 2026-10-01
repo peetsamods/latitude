@@ -13,6 +13,7 @@
 - Latitude warnings and border presentation stay confined to Latitude Overworlds.
 - Worlds with seed zero initialize their climate regions correctly.
 - First-spawn checks respect collision shapes, fluids, and hazardous blocks.
+- First spawn can search farther along the selected climate zone for safe land.
 - First-spawn and upland planning use the painted biome and measured terrain, including biome-pack mountains.
 - Structure checks use the same resolved biomes as world generation.
 - World-list button labels fit better at normal and narrow window sizes.
