@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class WorldRendererWorldBorderMixin {
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void globe$cancelVanillaWorldBorder(WorldBorderRenderState state, Vec3 cameraPos, double viewDistanceBlocks, double farPlaneDistance, CallbackInfo ci) {
-        if (!GlobeClientState.DEBUG_EW_SUPPRESS_VANILLA_BORDER) return;
+        if (!GlobeClientState.DEBUG_EW_SUPPRESS_VANILLA_BORDER || !GlobeClientState.isGlobeWorld()) return;
         ci.cancel();
     }
 }
