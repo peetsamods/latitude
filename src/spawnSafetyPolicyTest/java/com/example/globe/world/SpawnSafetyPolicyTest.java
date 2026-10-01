@@ -19,6 +19,7 @@ public final class SpawnSafetyPolicyTest {
     private static final int WARNING_PADDING = 64;
 
     public static void main(String[] args) throws Exception {
+        SpawnCellShapePolicyTest.run();
         searchBoundsStayInsideTerrainAndWarningMargins();
         spawnLatitudesSitAtTheMidpointOfTheirOwnBand();
         initialSpawnStaysInRequestedLatitudeWithBoundedFallback();
@@ -678,10 +679,10 @@ public final class SpawnSafetyPolicyTest {
                 "private static boolean isOpenSpawnCell(",
                 "private static BlockPos rejectSpawnColumn(");
         assertTrue(
-                openCell.contains("if (state.blocksMotion()) { return false; }"),
+                openCell.contains("state.getCollisionShape(world, pos).isEmpty()"),
                 "any block with a collision box obstructs the spawn cell");
         assertTrue(
-                openCell.contains("!SpawnSafetyPolicy.isDangerousSurfaceId(id.toString())"),
+                openCell.contains("SpawnSafetyPolicy.canOccupySpawnCell("),
                 "a collision-free but harmful block (berry bush, fire, powder snow) still obstructs");
     }
 

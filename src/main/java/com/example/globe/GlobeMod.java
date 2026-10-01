@@ -1324,14 +1324,11 @@ public class GlobeMod implements ModInitializer {
      */
     private static boolean isOpenSpawnCell(ServerLevel world, BlockPos pos) {
         BlockState state = world.getBlockState(pos);
-        if (state.isAir()) {
-            return true;
-        }
-        if (state.blocksMotion()) {
-            return false;
-        }
-        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
-        return id != null && !SpawnSafetyPolicy.isDangerousSurfaceId(id.toString());
+        var id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        return SpawnSafetyPolicy.canOccupySpawnCell(
+                state.getCollisionShape(world, pos).isEmpty(),
+                state.getFluidState().isEmpty(),
+                id == null ? null : id.toString());
     }
 
     private static BlockPos rejectSpawnColumn(ServerLevel world, BlockPos spawn, BlockPos ground, String reason) {

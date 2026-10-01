@@ -60,6 +60,12 @@ public final class SpawnSafetyPolicy {
     private SpawnSafetyPolicy() {
     }
 
+    /** Accept only dry, collision-free cells whose block is not intrinsically harmful. */
+    public static boolean canOccupySpawnCell(boolean collisionEmpty, boolean fluidEmpty, String blockId) {
+        return collisionEmpty && fluidEmpty && blockId != null && !isDangerousSurfaceId(blockId);
+    }
+
+
     /**
      * Returns the largest absolute X that is both inside the terrain-search margin and outside
      * Latitude's east/west warning zone. Sampling inside this bound avoids moving a validated
