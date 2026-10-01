@@ -1263,8 +1263,8 @@ public class GlobeMod implements ModInitializer {
         // Same validation as the old tryLandAt
         if (!world.getFluidState(spawn).isEmpty()) return null;
         if (!world.getFluidState(spawn.above()).isEmpty()) return null;
-        if (!world.getBlockState(spawn).isAir()) return null;
-        if (!world.getBlockState(spawn.above()).isAir()) return null;
+        if (!isOpenSpawnCell(world, spawn)) return null;
+        if (!isOpenSpawnCell(world, spawn.above())) return null;
         if (!world.getFluidState(ground).isEmpty()) return null;
         BlockState groundState = world.getBlockState(ground);
         ResourceLocation groundBlockId = BuiltInRegistries.BLOCK.getKey(groundState.getBlock());
@@ -1280,6 +1280,15 @@ public class GlobeMod implements ModInitializer {
         LOGGER.info("[Latitude] Prepared spawn target surface: x={} y={} z={} loadedTeleportChunks={}",
                 x, spawn.getY(), z, loadedNeighborChunks + 1);
         return spawn;
+    }
+
+    private static boolean isOpenSpawnCell(ServerLevel world, BlockPos pos) {
+        BlockState state = world.getBlockState(pos);
+        var id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        return SpawnSafetyPolicy.canOccupySpawnCell(
+                state.getCollisionShape(world, pos).isEmpty(),
+                state.getFluidState().isEmpty(),
+                id == null ? null : id.toString());
     }
 
     private static void loadSpawnTargetChunk(ServerLevel world, int x, int z) {
