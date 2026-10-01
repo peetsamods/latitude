@@ -205,21 +205,25 @@ public abstract class SelectWorldScreenVanillaDoorMixin {
         // a narrowed button whose label no longer fits enables a scissor at that negative x, which
         // the renderer rejects outright rather than clipping.
         int envelope = VanillaFooterLayoutPolicy.fittedEnvelope(otherRowRight - otherRowLeft, self.width);
-        int width = VanillaFooterLayoutPolicy.buttonWidth(3, envelope);
+        int gap = VanillaFooterLayoutPolicy.SPACING;
+        int doorWidth = VanillaFooterLayoutPolicy.doorWidthForThree(envelope, gap, gap,
+                client.font.width(Component.literal("Vanilla...")) + 12);
+        int width = VanillaFooterLayoutPolicy.mainWidthForThree(envelope, gap, gap, doorWidth);
         int left = Math.max(VanillaFooterLayoutPolicy.SCREEN_MARGIN, otherRowLeft);
 
+        int[] xs = VanillaFooterLayoutPolicy.threeButtonXsWeighted(left, width, doorWidth, gap, gap);
         play.setWidth(width);
-        play.setX(left);
+        play.setX(xs[0]);
         play.setY(rowY);
         create.setWidth(width);
-        create.setX(VanillaFooterLayoutPolicy.buttonXFrom(left, width, 1));
+        create.setX(xs[1]);
         create.setY(rowY);
 
-        int doorX = VanillaFooterLayoutPolicy.buttonXFrom(left, width, 2);
+        int doorX = xs[2];
         if (this.globe$doorButton == null) {
             this.globe$doorButton = Button.builder(
                             Component.literal("Vanilla..."), button -> globe$openVanillaDoor(client, self))
-                    .bounds(doorX, rowY, width, rowHeight)
+                    .bounds(doorX, rowY, doorWidth, rowHeight)
                     .tooltip(Tooltip.create(Component.literal(
                             "Open Minecraft's own world creation screen, skipping Latitude's")))
                     .build();
@@ -228,7 +232,7 @@ public abstract class SelectWorldScreenVanillaDoorMixin {
         } else {
             this.globe$doorButton.setX(doorX);
             this.globe$doorButton.setY(rowY);
-            this.globe$doorButton.setWidth(width);
+            this.globe$doorButton.setWidth(doorWidth);
             McCompat.setWidgetHeight(this.globe$doorButton, rowHeight);
             this.globe$doorButton.visible = true;
             this.globe$doorButton.active = true;

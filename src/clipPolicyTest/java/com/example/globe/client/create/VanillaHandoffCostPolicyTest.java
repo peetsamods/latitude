@@ -470,9 +470,9 @@ public final class VanillaHandoffCostPolicyTest {
         String door = methodSection(read(DOOR_MIXIN), "private void globe$layOutVanillaDoor(");
         assertTrue(!door.contains("createXForFit"),
                 "the old refuse-based fit-check is gone, not merely unreachable");
-        assertTrue(door.contains("VanillaFooterLayoutPolicy.buttonWidth(3, envelope)"),
-                "narrows to a 3-way split of the row's own envelope, the same policy the "
-                        + "escape-hatch footer already uses for its own 2-to-3 narrowing");
+        assertTrue(door.contains("VanillaFooterLayoutPolicy.doorWidthForThree(envelope, gap, gap,")
+                        && door.contains("VanillaFooterLayoutPolicy.mainWidthForThree(envelope, gap, gap, doorWidth)"),
+                "all three buttons share the original envelope, with label-measured width returned to Play and Create");
         assertTrue(door.contains("play.setWidth(width)") && door.contains("create.setWidth(width)"),
                 "BOTH Play and Create are narrowed, not just Create -- a real behaviour change from "
                         + "the earlier design, which never touched Play at all");
@@ -520,9 +520,8 @@ public final class VanillaHandoffCostPolicyTest {
         assertTrue(!door.contains("centreX"),
                 "and no computed screen centre either -- that was the version whose left edge could "
                         + "go negative");
-        assertTrue(door.contains("VanillaFooterLayoutPolicy.buttonWidth(3, envelope)"),
-                "still narrows to a 3-way split, so the door stays always-present rather than "
-                        + "reverting to appending a fourth button past Create's edge");
+        assertTrue(door.contains("VanillaFooterLayoutPolicy.threeButtonXsWeighted(left, width, doorWidth, gap, gap)"),
+                "all three buttons remain inside the anchored row instead of appending the door past Create's edge");
     }
 
     /**
