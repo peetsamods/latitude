@@ -463,6 +463,7 @@ public final class LatitudeBiomes {
     private static final boolean SKIP_PREVIEW_HEIGHT_FOR_BIOME_PNG =
             Boolean.parseBoolean(System.getProperty("latitude.skipPreviewHeightForBiomePng", "true"));
     private static volatile long WORLD_SEED = 0L;
+    private static volatile boolean WORLD_SEED_INITIALIZED = false;
     private static volatile WorldgenPolicyVersion ACTIVE_WORLDGEN_POLICY = WorldgenPolicyVersion.MODERN_1_3;
     /** Birth-locked V1 roster. Null means a legacy world or a deliberately fail-closed V1 load. */
     private static volatile BiomeSelectionProfile ACTIVE_PROVIDER_TICKET_PROFILE = null;
@@ -777,6 +778,7 @@ public final class LatitudeBiomes {
 
     public static void setWorldSeed(long seed) {
         WORLD_SEED = seed;
+        WORLD_SEED_INITIALIZED = true;
         OCEAN_DISTANCE_FIELD = new OceanDistanceField(seed);
         PALE_GARDEN_ANCHOR_CACHE = null;
         rebuildProvinceAuthority();
@@ -896,6 +898,7 @@ public final class LatitudeBiomes {
                 ? donorSource.createResolver(sampler)
                 : null;
         WORLD_SEED = seed;
+        WORLD_SEED_INITIALIZED = true;
         OCEAN_DISTANCE_FIELD = new OceanDistanceField(seed);
         clearTagSelectionCaches();
         PALE_GARDEN_ANCHOR_CACHE = null;
@@ -985,6 +988,7 @@ public final class LatitudeBiomes {
         ACTIVE_WORLDGEN_AUTHORITY = false;
         ACTIVE_RADIUS_BLOCKS = 0;
         WORLD_SEED = 0L;
+        WORLD_SEED_INITIALIZED = false;
         OCEAN_DISTANCE_FIELD = null;
         clearTagSelectionCaches();
         TREED_VEGETAL_CACHE.clear();
@@ -1583,11 +1587,13 @@ public final class LatitudeBiomes {
     private static void rebuildProvinceAuthority() {
         long seed = WORLD_SEED;
         int radius = ACTIVE_RADIUS_BLOCKS;
-        if (seed != 0L && radius > 0) {
+        if (WORLD_SEED_INITIALIZED && radius > 0) {
             PROVINCE_AUTHORITY = new ProvinceAuthority(seed, radius);
             if (DEBUG_PROVINCE) {
                 LOGGER.info("[LAT][PROVINCE] rebuilt authority seed={} radius={}", seed, radius);
             }
+        } else {
+            PROVINCE_AUTHORITY = null;
         }
     }
 
