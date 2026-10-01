@@ -212,6 +212,9 @@ public final class LatitudeStructureLocateService {
         Registry<Biome> biomeRegistry = level.registryAccess().lookupOrThrow(Registries.BIOME);
         RandomState randomState = level.getChunkSource().randomState();
         int worldRadius = GlobeMod.borderRadiusForNoiseGenerator(generator);
+        if ((Object) generator instanceof PaintedBiomeSiting siting) {
+            siting.globe$adoptPaintedBiomeSource(biomeRegistry, randomState, level);
+        }
         LatitudeBiomeSource finalBiomeSource = LatitudeBiomeSource.forStructure(
                 generator.getBiomeSource(), biomeRegistry, worldRadius,
                 generator, randomState, level);
