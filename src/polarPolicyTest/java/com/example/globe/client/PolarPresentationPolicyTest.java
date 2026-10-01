@@ -23,6 +23,7 @@ public final class PolarPresentationPolicyTest {
         ZoneTitlePolicyTest.runAll();
         CreateWorldIntroClockPolicyTest.runAll();
         WorldListZoneFitPolicyTest.runAll();
+        LoadingIdentityPolicyTest.runAll();
         System.out.println("POLAR_PRESENTATION_POLICY_TEST_PASS");
     }
 
