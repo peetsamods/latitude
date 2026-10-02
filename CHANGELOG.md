@@ -7,7 +7,9 @@
 
 ### Fixed
 
+- HUD Studio keeps previews visible and cycles controls correctly from saved settings.
 - World creation keeps structures, bonus chests, and game rules when switching through Minecraft’s world screen.
+- Vanilla world types and Superflat customization remain available from Latitude’s creation screen.
 - Latitude warnings and border presentation stay confined to Latitude Overworlds.
 - Worlds with seed zero initialize their climate regions correctly.
 - First-spawn checks respect collision shapes, fluids, and hazardous blocks.
