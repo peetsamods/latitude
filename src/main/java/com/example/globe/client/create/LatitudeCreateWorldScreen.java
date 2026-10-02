@@ -1465,13 +1465,10 @@ public class LatitudeCreateWorldScreen extends Screen {
             // enabled), and this screen already holds the very context that load would rebuild.
             // createFromExisting takes that context and performs no load at all.
             //
-            // Safe because `holder` is always built from vanilla's NORMAL dimensions -- both the
-            // redirect path (vanilla's own openFresh context) and the datapack-loading path use
-            // WorldPresets.createNormalWorldDimensions -- so the vanilla screen opens on the same
-            // world type openFresh would have given it. Globe's own dimensions are built at world
-            // creation, in LatitudeWorldLauncher, never into this context. If the player changes
-            // packs over there, vanilla's own datapack flow reloads then, which is the only time
-            // the cost is actually owed.
+            // Fresh contexts use vanilla's NORMAL dimensions; Re-create may retain Flat.
+            // Globe's own dimensions are built at world creation, in LatitudeWorldLauncher.
+            // If the player changes packs over there, vanilla's own datapack flow reloads then,
+            // which is the only time the cost is actually owed.
             //
             // Mode mapping matches beginExpedition exactly; the two must not drift.
             GameType gameMode = this.selectedModeIdx == 2 ? GameType.CREATIVE : GameType.SURVIVAL;
@@ -1486,6 +1483,15 @@ public class LatitudeCreateWorldScreen extends Screen {
                     this.minecraft, returnScreen, carried, this.holder, null);
             WorldCreationUiState outboundState =
                     ((VanillaCreateWorldUiStateCarrier) (Object) vanillaScreen).globe$getVanillaUiState();
+            // This vanilla version only recognizes Flat and Debug when inferring a preset from
+            // existing dimensions. Recover Normal for noise contexts so the type selector stays
+            // available, while preserving any preset vanilla already recognized.
+            if (outboundState.getWorldType().preset() == null) {
+                var normalPreset = this.holder.worldgenLoadContext()
+                        .registryOrThrow(Registries.WORLD_PRESET)
+                        .getHolderOrThrow(WorldPresets.NORMAL);
+                outboundState.setWorldType(new WorldCreationUiState.WorldTypeEntry(normalPreset));
+            }
             returnState.set(outboundState);
             outboundState.setGenerateStructures(this.generateStructures);
             outboundState.setBonusChest(this.bonusChest);
