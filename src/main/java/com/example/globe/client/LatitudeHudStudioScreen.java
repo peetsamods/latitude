@@ -166,8 +166,8 @@ public class LatitudeHudStudioScreen extends Screen {
 
         if (activeTab == TAB_COMPASS) {
 
-        this.wCompassStyle = this.addRenderableWidget(CycleButton.<CompassHudConfig.CompassStyle>builder(v -> Component.literal(v == CompassHudConfig.CompassStyle.ANALOG ? "Analog" : "Digital")).withInitialValue(cfg.style)
-                .withValues(CompassHudConfig.CompassStyle.values())
+        this.wCompassStyle = this.addRenderableWidget(CycleButton.<CompassHudConfig.CompassStyle>builder(v -> Component.literal(v == CompassHudConfig.CompassStyle.ANALOG ? "Analog" : "Digital")).withValues(CompassHudConfig.CompassStyle.values())
+                .withInitialValue(cfg.style)
                 .create(panelX, y, widgetW, rowH, Component.literal("Compass Style"), (btn, value) -> {
                     cfg.style = value;
                     CompassHudConfig.saveCurrent();
@@ -198,8 +198,8 @@ public class LatitudeHudStudioScreen extends Screen {
             tooltip(this.wCompassAnalogInnerAlpha, "Controls how solid the compass face is. Lower values show more of the world behind it.");
             trackSidebarWidget(this.wCompassAnalogInnerAlpha, y);
             y += rowH + rowGap;
-            this.wCompassAnalogTheme = this.addRenderableWidget(CycleButton.<CompassHudConfig.AnalogCompassTheme>builder(v -> Component.literal(themeLabel(v))).withInitialValue(cfg.analogTheme)
-                    .withValues(CompassHudConfig.AnalogCompassTheme.values())
+            this.wCompassAnalogTheme = this.addRenderableWidget(CycleButton.<CompassHudConfig.AnalogCompassTheme>builder(v -> Component.literal(themeLabel(v))).withValues(CompassHudConfig.AnalogCompassTheme.values())
+                    .withInitialValue(cfg.analogTheme)
                     .create(panelX, y, widgetW, rowH, Component.literal("Color Scheme"), (btn, value) -> {
                         cfg.analogTheme = value;
                         CompassHudConfig.saveCurrent();
@@ -218,45 +218,45 @@ public class LatitudeHudStudioScreen extends Screen {
             trackSidebarWidget(this.wCompassTransparency, y);
             y += rowH + rowGap;
 
-            this.wCompassBackground = this.addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "ON" : "OFF")).withInitialValue(cfg.showBackground)
-                    .withValues(true, false)
+            this.wCompassBackground = this.addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "ON" : "OFF")).withValues(true, false)
+                    .withInitialValue(cfg.showBackground)
                     .create(panelX, y, widgetW, rowH, Component.literal("Background"), (btn, value) -> cfg.showBackground = value));
             tooltip(this.wCompassBackground, "Toggles the digital compass background box.");
             trackSidebarWidget(this.wCompassBackground, y);
             y += rowH + rowGap;
 
-            this.wCompassBgColor = this.addRenderableWidget(CycleButton.<String>builder(Component::literal).withInitialValue(bgColorName(cfg.backgroundRgb))
-                    .withValues("BLACK", "WHITE", "DARK_GRAY", "BLUE")
+            this.wCompassBgColor = this.addRenderableWidget(CycleButton.<String>builder(Component::literal).withValues("BLACK", "WHITE", "DARK_GRAY", "BLUE")
+                    .withInitialValue(bgColorName(cfg.backgroundRgb))
                     .create(panelX, y, widgetW, rowH, Component.literal("Background Color"), (btn, value) -> cfg.backgroundRgb = bgColorRgb(value)));
             tooltip(this.wCompassBgColor, "Selects the background color for the digital compass.");
             trackSidebarWidget(this.wCompassBgColor, y);
             y += rowH + rowGap;
         }
 
-        this.wCompassTextColor = this.addRenderableWidget(CycleButton.<String>builder(Component::literal).withInitialValue(textColorName(cfg.textRgb))
-                .withValues("WHITE", "BLACK", "YELLOW", "RED", "CYAN")
+        this.wCompassTextColor = this.addRenderableWidget(CycleButton.<String>builder(Component::literal).withValues("WHITE", "BLACK", "YELLOW", "RED", "CYAN")
+                .withInitialValue(textColorName(cfg.textRgb))
                 .create(panelX, y, widgetW, rowH, Component.literal("Text Color"), (btn, value) -> cfg.textRgb = textColorRgb(value)));
         tooltip(this.wCompassTextColor, "Selects the text color used for the compass and labels.");
         trackSidebarWidget(this.wCompassTextColor, y);
         y += rowH + rowGap;
 
         if (analog) {
-            this.wCompassAnalogShowLatitude = this.addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "ON" : "OFF")).withInitialValue(Boolean.TRUE.equals(cfg.analogShowLatitude))
-                    .withValues(true, false)
+            this.wCompassAnalogShowLatitude = this.addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "ON" : "OFF")).withValues(true, false)
+                    .withInitialValue(Boolean.TRUE.equals(cfg.analogShowLatitude))
                     .create(panelX, y, widgetW, rowH, Component.literal("Analog Latitude"), (btn, value) -> cfg.analogShowLatitude = value));
             tooltip(this.wCompassAnalogShowLatitude, "Shows latitude next to the analog compass.");
             trackSidebarWidget(this.wCompassAnalogShowLatitude, y);
             y += rowH + rowGap;
         } else {
-            this.wCompassShowLatitude = this.addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "ON" : "OFF")).withInitialValue(Boolean.TRUE.equals(cfg.showLatitude))
-                    .withValues(true, false)
+            this.wCompassShowLatitude = this.addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "ON" : "OFF")).withValues(true, false)
+                    .withInitialValue(Boolean.TRUE.equals(cfg.showLatitude))
                     .create(panelX, y, widgetW, rowH, Component.literal("Show Latitude"), (btn, value) -> cfg.showLatitude = value));
             tooltip(this.wCompassShowLatitude, "Shows latitude inside the digital compass line.");
             trackSidebarWidget(this.wCompassShowLatitude, y);
             y += rowH + rowGap;
 
-            this.wCompassCompact = this.addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "ON" : "OFF")).withInitialValue(cfg.compactHud)
-                    .withValues(true, false)
+            this.wCompassCompact = this.addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "ON" : "OFF")).withValues(true, false)
+                    .withInitialValue(cfg.compactHud)
                     .create(panelX, y, widgetW, rowH, Component.literal("Compact HUD"), (btn, value) -> cfg.compactHud = value));
             tooltip(this.wCompassCompact, "Uses a tighter layout with minimal spacing.");
             trackSidebarWidget(this.wCompassCompact, y);
@@ -281,8 +281,8 @@ public class LatitudeHudStudioScreen extends Screen {
         trackSidebarWidget(this.wLocationTextScale, y);
         y += rowH + rowGap;
 
-        this.wCompassAttachHotbar = this.addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "ON" : "OFF")).withInitialValue(cfg.attachToHotbarCompass)
-                .withValues(true, false)
+        this.wCompassAttachHotbar = this.addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "ON" : "OFF")).withValues(true, false)
+                .withInitialValue(cfg.attachToHotbarCompass)
                 .create(panelX, y, widgetW, rowH, Component.literal("Attach to Hotbar"), (btn, value) -> {
                     cfg.attachToHotbarCompass = value;
                     CompassHudConfig.saveCurrent();
@@ -292,8 +292,8 @@ public class LatitudeHudStudioScreen extends Screen {
         y += rowH + rowGap;
 
         this.wLocationDetail = this.addRenderableWidget(CycleButton.<LocationDetailPolicy.Mode>builder(
-                        value -> Component.literal(value.label())).withInitialValue(cfg.locationDetailMode())
-                .withValues(LocationDetailPolicy.Mode.values())
+                        value -> Component.literal(value.label())).withValues(LocationDetailPolicy.Mode.values())
+                .withInitialValue(cfg.locationDetailMode())
                 .create(panelX, y, widgetW, rowH, Component.literal("Location Detail"), (btn, value) -> {
                     cfg.setLocationDetailMode(value);
                     CompassHudConfig.saveCurrent();
@@ -306,8 +306,8 @@ public class LatitudeHudStudioScreen extends Screen {
         y += rowH + rowGap;
 
         this.wCustomBiomeSource = this.addRenderableWidget(CycleButton.<Boolean>builder(
-                        v -> Component.literal(v ? "ON" : "OFF")).withInitialValue(cfg.showCustomBiomeSource)
-                .withValues(true, false)
+                        v -> Component.literal(v ? "ON" : "OFF")).withValues(true, false)
+                .withInitialValue(cfg.showCustomBiomeSource)
                 .create(panelX, y, widgetW, rowH, Component.literal("Show Biome Source"), (btn, value) -> {
                     cfg.showCustomBiomeSource = value;
                     CompassHudConfig.saveCurrent();
@@ -318,8 +318,8 @@ public class LatitudeHudStudioScreen extends Screen {
         trackSidebarWidget(this.wCustomBiomeSource, y);
         y += rowH + rowGap;
 
-        this.wLocationFollow = this.addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "FOLLOW" : "DETACH")).withInitialValue(cfg.zoneFollowsCompass)
-                .withValues(true, false)
+        this.wLocationFollow = this.addRenderableWidget(CycleButton.<Boolean>builder(v -> Component.literal(v ? "FOLLOW" : "DETACH")).withValues(true, false)
+                .withInitialValue(cfg.zoneFollowsCompass)
                 .create(panelX, y, widgetW, rowH, Component.literal("Location Placement"), (btn, value) -> {
                     cfg.zoneFollowsCompass = value;
                     CompassHudConfig.saveCurrent();
@@ -333,8 +333,8 @@ public class LatitudeHudStudioScreen extends Screen {
 
         } else if (activeTab == TAB_TITLE) {
             this.wZoneEnterTitle = this.addRenderableWidget(CycleButton.<Boolean>builder(
-                            v -> Component.literal(v ? "ON" : "OFF")).withInitialValue(LatitudeConfig.zoneEnterTitleEnabled)
-                    .withValues(true, false)
+                            v -> Component.literal(v ? "ON" : "OFF")).withValues(true, false)
+                    .withInitialValue(LatitudeConfig.zoneEnterTitleEnabled)
                     .create(panelX, y, widgetW, rowH, Component.literal("Zone Enter Title"), (btn, value) -> {
                         LatitudeConfig.zoneEnterTitleEnabled = value;
                         LatitudeConfig.saveCurrent();
@@ -373,8 +373,8 @@ public class LatitudeHudStudioScreen extends Screen {
             trackSidebarWidget(this.wTitleScale, y);
         } else {
             this.wShowHud = this.addRenderableWidget(CycleButton.<Boolean>builder(
-                            v -> Component.literal(v ? "ON" : "OFF")).withInitialValue(cfg.enabled)
-                    .withValues(true, false)
+                            v -> Component.literal(v ? "ON" : "OFF")).withValues(true, false)
+                    .withInitialValue(cfg.enabled)
                     .create(panelX, y, widgetW, rowH, Component.literal("Show HUD"), (btn, value) -> {
                         cfg.enabled = value;
                         CompassHudConfig.saveCurrent();
@@ -384,8 +384,8 @@ public class LatitudeHudStudioScreen extends Screen {
             y += rowH + rowGap;
 
             this.wDisplayWhen = this.addRenderableWidget(CycleButton.<CompassHudConfig.ShowMode>builder(
-                            LatitudeHudStudioScreen::showModeLabel).withInitialValue(cfg.showMode)
-                    .withValues(CompassHudConfig.ShowMode.values())
+                            LatitudeHudStudioScreen::showModeLabel).withValues(CompassHudConfig.ShowMode.values())
+                    .withInitialValue(cfg.showMode)
                     .create(panelX, y, widgetW, rowH, Component.literal("Display When"), (btn, value) -> {
                         cfg.showMode = value;
                         CompassHudConfig.saveCurrent();
@@ -395,8 +395,8 @@ public class LatitudeHudStudioScreen extends Screen {
             y += rowH + rowGap;
 
             this.wWarningMessages = this.addRenderableWidget(CycleButton.<Boolean>builder(
-                            v -> Component.literal(v ? "ON" : "OFF")).withInitialValue(LatitudeConfig.showWarningMessages)
-                    .withValues(true, false)
+                            v -> Component.literal(v ? "ON" : "OFF")).withValues(true, false)
+                    .withInitialValue(LatitudeConfig.showWarningMessages)
                     .create(panelX, y, widgetW, rowH, Component.literal("Warning Messages"), (btn, value) -> {
                         LatitudeConfig.showWarningMessages = value;
                         LatitudeConfig.saveCurrent();
@@ -406,8 +406,8 @@ public class LatitudeHudStudioScreen extends Screen {
             y += rowH + rowGap;
 
             this.wPlacementGrid = this.addRenderableWidget(CycleButton.<Boolean>builder(
-                            v -> Component.literal(v ? "SNAP" : "FREE")).withInitialValue(LatitudeConfig.hudSnapEnabled)
-                    .withValues(true, false)
+                            v -> Component.literal(v ? "SNAP" : "FREE")).withValues(true, false)
+                    .withInitialValue(LatitudeConfig.hudSnapEnabled)
                     .create(panelX, y, widgetW, rowH, Component.literal("HUD Placement"), (btn, value) -> {
                         LatitudeConfig.hudSnapEnabled = value;
                         LatitudeConfig.saveCurrent();
