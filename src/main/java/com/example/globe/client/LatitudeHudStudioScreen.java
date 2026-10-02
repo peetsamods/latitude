@@ -9,6 +9,7 @@ import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
+import net.minecraft.client.gui.components.Renderable;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -455,17 +456,6 @@ public class LatitudeHudStudioScreen extends Screen {
         }
     }
 
-    /**
-     * Not an {@code @Override}: Screen.render calls a four-argument renderBackground from 1.20.2
-     * on, and 1.20.1 does not declare that overload. The studio paints the identical translucent
-     * backdrop itself at the top of render(), before its previews, so on 1.20.2 to 1.20.4 the
-     * inherited pass would paint the same darkening a second time, over the previews, from inside
-     * super.render(). Declaring the newer overload here makes that pass a no-op where it exists
-     * and is inert on 1.20.1.
-     */
-    public void renderBackground(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
-    }
-
     @Override
     public void render(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         this.lastMouseX = mouseX;
@@ -523,7 +513,14 @@ public class LatitudeHudStudioScreen extends Screen {
 
         applySidebarScroll();
         drawSidebarScrollbar(ctx);
-        super.render(ctx, mouseX, mouseY, delta);
+        // Every studio control is registered with addRenderableWidget, so children preserves
+        // their render order. Screen.render adds another background pass on 1.20.2+, which
+        // would cover the previews; draw these controls without that version-specific pass.
+        for (var child : this.children()) {
+            if (child instanceof Renderable renderable) {
+                renderable.render(ctx, mouseX, mouseY, delta);
+            }
+        }
         drawActiveTabUnderline(ctx);
 
         if (sidebarVisible) {

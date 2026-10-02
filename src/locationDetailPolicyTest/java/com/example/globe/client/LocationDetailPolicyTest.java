@@ -401,20 +401,25 @@ public final class LocationDetailPolicyTest {
     }
 
     /**
-     * Screen.render paints a translucent in-game backdrop through a four-argument
-     * renderBackground from 1.20.2 on. The studio draws that backdrop itself before its previews,
-     * so the inherited pass would darken the previews a second time from inside super.render().
-     * The studio must declare the newer overload as a no-op (without @Override: 1.20.1 lacks it).
+     * Screen.render adds a background pass on 1.20.2+, but its newer overload cannot be
+     * overridden by a named method remapped with 1.20.1 mappings. The studio owns its backdrop
+     * and draws its renderable children directly; every control must stay in that shared list.
      */
     private static void hudStudioKeepsTheInheritedBackgroundPassOffItsPreviews() throws IOException {
         String studio = read("src/main/java/com/example/globe/client/LatitudeHudStudioScreen.java");
-        int at = studio.indexOf("public void renderBackground(GuiGraphics ctx, int mouseX, int mouseY, float delta) {");
-        assertTrue(at >= 0, "the studio must declare the four-argument renderBackground");
-        String body = studio.substring(at, studio.indexOf("}", at));
-        assertTrue(!body.contains("super.renderBackground") && !body.contains("fill"),
-                "the four-argument renderBackground must be a no-op");
-        assertTrue(!studio.substring(Math.max(0, at - 40), at).contains("@Override"),
-                "the overload is declared without @Override so 1.20.1 still compiles");
+        String render = slice(studio, "public void render(", "private void drawActiveTabUnderline(");
+        assertTrue(!render.contains("super.render("),
+                "the inherited renderer must not paint another background over the previews");
+        assertTrue(!studio.contains("public void renderBackground("),
+                "a newer named overload cannot suppress the remapped native background method");
+        assertTrue(render.indexOf("ctx.fillGradient(") < render.indexOf("CompassHud.renderAdjustPreview("),
+                "the studio backdrop precedes the compass preview");
+        assertTrue(render.indexOf("this.children()") > render.indexOf("CompassHud.renderAdjustPreview("),
+                "registered controls render after the previews");
+        assertTrue(render.contains("renderable.render(ctx, mouseX, mouseY, delta)"),
+                "the controls still receive the native rendering arguments");
+        assertTrue(!studio.contains("addRenderableOnly(") && !studio.contains("addWidget("),
+                "studio registrations must keep the rendered controls and children in the same order");
     }
 
     private static String read(String relativePath) throws IOException {
