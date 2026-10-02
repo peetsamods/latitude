@@ -9,6 +9,7 @@
 
 ### Fixed
 
+- HUD Studio controls cycle correctly from their saved settings.
 - World creation keeps structures, bonus chests, and game rules when switching through Minecraft’s world screen.
 - Latitude warnings and border presentation stay confined to Latitude Overworlds.
 - Worlds with seed zero initialize their climate regions correctly.
