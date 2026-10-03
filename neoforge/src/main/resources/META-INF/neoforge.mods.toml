@@ -1,0 +1,50 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "GPL-3.0-or-later"
+
+[[mods]]
+modId = "globe"
+version = "${version}"
+displayName = "Latitude"
+authors = "Peetsa"
+description = '''A globe-style world + latitude-based biome bands with a customizable compass HUD and warnings.'''
+iconFile = "assets/globe/icon.png"
+
+[[mixins]]
+config = "globe.mixins.json"
+
+[[dependencies.globe]]
+modId = "neoforge"
+type = "required"
+versionRange = "${neo_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.globe]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+# Latitude installs its surface-rule bridge while it starts, so TerraBlender must start first.
+[[dependencies.globe]]
+modId = "terrablender"
+type = "optional"
+versionRange = "*"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.globe]]
+modId = "tectonic"
+type = "optional"
+versionRange = "*"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.globe]]
+modId = "lithostitched"
+type = "optional"
+versionRange = "*"
+ordering = "NONE"
+side = "BOTH"

@@ -17,7 +17,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -1133,8 +1132,8 @@ public final class LatitudeBiomes {
     }
 
     private static boolean isUndergroundCaveBiome(Holder<Biome> biome) {
-        return biome != null && (biome.is(ConventionalBiomeTags.IS_CAVE)
-                || biome.is(ConventionalBiomeTags.IS_UNDERGROUND)
+        return biome != null && (biome.is(LatitudeConventionBiomeTags.IS_CAVE)
+                || biome.is(LatitudeConventionBiomeTags.IS_UNDERGROUND)
                 || SURFACE_CAVE_DENYLIST.contains(biomeId(biome)));
     }
 

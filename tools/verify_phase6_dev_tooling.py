@@ -254,13 +254,13 @@ def verify_sources(failures: list[str]) -> None:
     forbid(globe, 'Commands.literal("flyspeed")', "public top-level flyspeed command", failures)
     require(
         globe,
-        "if (!FabricLoader.getInstance().isDevelopmentEnvironment())",
+        "if (!LatitudePlatform.isDevelopmentEnvironment())",
         "unchanged public common development guard",
         failures,
     )
     require(
         globe_client,
-        "if (FabricLoader.getInstance().isDevelopmentEnvironment())",
+        "if (LatitudePlatform.isDevelopmentEnvironment())",
         "unchanged public client development guard",
         failures,
     )
@@ -523,13 +523,16 @@ def verify_sources(failures: list[str]) -> None:
 
     for needle, label in (
         ("DevToolPolicy.packagedTestIdentityValid(", "fail-closed packaged identity"),
-        ("CustomValue.CvType.BOOLEAN", "boolean Fabric marker"),
+        ("LatitudePlatform.modFlag(GlobeMod.MOD_ID, TEST_MARKER_KEY)", "boolean loader marker"),
         ('attribute(manifest, "Latitude-Artifact-Role")', "manifest role"),
         ('attribute(manifest, "Latitude-Test-Sequence")', "manifest sequence"),
         ('attribute(manifest, "Latitude-Artifact-Version")', "manifest artifact version"),
         ("private static final BuildIdentity IDENTITY = resolve();", "immutable shared identity"),
     ):
         require(runtime, needle, label, failures)
+    # The Fabric seam owns the marker read now; it must stay a strict boolean custom value.
+    fabric_platform = read("src/main/java/com/example/globe/platform/fabric/FabricLatitudePlatform.java")
+    require(fabric_platform, "CustomValue.CvType.BOOLEAN", "boolean Fabric marker", failures)
 
     for source, label in (
         (capture, "capture keybind"),
@@ -604,8 +607,8 @@ def verify_sources(failures: list[str]) -> None:
         require(build, property_name, f"dev runtime identity property {property_name}", failures)
 
 
-PUBLIC_MAIN_ENTRYPOINT = "com.example.globe.GlobeMod"
-PUBLIC_CLIENT_ENTRYPOINT = "com.example.globe.GlobeModClient"
+PUBLIC_MAIN_ENTRYPOINT = "com.example.globe.platform.fabric.GlobeFabricMod"
+PUBLIC_CLIENT_ENTRYPOINT = "com.example.globe.platform.fabric.GlobeFabricModClient"
 TEST_MAIN_ENTRYPOINT = "com.example.globe.dev.LatitudeDevTestEntrypoint"
 TEST_CLIENT_ENTRYPOINT = "com.example.globe.dev.LatitudeDevTestClientEntrypoint"
 TEST_MARKER_KEY = "latitude:test_artifact"

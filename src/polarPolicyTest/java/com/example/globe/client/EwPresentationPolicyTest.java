@@ -449,7 +449,7 @@ public final class EwPresentationPolicyTest {
                         && resetTitle.contains("endWorldTime = Long.MIN_VALUE"),
                 "true world changes and disconnects discard any title from the prior level");
         String disconnectEvent = methodSection(client,
-                "ClientPlayConnectionEvents.DISCONNECT.register((handler, client) ->");
+                "LatitudeClientPlatform.onClientDisconnect(client ->");
         assertTrue(disconnectEvent.contains("GlobeWarningOverlay.resetForDisconnect()")
                         && disconnectEvent.contains("GlobeClientState.resetForDisconnect()")
                         && disconnectEvent.indexOf("GlobeWarningOverlay.resetForDisconnect()")

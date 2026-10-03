@@ -16,7 +16,6 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -710,8 +709,8 @@ public final class LatitudeBiomeSource extends BiomeSource {
     }
 
     static boolean isCaveBiome(Holder<Biome> entry) {
-        if (entry.is(ConventionalBiomeTags.IS_CAVE)
-                || entry.is(ConventionalBiomeTags.IS_UNDERGROUND)) {
+        if (entry.is(LatitudeConventionBiomeTags.IS_CAVE)
+                || entry.is(LatitudeConventionBiomeTags.IS_UNDERGROUND)) {
             return true;
         }
         Identifier id = biomeId(entry);

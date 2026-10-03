@@ -12,10 +12,10 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "com.example.globe.GlobeMod"
+      "com.example.globe.platform.fabric.GlobeFabricMod"
     ],
     "client": [
-      "com.example.globe.GlobeModClient"
+      "com.example.globe.platform.fabric.GlobeFabricModClient"
     ]
   },
   "mixins": [

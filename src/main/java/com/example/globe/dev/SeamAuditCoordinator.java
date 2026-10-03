@@ -1,10 +1,10 @@
 package com.example.globe.dev;
 
+import com.example.globe.platform.LatitudePlatform;
 import com.example.globe.GlobeMod;
 import com.example.globe.util.LatitudeBands;
 import com.example.globe.util.LatitudeMath;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -177,7 +177,7 @@ public final class SeamAuditCoordinator {
         if (tickHookRegistered) {
             return;
         }
-        ServerTickEvents.END_SERVER_TICK.register(SeamAuditCoordinator::onEndServerTick);
+        LatitudePlatform.onServerTickEnd(SeamAuditCoordinator::onEndServerTick);
         tickHookRegistered = true;
     }
 

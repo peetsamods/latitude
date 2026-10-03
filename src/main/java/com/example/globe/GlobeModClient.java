@@ -1,5 +1,7 @@
 package com.example.globe;
 
+import com.example.globe.platform.client.LatitudeClientPlatform;
+import com.example.globe.platform.LatitudePlatform;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,12 +18,6 @@ import com.example.globe.dev.DevCaptureKeybind;
 import com.example.globe.dev.client.SeamAuditClientBridge;
 import com.example.globe.dev.client.audit.SeamAuditHarness;
 import com.example.globe.util.LatitudeBands;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.color.block.BlockTintSources;
 import net.minecraft.core.particles.BlockParticleOption;
@@ -33,7 +29,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 
-public class GlobeModClient implements ClientModInitializer {
+public class GlobeModClient {
     private static final int PROMENADE_PALM_LEAVES_OPAQUE_TINT = 0xFF7DB22E;
     private static final String[] PROMENADE_PALM_TINT_BLOCKS = {
             "promenade:palm_leaves",
@@ -42,7 +38,6 @@ public class GlobeModClient implements ClientModInitializer {
             "promenade:palm_leaf_pile"
     };
 
-    @Override
     public void onInitializeClient() {
         GlobeNet.registerPayloads();
         GlobeMod.LOGGER.info("Globe client init OK");
@@ -51,9 +46,9 @@ public class GlobeModClient implements ClientModInitializer {
         }
 
         LatitudeConfig.get();
-        ClientLifecycleEvents.CLIENT_STARTED.register(GlobeModClient::registerPromenadePalmTintCompat);
+        LatitudeClientPlatform.onClientStarted(GlobeModClient::registerPromenadePalmTintCompat);
 
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+        LatitudeClientPlatform.onClientDisconnect(client -> {
             GlobeWarningOverlay.resetForDisconnect();
             GlobeClientState.resetForDisconnect();
             // A failed/cancelled integrated-world load may disconnect before the normal client-ready tick.
@@ -61,7 +56,7 @@ public class GlobeModClient implements ClientModInitializer {
             LatitudeClientState.clearLatitudeLoadingState();
         });
 
-        ClientPlayNetworking.registerGlobalReceiver(GlobeNet.GlobeStatePayload.ID, (payload, context) -> {
+        LatitudeClientPlatform.onClientPayload(GlobeNet.GlobeStatePayload.ID, (payload, client) -> {
             if (payload.isGlobe()) {
                 // Flip the bespoke loading flag as soon as the handshake packet arrives (network thread).
                 LatitudeClientState.activateLatitudeLoading();
@@ -72,41 +67,41 @@ public class GlobeModClient implements ClientModInitializer {
             } else if (LatitudeClientState.isLatitudeWorldLoading()) {
                 LatitudeClientState.clearLatitudeLoadingState();
             }
-            context.client().execute(() -> {
+            client.execute(() -> {
                 GlobeClientState.setGlobeWorld(payload.isGlobe());
                 GlobeMod.LOGGER.info("S2C globe state: isGlobe={}", payload.isGlobe());
             });
         });
 
-        ClientPlayNetworking.registerGlobalReceiver(GlobeNet.OpenSpawnPickerPayload.ID, (payload, context) -> {
+        LatitudeClientPlatform.onClientPayload(GlobeNet.OpenSpawnPickerPayload.ID, (payload, client) -> {
             // Legacy spawn picker is no longer part of the first-load flow; ignore any stale payloads.
             if (!payload.open()) {
                 return;
             }
 
-            context.client().execute(() -> {
+            client.execute(() -> {
                 GlobeMod.LOGGER.info("Ignoring legacy open spawn picker payload");
             });
         });
 
         GlobeWarningOverlay.init();
         CompassHud.init();
-        ClientTickEvents.END_CLIENT_TICK.register(GlobeModClient::polarCapClientTick);
+        LatitudeClientPlatform.onClientTickEnd(GlobeModClient::polarCapClientTick);
         ClientKeybinds.init();
-        if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+        if (LatitudePlatform.isDevelopmentEnvironment()) {
             DevCaptureKeybind.init();
             SeamAuditClientBridge.init();
             SeamAuditHarness.init();
         }
-        ClientTickEvents.END_CLIENT_TICK.register(GlobeModClient::clientKeybindTick);
-        if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+        LatitudeClientPlatform.onClientTickEnd(GlobeModClient::clientKeybindTick);
+        if (LatitudePlatform.isDevelopmentEnvironment()) {
             com.example.globe.dev.AutoCreateWorldProbe.maybeRegister();
         }
 
     }
 
     private static void registerPromenadePalmTintCompat(Minecraft client) {
-        if (!FabricLoader.getInstance().isModLoaded("promenade")) {
+        if (!LatitudePlatform.isModLoaded("promenade")) {
             return;
         }
 

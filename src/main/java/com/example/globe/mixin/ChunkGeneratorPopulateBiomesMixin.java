@@ -1,12 +1,12 @@
 package com.example.globe.mixin;
 
+import com.example.globe.world.LatitudeConventionBiomeTags;
 import com.example.globe.GlobeMod;
 import com.example.globe.world.PaintedBiomeSiting;
 import com.example.globe.world.LatitudeBiomeSource;
 import com.example.globe.world.LatitudeBiomes;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import net.fabricmc.fabric.api.tag.convention.v2.ConventionalBiomeTags;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -376,8 +376,8 @@ public abstract class ChunkGeneratorPopulateBiomesMixin {
 
     @Unique
     private static boolean isCaveBiome(Registry<Biome> biomes, Holder<Biome> entry) {
-        if (entry.is(ConventionalBiomeTags.IS_CAVE)
-                || entry.is(ConventionalBiomeTags.IS_UNDERGROUND)) {
+        if (entry.is(LatitudeConventionBiomeTags.IS_CAVE)
+                || entry.is(LatitudeConventionBiomeTags.IS_UNDERGROUND)) {
             return true;
         }
         Identifier actual = biomes.getKey(entry.value());

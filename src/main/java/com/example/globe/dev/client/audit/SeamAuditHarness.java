@@ -1,11 +1,11 @@
 package com.example.globe.dev.client.audit;
 
+import com.example.globe.platform.client.LatitudeClientPlatform;
 import com.example.globe.GlobeMod;
 import com.example.globe.dev.audit.AutonomousSeamAuditJob;
 import com.example.globe.dev.audit.SeamAuditMode;
 import com.example.globe.dev.client.SeamAuditClientBridge;
 import com.example.globe.dev.LatitudeDevRuntime;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.server.IntegratedServer;
@@ -13,7 +13,7 @@ import net.minecraft.client.server.IntegratedServer;
 /**
  * Client-side startup owner of the autonomous seam-audit harness.
  *
- * <p>On the first {@link ClientPlayConnectionEvents#JOIN JOIN} event after
+ * <p>On the first client join event after
  * audit mode is enabled, this harness:
  * <ol>
  *   <li>Installs the screenshot bridge (idempotent).</li>
@@ -42,7 +42,7 @@ public final class SeamAuditHarness {
         if (!SeamAuditMode.ENABLED) return;
         initialized = true;
 
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> onJoin(client));
+        LatitudeClientPlatform.onClientJoin(SeamAuditHarness::onJoin);
 
         GlobeMod.LOGGER.info("[auditMode] seam audit harness armed (bandPair={}, edge={}, samples={}, renderDistance={}, exitWhenDone={})",
                 SeamAuditMode.BAND_PAIR,

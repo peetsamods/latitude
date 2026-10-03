@@ -1,5 +1,6 @@
 package com.example.globe.world;
 
+import com.example.globe.platform.LatitudePlatform;
 import com.example.globe.GlobeMod;
 import com.example.globe.util.LatitudeBands;
 import com.mojang.datafixers.util.Pair;
@@ -15,9 +16,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.ResourceOrTagKeyArgument;
 import net.minecraft.core.BlockPos;
@@ -65,14 +63,14 @@ public final class LatitudeStructureLocateService {
             new IdentityHashMap<>();
 
     static {
-        ServerTickEvents.END_SERVER_TICK.register(LatitudeStructureLocateService::tick);
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+        LatitudePlatform.onServerTickEnd(LatitudeStructureLocateService::tick);
+        LatitudePlatform.onServerStopped(server -> {
             cancel(server, null);
             PENDING_TELEPORTS.remove(server);
         });
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-            cancel(server, handler.player);
-            clearPendingTeleport(server, handler.player);
+        LatitudePlatform.onPlayerDisconnect((player, server) -> {
+            cancel(server, player);
+            clearPendingTeleport(server, player);
         });
     }
 

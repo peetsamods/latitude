@@ -1,9 +1,9 @@
 package com.example.globe.mixin.client;
 
+import com.example.globe.platform.client.LatitudeClientPlatform;
+import com.example.globe.platform.LatitudePlatform;
 import com.example.globe.GlobeMod;
 import com.example.globe.client.LatitudeClientState;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
@@ -52,9 +52,8 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
     @Unique private static final float globe$VERSION_LABEL_SCALE = 0.67f;
     @Unique private static final int globe$VERSION_LABEL_GAP = 4;
     @Unique private static final int globe$VERSION_LABEL_SCREEN_MARGIN = 2;
-    @Unique private static final String globe$VERSION_LABEL = FabricLoader.getInstance()
-            .getModContainer(GlobeMod.MOD_ID)
-            .map(container -> "v" + container.getMetadata().getVersion().getFriendlyString())
+    @Unique private static final String globe$VERSION_LABEL = LatitudePlatform.modVersion(GlobeMod.MOD_ID)
+            .map(version -> "v" + version)
             .orElse("");
 
     // ── Loading phrases ──
@@ -139,7 +138,7 @@ public abstract class LevelLoadingScreenLatitudeOverlayMixin extends Screen {
     @Unique private static final Logger GLOBE_LOGGER = LoggerFactory.getLogger("LatitudeLoadingOverlay");
 
     static {
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+        LatitudeClientPlatform.onClientJoin(client -> {
             if (!LatitudeClientState.isLatitudeWorldLoading()) {
                 return;
             }
