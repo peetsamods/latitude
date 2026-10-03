@@ -1,5 +1,6 @@
 package com.example.globe.dev;
 
+import com.example.globe.platform.client.LatitudeClientPlatform;
 import com.example.globe.GlobeMod;
 import com.example.globe.client.GlobeWorldSize;
 import com.example.globe.client.LatitudeClientState;
@@ -7,8 +8,6 @@ import com.example.globe.client.create.LatitudeCreateWorldScreen;
 import com.example.globe.util.LatitudeBands;
 import com.example.globe.util.LatitudeMath;
 import com.example.globe.world.GlobeWorldSizeRuntime;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
@@ -105,8 +104,8 @@ public final class AutoCreateWorldProbe {
         AutoCreateWorldProbeState.reset(timeoutMs);
         GlobeMod.LOGGER.info("[LAT][CWPATH] autoCreateWorldProbe enabled timeout={}s creative={}",
                 timeoutMs / 1000L, AUTO_CREATE_WORLD_PROBE_CREATIVE);
-        ClientTickEvents.END_CLIENT_TICK.register(AutoCreateWorldProbe::autoCreateWorldProbeTick);
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+        LatitudeClientPlatform.onClientTickEnd(AutoCreateWorldProbe::autoCreateWorldProbeTick);
+        LatitudeClientPlatform.onClientDisconnect(client -> {
             autoCreateWorldProbeLatdevLiveTargetSearchState = null;
             autoCreateWorldProbeLatdevLiveTargetSearchBatchQueued = false;
             autoCreateWorldProbeLatdevServerTargetSetupPending = false;

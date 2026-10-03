@@ -1,5 +1,6 @@
 package com.example.globe.dev;
 
+import com.example.globe.platform.LatitudePlatform;
 import com.example.globe.GlobeMod;
 import java.io.IOException;
 import java.io.InputStream;
@@ -7,9 +8,6 @@ import java.nio.file.Files;
 import java.util.Optional;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
-import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.api.ModContainer;
-import net.fabricmc.loader.api.metadata.CustomValue;
 
 /**
  * One immutable runtime identity and activation policy for excluded development tooling.
@@ -38,14 +36,11 @@ public final class LatitudeDevRuntime {
     }
 
     private static BuildIdentity resolve() {
-        FabricLoader loader = FabricLoader.getInstance();
-        boolean developmentEnvironment = loader.isDevelopmentEnvironment();
-        Optional<ModContainer> container = loader.getModContainer(GlobeMod.MOD_ID);
-        String metadataVersion = container
-                .map(value -> value.getMetadata().getVersion().getFriendlyString())
-                .orElse("unknown");
-        boolean testMarker = container.map(LatitudeDevRuntime::hasTestMarker).orElse(false);
-        Attributes manifest = container.map(LatitudeDevRuntime::readManifest).orElseGet(Attributes::new);
+        boolean developmentEnvironment = LatitudePlatform.isDevelopmentEnvironment();
+        Optional<String> modVersion = LatitudePlatform.modVersion(GlobeMod.MOD_ID);
+        String metadataVersion = modVersion.orElse("unknown");
+        boolean testMarker = modVersion.isPresent() && LatitudePlatform.modFlag(GlobeMod.MOD_ID, TEST_MARKER_KEY);
+        Attributes manifest = modVersion.isPresent() ? readManifest() : new Attributes();
 
         if (developmentEnvironment) {
             return new BuildIdentity(
@@ -93,18 +88,8 @@ public final class LatitudeDevRuntime {
                 time);
     }
 
-    private static boolean hasTestMarker(ModContainer container) {
-        if (!container.getMetadata().containsCustomValue(TEST_MARKER_KEY)) {
-            return false;
-        }
-        CustomValue value = container.getMetadata().getCustomValue(TEST_MARKER_KEY);
-        return value != null
-                && value.getType() == CustomValue.CvType.BOOLEAN
-                && value.getAsBoolean();
-    }
-
-    private static Attributes readManifest(ModContainer container) {
-        try (InputStream input = container.findPath("META-INF/MANIFEST.MF")
+    private static Attributes readManifest() {
+        try (InputStream input = LatitudePlatform.findModFile(GlobeMod.MOD_ID, "META-INF/MANIFEST.MF")
                 .map(path -> {
                     try {
                         return Files.newInputStream(path);

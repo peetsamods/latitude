@@ -1,5 +1,6 @@
 package com.example.globe.dev;
 
+import com.example.globe.platform.LatitudePlatform;
 import com.example.globe.dev.BiomeSamplerDevTools;
 import com.example.globe.util.BiomeSamplerTools;
 import com.example.globe.util.BiomeColorUtil;
@@ -49,7 +50,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import net.fabricmc.loader.api.FabricLoader;
 
 public final class BiomePreviewExporter {
     private static final int BLOCKS_PER_CHUNK = 16;
@@ -1630,8 +1630,8 @@ public final class BiomePreviewExporter {
 
     private static List<String> sortedLoadedModIds() {
         List<String> modIds = new ArrayList<>();
-        for (net.fabricmc.loader.api.ModContainer mod : FabricLoader.getInstance().getAllMods()) {
-            modIds.add(mod.getMetadata().getId().toLowerCase(Locale.ROOT));
+        for (String modId : LatitudePlatform.loadedModIds()) {
+            modIds.add(modId.toLowerCase(Locale.ROOT));
         }
         modIds.sort(String::compareTo);
         return modIds;

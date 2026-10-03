@@ -1,9 +1,9 @@
 package com.example.globe.client;
 
+import com.example.globe.platform.LatitudePlatform;
 import com.example.globe.GlobeMod;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.Reader;
 import java.io.Writer;
@@ -81,7 +81,7 @@ public final class LatitudeConfig {
     private Boolean createWorldStillBackgroundValue = false;
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve("globe_latitude.json");
+    private static final Path PATH = LatitudePlatform.configDir().resolve("globe_latitude.json");
 
     private static LatitudeConfig INSTANCE;
 

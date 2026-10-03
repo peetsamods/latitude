@@ -1,0 +1,4 @@
+# Local game runs (worlds, logs, configs) never belong in Git.
+/run/
+/run-*/
+/runs/

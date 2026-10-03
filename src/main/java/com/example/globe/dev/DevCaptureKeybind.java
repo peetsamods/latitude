@@ -1,5 +1,6 @@
 package com.example.globe.dev;
 
+import com.example.globe.platform.client.LatitudeClientPlatform;
 import com.example.globe.GlobeMod;
 import com.example.globe.client.ClientKeybinds;
 import com.example.globe.client.ClipboardImageWriter;
@@ -9,8 +10,6 @@ import com.example.globe.util.LatitudeMath;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.NativeImage;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
@@ -55,21 +54,21 @@ public final class DevCaptureKeybind {
             return;
         }
 
-        captureKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+        captureKey = LatitudeClientPlatform.registerKeyMapping(new KeyMapping(
                 "key.globe.dev_capture_overlay",
                 InputConstants.Type.KEYSYM,
                 InputConstants.KEY_NUMPAD0,
                 ClientKeybinds.CATEGORY
         ));
 
-        explainKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+        explainKey = LatitudeClientPlatform.registerKeyMapping(new KeyMapping(
                 "key.globe.dev_explain_here",
                 InputConstants.Type.KEYSYM,
                 InputConstants.KEY_NUMPAD3,
                 ClientKeybinds.CATEGORY
         ));
 
-        ClientTickEvents.END_CLIENT_TICK.register(DevCaptureKeybind::onEndClientTick);
+        LatitudeClientPlatform.onClientTickEnd(DevCaptureKeybind::onEndClientTick);
         initialized = true;
     }
 

@@ -1,6 +1,6 @@
 package com.example.globe;
 
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import com.example.globe.platform.LatitudePlatform;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -19,10 +19,10 @@ public final class GlobeNet {
         }
         registered = true;
 
-        PayloadTypeRegistry.clientboundPlay().register(GlobeStatePayload.ID, GlobeStatePayload.CODEC);
+        LatitudePlatform.registerClientboundPayload(GlobeStatePayload.ID, GlobeStatePayload.CODEC);
 
-        PayloadTypeRegistry.clientboundPlay().register(OpenSpawnPickerPayload.ID, OpenSpawnPickerPayload.CODEC);
-        PayloadTypeRegistry.serverboundPlay().register(SetSpawnPickerPayload.ID, SetSpawnPickerPayload.CODEC);
+        LatitudePlatform.registerClientboundPayload(OpenSpawnPickerPayload.ID, OpenSpawnPickerPayload.CODEC);
+        LatitudePlatform.registerServerboundPayload(SetSpawnPickerPayload.ID, SetSpawnPickerPayload.CODEC);
     }
 
     public record GlobeStatePayload(boolean isGlobe, String loadingBandId) implements CustomPacketPayload {

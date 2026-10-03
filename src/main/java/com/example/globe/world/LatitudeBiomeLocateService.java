@@ -1,5 +1,6 @@
 package com.example.globe.world;
 
+import com.example.globe.platform.LatitudePlatform;
 import com.example.globe.GlobeMod;
 import com.mojang.datafixers.util.Pair;
 import java.time.Duration;
@@ -8,9 +9,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.ResourceOrTagArgument;
 import net.minecraft.core.BlockPos;
@@ -45,10 +43,10 @@ public final class LatitudeBiomeLocateService {
             new IdentityHashMap<>();
 
     static {
-        ServerTickEvents.END_SERVER_TICK.register(LatitudeBiomeLocateService::tick);
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> cancel(server, null));
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                cancel(server, handler.player));
+        LatitudePlatform.onServerTickEnd(LatitudeBiomeLocateService::tick);
+        LatitudePlatform.onServerStopped(server -> cancel(server, null));
+        LatitudePlatform.onPlayerDisconnect((player, server) ->
+                cancel(server, player));
     }
 
     private LatitudeBiomeLocateService() {

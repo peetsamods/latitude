@@ -1,12 +1,12 @@
 package com.example.globe.client.create;
 
+import com.example.globe.platform.LatitudePlatform;
 import com.example.globe.GlobeMod;
 import com.example.globe.client.GlobeWorldSize;
 import com.example.globe.client.LatitudeConfig;
 import com.example.globe.client.LatitudeHudStudioScreen;
 import com.example.globe.util.LatitudeBands;
 import com.mojang.blaze3d.platform.InputConstants;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
@@ -85,9 +85,8 @@ public class LatitudeCreateWorldScreen extends Screen {
     private static final float CREATE_TITLE_SCALE = 13.0f / 9.0f;
     private static final String CREATE_TITLE_TEXT = "L A T I T U D E";
     private static final float CREATE_VERSION_LABEL_SCALE = 0.67f;
-    private static final String CREATE_VERSION_LABEL = FabricLoader.getInstance()
-            .getModContainer(GlobeMod.MOD_ID)
-            .map(container -> "v" + container.getMetadata().getVersion().getFriendlyString())
+    private static final String CREATE_VERSION_LABEL = LatitudePlatform.modVersion(GlobeMod.MOD_ID)
+            .map(version -> "v" + version)
             .orElse("");
 
     // ── Band native colors (ARGB, indexed by Band.ordinal()) ──

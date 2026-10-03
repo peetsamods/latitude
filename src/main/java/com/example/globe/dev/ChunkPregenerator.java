@@ -1,7 +1,6 @@
 package com.example.globe.dev;
 
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import com.example.globe.platform.LatitudePlatform;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -276,8 +275,8 @@ public final class ChunkPregenerator {
             return;
         }
 
-        ServerTickEvents.END_SERVER_TICK.register(ChunkPregenerator::onEndServerTick);
-        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+        LatitudePlatform.onServerTickEnd(ChunkPregenerator::onEndServerTick);
+        LatitudePlatform.onServerStopping(server -> {
             if (active && activeServer == server) {
                 stopJob(true);
             }
