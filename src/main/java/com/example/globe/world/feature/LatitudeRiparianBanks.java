@@ -1,5 +1,6 @@
 package com.example.globe.world.feature;
 
+import com.example.globe.platform.LatitudePlatform;
 import com.example.globe.GlobeMod;
 import com.example.globe.world.BiomeDescriptorLedger;
 import java.util.ArrayList;
@@ -74,7 +75,7 @@ public final class LatitudeRiparianBanks {
             return;
         }
         registered = true;
-        Registry.register(BuiltInRegistries.PLACEMENT_MODIFIER_TYPE, RIPARIAN_TYPE_ID, RIPARIAN);
+        LatitudePlatform.register(BuiltInRegistries.PLACEMENT_MODIFIER_TYPE, RIPARIAN_TYPE_ID, RIPARIAN);
     }
 
     /** True only for biomes the ledger describes as Latitude-owned arid surface land. */

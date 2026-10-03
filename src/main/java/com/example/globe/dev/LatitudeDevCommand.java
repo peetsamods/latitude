@@ -1,5 +1,6 @@
 package com.example.globe.dev;
 
+import com.example.globe.platform.LatitudePlatform;
 import com.example.globe.GlobeMod;
 import com.example.globe.tools.RuggednessSensor;
 import com.example.globe.util.LatitudeBands;
@@ -39,7 +40,6 @@ import java.util.Random;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -518,24 +518,23 @@ public final class LatitudeDevCommand {
         if (eventContext != null) {
             identity.putAll(eventContext);
         }
-        FabricLoader loader = FabricLoader.getInstance();
         identity.put("artifact_sha256", LatitudeDevRuntime.artifactSha256());
-        identity.put("minecraft_version", modVersion(loader, "minecraft"));
-        identity.put("loader_version", modVersion(loader, "fabricloader"));
-        identity.put("latitude_version", modVersion(loader, GlobeMod.MOD_ID));
+        identity.put("minecraft_version", modVersion("minecraft"));
+        identity.put("loader_version", modVersion(LatitudePlatform.loaderModId()));
+        identity.put("latitude_version", modVersion(GlobeMod.MOD_ID));
 
         List<String> providers = new ArrayList<>();
         providers.add("minecraft");
         for (String provider : List.of(
                 "terrablender", "biomesoplenty", "terralith", "clifftree")) {
-            if (loader.isModLoaded(provider)) {
+            if (LatitudePlatform.isModLoaded(provider)) {
                 providers.add(provider);
             }
         }
         identity.put("provider_stack", String.join(",", providers));
 
         TreeSet<String> loadedMods = new TreeSet<>();
-        loader.getAllMods().forEach(container -> loadedMods.add(container.getMetadata().getId()));
+        loadedMods.addAll(LatitudePlatform.loadedModIds());
         identity.put("loaded_mods", String.join(",", loadedMods));
         identity.put("loaded_mods_fingerprint", sha256Text(String.join("\n", loadedMods)));
 
@@ -544,17 +543,15 @@ public final class LatitudeDevCommand {
         identity.put("datapacks", String.join(",", datapacks));
         identity.put("datapack_fingerprint", sha256Text(String.join("\n", datapacks)));
 
-        Path config = loader.getConfigDir().resolve("globe_compass_hud.json");
+        Path config = LatitudePlatform.configDir().resolve("globe_compass_hud.json");
         identity.put("config_fingerprint", sha256FileOrState(config));
         identity.put("world_class", recorderPlan.worldClass());
         identity.put("atlas_fingerprint", sha256Text(recorderPlan.atlasSettings().toString()));
         return identity;
     }
 
-    private static String modVersion(FabricLoader loader, String modId) {
-        return loader.getModContainer(modId)
-                .map(container -> container.getMetadata().getVersion().getFriendlyString())
-                .orElse("not-loaded");
+    private static String modVersion(String modId) {
+        return LatitudePlatform.modVersion(modId).orElse("not-loaded");
     }
 
     private static String sha256FileOrState(Path path) {

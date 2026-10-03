@@ -1,9 +1,9 @@
 package com.example.globe.client;
 
+import com.example.globe.platform.LatitudePlatform;
 import com.example.globe.GlobeMod;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.Reader;
 import java.io.Writer;
@@ -92,7 +92,7 @@ public final class CompassHudConfig {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path PATH =
-            FabricLoader.getInstance().getConfigDir().resolve("globe_compass_hud.json");
+            LatitudePlatform.configDir().resolve("globe_compass_hud.json");
 
     private static CompassHudConfig INSTANCE;
 

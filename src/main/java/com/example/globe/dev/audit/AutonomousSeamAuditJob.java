@@ -1,10 +1,10 @@
 package com.example.globe.dev.audit;
 
+import com.example.globe.platform.LatitudePlatform;
 import com.example.globe.GlobeMod;
 import com.example.globe.util.LatitudeBands;
 import com.example.globe.util.LatitudeMath;
 import com.example.globe.world.LatitudeBiomes;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.server.MinecraftServer;
@@ -190,7 +190,7 @@ public final class AutonomousSeamAuditJob {
 
     private static void ensureTickHook() {
         if (tickHookRegistered) return;
-        ServerTickEvents.END_SERVER_TICK.register(AutonomousSeamAuditJob::onEndServerTick);
+        LatitudePlatform.onServerTickEnd(AutonomousSeamAuditJob::onEndServerTick);
         tickHookRegistered = true;
     }
 

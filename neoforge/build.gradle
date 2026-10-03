@@ -1,0 +1,205 @@
+// NeoForge build of Latitude. It compiles the shared sources in ../src/main/java (everything except
+// the Fabric adapter package) together with the NeoForge adapter in ./src/main/java.
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+def sharedRoot = file('..')
+def sharedProps = new Properties()
+file('../gradle.properties').withInputStream { sharedProps.load(it) }
+
+version = sharedProps.getProperty('mod_version')
+group = sharedProps.getProperty('maven_group')
+
+def latitudeGitOutput = { String... args ->
+    try {
+        def process = new ProcessBuilder(['git'] + args.toList())
+                .directory(sharedRoot)
+                .redirectErrorStream(true)
+                .start()
+        def output = process.inputStream.getText('UTF-8').trim()
+        return process.waitFor() == 0 ? output : 'unknown'
+    } catch (Exception ignored) {
+        return 'unknown'
+    }
+}
+
+def latitudeBuildTimeUtc = {
+    def format = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
+    format.setTimeZone(TimeZone.getTimeZone('UTC'))
+    return format.format(new Date())
+}
+
+def latitudeGitCommit = latitudeGitOutput('rev-parse', 'HEAD')
+def latitudeGitBranch = latitudeGitOutput('branch', '--show-current')
+def latitudeGitDirty = latitudeGitOutput('status', '--porcelain', '--untracked-files=no') == '' ? 'false' : 'true'
+def latitudeBuildTime = latitudeBuildTimeUtc()
+def latitudePreviewRunDir = (findProperty('latdev.preview.runDir') ?: 'run-headless').toString()
+
+base {
+    archivesName = "${sharedProps.getProperty('archives_base_name')}-neoforge"
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['../src/main/java', 'src/main/java']
+            exclude 'com/example/globe/platform/fabric/**'
+        }
+        resources {
+            srcDirs = ['../src/main/resources', 'src/main/resources']
+            exclude 'fabric.mod.json'
+        }
+    }
+}
+
+neoForge {
+    version = project.neo_version
+
+    runs {
+        configureEach {
+            systemProperty 'latitude.dev.gitCommit', latitudeGitCommit
+            systemProperty 'latitude.dev.gitBranch', latitudeGitBranch
+            systemProperty 'latitude.dev.buildDirty', latitudeGitDirty
+            systemProperty 'latitude.dev.buildTime', latitudeBuildTime
+        }
+        client {
+            client()
+            gameDirectory = project.file('run')
+            systemProperty 'latitude.fixSurfaceDripstone', 'true'
+            systemProperty 'latitude.debug.autoCreateWorldProbe.disable',
+                    (findProperty('latitude.debug.autoCreateWorldProbe.disable') ?: 'false').toString()
+            systemProperty 'latitude.debug.autoCreateWorldProbe.timeoutSeconds',
+                    (findProperty('latitude.debug.autoCreateWorldProbe.timeoutSeconds') ?: '45').toString()
+        }
+        server {
+            server()
+            programArgument '--nogui'
+            gameDirectory = project.file('run-server')
+        }
+        // Headless Atlas, matching the Fabric biomePreview run. Pass the full recipe as
+        // -Platdev.biomePng="enabled=true;seed=...;radius=...;step=...;y=...;layers=...;emitbiomeindex=true;out=..."
+        biomePreview {
+            server()
+            programArgument '--nogui'
+            gameDirectory = project.file(latitudePreviewRunDir)
+            jvmArguments.addAll('-Xms2G', '-Xmx8G')
+            systemProperty 'latdev.biomePng', (findProperty('latdev.biomePng') ?: 'enabled').toString()
+            systemProperty 'latdev.locateBoundary', (findProperty('latdev.locateBoundary') ?: '').toString()
+            systemProperty 'latitude.debugWorldgenPath', 'false'
+            systemProperty 'latitude.atlasTerrainAware', (findProperty('latitude.atlasTerrainAware') ?: 'false').toString()
+        }
+    }
+
+    mods {
+        globe {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+tasks.register('prepareBiomePreviewRunDir') {
+    doLast {
+        def dir = file(latitudePreviewRunDir)
+        dir.mkdirs()
+        file("${dir}/eula.txt").text = "eula=true\n"
+        def propsFile = file("${dir}/server.properties")
+        if (!propsFile.exists()) {
+            def seed = (findProperty('latdev.preview.levelSeed') ?: '').toString()
+            propsFile.text = """motd=Latitude Headless Preview
+online-mode=false
+max-players=1
+enable-command-block=false
+server-port=${(findProperty('latdev.preview.serverPort') ?: '25599').toString()}
+max-tick-time=-1
+level-seed=${seed}
+"""
+        }
+    }
+}
+
+tasks.matching { it.name == 'runBiomePreview' }.configureEach {
+    dependsOn tasks.named('prepareBiomePreviewRunDir')
+}
+
+processResources {
+    def props = [version: project.version,
+                 minecraft_version_range: project.minecraft_version_range,
+                 neo_version_range: project.neo_version_range]
+    inputs.properties props
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand props
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 25
+    it.options.encoding = 'UTF-8'
+}
+
+java {
+    withSourcesJar()
+}
+
+tasks.withType(Jar).configureEach {
+    manifest {
+        attributes(
+                'Implementation-Title': project.base.archivesName.get(),
+                'Implementation-Version': project.version,
+                'Minecraft-Version': sharedProps.getProperty('minecraft_version'),
+                'Git-Commit': latitudeGitCommit,
+                'Git-Branch': latitudeGitBranch,
+                'Build-Time': latitudeBuildTime,
+                'Build-Dirty': latitudeGitDirty
+        )
+    }
+}
+
+// Same release-artifact law as the Fabric build: development tooling never ships.
+def releaseArtifactExcludeSpec = { details ->
+    def path = details.path
+    if (path == null) {
+        return false
+    }
+    if (path == 'com/example/globe/dev' || path.startsWith('com/example/globe/dev/')) {
+        return true
+    }
+    if (path == 'com/example/globe/debug' || path.startsWith('com/example/globe/debug/')) {
+        return true
+    }
+    if (path == 'com/example/globe/client/ClipboardImageWriter.class'
+            || path.startsWith('com/example/globe/client/ClipboardImageWriter$')) {
+        return true
+    }
+    return false
+}
+
+def releaseArtifactPatternExcludes = [
+        '**/*.sh',
+        '**/*.bat',
+        '**/*.exe',
+        '**/*.dll',
+        '**/*.dylib',
+        '**/*.so',
+        'tools/**',
+        'scripts/**'
+]
+
+tasks.named('jar', Jar).configure {
+    from(rootProject.file('../LICENSE')) {
+        rename { "${it}_${project.base.archivesName.get()}" }
+    }
+    exclude(releaseArtifactExcludeSpec)
+    exclude(releaseArtifactPatternExcludes)
+}
+
+tasks.named('sourcesJar', Jar).configure {
+    from(rootProject.file('../LICENSE')) {
+        rename { "${it}_${project.base.archivesName.get()}" }
+    }
+    exclude(releaseArtifactExcludeSpec)
+    exclude(releaseArtifactPatternExcludes)
+}

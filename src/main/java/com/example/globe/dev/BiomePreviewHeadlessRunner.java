@@ -1,13 +1,12 @@
 package com.example.globe.dev;
 
+import com.example.globe.platform.LatitudePlatform;
 import com.example.globe.GlobeMod;
 import com.example.globe.mixin.NoiseChunkGeneratorAccessor;
 import com.example.globe.dev.BiomeSamplerDevTools;
 import com.example.globe.world.LatitudeBiomeSource;
 import com.example.globe.world.LatitudeBiomes;
 import com.mojang.datafixers.util.Pair;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -87,7 +86,7 @@ public final class BiomePreviewHeadlessRunner {
     }
 
     public static void register() {
-        ServerLifecycleEvents.SERVER_STARTED.register(BiomePreviewHeadlessRunner::onServerStarted);
+        LatitudePlatform.onServerStarted(BiomePreviewHeadlessRunner::onServerStarted);
     }
 
     private static void onServerStarted(MinecraftServer server) {
@@ -1649,7 +1648,7 @@ public final class BiomePreviewHeadlessRunner {
 
     private static List<String> launchArgs() {
         try {
-            return Arrays.asList(FabricLoader.getInstance().getLaunchArguments(true));
+            return Arrays.asList(LatitudePlatform.launchArguments());
         } catch (Throwable t) {
             GlobeMod.LOGGER.warn("[latdev][headless] failed to read launch arguments: {}", t.getMessage());
             return List.of();

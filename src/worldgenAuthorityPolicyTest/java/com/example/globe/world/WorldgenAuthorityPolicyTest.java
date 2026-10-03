@@ -946,8 +946,8 @@ public final class WorldgenAuthorityPolicyTest {
                         && service.contains("else { job = new ThreeDimensionalLocateJob("),
                 "surface, cave, and mixed biome targets must all receive bounded tick-sliced routes");
         assertTrue(
-                service.contains("ServerPlayConnectionEvents.DISCONNECT.register(")
-                        && service.contains("ServerLifecycleEvents.SERVER_STOPPED.register(server -> cancel(server, null))"),
+                service.contains("LatitudePlatform.onPlayerDisconnect(")
+                        && service.contains("LatitudePlatform.onServerStopped(server -> cancel(server, null))"),
                 "disconnect and server-stop cancellation must reach the active locate job");
         assertTrue(
                 occurrences(service, "bossBar.removeAllPlayers()") >= 3,
@@ -989,7 +989,7 @@ public final class WorldgenAuthorityPolicyTest {
                         && !service.contains("whenCompleteAsync("),
                 "heavy structure candidate evaluation must leave the server thread without delivering UI off-thread");
         assertTrue(
-                service.contains("ServerTickEvents.END_SERVER_TICK.register(LatitudeStructureLocateService::tick)")
+                service.contains("LatitudePlatform.onServerTickEnd(LatitudeStructureLocateService::tick)")
                         && service.contains("if (job.isDone()) { ACTIVE_JOBS.remove(server); job.complete(); }"),
                 "normal server ticks must poll and deliver the completed result");
         assertTrue(
@@ -1006,11 +1006,11 @@ public final class WorldgenAuthorityPolicyTest {
                         && service.contains("bossBar.removeAllPlayers();"),
                 "success, failure, and cancellation must all clear the structure progress bar");
         assertTrue(
-                service.contains("ServerPlayConnectionEvents.DISCONNECT.register(")
-                        && service.contains("ServerLifecycleEvents.SERVER_STOPPED.register(server -> {")
+                service.contains("LatitudePlatform.onPlayerDisconnect(")
+                        && service.contains("LatitudePlatform.onServerStopped(server -> {")
                         && service.contains("cancel(server, null);")
                         && service.contains("PENDING_TELEPORTS.remove(server);")
-                        && service.contains("clearPendingTeleport(server, handler.player);"),
+                        && service.contains("clearPendingTeleport(server, player);"),
                 "disconnect and server stop must cancel the owned structure search and clear teleport tokens");
         assertTrue(
                 service.contains("private static final Map<MinecraftServer, StructureLocateJob> ACTIVE_JOBS")
@@ -1070,9 +1070,12 @@ public final class WorldgenAuthorityPolicyTest {
                 net.contains("record GlobeStatePayload(boolean isGlobe, String loadingBandId)")
                         && net.contains("GlobeStatePayload::loadingBandId"),
                 "the existing globe handshake must carry the authoritative loading-band id");
+        int joinStart = server.indexOf("LatitudePlatform.onPlayerJoin((player, server) -> {");
+        int joinSnapshot = server.indexOf(
+                "recordLastKnownBand(overworld, overworld.getWorldBorder(), player);", joinStart);
+        int joinSend = server.indexOf("new GlobeNet.GlobeStatePayload(isGlobe, loadingBandId)", joinStart);
         assertTrue(
-                server.contains("recordLastKnownBand(overworld, overworld.getWorldBorder(), handler.player);")
-                        && server.contains("new GlobeNet.GlobeStatePayload(isGlobe, loadingBandId)"),
+                joinStart >= 0 && joinSnapshot > joinStart && joinSend > joinSnapshot,
                 "the first Latitude join must snapshot the actual band before it sends the loading state");
         assertTrue(
                 tools.contains("Commands.literal(\"latitude_locate_teleport\")")

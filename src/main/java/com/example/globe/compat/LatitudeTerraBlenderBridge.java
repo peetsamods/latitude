@@ -1,5 +1,6 @@
 package com.example.globe.compat;
 
+import com.example.globe.platform.LatitudePlatform;
 import com.example.globe.GlobeMod;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
@@ -7,7 +8,6 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.material.MaterialRules;
@@ -51,7 +51,7 @@ public final class LatitudeTerraBlenderBridge {
             GlobeMod.LOGGER.info("[Latitude] TerraBlender surface sweep disabled by {}", DISABLE_PROP);
             return;
         }
-        if (!FabricLoader.getInstance().isModLoaded("terrablender")) {
+        if (!LatitudePlatform.isModLoaded("terrablender")) {
             return;
         }
         try {

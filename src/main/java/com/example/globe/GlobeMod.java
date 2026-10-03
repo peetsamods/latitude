@@ -1,6 +1,6 @@
 package com.example.globe;
 
-import net.fabricmc.api.ModInitializer;
+import com.example.globe.platform.LatitudePlatform;
 import com.example.globe.world.LatitudeBiomes;
 import com.example.globe.world.LatitudeBiomeSource;
 import com.example.globe.world.LatitudeWorldState;
@@ -11,12 +11,6 @@ import com.example.globe.world.SpawnSafetyPolicy;
 import com.example.globe.world.WorldgenGeneratorAuthorityPolicy;
 import com.example.globe.util.BiomeSamplerTools;
 import com.example.globe.util.BiomeSamplerTools.SamplerTemplate;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -56,8 +50,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.level.storage.ServerLevelData;
-import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.api.ModContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,7 +63,7 @@ import java.lang.reflect.Method;
 
 import java.io.InputStream;
 
-public class GlobeMod implements ModInitializer {
+public class GlobeMod {
     public static final String MOD_ID = "globe";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
@@ -126,7 +118,6 @@ public class GlobeMod implements ModInitializer {
     /** Exact overworld generator for the currently loaded Latitude server. */
     private static volatile NoiseBasedChunkGenerator activeLatitudeOverworldGenerator;
 
-    @Override
     public void onInitialize() {
         LOGGER.info("{} initialized. Use the globe:globe world preset for deterministic terrain.", MOD_ID);
 
@@ -139,7 +130,7 @@ public class GlobeMod implements ModInitializer {
         com.example.globe.world.feature.LatitudeRiparianBanks.registerPlacementType();
 
         GlobeNet.registerPayloads();
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+        LatitudePlatform.onRegisterCommands(dispatcher -> {
             // Shipping operator commands: unconditional and directly linked. Unlike the dev tree,
             // com.example.globe.tools is packaged into release artifacts, so a missing class is a
             // build error worth surfacing rather than something to swallow reflectively.
@@ -149,10 +140,10 @@ public class GlobeMod implements ModInitializer {
 
         // Initialize province authority at world-load time, before spawn-chunk generation fires
         // for brand-new worlds. SERVER_STARTED fires too late (after spawn chunks are pregenerated).
-        ServerLevelEvents.LOAD.register(GlobeMod::initLatitudeBiomesForWorld);
-        ServerLifecycleEvents.SERVER_STARTED.register(GlobeMod::applyWorldBorder);
+        LatitudePlatform.onServerLevelLoad(GlobeMod::initLatitudeBiomesForWorld);
+        LatitudePlatform.onServerStarted(GlobeMod::applyWorldBorder);
         registerDevOnlyHeadlessRunner();
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+        LatitudePlatform.onServerStopped(server -> {
             activeLatitudeOverworldGenerator = null;
             pendingInitialBonusChest = false;
             activePoleBandStartAbsZ = POLE_BAND_START_ABS_Z;
@@ -160,7 +151,7 @@ public class GlobeMod implements ModInitializer {
             LatitudeBiomes.clearWorldgenContext();
         });
 
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+        LatitudePlatform.onPlayerJoin((player, server) -> {
             ServerLevel overworld = server.overworld();
             if (overworld == null) {
                 return;
@@ -168,28 +159,28 @@ public class GlobeMod implements ModInitializer {
 
             boolean isGlobe = isGlobeOverworld(overworld);
             if (DEBUG_JOIN) {
-                LOGGER.info("JOIN: player={}, isGlobeOverworld={}", handler.player.getName().getString(), isGlobe);
+                LOGGER.info("JOIN: player={}, isGlobeOverworld={}", player.getName().getString(), isGlobe);
             }
             LatitudeWorldState worldState = isGlobe ? LatitudeWorldState.get(overworld) : null;
             if (worldState != null) {
                 // A fresh integrated world can cross the client disconnect boundary before its
                 // first regular tick. Snapshot the actual spawn band now so both the initial
                 // loading overlay and the next world-list row have authoritative saved data.
-                recordLastKnownBand(overworld, overworld.getWorldBorder(), handler.player);
+                recordLastKnownBand(overworld, overworld.getWorldBorder(), player);
             }
             String loadingBandId = worldState == null
                     ? ""
                     : worldState.getLastKnownBandId().orElse("");
-            ServerPlayNetworking.send(handler.player, new GlobeNet.GlobeStatePayload(isGlobe, loadingBandId));
+            LatitudePlatform.sendToPlayer(player, new GlobeNet.GlobeStatePayload(isGlobe, loadingBandId));
             boolean isBrandNewWorld = overworld.getGameTime() < 100L;
-            boolean spawnAlreadyChosen = handler.player.entityTags().contains(SPAWN_CHOSEN_TAG);
+            boolean spawnAlreadyChosen = player.entityTags().contains(SPAWN_CHOSEN_TAG);
 
             if (isGlobe && pendingInitialBonusChest) {
                 // The biome-correct initial coordinate is only a suggestion. Minecraft 26.2's
                 // PrepareSpawnTask resolves and loads the actual safe player position before JOIN,
                 // so placing the optional chest here avoids a synchronous remote chunk request.
                 pendingInitialBonusChest = false;
-                placeLatitudeBonusChest(overworld, handler.player.blockPosition());
+                placeLatitudeBonusChest(overworld, player.blockPosition());
             }
 
             if (!server.isDedicatedServer()) {
@@ -197,15 +188,15 @@ public class GlobeMod implements ModInitializer {
             }
 
             boolean startWithCompass = !server.isDedicatedServer() && activeStartWithCompass;
-            if (isGlobe && !server.isDedicatedServer() && !StartCompass.hasReceived(handler.player)) {
+            if (isGlobe && !server.isDedicatedServer() && !StartCompass.hasReceived(player)) {
                 if (!startWithCompass) {
-                    StartCompass.markReceived(handler.player);
-                } else if (hasCompassAnywhere(handler.player)) {
-                    StartCompass.markReceived(handler.player);
+                    StartCompass.markReceived(player);
+                } else if (hasCompassAnywhere(player)) {
+                    StartCompass.markReceived(player);
                 } else {
-                    boolean given = handler.player.addItem(new ItemStack(Items.COMPASS));
+                    boolean given = player.addItem(new ItemStack(Items.COMPASS));
                     if (given) {
-                        StartCompass.markReceived(handler.player);
+                        StartCompass.markReceived(player);
                     }
                 }
             }
@@ -219,16 +210,15 @@ public class GlobeMod implements ModInitializer {
             }
         });
 
-        ServerPlayNetworking.registerGlobalReceiver(GlobeNet.SetSpawnPickerPayload.ID, (payload, context) -> {
-            context.server().execute(() -> applySpawnChoice(context.player(), payload.zoneId()));
+        LatitudePlatform.onServerPayload(GlobeNet.SetSpawnPickerPayload.ID, (payload, player, server) -> {
+            server.execute(() -> applySpawnChoice(player, payload.zoneId()));
         });
 
-        ServerTickEvents.END_SERVER_TICK.register(GlobeMod::borderUxTick);
+        LatitudePlatform.onServerTickEnd(GlobeMod::borderUxTick);
 
         // Authoritative last-known-band capture at quit time, closing the gap the periodic tick in
         // borderUxTick leaves if a player quits within moments of crossing a band boundary.
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-            ServerPlayer player = handler.player;
+        LatitudePlatform.onPlayerDisconnect((player, server) -> {
             ServerLevel overworld = server.overworld();
             if (player == null || overworld == null || player.level() != overworld || !isGlobeOverworld(overworld)) {
                 return;
@@ -238,14 +228,14 @@ public class GlobeMod implements ModInitializer {
     }
 
     private static void registerDevOnlyCommand(Object dispatcher) {
-        if (!FabricLoader.getInstance().isDevelopmentEnvironment()) {
+        if (!LatitudePlatform.isDevelopmentEnvironment()) {
             return;
         }
         invokeDevRegister("com.example.globe.dev.LatitudeDevCommand", dispatcher);
     }
 
     private static void registerDevOnlyHeadlessRunner() {
-        if (!FabricLoader.getInstance().isDevelopmentEnvironment()) {
+        if (!LatitudePlatform.isDevelopmentEnvironment()) {
             return;
         }
         invokeDevRegister("com.example.globe.dev.BiomePreviewHeadlessRunner");
@@ -921,15 +911,15 @@ public class GlobeMod implements ModInitializer {
     }
 
     public static void logBuildMetadata(String side) {
-        Optional<ModContainer> mod = FabricLoader.getInstance().getModContainer(MOD_ID);
-        String version = mod.map(c -> c.getMetadata().getVersion().getFriendlyString()).orElse("?");
+        Optional<String> modVersion = LatitudePlatform.modVersion(MOD_ID);
+        String version = modVersion.orElse("?");
         String commit = "?";
         String branch = "?";
         String time = "?";
         String dirty = "?";
 
-        if (mod.isPresent()) {
-            try (InputStream is = mod.get().findPath("META-INF/MANIFEST.MF").map(path -> {
+        if (modVersion.isPresent()) {
+            try (InputStream is = LatitudePlatform.findModFile(MOD_ID, "META-INF/MANIFEST.MF").map(path -> {
                 try {
                     return java.nio.file.Files.newInputStream(path);
                 } catch (Exception e) {

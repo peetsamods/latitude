@@ -137,7 +137,7 @@ public final class SpawnSafetyPolicyTest {
                 "initial-spawn logs distinguish a suggestion from a terrain-validated coordinate");
         assertTrue(
                 source.contains(
-                        "placeLatitudeBonusChest(overworld, handler.player.blockPosition())"),
+                        "placeLatitudeBonusChest(overworld, player.blockPosition())"),
                 "an optional bonus chest is placed only after Minecraft has resolved and loaded the final player position");
         assertTrue(
                 source.contains(
