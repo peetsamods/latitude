@@ -55,6 +55,10 @@ packages from its release jar as the Fabric build does.
 - **Level load** fires for client levels on NeoForge too; the seam forwards server levels only, matching
   Fabric's `ServerLevelEvents.LOAD`.
 - **Player join** fires at the end of login on NeoForge rather than part-way through.
+- **Client disconnect.** NeoForge fires `ClientPlayerNetworkEvent.LoggingOut` from every
+  `Minecraft.disconnect()`, including the clean-up before a new world opens. The seam forwards only
+  logouts that had a play connection, matching Fabric; otherwise the loading overlay is cleared the
+  moment a new world starts.
 - **Promenade** has no NeoForge build, so its palm-leaf tint compatibility only ever activates on Fabric.
 
 ## Proving a NeoForge build

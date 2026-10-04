@@ -48,8 +48,14 @@ public final class NeoForgeLatitudeClientPlatform implements LatitudeClientPlatf
 
     @Override
     public void onClientDisconnect(Consumer<Minecraft> listener) {
-        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class,
-                event -> listener.accept(Minecraft.getInstance()));
+        // NeoForge fires LoggingOut from every Minecraft.disconnect(), including the clean-up run before a
+        // new world opens, when no play connection exists. Fabric's DISCONNECT fires only when a real play
+        // connection closes, so only forward a logout that had a connection.
+        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, event -> {
+            if (event.getConnection() != null) {
+                listener.accept(Minecraft.getInstance());
+            }
+        });
     }
 
     @Override
