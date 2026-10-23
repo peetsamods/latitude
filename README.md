@@ -13,10 +13,9 @@ using Java 21. See [the changelog](CHANGELOG.md) for this version's changes and
 - **Latitude biome bands** via biome tags under `globe:lat_*`.
 - **Warning overlays** (e.g. pole / edge warnings).
 - **Compass HUD**
-  - Toggle keybind: `K`
-  - Open settings: `F9`
-  - Preview mode toggle: `P`
-  - Alt+Left-Click a compass icon in inventory to toggle (shows a red X when disabled)
+  - Toggle compass: `,` (comma)
+  - Open HUD Studio: `F9`
+  - Reassign either shortcut in Minecraft's Controls menu
   - Fully configurable: anchors, offsets, scale, background alpha, colors, show modes, direction modes
 
 ## Design specification
