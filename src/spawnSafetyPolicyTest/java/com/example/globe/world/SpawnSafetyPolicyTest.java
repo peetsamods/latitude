@@ -22,6 +22,7 @@ public final class SpawnSafetyPolicyTest {
         heightmapPositionIsTheSpawnSpaceAboveGround();
         productionUsesTheValidatedCoordinateAndSurfacePolicy();
         spawnSearchJudgesThePaintedBiome();
+        retiredSpawnPickerHasNoServerMutationPath();
         System.out.println("SPAWN_SAFETY_POLICY_TEST_PASS");
     }
 
@@ -349,6 +350,21 @@ public final class SpawnSafetyPolicyTest {
         assertFalse(
                 source.contains("isLandBiome(template,"),
                 "no spawn candidate is judged through the bare template");
+    }
+
+    private static void retiredSpawnPickerHasNoServerMutationPath() throws IOException {
+        String serverSource = Files.readString(
+                Path.of("src/main/java/com/example/globe/GlobeMod.java"));
+        String networkSource = Files.readString(
+                Path.of("src/main/java/com/example/globe/GlobeNet.java"));
+        assertFalse(serverSource.contains("GlobeNet.SetSpawnPickerPayload.ID"),
+                "a client must not reach spawn relocation through the retired picker channel");
+        assertFalse(serverSource.contains("private static void applySpawnChoice("),
+                "the retired packet handler must not retain a world-spawn mutation path");
+        assertFalse(networkSource.contains("c2s_set_spawn_picker"),
+                "the retired spawn-selection request must not be registered for decoding");
+        assertTrue(serverSource.contains("resolveInitialSpawnChoice(world, pendingZone)"),
+                "new worlds still resolve their selected spawn through server-owned initial creation");
     }
 
     private static String normalize(String value) {
