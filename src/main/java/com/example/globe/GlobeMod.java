@@ -36,7 +36,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.RelativeMovement;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
@@ -63,7 +62,6 @@ import net.fabricmc.loader.api.metadata.CustomValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.EnumSet;
 import java.util.Set;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -235,11 +233,6 @@ public class GlobeMod implements ModInitializer {
                 worldState.setSpawnPickerDismissed(true);
             }
         });
-
-        ServerPlayNetworking.registerGlobalReceiver(GlobeNet.SetSpawnPickerPayload.ID,
-                (payload, player, responseSender) -> {
-                    player.server.execute(() -> applySpawnChoice(player, payload.zoneId()));
-                });
 
         ServerTickEvents.END_SERVER_TICK.register(GlobeMod::borderUxTick);
 
@@ -858,45 +851,6 @@ public class GlobeMod implements ModInitializer {
         return count;
     }
 
-    private static void applySpawnChoice(ServerPlayer player, String id) {
-        if (player.getTags().contains(SPAWN_CHOSEN_TAG)) {
-            return;
-        }
-
-        if (Boolean.getBoolean("latitude.disableSpawnTeleport")) {
-            // DEBUG ONLY: avoid join hitch while diagnosing spawn teleport.
-            LOGGER.info("Spawn teleport disabled by latitude.disableSpawnTeleport (debug only).");
-            return;
-        }
-
-        ServerLevel world = (ServerLevel) player.level();
-        if (!isGlobeOverworld(world)) {
-            return;
-        }
-
-        SpawnChoice spawnChoice;
-        try {
-            spawnChoice = resolveSpawnChoice(world, id);
-        } catch (RuntimeException e) {
-            LOGGER.error(
-                    "[Latitude] No terrain-validated spawn was available for zone={}; keeping the player's current safe position",
-                    id,
-                    e);
-            return;
-        }
-        LOGGER.info("Applying spawn choice: player={}, zoneId={}", player.getName().getString(), spawnChoice.zoneId());
-
-        BlockPos clampedSpawnPos = spawnChoice.pos();
-        world.setDefaultSpawnPos(clampedSpawnPos, 0.0f);
-
-        BlockPos teleportPos = clampedSpawnPos;
-        player.teleportTo(world, teleportPos.getX() + 0.5, teleportPos.getY(), teleportPos.getZ() + 0.5, EnumSet.noneOf(RelativeMovement.class), player.getYRot(), player.getXRot());
-        player.setDeltaMovement(0.0, 0.0, 0.0);
-        player.fallDistance = 0.0F;
-        player.addTag(SPAWN_CHOSEN_TAG);
-        LatitudeWorldState.get(world).setSpawnPickerDismissed(true);
-    }
-
     private static SpawnChoice resolveInitialSpawnChoice(ServerLevel world, String id) {
         String zoneId = id;
         long seed = world.getServer().getWorldData().worldGenOptions().seed();
@@ -978,10 +932,6 @@ public class GlobeMod implements ModInitializer {
                     "Latitude could not find a safe initial spawn in the selected climate zone after nine bounded attempts.");
         }
         return new SpawnChoice(zoneId, spawnPos, radius);
-    }
-
-    private static SpawnChoice resolveSpawnChoice(ServerLevel world, String id) {
-        return resolveSpawnChoice(world, id, Integer.MAX_VALUE, true, true);
     }
 
     private static SpawnChoice resolveSpawnChoice(

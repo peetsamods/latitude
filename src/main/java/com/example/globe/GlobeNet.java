@@ -12,11 +12,11 @@ public final class GlobeNet {
     }
 
     /**
-     * Claims the three channel ids.
+     * Claims the two clientbound channel ids.
      *
      * <p>On this Minecraft line the id is claimed by {@code PacketType.create}, which runs inside
      * each payload record's static initialiser rather than in a separate registry call. Naming the
-     * three constants here is what forces those initialisers, so every id is still claimed at
+     * two constants here is what forces those initialisers, so every id is still claimed at
      * exactly the point in start-up this method was always called from.
      */
     public static void registerPayloads() {
@@ -24,8 +24,7 @@ public final class GlobeNet {
             return;
         }
         registered = GlobeStatePayload.ID != null
-                && OpenSpawnPickerPayload.ID != null
-                && SetSpawnPickerPayload.ID != null;
+                && OpenSpawnPickerPayload.ID != null;
     }
 
     /**
@@ -78,22 +77,4 @@ public final class GlobeNet {
         }
     }
 
-    public record SetSpawnPickerPayload(String zoneId) implements FabricPacket {
-        public static final PacketType<SetSpawnPickerPayload> ID = PacketType.create(
-                new ResourceLocation("globe", "c2s_set_spawn_picker"), SetSpawnPickerPayload::read);
-
-        private static SetSpawnPickerPayload read(FriendlyByteBuf buf) {
-            return new SetSpawnPickerPayload(buf.readUtf());
-        }
-
-        @Override
-        public void write(FriendlyByteBuf buf) {
-            buf.writeUtf(zoneId);
-        }
-
-        @Override
-        public PacketType<?> getType() {
-            return ID;
-        }
-    }
 }
