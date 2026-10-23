@@ -7526,6 +7526,16 @@ public final class LatitudeBiomes {
 
     private static List<String> ledgerLandIdsForBand(int bandIndex) {
         List<BiomeRoute> routes = landRoutesForBand(bandIndex);
+        BiomeSelectionProfile profile = ACTIVE_PROVIDER_TICKET_PROFILE;
+        if (profile != null && isProviderTicketPolicy(ACTIVE_WORLDGEN_POLICY)) {
+            // Late acceptance and reroll pools must use the same birth roster as primary picks.
+            // Read the saved routes too: tolerated legacy rows need not match today's ledger.
+            Set<String> capturedIds = new java.util.TreeSet<>();
+            for (BiomeRoute route : routes) {
+                capturedIds.addAll(profile.entries(route));
+            }
+            return List.copyOf(capturedIds);
+        }
         List<String> ids = new ArrayList<>();
         for (BiomeDescriptorLedger.Descriptor descriptor : BiomeDescriptorLedger.descriptors()) {
             for (BiomeRoute route : routes) {
