@@ -45,6 +45,7 @@ final class BiomeProviderSelectionPolicyTest {
 
     static void run() throws Exception {
         descriptorAdmissionIsClosedAndCanonical();
+        legacyColdWetlandRowsPreserveTheBirthRoster();
         dappledForestHasOneCoolBorderHome();
         ineligibleColumnsRollWithoutDappled();
         existingWorldDappledUpgradeIsOneTimeAndAdditive();
@@ -755,6 +756,45 @@ final class BiomeProviderSelectionPolicyTest {
                 .collect(java.util.stream.Collectors.joining("\n"));
         return VanillaBiomeRepresentationProfile.decode(encoded);
     }
+
+    private static void legacyColdWetlandRowsPreserveTheBirthRoster() {
+        for (Set<String> providers : List.of(Set.of("biomesoplenty"), Set.of("terralith"),
+                Set.of("biomesoplenty", "terralith"))) {
+            BiomeSelectionProfile current = BiomeSelectionProfile.capture(registryFor(providers));
+            String encoded = current.encode();
+            assertEquals(encoded, BiomeSelectionProfile.decode(encoded).encode(),
+                    "current birth rosters retain their canonical roundtrip: " + providers);
+            String historical = encoded;
+            for (String id : List.of("biomesoplenty:muskeg", "terralith:ice_marsh")) {
+                if (!providers.contains(id.substring(0, id.indexOf(':')))) continue;
+                String correctedRow = BiomeRoute.SUBPOLAR_WETLAND.name() + "|" + id;
+                assertTrue(encoded.contains(correctedRow),
+                        "the captured roster must exercise the corrected cold-wetland row: " + id);
+                historical = historical.replace(correctedRow,
+                        BiomeRoute.TEMPERATE_WETLAND.name() + "|" + id);
+            }
+            assertFalse(encoded.equals(historical), "the historical fixture must change a row");
+            BiomeSelectionProfile reopened = BiomeSelectionProfile.decode(historical);
+            assertEquals(encoded, reopened.encode(),
+                    "only the historical cold-wetland routes change; all other birth rows survive");
+            assertEquals(current.providers(), reopened.providers(),
+                    "cold-wetland migration preserves the full provider roster");
+            for (BiomeRoute route : BiomeRoute.values()) {
+                assertEquals(current.entries(route), reopened.entries(route),
+                        "every route retains the captured identities after migration: " + route);
+            }
+        }
+        assertThrows(() -> BiomeSelectionProfile.decode(
+                        "provider_ticket_v1\nTEMPERATE_WETLAND|minecraft:forest"),
+                "the migration must not admit an unrelated biome on the old wetland route");
+        assertThrows(() -> BiomeSelectionProfile.decode(
+                        "provider_ticket_v1\nTEMPERATE_LOWLAND|biomesoplenty:muskeg"),
+                "the migration must not accept another invalid route for a corrected biome");
+        assertThrows(() -> BiomeSelectionProfile.decode(
+                        "provider_ticket_v1\nTEMPERATE_WETLAND|unreviewed:unknown_wetland"),
+                "unknown biome identifiers remain rejected");
+    }
+
 
     /**
      * Wetland routing is checked against REAL biome climate, not against the ledger's own opinion.
