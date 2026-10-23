@@ -171,6 +171,7 @@ def releaseArtifactExcludeSpec = { details ->
         return true
     }
     if (path == 'com/example/globe/client/ClipboardImageWriter.class'
+            || path == 'com/example/globe/client/ClipboardImageWriter.java'
             || path.startsWith('com/example/globe/client/ClipboardImageWriter$')) {
         return true
     }
@@ -202,4 +203,38 @@ tasks.named('sourcesJar', Jar).configure {
     }
     exclude(releaseArtifactExcludeSpec)
     exclude(releaseArtifactPatternExcludes)
+}
+
+// Check the actual archives independently of the producer's exclusion rules.
+tasks.register('latitudeReleaseArchivePolicyCheck') {
+    group = 'verification'
+    description = 'Reject development tooling in native release and source archives'
+    dependsOn tasks.named('jar'), tasks.named('sourcesJar')
+    doLast {
+        ['jar', 'sourcesJar'].each { taskName ->
+            def archive = tasks.named(taskName, Jar).get().archiveFile.get().asFile
+            new java.util.zip.ZipFile(archive).withCloseable { zip ->
+                def names = zip.entries().findAll { !it.directory }.collect { it.name }
+                def forbidden = names.findAll { name ->
+                    name.startsWith('com/example/globe/dev/')
+                            || name.startsWith('com/example/globe/debug/')
+                            || name.startsWith('com/example/globe/client/ClipboardImageWriter')
+                            || name.startsWith('tools/') || name.startsWith('scripts/')
+                            || name ==~ /.*\.(sh|bat|exe|dll|dylib|so)$/
+                }
+                if (!forbidden.isEmpty()) {
+                    throw new GradleException('Release archive contains excluded development tooling: ' + taskName)
+                }
+                def extension = taskName == 'jar' ? '.class' : '.java'
+                if (!names.contains('com/example/globe/GlobeMod' + extension)
+                        || !names.any { !it.contains('/') && it.startsWith('LICENSE') }) {
+                    throw new GradleException('Release archive is missing core content or license: ' + taskName)
+                }
+            }
+        }
+    }
+}
+
+tasks.named('check').configure {
+    dependsOn tasks.named('latitudeReleaseArchivePolicyCheck')
 }
