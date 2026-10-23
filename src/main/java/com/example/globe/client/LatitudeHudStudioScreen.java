@@ -644,7 +644,7 @@ public class LatitudeHudStudioScreen extends Screen {
             }
 
             var cfg = CompassHudConfig.get();
-            if (cfg.attachToHotbarCompass) {
+            if (cfg.style == CompassHudConfig.CompassStyle.DIGITAL && cfg.attachToHotbarCompass) {
                 return true;
             }
 
@@ -905,7 +905,7 @@ public class LatitudeHudStudioScreen extends Screen {
             return false;
         }
         var cfg = CompassHudConfig.get();
-        if (cfg.attachToHotbarCompass) {
+        if (cfg.style == CompassHudConfig.CompassStyle.DIGITAL && cfg.attachToHotbarCompass) {
             return false;
         }
         var b = CompassHud.computeBounds(mc, cfg);
