@@ -65,6 +65,7 @@ final class BiomeProviderSelectionPolicyTest {
         routeSelectionCannotFallBackToAnUnclassifiedTag();
         providerTicketHotPathCachesAndInvalidates();
         providerProfileCompatibilityIsBirthLocked();
+        fallbackPoolsPreserveBirthProvidersAcrossContextChanges();
         polarIceSpikeAccentStaysAMinorityInEveryPoolSize();
         polarTaigaTransitionPreservesShouldersAndTreeLine();
         polarExtremeCapCatchesNameAlikeModdedBiomesConsistently();
@@ -1054,6 +1055,107 @@ final class BiomeProviderSelectionPolicyTest {
         assertTrue(mod.contains("No new provider is substituted")
                         && mod.contains("removing biome mods can still leave saved chunks unreadable"),
                 "the live compatibility warning states both the closed fallback and saved-ID risk");
+    }
+
+    private static void fallbackPoolsPreserveBirthProvidersAcrossContextChanges() throws Exception {
+        net.minecraft.SharedConstants.tryDetectVersion();
+        net.minecraft.server.Bootstrap.bootStrap();
+        MappedRegistry<Biome> registry = new MappedRegistry<>(Registries.BIOME, Lifecycle.stable());
+        Set<String> ids = new TreeSet<>(registryFor(Set.of("biomesoplenty", "terralith")));
+        ids.add("minecraft:pale_garden");
+        for (String id : ids) {
+            registry.register(ResourceKey.create(Registries.BIOME, Identifier.parse(id)),
+                    minimalBiome(), RegistrationInfo.BUILT_IN);
+        }
+        registry.bindAllTagsToEmpty();
+        registry.freeze();
+        List<Holder<Biome>> source = registry.listElements().map(h -> (Holder<Biome>) h).toList();
+        BiomeSelectionProfile birth = BiomeSelectionProfile.capture(registryFor(Set.of("biomesoplenty")));
+        BiomeSelectionProfile current = BiomeSelectionProfile.capture(registryFor(Set.of("biomesoplenty", "terralith")));
+        java.lang.reflect.Method registryPool = LatitudeBiomes.class.getDeclaredMethod(
+                "filteredAllowedLandPool", Registry.class, int.class, boolean.class);
+        java.lang.reflect.Method sourcePool = LatitudeBiomes.class.getDeclaredMethod(
+                "filteredAllowedLandPool", java.util.Collection.class, int.class, boolean.class);
+        java.lang.reflect.Method enforce = LatitudeBiomes.class.getDeclaredMethod(
+                "enforceLandBandPool", Registry.class, Holder.class,
+                int.class, int.class, double.class, int.class, boolean.class);
+        java.lang.reflect.Method routes = LatitudeBiomes.class.getDeclaredMethod("landRoutesForBand", int.class);
+        java.lang.reflect.Method ledger = LatitudeBiomes.class.getDeclaredMethod("ledgerLandIdsForBand", int.class);
+        for (java.lang.reflect.Method method : List.of(registryPool, sourcePool, enforce, routes, ledger)) {
+            method.setAccessible(true);
+        }
+        Holder<Biome> grove = holder(registry, "minecraft:grove");
+        List<List<String>> currentPools = new ArrayList<>();
+        try {
+            // Reuse the exact registry/source identities so every transition must invalidate caches.
+            for (BiomeSelectionProfile profile : List.of(birth, current, birth)) {
+                LatitudeBiomes.activateWorldgenContext(10_000, 3L,
+                        LatitudeWorldState.WorldgenPolicyVersion.PROVIDER_TICKET_V4_CAVE_COVERAGE, profile);
+                for (int band = 0; band < 5; band++) {
+                    @SuppressWarnings("unchecked")
+                    List<BiomeRoute> bandRoutes = (List<BiomeRoute>) routes.invoke(null, band);
+                    @SuppressWarnings("unchecked")
+                    List<Holder<Biome>> registryEntries = (List<Holder<Biome>>) registryPool.invoke(null, registry, band, false);
+                    @SuppressWarnings("unchecked")
+                    List<Holder<Biome>> sourceEntries = (List<Holder<Biome>>) sourcePool.invoke(null, source, band, false);
+                    assertEquals(registryEntries, sourceEntries,
+                            "registry and source fallback pools share the captured roster: " + band);
+                    for (Holder<Biome> holder : registryEntries) {
+                        String id = LatitudeBiomes.biomeIdPublic(holder);
+                        if (id.startsWith("minecraft:")) continue;
+                        assertTrue(bandRoutes.stream().anyMatch(route -> profile.contains(route, id)),
+                                "custom fallback identity needs a captured route for this band: " + id);
+                    }
+                    if (profile == current) {
+                        currentPools.add(registryEntries.stream().map(LatitudeBiomes::biomeIdPublic).toList());
+                    }
+                }
+                boolean selectedTerralith = false;
+                for (int x = -8192; x <= 8192; x += 512) {
+                    for (int z = 4096; z <= 5120; z += 256) {
+                        @SuppressWarnings("unchecked")
+                        Holder<Biome> selected = (Holder<Biome>) enforce.invoke(null, registry, grove,
+                                x, z, z / 10_000.0, 2, false);
+                        if (LatitudeBiomes.biomeIdPublic(selected).startsWith("terralith:")) {
+                            selectedTerralith = true;
+                        }
+                    }
+                }
+                assertEquals(profile == current, selectedTerralith,
+                        "real fallback output admits Terralith only when the birth profile contains it");
+            }
+            // No profile retains the ordinary current-registry behavior, including after a reset.
+            for (LatitudeWorldState.WorldgenPolicyVersion policy : List.of(
+                    LatitudeWorldState.WorldgenPolicyVersion.MODERN_1_3,
+                    LatitudeWorldState.WorldgenPolicyVersion.PROVIDER_TICKET_V4_CAVE_COVERAGE)) {
+                LatitudeBiomes.clearWorldgenContext();
+                LatitudeBiomes.activateWorldgenContext(10_000, 3L, policy, null);
+                for (int band = 0; band < 5; band++) {
+                    @SuppressWarnings("unchecked")
+                    List<Holder<Biome>> entries = (List<Holder<Biome>>) registryPool.invoke(null, registry, band, false);
+                    assertEquals(currentPools.get(band), entries.stream().map(LatitudeBiomes::biomeIdPublic).toList(),
+                            "profile-less fallback pools keep their ordinary membership: " + policy + " " + band);
+                }
+            }
+            BiomeSelectionProfile legacyRedwood = BiomeSelectionProfile.decode(
+                    "provider_ticket_v1\nSUBTROPICAL_HUMID_LOWLAND|biomesoplenty:redwood_forest");
+            LatitudeBiomes.activateWorldgenContext(10_000, 3L,
+                    LatitudeWorldState.WorldgenPolicyVersion.PROVIDER_TICKET_V4_CAVE_COVERAGE, legacyRedwood);
+            assertTrue(((List<?>) ledger.invoke(null, 1)).contains("biomesoplenty:redwood_forest"),
+                    "the tolerated saved redwood route remains legal in its birth band");
+            assertFalse(((List<?>) ledger.invoke(null, 2)).contains("biomesoplenty:redwood_forest"),
+                    "today's redwood route does not add an uncaptured route to a legacy profile");
+            Registry<Biome> removedProviderRegistry = buildTestBiomeRegistry(registryFor(Set.of())).registry();
+            LatitudeBiomes.activateWorldgenContext(10_000, 3L,
+                    LatitudeWorldState.WorldgenPolicyVersion.PROVIDER_TICKET_V4_CAVE_COVERAGE, birth);
+            @SuppressWarnings("unchecked")
+            List<Holder<Biome>> surviving = (List<Holder<Biome>>) registryPool.invoke(null, removedProviderRegistry, 2, false);
+            assertTrue(!surviving.isEmpty() && surviving.stream().allMatch(
+                            holder -> LatitudeBiomes.biomeIdPublic(holder).startsWith("minecraft:")),
+                    "missing birth providers fall back to present vanilla identities without substitution");
+        } finally {
+            LatitudeBiomes.clearWorldgenContext();
+        }
     }
 
     private static void vanillaCoverageIsCompleteAndWorldSizeSafe() {
