@@ -167,6 +167,30 @@ def main() -> int:
         "every visible HUD preview element must be draggable from every Studio tab",
         failures,
     )
+    compass_dragged_body = source_slice(
+        studio,
+        "if (dragElement == DragElement.COMPASS)",
+        "if (dragElement == DragElement.LOCATION_DETAIL)",
+    )
+    compass_hit_test_body = source_slice(
+        studio,
+        "private boolean isMouseOverCompass(",
+        "private boolean isMouseOverTitle(",
+    )
+    digital_attachment_guard = (
+        r"if\s*\(\s*cfg\.style\s*==\s*CompassHudConfig\.CompassStyle\.DIGITAL"
+        r"\s*&&\s*cfg\.attachToHotbarCompass\s*\)"
+    )
+    for body, action in (
+        (compass_hit_test_body, "hit test"),
+        (compass_dragged_body, "drag handler"),
+    ):
+        require(
+            re.search(digital_attachment_guard, body) is not None
+            and re.search(r"if\s*\(\s*cfg\.attachToHotbarCompass\s*\)", body) is None,
+            f"compass {action} must ignore saved digital hotbar attachment in analog mode",
+            failures,
+        )
     title_dragged = re.search(
         r"if \(dragElement == DragElement\.TITLE\)\s*\{(?P<body>.*?)"
         r"\n\s*return true;\n\s*\}",
