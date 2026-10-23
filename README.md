@@ -13,10 +13,9 @@ using Java 25. See [the changelog](CHANGELOG.md) for this version's changes and
 - **Latitude biome bands** via biome tags under `globe:lat_*`.
 - **Warning overlays** (e.g. pole / edge warnings).
 - **Compass HUD**
-  - Toggle keybind: `K`
-  - Open settings: `F9`
-  - Preview mode toggle: `P`
-  - Alt+Left-Click a compass icon in inventory to toggle (shows a red X when disabled)
+  - Toggle compass: `,` (comma)
+  - Open HUD Studio: `F9`
+  - Reassign either shortcut in Minecraft's Controls menu
   - Fully configurable: anchors, offsets, scale, background alpha, colors, show modes, direction modes
 
 ## Design Spec / Release Gate
@@ -59,6 +58,16 @@ The remapped runtime JAR is:
 - `build/libs/latitude-1.5.2-beta+26.1.jar`
 
 Do not upload development or sources JARs as the playable release file.
+
+### Native NeoForge build
+
+The root build above produces the Fabric artifact. To build the native NeoForge artifact instead:
+
+```bash
+./gradlew -p neoforge build
+```
+
+The NeoForge main and sources JARs are written to `neoforge/build/libs/`.
 
 ## Support
 
