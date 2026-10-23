@@ -8,6 +8,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 CLIENT = ROOT / "src/main/java/com/example/globe/GlobeModClient.java"
+KEYBINDS = ROOT / "src/main/java/com/example/globe/client/ClientKeybinds.java"
 CONFIG = ROOT / "src/main/java/com/example/globe/client/CompassHudConfig.java"
 HUD = ROOT / "src/main/java/com/example/globe/client/CompassHud.java"
 STUDIO = ROOT / "src/main/java/com/example/globe/client/LatitudeHudStudioScreen.java"
@@ -31,6 +32,7 @@ def source_slice(source: str, start: str, end: str) -> str:
 
 def main() -> int:
     client = CLIENT.read_text()
+    keybinds = KEYBINDS.read_text()
     config = CONFIG.read_text()
     hud = HUD.read_text()
     studio = STUDIO.read_text()
@@ -47,6 +49,29 @@ def main() -> int:
         "public static HudPoint computeBasePosition(",
     )
     failures: list[str] = []
+
+    registration_imports = {
+        "KeyBindingHelper.registerKeyBinding":
+            "import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;",
+        "KeyMappingHelper.registerKeyMapping":
+            "import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;",
+        "LatitudeClientPlatform.registerKeyMapping":
+            "import com.example.globe.platform.client.LatitudeClientPlatform;",
+    }
+    registration_call = "|".join(re.escape(call) for call in registration_imports)
+    for field in ("TOGGLE_COMPASS", "OPEN_SETTINGS"):
+        registered_mapping = re.search(
+            rf"\b{field}\s*=\s*(?P<helper>{registration_call})\s*\(\s*"
+            r"new\s+KeyMapping\s*\(.*?\)\s*\)\s*;",
+            keybinds,
+            re.DOTALL,
+        )
+        require(
+            registered_mapping is not None
+            and registration_imports[registered_mapping.group("helper")] in keybinds,
+            f"{field} must be assigned its newly constructed mapping through the loader registration helper",
+            failures,
+        )
 
     require(
         "import com.example.globe.client.LatitudeHudStudioScreen;" in client
