@@ -146,6 +146,13 @@ public final class BiomeSelectionProfile {
      * POLAR mountain — the exact thing the ruling forbids.
      */
     private static BiomeRoute migrateSavedRoute(BiomeRoute route, String biomeId) {
+        // These cold wetlands formerly shared the temperate route. Keep the whole birth roster
+        // readable while applying their corrected climate route, as for windswept below.
+        if (route == BiomeRoute.TEMPERATE_WETLAND
+                && ("biomesoplenty:muskeg".equals(biomeId)
+                || "terralith:ice_marsh".equals(biomeId))) {
+            return BiomeRoute.SUBPOLAR_WETLAND;
+        }
         if (route != BiomeRoute.COLD_UPLAND && route != BiomeRoute.TEMPERATE_UPLAND) return route;
         return switch (biomeId) {
             case "minecraft:windswept_hills",
