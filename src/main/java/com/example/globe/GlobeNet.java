@@ -22,7 +22,6 @@ public final class GlobeNet {
         PayloadTypeRegistry.playS2C().register(GlobeStatePayload.ID, GlobeStatePayload.CODEC);
 
         PayloadTypeRegistry.playS2C().register(OpenSpawnPickerPayload.ID, OpenSpawnPickerPayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(SetSpawnPickerPayload.ID, SetSpawnPickerPayload.CODEC);
     }
 
     /**
@@ -64,17 +63,4 @@ public final class GlobeNet {
         }
     }
 
-    public record SetSpawnPickerPayload(String zoneId) implements CustomPacketPayload {
-        public static final Type<SetSpawnPickerPayload> ID = new Type<>(Identifier.fromNamespaceAndPath("globe", "c2s_set_spawn_picker"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, SetSpawnPickerPayload> CODEC = StreamCodec.composite(
-                ByteBufCodecs.STRING_UTF8,
-                SetSpawnPickerPayload::zoneId,
-                SetSpawnPickerPayload::new
-        );
-
-        @Override
-        public Type<? extends CustomPacketPayload> type() {
-            return ID;
-        }
-    }
 }
