@@ -34,6 +34,7 @@ public final class SpawnSafetyPolicyTest {
         heightmapPositionIsTheSpawnSpaceAboveGround();
         productionUsesTheValidatedCoordinateAndSurfacePolicy();
         spawnSearchJudgesThePaintedBiome();
+        retiredSpawnPickerHasNoServerMutationPath();
         System.out.println("SPAWN_SAFETY_POLICY_TEST_PASS");
     }
 
@@ -220,10 +221,9 @@ public final class SpawnSafetyPolicyTest {
                         "throw new InitialSpawnSelectionException( \"Latitude could not find a safe initial spawn in the selected climate zone after nine bounded attempts.\");"),
                 "the resolver still surfaces exhaustion as the dedicated exception -- it is an "
                         + "internal signal now, caught by the wrapper, never a server crash");
-        assertTrue(
-                source.contains(
-                        "private static SpawnChoice resolveSpawnChoice(ServerLevel world, String id) { return resolveSpawnChoice(world, id, Integer.MAX_VALUE, true, true); }"),
-                "ordinary non-initial picker resolution retains its existing biome search and fallback route");
+        assertFalse(
+                source.contains("resolveSpawnChoice(world, id, Integer.MAX_VALUE, true, true)"),
+                "the retired non-initial picker must not retain an unbounded spawn relocation route");
         assertFalse(
                 source.contains("applySpawnChoice(handler.player, zoneToApply)"),
                 "first join must not retry the synchronous globe scan after initial selection");
@@ -737,6 +737,21 @@ public final class SpawnSafetyPolicyTest {
         assertFalse(
                 source.contains("isLandBiome(template,"),
                 "no spawn candidate is judged through the bare template");
+    }
+
+    private static void retiredSpawnPickerHasNoServerMutationPath() throws IOException {
+        String serverSource = Files.readString(
+                Path.of("src/main/java/com/example/globe/GlobeMod.java"));
+        String networkSource = Files.readString(
+                Path.of("src/main/java/com/example/globe/GlobeNet.java"));
+        assertFalse(serverSource.contains("GlobeNet.SetSpawnPickerPayload.ID"),
+                "a client must not reach spawn relocation through the retired picker channel");
+        assertFalse(serverSource.contains("private static void applySpawnChoice("),
+                "the retired packet handler must not retain a world-spawn mutation path");
+        assertFalse(networkSource.contains("c2s_set_spawn_picker"),
+                "the retired spawn-selection request must not be registered for decoding");
+        assertTrue(serverSource.contains("resolveInitialSpawnChoice(world, pendingZone)"),
+                "new worlds still resolve their selected spawn through server-owned initial creation");
     }
 
     private static String normalize(String value) {
