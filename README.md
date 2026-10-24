@@ -4,7 +4,7 @@ A globe-style world + latitude-based biome bands with a customizable compass HUD
 
 ## Current version
 
-This checkout builds Latitude `1.5.2-beta+26.2` for Minecraft **26.2** on **Fabric**,
+This checkout builds Latitude `1.5.3+26.2` for Minecraft **26.2** on **Fabric**,
 using Java 25. See [the changelog](CHANGELOG.md) for this version's changes and
 [version naming](docs/versioning.md) for the shared release contract.
 
