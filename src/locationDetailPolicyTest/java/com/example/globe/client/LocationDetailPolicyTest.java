@@ -286,6 +286,15 @@ public final class LocationDetailPolicyTest {
                 "no parallel zone-only detached render/bounds path remains");
 
         String studio = normalize(read("src/main/java/com/example/globe/client/LatitudeHudStudioScreen.java"));
+        String studioClick = slice(studio, "public boolean mouseClicked(", "public boolean mouseDragged(");
+        String studioDrag = slice(studio, "public boolean mouseDragged(", "public boolean mouseReleased(");
+        String studioRelease = slice(studio, "public boolean mouseReleased(", "private static void resetHudDefaults(");
+        assertTrue(studioClick.contains("if (click.button() == InputConstants.MOUSE_BUTTON_LEFT)"),
+                "HUD press must use the platform primary-button constant, not a legacy numeric button");
+        assertTrue(studioDrag.contains("if (click.button() != InputConstants.MOUSE_BUTTON_LEFT)"),
+                "HUD movement must use the same platform primary-button constant as press");
+        assertTrue(studioRelease.contains("if (click.button() == InputConstants.MOUSE_BUTTON_LEFT)"),
+                "HUD release must use the same platform primary-button constant as press");
         assertTrue(
                 studio.contains("CompassHud.anchoredZoneX(") && studio.contains("CompassHud.anchoredZoneY(")
                         && !studio.contains("private static int anchoredZoneX("),

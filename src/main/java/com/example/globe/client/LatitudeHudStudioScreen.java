@@ -572,7 +572,7 @@ public class LatitudeHudStudioScreen extends Screen {
         double mx = click.x();
         double my = click.y();
 
-        if (click.button() == 0) {
+        if (click.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             if (LatitudeConfig.zoneEnterTitleDraggable
                     && isMouseOverTitle(mx, my)) {
                 dragElement = DragElement.TITLE;
@@ -608,7 +608,7 @@ public class LatitudeHudStudioScreen extends Screen {
         double mx = click.x();
         double my = click.y();
 
-        if (click.button() != 0) {
+        if (click.button() != InputConstants.MOUSE_BUTTON_LEFT) {
             return false;
         }
 
@@ -698,7 +698,7 @@ public class LatitudeHudStudioScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent click) {
-        if (click.button() == 0) {
+        if (click.button() == InputConstants.MOUSE_BUTTON_LEFT) {
             if (dragElement == DragElement.TITLE) {
                 int x = (int) Math.round(titleOffsetXf);
                 int y = (int) Math.round(titleOffsetYf);
