@@ -73,6 +73,7 @@ def main() -> int:
             failures,
         )
 
+
     require(
         "import com.example.globe.client.LatitudeHudStudioScreen;" in client
         and "new LatitudeHudStudioScreen(" in client,
@@ -145,7 +146,7 @@ def main() -> int:
     )
     require(
         "isSidebarWidgetEligible(w)" in studio
-        and "w == wCompassAttachHotbar" in studio
+        and "w == wCustomBiomeSource" in studio
         and "w == wLocationFollow" in studio,
         "viewport scrolling must preserve mode-specific semantic hiding",
         failures,
@@ -202,20 +203,23 @@ def main() -> int:
         "private boolean isMouseOverCompass(",
         "private boolean isMouseOverTitle(",
     )
-    digital_attachment_guard = (
-        r"if\s*\(\s*cfg\.style\s*==\s*CompassHudConfig\.CompassStyle\.DIGITAL"
-        r"\s*&&\s*cfg\.attachToHotbarCompass\s*\)"
+    require(
+        "attachToHotbarCompass" not in compass_hit_test_body
+        and "cfg.attachToHotbarCompass = false;" in compass_dragged_body
+        and "wCompassAttachHotbar.setValue(false);" in compass_dragged_body
+        and compass_dragged_body.index("cfg.attachToHotbarCompass = false;")
+        < compass_dragged_body.index("CompassHud.computeBasePosition(mc, cfg)"),
+        "grabbing either compass must permit direct movement and synchronize hotbar detachment",
+        failures,
     )
-    for body, action in (
-        (compass_hit_test_body, "hit test"),
-        (compass_dragged_body, "drag handler"),
-    ):
-        require(
-            re.search(digital_attachment_guard, body) is not None
-            and re.search(r"if\s*\(\s*cfg\.attachToHotbarCompass\s*\)", body) is None,
-            f"compass {action} must ignore saved digital hotbar attachment in analog mode",
-            failures,
-        )
+    require(
+        "private CycleButton<Boolean> wCompassAttachHotbar;" in studio
+        and "setVisible(wCompassAttachHotbar, showCompassControls);" in studio
+        and "if (w == wCompassAttachHotbar)" not in studio
+        and "Analog ignores this" not in studio,
+        "hotbar attachment must remain available in both compass styles",
+        failures,
+    )
     title_dragged = re.search(
         r"if \(dragElement == DragElement\.TITLE\)\s*\{(?P<body>.*?)"
         r"\n\s*return true;\n\s*\}",
