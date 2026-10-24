@@ -4,7 +4,7 @@ A globe-style world + latitude-based biome bands with a customizable compass HUD
 
 ## Current version
 
-This checkout builds Latitude `1.5.2-beta+1.21.11` for Minecraft **1.21.11** on **Fabric**,
+This checkout builds Latitude `1.5.3+1.21.11` for Minecraft **1.21.11** on **Fabric**,
 using Java 21. See [the changelog](CHANGELOG.md) for this version's changes and
 [version naming](docs/versioning.md) for the shared release contract.
 
@@ -57,7 +57,7 @@ On Windows, use `.\gradlew.bat clean build`.
 
 The remapped runtime JAR is:
 
-- `build/libs/latitude-1.5.2-beta+1.21.11.jar`
+- `build/libs/latitude-1.5.3+1.21.11.jar`
 
 Do not upload development or sources JARs as the playable release file.
 
