@@ -103,21 +103,25 @@ public final class HudTextLayoutPolicy {
         int hotbarTop = screenHeight - 22;
         int gap = 4;
         int sideReserve = 30;
-        int maxX = Math.max(0, screenWidth - boxWidth);
-        int maxY = Math.max(0, screenHeight - boxHeight);
+        // The inclusive circle raster paints 2r+1 pixels, including the rim at each edge.
+        int paintedDiameter = (diameter / 2) * 2 + 1;
+        int paintedWidth = Math.max(boxWidth, paintedDiameter);
+        int paintedHeight = Math.max(boxHeight, paintedDiameter);
+        int maxX = Math.max(0, screenWidth - paintedWidth);
+        int maxY = Math.max(0, screenHeight - paintedHeight);
         int besideY = clamp(hotbarTop + (22 - boxHeight) / 2, 0, maxY);
         int rightX = hotbarRight + sideReserve + gap;
-        if (rightX + boxWidth <= screenWidth - gap) {
+        if (rightX + paintedWidth <= screenWidth - gap) {
             return new HotbarPosition(rightX, besideY);
         }
-        int leftX = hotbarLeft - sideReserve - gap - boxWidth;
+        int leftX = hotbarLeft - sideReserve - gap - paintedWidth;
         if (leftX >= gap) {
             return new HotbarPosition(leftX, besideY);
         }
         // Keep ordinary health/armor/held-item rows clear when the side lanes are too narrow.
         return new HotbarPosition(
                 clamp(hotbarRight - diameter, 0, maxX),
-                clamp(hotbarTop - 48 - boxHeight, 0, maxY));
+                clamp(hotbarTop - 48 - paintedHeight, 0, maxY));
     }
 
     private static boolean intersects(

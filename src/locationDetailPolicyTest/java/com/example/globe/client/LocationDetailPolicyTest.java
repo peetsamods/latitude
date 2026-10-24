@@ -165,12 +165,14 @@ public final class LocationDetailPolicyTest {
     private static void analogHotbarAttachmentStaysClear() {
         for (int width : new int[] {320, 427, 640, 854}) {
             for (int height : new int[] {240, 360, 480}) {
-                for (int diameter : new int[] {16, 32, 72, 128}) {
+                for (int diameter : new int[] {16, 17, 32, 33, 72, 73, 127, 128}) {
                     for (int extraWidth : new int[] {0, 48, 160}) {
                         int boxWidth = Math.min(width - 8, diameter + extraWidth);
                         var position = HudTextLayoutPolicy.analogHotbarPosition(
                                 width, height, boxWidth, diameter, diameter);
-                        var box = new Rect(position.x(), position.y(), boxWidth, diameter);
+                        int paintedDiameter = (diameter / 2) * 2 + 1;
+                        var box = new Rect(position.x(), position.y(),
+                                Math.max(boxWidth, paintedDiameter), paintedDiameter);
                         var barAndAccessories = new Rect(width / 2 - 121, height - 22, 242, 22);
                         assertTrue(box.x >= 0 && box.y >= 0
                                         && box.x + box.w <= width && box.y + box.h <= height,
@@ -186,10 +188,10 @@ public final class LocationDetailPolicyTest {
                 }
             }
         }
-        assertEquals(new HudTextLayoutPolicy.HotbarPosition(445, 328),
+        assertEquals(new HudTextLayoutPolicy.HotbarPosition(445, 327),
                 HudTextLayoutPolicy.analogHotbarPosition(640, 360, 68, 32, 32),
                 "a normal analog group docks at the right with accessory clearance");
-        assertEquals(new HudTextLayoutPolicy.HotbarPosition(219, 138),
+        assertEquals(new HudTextLayoutPolicy.HotbarPosition(219, 137),
                 HudTextLayoutPolicy.analogHotbarPosition(320, 240, 68, 32, 32),
                 "a narrow GUI docks above the right end instead of centering over the hotbar");
     }
