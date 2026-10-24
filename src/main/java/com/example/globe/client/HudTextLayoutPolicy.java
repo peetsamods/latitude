@@ -93,6 +93,37 @@ public final class HudTextLayoutPolicy {
         return Math.round(rounded / (float) gridPixels) * gridPixels;
     }
 
+    public record HotbarPosition(int x, int y) {}
+
+    /** Places the entire analog group clear of the bar and either offhand slot. */
+    public static HotbarPosition analogHotbarPosition(
+            int screenWidth, int screenHeight, int boxWidth, int boxHeight, int diameter) {
+        int hotbarLeft = screenWidth / 2 - 91;
+        int hotbarRight = hotbarLeft + 182;
+        int hotbarTop = screenHeight - 22;
+        int gap = 4;
+        int sideReserve = 30;
+        // The inclusive circle raster paints 2r+1 pixels, including the rim at each edge.
+        int paintedDiameter = (diameter / 2) * 2 + 1;
+        int paintedWidth = Math.max(boxWidth, paintedDiameter);
+        int paintedHeight = Math.max(boxHeight, paintedDiameter);
+        int maxX = Math.max(0, screenWidth - paintedWidth);
+        int maxY = Math.max(0, screenHeight - paintedHeight);
+        int besideY = clamp(hotbarTop + (22 - boxHeight) / 2, 0, maxY);
+        int rightX = hotbarRight + sideReserve + gap;
+        if (rightX + paintedWidth <= screenWidth - gap) {
+            return new HotbarPosition(rightX, besideY);
+        }
+        int leftX = hotbarLeft - sideReserve - gap - paintedWidth;
+        if (leftX >= gap) {
+            return new HotbarPosition(leftX, besideY);
+        }
+        // Keep ordinary health/armor/held-item rows clear when the side lanes are too narrow.
+        return new HotbarPosition(
+                clamp(hotbarRight - diameter, 0, maxX),
+                clamp(hotbarTop - 48 - paintedHeight, 0, maxY));
+    }
+
     private static boolean intersects(
             int ax,
             int ay,
