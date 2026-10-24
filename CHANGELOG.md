@@ -1,5 +1,31 @@
 # Changelog
 
+## Latitude 1.5.3 (Minecraft 26.2, Neoforge)
+
+Stable release of Latitude 1.5.3.
+
+### NEW
+
+- The analog compass can attach to the hotbar alongside the digital compass. The dial uses space beside the bar when available and moves above it when space is limited.
+- Drag either attached compass to detach it and position it freely.
+
+### FIXED
+
+- Switching compass styles no longer leaves analog dragging blocked by saved digital attachment settings.
+- Both Latitude shortcuts are registered with the loader so Minecraft can list and rebind them in Controls.
+- Biome fallback and reroll pools respect a saved world's original provider roster.
+- Known legacy cold-wetland roster entries are migrated without admitting unrelated new providers into existing worlds.
+- Obsolete spawn-picker networking has been removed.
+
+### IMPROVED
+
+- Attached compass previews and hit bounds use the same placement rules. Detaching keeps the cursor grab point and updates the attachment switch.
+- Development-only clipboard utilities are excluded from the packaged game JARs and Gradle sources JARs.
+
+### KNOWN ISSUES
+
+- An underwater initial spawn has been observed in a new Creative-mode world on NeoForge 26.1.2. Its scope across seeds, game modes, and loaders has not been established. This release does not claim to fix it.
+
 ## Latitude 1.5.2-beta (Minecraft 26.2)
 
 ### Improved
