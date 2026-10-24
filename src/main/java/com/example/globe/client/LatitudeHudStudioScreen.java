@@ -67,7 +67,7 @@ public class LatitudeHudStudioScreen extends Screen {
     private AbstractWidget wCompassAnalogShowLatitude;
     private AbstractWidget wLocationTextScale;
     private AbstractWidget wCompassCompact;
-    private AbstractWidget wCompassAttachHotbar;
+    private CycleButton<Boolean> wCompassAttachHotbar;
     private AbstractWidget wLocationDetail;
     private AbstractWidget wCustomBiomeSource;
     private AbstractWidget wLocationFollow;
@@ -294,7 +294,7 @@ public class LatitudeHudStudioScreen extends Screen {
                     cfg.attachToHotbarCompass = value;
                     CompassHudConfig.saveCurrent();
                 }));
-        tooltip(this.wCompassAttachHotbar, "Snaps the digital compass to the hotbar. Analog ignores this for now.");
+        tooltip(this.wCompassAttachHotbar, "Docks either compass by the hotbar. Drag the compass to detach and reposition it.");
         trackSidebarWidget(this.wCompassAttachHotbar, y);
         y += rowH + rowGap;
 
@@ -590,7 +590,7 @@ public class LatitudeHudStudioScreen extends Screen {
         double mx = mouseX;
         double my = mouseY;
 
-        if (button == 0) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT) {
             if (LatitudeConfig.zoneEnterTitleDraggable
                     && isMouseOverTitle(mx, my)) {
                 dragElement = DragElement.TITLE;
@@ -626,7 +626,7 @@ public class LatitudeHudStudioScreen extends Screen {
         double mx = mouseX;
         double my = mouseY;
 
-        if (button != 0) {
+        if (button != InputConstants.MOUSE_BUTTON_LEFT) {
             return false;
         }
 
@@ -653,8 +653,11 @@ public class LatitudeHudStudioScreen extends Screen {
             }
 
             var cfg = CompassHudConfig.get();
-            if (cfg.style == CompassHudConfig.CompassStyle.DIGITAL && cfg.attachToHotbarCompass) {
-                return true;
+            if (cfg.attachToHotbarCompass) {
+                cfg.attachToHotbarCompass = false;
+                if (wCompassAttachHotbar != null) {
+                    wCompassAttachHotbar.setValue(false);
+                }
             }
 
             int screenW = mc.getWindow().getGuiScaledWidth();
@@ -716,7 +719,7 @@ public class LatitudeHudStudioScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (button == 0) {
+        if (button == InputConstants.MOUSE_BUTTON_LEFT) {
             if (dragElement == DragElement.TITLE) {
                 int x = (int) Math.round(titleOffsetXf);
                 int y = (int) Math.round(titleOffsetYf);
@@ -818,9 +821,6 @@ public class LatitudeHudStudioScreen extends Screen {
             return false;
         }
         var cfg = CompassHudConfig.get();
-        if (w == wCompassAttachHotbar) {
-            return cfg.style != CompassHudConfig.CompassStyle.ANALOG;
-        }
         if (w == wLocationFollow) {
             return cfg.hasLocationDetail();
         }
@@ -866,7 +866,7 @@ public class LatitudeHudStudioScreen extends Screen {
         setVisible(wCompassAnalogShowLatitude, showCompassControls && analog);
         setVisible(wLocationTextScale, showCompassControls);
         setVisible(wCompassCompact, showCompassControls && !analog);
-        setVisible(wCompassAttachHotbar, showCompassControls && !analog);
+        setVisible(wCompassAttachHotbar, showCompassControls);
         setVisible(wLocationDetail, showCompassControls);
         setVisible(
                 wCustomBiomeSource,
@@ -914,9 +914,6 @@ public class LatitudeHudStudioScreen extends Screen {
             return false;
         }
         var cfg = CompassHudConfig.get();
-        if (cfg.style == CompassHudConfig.CompassStyle.DIGITAL && cfg.attachToHotbarCompass) {
-            return false;
-        }
         var b = CompassHud.computeBounds(mc, cfg);
         if (b == null) {
             return false;

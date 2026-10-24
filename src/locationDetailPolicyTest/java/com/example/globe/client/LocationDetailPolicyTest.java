@@ -13,6 +13,8 @@ public final class LocationDetailPolicyTest {
         customBiomeSourcesAreOptionalAndPlayerFacing();
         defaultDetachedBoundsStayReachableAtAcceptedGuiSize();
         locationTextScalePolicyIsBoundedAndIndependent();
+        analogHotbarAttachmentStaysClear();
+        analogAttachmentAndDragShareTheSameState();
         staticIntegrationProofsHold();
         hudStudioKeepsTheInheritedBackgroundPassOffItsPreviews();
         System.out.println("LOCATION_DETAIL_POLICY_TEST_PASS");
@@ -161,6 +163,81 @@ public final class LocationDetailPolicyTest {
                 "surface-clamped fallback keeps the fixed four-pixel gap");
     }
 
+    private static void analogHotbarAttachmentStaysClear() {
+        for (int width : new int[] {320, 427, 640, 854}) {
+            for (int height : new int[] {240, 360, 480}) {
+                for (int diameter : new int[] {16, 17, 32, 33, 72, 73, 127, 128}) {
+                    for (int extraWidth : new int[] {0, 48, 160}) {
+                        int boxWidth = Math.min(width - 8, diameter + extraWidth);
+                        var position = HudTextLayoutPolicy.analogHotbarPosition(
+                                width, height, boxWidth, diameter, diameter);
+                        int paintedDiameter = (diameter / 2) * 2 + 1;
+                        var box = new Rect(position.x(), position.y(),
+                                Math.max(boxWidth, paintedDiameter), paintedDiameter);
+                        var barAndAccessories = new Rect(width / 2 - 121, height - 22, 242, 22);
+                        assertTrue(box.x >= 0 && box.y >= 0
+                                        && box.x + box.w <= width && box.y + box.h <= height,
+                                "attached analog group remains inside accepted GUI dimensions");
+                        assertTrue(!intersects(box, barAndAccessories),
+                                "dial and following labels never overlap the hotbar or either offhand lane");
+                        if (box.x < barAndAccessories.x + barAndAccessories.w
+                                && box.x + box.w > barAndAccessories.x) {
+                            assertTrue(box.y + box.h <= height - 70,
+                                    "the narrow-window fallback stays above ordinary status and held-item rows");
+                        }
+                    }
+                }
+            }
+        }
+        assertEquals(new HudTextLayoutPolicy.HotbarPosition(445, 327),
+                HudTextLayoutPolicy.analogHotbarPosition(640, 360, 68, 32, 32),
+                "a normal analog group docks at the right with accessory clearance");
+        assertEquals(new HudTextLayoutPolicy.HotbarPosition(219, 137),
+                HudTextLayoutPolicy.analogHotbarPosition(320, 240, 68, 32, 32),
+                "a narrow GUI docks above the right end instead of centering over the hotbar");
+    }
+
+    private static void analogAttachmentAndDragShareTheSameState() throws IOException {
+        String hud = normalize(read("src/main/java/com/example/globe/client/CompassHud.java"));
+        String studio = normalize(read("src/main/java/com/example/globe/client/LatitudeHudStudioScreen.java"));
+        String analogBase = slice(hud, "private static HudPoint computeAnalogBasePosition(",
+                "private static HudBounds computeAnalogBounds(");
+        String analogBounds = slice(hud, "private static HudBounds computeAnalogBounds(",
+                "private static int analogLocationGap(");
+        assertTrue(analogBase.contains("shouldAttachToHotbar(client, cfg)")
+                        && analogBounds.contains("shouldAttachToHotbar(client, cfg)")
+                        && analogBase.contains("computeAttachedCompassPosition(screenW, screenH, cfg, boxW, boxH)")
+                        && analogBounds.contains("computeAttachedCompassPosition(screenW, screenH, cfg, boxW, boxH)")
+                        && analogBounds.indexOf("return new HudBounds(attached.x(), attached.y(), boxW, boxH)")
+                        < analogBounds.indexOf("x += cfg.offsetX;"),
+                "attached analog render/hit-test/base share a dock and ignore stored free offsets");
+        String digitalBase = slice(hud, "private static HudPoint computeDigitalBasePosition(",
+                "private static boolean shouldAttachToHotbar(");
+        assertTrue(!analogBase.contains("x = clamp(x,") && !analogBase.contains("y = clamp(y,")
+                        && !digitalBase.contains("x = clamp(x,") && !digitalBase.contains("y = clamp(y,"),
+                "free drag offsets invert raw anchors before bounds applies viewport clamping");
+        assertTrue(hud.contains("HudTextLayoutPolicy.analogHotbarPosition(")
+                        && hud.contains("private static boolean shouldAttachToHotbar(")
+                        && slice(hud, "private static boolean shouldRenderPreviewHotbar(",
+                                "private static void drawPreviewHotbar(").contains("return cfg.attachToHotbarCompass;"),
+                "both styles preview their attachment and use the tested analog geometry");
+        String compassHit = slice(studio, "private boolean isMouseOverCompass(",
+                "private boolean isMouseOverTitle(");
+        String compassDrag = slice(studio, "if (dragElement == DragElement.COMPASS)",
+                "if (dragElement == DragElement.LOCATION_DETAIL)");
+        assertTrue(!compassHit.contains("attachToHotbarCompass")
+                        && compassDrag.contains("cfg.attachToHotbarCompass = false;")
+                        && compassDrag.contains("wCompassAttachHotbar.setValue(false);")
+                        && compassDrag.indexOf("cfg.attachToHotbarCompass = false;")
+                        < compassDrag.indexOf("CompassHud.computeBasePosition(mc, cfg)"),
+                "either attached compass can be grabbed and detaches before calculating a free drag offset");
+        assertTrue(studio.contains("private CycleButton<Boolean> wCompassAttachHotbar;")
+                        && studio.contains("setVisible(wCompassAttachHotbar, showCompassControls);")
+                        && !studio.contains("if (w == wCompassAttachHotbar)")
+                        && !studio.contains("Analog ignores this"),
+                "the attachment control is visible and synchronized in both styles");
+    }
+
     private static void staticIntegrationProofsHold() throws IOException {
         String config = normalize(read("src/main/java/com/example/globe/client/CompassHudConfig.java"));
         String numericPolicy = normalize(read("src/main/java/com/example/globe/client/HudTextLayoutPolicy.java"));
@@ -287,6 +364,15 @@ public final class LocationDetailPolicyTest {
                 "no parallel zone-only detached render/bounds path remains");
 
         String studio = normalize(read("src/main/java/com/example/globe/client/LatitudeHudStudioScreen.java"));
+        String studioClick = slice(studio, "public boolean mouseClicked(", "public boolean mouseDragged(");
+        String studioDrag = slice(studio, "public boolean mouseDragged(", "public boolean mouseReleased(");
+        String studioRelease = slice(studio, "public boolean mouseReleased(", "private static void resetHudDefaults(");
+        assertTrue(studioClick.contains("if (button == InputConstants.MOUSE_BUTTON_LEFT)"),
+                "HUD press must use the platform primary-button constant, not a legacy numeric button");
+        assertTrue(studioDrag.contains("if (button != InputConstants.MOUSE_BUTTON_LEFT)"),
+                "HUD movement must use the same platform primary-button constant as press");
+        assertTrue(studioRelease.contains("if (button == InputConstants.MOUSE_BUTTON_LEFT)"),
+                "HUD release must use the same platform primary-button constant as press");
         assertTrue(
                 studio.contains("CompassHud.anchoredZoneX(") && studio.contains("CompassHud.anchoredZoneY(")
                         && !studio.contains("private static int anchoredZoneX("),
