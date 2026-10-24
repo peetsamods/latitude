@@ -4,7 +4,7 @@ A globe-style world + latitude-based biome bands with a customizable compass HUD
 
 ## Current version
 
-This checkout builds Latitude `1.5.2-beta+26.3` for Minecraft **26.3** on **Fabric**,
+This checkout builds Latitude `1.5.3+26.3` for Minecraft **26.3** on **Fabric**,
 using Java 25. See [the changelog](CHANGELOG.md) for this version's changes and
 [version naming](docs/versioning.md) for the shared release contract.
 
@@ -55,7 +55,7 @@ Compass HUD configuration is stored in:
 
 The remapped runtime JAR is:
 
-- `build/libs/latitude-1.5.2-beta+26.3.jar`
+- `build/libs/latitude-1.5.3+26.3.jar`
 
 Do not upload development or sources JARs as the playable release file.
 
