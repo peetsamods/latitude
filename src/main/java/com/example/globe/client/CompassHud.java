@@ -266,20 +266,10 @@ public final class CompassHud {
 
         int x;
         int y;
-        if (cfg.style == CompassHudConfig.CompassStyle.DIGITAL && cfg.attachToHotbarCompass && previewAttachToHotbar) {
+        if (cfg.attachToHotbarCompass && previewAttachToHotbar || shouldAttachToHotbar(client, cfg)) {
             HudPoint attached = computeAttachedCompassPosition(screenW, screenH, cfg, scaledBoxW, scaledBoxH);
             x = attached.x();
             y = attached.y();
-        } else if (cfg.style == CompassHudConfig.CompassStyle.DIGITAL && cfg.attachToHotbarCompass && client.player != null) {
-            int slotIndex = findHotbarCompassSlot(client.player);
-            if (slotIndex >= 0) {
-                HudPoint attached = computeAttachedCompassPosition(screenW, screenH, cfg, scaledBoxW, scaledBoxH);
-                x = attached.x();
-                y = attached.y();
-            } else {
-                x = anchoredX(cfg, screenW, scaledBoxW);
-                y = anchoredY(cfg, screenH, scaledBoxH);
-            }
         } else {
             x = anchoredX(cfg, screenW, scaledBoxW);
             y = anchoredY(cfg, screenH, scaledBoxH);
@@ -332,8 +322,7 @@ public final class CompassHud {
 
         int x;
         int y;
-        if (cfg.attachToHotbarCompass
-                && (previewAttachToHotbar || client.player != null && findHotbarCompassSlot(client.player) >= 0)) {
+        if (cfg.attachToHotbarCompass && previewAttachToHotbar || shouldAttachToHotbar(client, cfg)) {
             HudPoint attached = computeAttachedCompassPosition(screenW, screenH, cfg, boxW, boxH);
             x = attached.x();
             y = attached.y();
@@ -706,13 +695,14 @@ public final class CompassHud {
             boxH = Math.max(boxH, scaledTextHeight(client, cfg.locationTextScale));
         }
 
-        int x;
-        int y;
-        x = anchoredX(cfg, screenW, anchorW);
-        y = anchoredY(cfg, screenH, boxH);
+        if (shouldAttachToHotbar(client, cfg)) {
+            HudPoint attached = computeAttachedCompassPosition(screenW, screenH, cfg, boxW, boxH);
+            return attached;
+        }
+        int x = anchoredX(cfg, screenW, anchorW);
+        int y = anchoredY(cfg, screenH, boxH);
 
-        x = clamp(x, 0, Math.max(0, screenW - boxW));
-        y = clamp(y, 0, Math.max(0, screenH - boxH));
+        // Drag offsets invert the raw anchor; bounds clamps only after applying those offsets.
 
         return new HudPoint(x, y);
     }
@@ -738,10 +728,12 @@ public final class CompassHud {
             boxH = Math.max(boxH, scaledTextHeight(client, cfg.locationTextScale));
         }
 
-        int x;
-        int y;
-        x = anchoredX(cfg, screenW, anchorW);
-        y = anchoredY(cfg, screenH, boxH);
+        if (shouldAttachToHotbar(client, cfg)) {
+            HudPoint attached = computeAttachedCompassPosition(screenW, screenH, cfg, boxW, boxH);
+            return new HudBounds(attached.x(), attached.y(), boxW, boxH);
+        }
+        int x = anchoredX(cfg, screenW, anchorW);
+        int y = anchoredY(cfg, screenH, boxH);
         x += cfg.offsetX;
         y += cfg.offsetY;
 
@@ -760,9 +752,9 @@ public final class CompassHud {
         int hotbarLeft = screenW / 2 - 91;
         int hotbarTop = screenH - 22;
         if (cfg.style == CompassHudConfig.CompassStyle.ANALOG) {
-            int x = hotbarLeft + (182 - boxW) / 2;
-            int y = hotbarTop + (22 - boxH) / 2;
-            return new HudPoint(x, y);
+            var position = HudTextLayoutPolicy.analogHotbarPosition(
+                    screenW, screenH, boxW, boxH, analogDiameter(cfg));
+            return new HudPoint(position.x(), position.y());
         }
         int hotbarRight = hotbarLeft + 182;
         int margin = 4;
@@ -791,24 +783,26 @@ public final class CompassHud {
 
         int x;
         int y;
-        if (cfg.attachToHotbarCompass
-                && client.player != null
-                && findHotbarCompassSlot(client.player) >= 0) {
+        if (shouldAttachToHotbar(client, cfg)) {
             HudPoint attached = computeAttachedCompassPosition(screenW, screenH, cfg, boxW, boxH);
-            x = attached.x();
-            y = attached.y();
+            x = clamp(attached.x(), 0, Math.max(0, screenW - boxW));
+            y = clamp(attached.y(), 0, Math.max(0, screenH - boxH));
         } else {
             x = anchoredX(cfg, screenW, anchorW);
             y = anchoredY(cfg, screenH, boxH);
         }
 
-        x = clamp(x, 0, Math.max(0, screenW - boxW));
-        y = clamp(y, 0, Math.max(0, screenH - boxH));
         return new HudPoint(x, y);
     }
 
+    private static boolean shouldAttachToHotbar(Minecraft client, CompassHudConfig cfg) {
+        return cfg.attachToHotbarCompass
+                && (client.gui.screen() instanceof LatitudeHudStudioScreen
+                || client.player != null && findHotbarCompassSlot(client.player) >= 0);
+    }
+
     private static boolean shouldRenderPreviewHotbar(CompassHudConfig cfg) {
-        return cfg.style == CompassHudConfig.CompassStyle.DIGITAL && cfg.attachToHotbarCompass;
+        return cfg.attachToHotbarCompass;
     }
 
     private static void drawPreviewHotbar(GuiGraphicsExtractor ctx, int screenW, int screenH) {
