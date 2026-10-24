@@ -4,7 +4,7 @@ A globe-style world + latitude-based biome bands with a customizable compass HUD
 
 ## Current version
 
-This checkout builds Latitude `1.5.2-beta+26.1` for Minecraft **26.1–26.1.2** on **Fabric**,
+This checkout builds Latitude `1.5.3+26.1-neoforge` for Minecraft **26.1.2** on **NeoForge**,
 using Java 25. See [the changelog](CHANGELOG.md) for this version's changes and
 [version naming](docs/versioning.md) for the shared release contract.
 
@@ -48,26 +48,17 @@ Compass HUD configuration is stored in:
 ## Building
 
 ```bash
-./gradlew clean build
-```
-
-(Windows: `gradlew.bat clean build`.)
-
-The remapped runtime JAR is:
-
-- `build/libs/latitude-1.5.2-beta+26.1.jar`
-
-Do not upload development or sources JARs as the playable release file.
-
-### Native NeoForge build
-
-The root build above produces the Fabric artifact. To build the native NeoForge artifact instead:
-
-```bash
 ./gradlew -p neoforge build
 ```
 
-The NeoForge main and sources JARs are written to `neoforge/build/libs/`.
+(Windows: `gradlew.bat -p neoforge build`.)
+
+The native NeoForge runtime JAR is:
+
+- `neoforge/build/libs/latitude-neoforge-1.5.3+26.1-neoforge.jar`
+
+Do not upload development or sources JARs as the playable release file.
+The root project also supports the Fabric compatibility build used for shared-source checks.
 
 ## Support
 
